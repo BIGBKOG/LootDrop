@@ -92,6 +92,21 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     private val _detailItem = MutableStateFlow<GiveawayItem?>(null)
     val detailItem: StateFlow<GiveawayItem?> = _detailItem.asStateFlow()
 
+    private val _isFilterSheetOpen = MutableStateFlow(false)
+    val isFilterSheetOpen: StateFlow<Boolean> = _isFilterSheetOpen.asStateFlow()
+
+    val activeFilterCount: StateFlow<Int> = combine(
+        _selectedLauncher,
+        _selectedTypeFilter,
+        _selectedSort
+    ) { launcher, typeFilter, sort ->
+        var count = 0
+        if (launcher != LauncherType.ALL) count++
+        if (typeFilter != TypeFilter.ALL) count++
+        if (sort != SortOption.NEWEST) count++
+        count
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
     // Preferences & Theme flows
     private val _accentTheme = MutableStateFlow(preferences.accentTheme)
     val accentTheme: StateFlow<AccentTheme> = _accentTheme.asStateFlow()
@@ -251,6 +266,16 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun selectSort(sort: SortOption) {
         _selectedSort.value = sort
+    }
+
+    fun setFilterSheetOpen(open: Boolean) {
+        _isFilterSheetOpen.value = open
+    }
+
+    fun resetFilters() {
+        _selectedLauncher.value = LauncherType.ALL
+        _selectedTypeFilter.value = TypeFilter.ALL
+        _selectedSort.value = SortOption.NEWEST
     }
 
     fun updateSearchQuery(query: String) {

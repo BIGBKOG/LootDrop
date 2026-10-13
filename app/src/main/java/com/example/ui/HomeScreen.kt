@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,11 +32,9 @@ import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -67,9 +64,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import com.example.data.model.LauncherType
+import com.example.ui.components.FilterSortBottomSheet
 import com.example.ui.components.GiveawayCard
 import com.example.ui.components.GiveawayDetailDialog
-import com.example.ui.components.LauncherFilterChips
 import com.example.ui.components.StatsBanner
 import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.TextMuted
@@ -93,9 +91,10 @@ fun HomeScreen(
     val uiStats by viewModel.uiStats.collectAsState()
     val detailItem by viewModel.detailItem.collectAsState()
     val isCompactCards by viewModel.isCompactCards.collectAsState()
+    val isFilterSheetOpen by viewModel.isFilterSheetOpen.collectAsState()
+    val activeFilterCount by viewModel.activeFilterCount.collectAsState()
 
     var isSearchExpanded by remember { mutableStateOf(false) }
-    var isSortMenuExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
         modifier = Modifier
@@ -233,6 +232,7 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
+                        // Search Button
                         IconButton(
                             onClick = { isSearchExpanded = !isSearchExpanded },
                             modifier = Modifier.testTag("toggle_search_button")
@@ -244,50 +244,37 @@ fun HomeScreen(
                             )
                         }
 
-                        // Sort menu
-                        Box {
-                            IconButton(
-                                onClick = { isSortMenuExpanded = true },
-                                modifier = Modifier.testTag("sort_menu_button")
-                            ) {
+                        // Consolidated Material 3 Filter Menu Button (3 lines / tune icon)
+                        IconButton(
+                            onClick = { viewModel.setFilterSheetOpen(true) },
+                            modifier = Modifier.testTag("filter_menu_button")
+                        ) {
+                            Box {
                                 Icon(
-                                    imageVector = Icons.Default.Sort,
-                                    contentDescription = "Sort Giveaways",
-                                    tint = TextPrimary
+                                    imageVector = Icons.Default.Tune,
+                                    contentDescription = "Filter & Sort Menu",
+                                    tint = if (activeFilterCount > 0) MaterialTheme.colorScheme.primary else TextPrimary
                                 )
-                            }
-
-                            DropdownMenu(
-                                expanded = isSortMenuExpanded,
-                                onDismissRequest = { isSortMenuExpanded = false },
-                                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
-                            ) {
-                                SortOption.values().forEach { option ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = option.label,
-                                                color = if (option == selectedSort) MaterialTheme.colorScheme.primary else TextPrimary,
-                                                fontWeight = if (option == selectedSort) FontWeight.Bold else FontWeight.Normal
-                                            )
-                                        },
-                                        onClick = {
-                                            viewModel.selectSort(option)
-                                            isSortMenuExpanded = false
-                                        }
+                                if (activeFilterCount > 0) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(9.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.primary)
+                                            .align(Alignment.TopEnd)
                                     )
                                 }
                             }
                         }
 
-                        // Jump to Settings & Alerts
+                        // Jump to Settings
                         IconButton(
                             onClick = { viewModel.selectTab(MainTab.SETTINGS) },
-                            modifier = Modifier.testTag("top_bar_notifications_button")
+                            modifier = Modifier.testTag("top_bar_settings_button")
                         ) {
                             Icon(
-                                imageVector = Icons.Default.NotificationsActive,
-                                contentDescription = "Alert Preferences",
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Settings",
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
@@ -334,8 +321,7 @@ fun HomeScreen(
                     StatsBanner(
                         stats = uiStats,
                         isRefreshing = isLoading,
-                        onRefresh = { viewModel.refreshGiveaways() },
-                        onOpenNotifications = { viewModel.selectTab(MainTab.SETTINGS) }
+                        onRefresh = { viewModel.refreshGiveaways() }
                     )
                 }
 
@@ -347,42 +333,59 @@ fun HomeScreen(
                     )
                 }
 
-                // Launcher Filter Chips (Steam, Epic, GOG, etc.)
-                LauncherFilterChips(
-                    selectedLauncher = selectedLauncher,
-                    onLauncherSelected = { viewModel.selectLauncher(it) },
-                    counts = uiStats.platformCounts
-                )
-
-                // Secondary Filter Row (Type: All, Full Games, DLC/Loot, Beta)
-                LazyRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(TypeFilter.values()) { type ->
-                        val isSelected = type == selectedTypeFilter
-                        Box(
+                // Active Filters Summary Pill (if any non-defaults are selected)
+                if (activeFilterCount > 0 && selectedTab != MainTab.SETTINGS) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant)
-                            .border(
-                                1.dp,
-                                if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                                RoundedCornerShape(8.dp)
-                            )
-                            .clickable { viewModel.selectTypeFilter(type) }
-                            .padding(horizontal = 10.dp, vertical = 5.dp)
-                            .testTag("type_filter_${type.name.lowercase()}")
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                .clickable { viewModel.setFilterSheetOpen(true) }
+                                .padding(horizontal = 10.dp, vertical = 5.dp)
                         ) {
+                            Icon(
+                                imageVector = Icons.Default.Tune,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(13.dp)
+                            )
                             Text(
-                                text = type.label,
+                                text = buildString {
+                                    if (selectedLauncher != LauncherType.ALL) append(selectedLauncher.displayName)
+                                    if (selectedTypeFilter != TypeFilter.ALL) {
+                                        if (isNotEmpty()) append(" • ")
+                                        append(selectedTypeFilter.label)
+                                    }
+                                    if (selectedSort != SortOption.NEWEST) {
+                                        if (isNotEmpty()) append(" • ")
+                                        append(selectedSort.label)
+                                    }
+                                },
                                 fontSize = 11.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else TextSecondary
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary
                             )
                         }
+
+                        Text(
+                            text = "Reset",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .clickable { viewModel.resetFilters() }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
                     }
                 }
 
@@ -448,7 +451,7 @@ fun HomeScreen(
 
                             Text(
                                 text = when (selectedTab) {
-                                    MainTab.DISCOVER -> "Try switching launcher filters or clearing your search term."
+                                    MainTab.DISCOVER -> "Try adjusting your filters in the top menu or clearing your search term."
                                     MainTab.BOOKMARKS -> "Bookmark games in Discover to easily find them when you're on your PC!"
                                     MainTab.CLAIMED -> "Tap 'Claim Free' on any game to automatically add it to your library and track total dollars saved!"
                                     MainTab.SETTINGS -> ""
@@ -486,6 +489,23 @@ fun HomeScreen(
                 }
             }
         }
+    }
+
+    // Material 3 Filter & Sort Bottom Sheet
+    if (isFilterSheetOpen) {
+        FilterSortBottomSheet(
+            selectedLauncher = selectedLauncher,
+            onLauncherSelected = { viewModel.selectLauncher(it) },
+            selectedTypeFilter = selectedTypeFilter,
+            onTypeFilterSelected = { viewModel.selectTypeFilter(it) },
+            selectedSort = selectedSort,
+            onSortSelected = { viewModel.selectSort(it) },
+            activeFilterCount = activeFilterCount,
+            onResetFilters = { viewModel.resetFilters() },
+            platformCounts = uiStats.platformCounts,
+            totalFilteredCount = displayedGiveaways.size,
+            onDismiss = { viewModel.setFilterSheetOpen(false) }
+        )
     }
 
     // Detail Dialog
