@@ -8,6 +8,9 @@ import com.example.data.model.GiveawayItem
 import com.example.data.model.LauncherType
 import com.example.data.repository.GiveawaysRepository
 import com.example.notifications.NotificationHelper
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import com.example.preferences.AccentTheme
 import com.example.preferences.AppPreferences
 import com.example.preferences.BackgroundTheme
@@ -53,7 +56,9 @@ data class UiStats(
     val totalFreeWorthUsd: Double = 0.0,
     val activeGiveawaysCount: Int = 0,
     val newFreebiesCount: Int = 0,
-    val platformCounts: Map<LauncherType, Int> = emptyMap()
+    val platformCounts: Map<LauncherType, Int> = emptyMap(),
+    val claimedTotalSavedUsd: Double = 0.0,
+    val claimedCount: Int = 0
 )
 
 class GiveawaysViewModel(application: Application) : AndroidViewModel(application) {
@@ -130,6 +135,10 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     val uiStats: StateFlow<UiStats> = allGiveaways.combine(_selectedTab) { all, _ ->
         val totalWorth = all.sumOf { it.numericWorth }
         val newCount = all.count { it.isNew }
+        val claimedGames = all.filter { it.isClaimed }
+        val claimedTotalSaved = claimedGames.sumOf { it.numericWorth }
+        val claimedCount = claimedGames.size
+
         val platformMap = mutableMapOf<LauncherType, Int>()
         for (launcher in LauncherType.values()) {
             if (launcher == LauncherType.ALL) {
@@ -142,7 +151,9 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
             totalFreeWorthUsd = totalWorth,
             activeGiveawaysCount = all.size,
             newFreebiesCount = newCount,
-            platformCounts = platformMap
+            platformCounts = platformMap,
+            claimedTotalSavedUsd = claimedTotalSaved,
+            claimedCount = claimedCount
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiStats())
 
@@ -357,5 +368,20 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                 _detailItem.value = item
             }
         }
+    }
+
+    fun claimAndLaunch(context: Context, item: GiveawayItem) {
+        if (!item.isClaimed) {
+            viewModelScope.launch {
+                repository.toggleClaimed(item.id, false)
+                if (_detailItem.value?.id == item.id) {
+                    _detailItem.value = _detailItem.value?.copy(isClaimed = true)
+                }
+            }
+        }
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(item.openGiveawayUrl)).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(intent)
     }
 }

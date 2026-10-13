@@ -28,7 +28,9 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sort
@@ -56,7 +58,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -71,12 +75,14 @@ import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     viewModel: GiveawaysViewModel
 ) {
+    val context = LocalContext.current
     val selectedTab by viewModel.selectedTab.collectAsState()
     val selectedLauncher by viewModel.selectedLauncher.collectAsState()
     val selectedTypeFilter by viewModel.selectedTypeFilter.collectAsState()
@@ -172,7 +178,7 @@ fun HomeScreen(
                 .padding(innerPadding)
         ) {
             if (selectedTab == MainTab.SETTINGS) {
-                // Render Full Settings Tab
+                // Render Settings Tab
                 SettingsScreen(
                     viewModel = viewModel,
                     modifier = Modifier.statusBarsPadding()
@@ -323,13 +329,21 @@ fun HomeScreen(
                     }
                 }
 
-                // Stats Banner (shown on Discover tab)
+                // Stats Banner on Discover
                 if (selectedTab == MainTab.DISCOVER) {
                     StatsBanner(
                         stats = uiStats,
                         isRefreshing = isLoading,
                         onRefresh = { viewModel.refreshGiveaways() },
                         onOpenNotifications = { viewModel.selectTab(MainTab.SETTINGS) }
+                    )
+                }
+
+                // Total Money Saved Banner on In Library
+                if (selectedTab == MainTab.CLAIMED) {
+                    ClaimedSavingsBanner(
+                        savingsUsd = uiStats.claimedTotalSavedUsd,
+                        claimedCount = uiStats.claimedCount
                     )
                 }
 
@@ -353,14 +367,14 @@ fun HomeScreen(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant)
-                                .border(
-                                    1.dp,
-                                    if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                                    RoundedCornerShape(8.dp)
-                                )
-                                .clickable { viewModel.selectTypeFilter(type) }
-                                .padding(horizontal = 10.dp, vertical = 5.dp)
-                                .testTag("type_filter_${type.name.lowercase()}")
+                            .border(
+                                1.dp,
+                                if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                RoundedCornerShape(8.dp)
+                            )
+                            .clickable { viewModel.selectTypeFilter(type) }
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                            .testTag("type_filter_${type.name.lowercase()}")
                         ) {
                             Text(
                                 text = type.label,
@@ -436,7 +450,7 @@ fun HomeScreen(
                                 text = when (selectedTab) {
                                     MainTab.DISCOVER -> "Try switching launcher filters or clearing your search term."
                                     MainTab.BOOKMARKS -> "Bookmark games in Discover to easily find them when you're on your PC!"
-                                    MainTab.CLAIMED -> "Mark games as claimed to keep track of your growing PC game library."
+                                    MainTab.CLAIMED -> "Tap 'Claim Free' on any game to automatically add it to your library and track total dollars saved!"
                                     MainTab.SETTINGS -> ""
                                 },
                                 fontSize = 13.sp,
@@ -462,6 +476,7 @@ fun HomeScreen(
                                     item = item,
                                     isCompact = isCompactCards,
                                     onClick = { viewModel.openDetail(item) },
+                                    onClaimClick = { viewModel.claimAndLaunch(context, item) },
                                     onToggleBookmark = { viewModel.toggleBookmark(item) },
                                     onToggleClaimed = { viewModel.toggleClaimed(item) }
                                 )
@@ -478,8 +493,121 @@ fun HomeScreen(
         GiveawayDetailDialog(
             item = item,
             onDismiss = { viewModel.closeDetail() },
+            onClaimClick = { viewModel.claimAndLaunch(context, item) },
             onToggleBookmark = { viewModel.toggleBookmark(item) },
             onToggleClaimed = { viewModel.toggleClaimed(item) }
         )
+    }
+}
+
+@Composable
+fun ClaimedSavingsBanner(
+    savingsUsd: Double,
+    claimedCount: Int,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                Brush.horizontalGradient(
+                    colors = listOf(
+                        Color(0xFF0B2816),
+                        Color(0xFF113820),
+                        Color(0xFF0D2218)
+                    )
+                )
+            )
+            .border(1.dp, NeonGreen.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+            .padding(16.dp)
+            .testTag("claimed_savings_banner")
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(NeonGreen.copy(alpha = 0.25f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Savings,
+                            contentDescription = null,
+                            tint = NeonGreen,
+                            modifier = Modifier.size(15.dp)
+                        )
+                    }
+                    Text(
+                        text = "TOTAL MONEY SAVED",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = NeonGreen,
+                        letterSpacing = 1.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(
+                    verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val formattedVal = String.format(Locale.US, "$%.2f", savingsUsd)
+                    Text(
+                        text = formattedVal,
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = "SAVED",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = NeonGreen,
+                        modifier = Modifier.padding(bottom = 5.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                val avgSaved = if (claimedCount > 0) savingsUsd / claimedCount else 0.0
+                Text(
+                    text = if (claimedCount > 0) {
+                        "$claimedCount claimed games • avg ${String.format(Locale.US, "$%.2f", avgSaved)} / game"
+                    } else {
+                        "Claim games to track your savings backlog"
+                    },
+                    fontSize = 12.sp,
+                    color = TextSecondary
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(NeonGreen.copy(alpha = 0.15f))
+                    .border(1.dp, NeonGreen.copy(alpha = 0.4f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MilitaryTech,
+                    contentDescription = null,
+                    tint = NeonGreen,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+        }
     }
 }

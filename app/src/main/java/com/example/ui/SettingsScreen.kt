@@ -643,7 +643,7 @@ fun SettingsScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "LootDrop v1.0 • PC Free Games Radar",
+                text = "LootDrop v1.1 • PC Free Games Radar",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = TextSecondary

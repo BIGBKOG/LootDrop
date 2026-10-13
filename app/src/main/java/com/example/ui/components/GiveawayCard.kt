@@ -66,6 +66,7 @@ fun GiveawayCard(
     item: GiveawayItem,
     isCompact: Boolean = false,
     onClick: () -> Unit,
+    onClaimClick: () -> Unit,
     onToggleBookmark: () -> Unit,
     onToggleClaimed: () -> Unit,
     modifier: Modifier = Modifier
@@ -209,12 +210,7 @@ fun GiveawayCard(
                         }
 
                         Button(
-                            onClick = {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(item.openGiveawayUrl)).apply {
-                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                }
-                                context.startActivity(intent)
-                            },
+                            onClick = onClaimClick,
                             modifier = Modifier
                                 .height(32.dp)
                                 .testTag("claim_compact_${item.id}"),
@@ -473,12 +469,7 @@ fun GiveawayCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Button(
-                            onClick = {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(item.openGiveawayUrl)).apply {
-                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                }
-                                context.startActivity(intent)
-                            },
+                            onClick = onClaimClick,
                             modifier = Modifier
                                 .weight(1f)
                                 .height(44.dp)

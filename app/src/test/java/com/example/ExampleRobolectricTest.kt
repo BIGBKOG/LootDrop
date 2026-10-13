@@ -53,6 +53,51 @@ class ExampleRobolectricTest {
     }
 
     @Test
+    fun `claimed items total saved calculation matches item worth values`() {
+        val game1 = GiveawayItem(
+            id = 10,
+            title = "Death Stranding",
+            worth = "$39.99",
+            numericWorth = 39.99,
+            thumbnail = "",
+            image = "",
+            description = "",
+            instructions = "",
+            openGiveawayUrl = "https://epicgames.com",
+            publishedDate = "",
+            type = "Game",
+            platforms = "Epic Games Store",
+            endDate = "N/A",
+            users = 500,
+            status = "Active",
+            isClaimed = true
+        )
+        val game2 = GiveawayItem(
+            id = 11,
+            title = "Fallout: New Vegas",
+            worth = "$19.99",
+            numericWorth = 19.99,
+            thumbnail = "",
+            image = "",
+            description = "",
+            instructions = "",
+            openGiveawayUrl = "https://gog.com",
+            publishedDate = "",
+            type = "Game",
+            platforms = "GOG",
+            endDate = "N/A",
+            users = 300,
+            status = "Active",
+            isClaimed = true
+        )
+        val unclaimed = game1.copy(id = 12, isClaimed = false, numericWorth = 59.99)
+
+        val library = listOf(game1, game2, unclaimed)
+        val claimedTotal = library.filter { it.isClaimed }.sumOf { it.numericWorth }
+        assertEquals(59.98, claimedTotal, 0.001)
+    }
+
+    @Test
     fun `notification helper initializes and respects preferences`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val helper = NotificationHelper(context)

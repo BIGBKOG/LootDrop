@@ -75,6 +75,7 @@ import com.example.ui.theme.TextSecondary
 fun GiveawayDetailDialog(
     item: GiveawayItem,
     onDismiss: () -> Unit,
+    onClaimClick: () -> Unit,
     onToggleBookmark: () -> Unit,
     onToggleClaimed: () -> Unit
 ) {
@@ -228,12 +229,7 @@ fun GiveawayDetailDialog(
 
                     // Primary Claim CTA Button
                     Button(
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(item.openGiveawayUrl)).apply {
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                            }
-                            context.startActivity(intent)
-                        },
+                        onClick = onClaimClick,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp)
