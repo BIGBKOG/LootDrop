@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">LootDrop</string>
+    <string name="notification_channel_name">Free Game Alerts</string>
+    <string name="notification_channel_description">Notifications when new free PC games are available to claim</string>
+</resources>

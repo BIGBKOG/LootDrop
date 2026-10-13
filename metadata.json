@@ -1,0 +1,6 @@
+{
+  "name": "LootDrop",
+  "description": "Real-time free PC game tracker for Steam, Epic Games, GOG, and top launchers with instant claim links, new freebie alerts, and library bookmarking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
