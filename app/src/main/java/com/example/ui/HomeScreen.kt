@@ -1,5 +1,6 @@
 package com.example.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -114,6 +115,10 @@ fun HomeScreen(
         }
     }
 
+    BackHandler(enabled = selectedTab != MainTab.DISCOVER) {
+        viewModel.selectTab(MainTab.DISCOVER)
+    }
+
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
@@ -143,24 +148,9 @@ fun HomeScreen(
                 )
 
                 NavigationBarItem(
-                    selected = selectedTab == MainTab.BOOKMARKS,
-                    onClick = { viewModel.selectTab(MainTab.BOOKMARKS) },
-                    icon = { Icon(Icons.Default.Bookmark, contentDescription = "Saved") },
-                    label = { Text("Saved") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MaterialTheme.colorScheme.background,
-                        indicatorColor = MaterialTheme.colorScheme.primary,
-                        selectedTextColor = MaterialTheme.colorScheme.primary,
-                        unselectedIconColor = TextMuted,
-                        unselectedTextColor = TextMuted
-                    ),
-                    modifier = Modifier.testTag("nav_tab_saved")
-                )
-
-                NavigationBarItem(
                     selected = selectedTab == MainTab.CLAIMED,
                     onClick = { viewModel.selectTab(MainTab.CLAIMED) },
-                    icon = { Icon(Icons.Default.CheckCircle, contentDescription = "Claimed") },
+                    icon = { Icon(Icons.Default.CheckCircle, contentDescription = "In Library") },
                     label = { Text("In Library") },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = MaterialTheme.colorScheme.background,
@@ -497,7 +487,6 @@ fun HomeScreen(
                                 Icon(
                                     imageVector = when (selectedTab) {
                                         MainTab.DISCOVER -> Icons.Default.SportsEsports
-                                        MainTab.BOOKMARKS -> Icons.Default.Bookmark
                                         MainTab.CLAIMED -> Icons.Default.CheckCircle
                                         MainTab.SETTINGS -> Icons.Default.Settings
                                     },
@@ -512,7 +501,6 @@ fun HomeScreen(
                             Text(
                                 text = when (selectedTab) {
                                     MainTab.DISCOVER -> "No Giveaways Found"
-                                    MainTab.BOOKMARKS -> "No Saved Games"
                                     MainTab.CLAIMED -> "No Claimed Games Yet"
                                     MainTab.SETTINGS -> ""
                                 },
@@ -526,7 +514,6 @@ fun HomeScreen(
                             Text(
                                 text = when (selectedTab) {
                                     MainTab.DISCOVER -> "Try adjusting your filters in the top menu or clearing your search term."
-                                    MainTab.BOOKMARKS -> "Bookmark games in Discover to easily find them when you're on your PC!"
                                     MainTab.CLAIMED -> "Tap 'Claim Free' on any game to automatically add it to your library and track total dollars saved!"
                                     MainTab.SETTINGS -> ""
                                 },

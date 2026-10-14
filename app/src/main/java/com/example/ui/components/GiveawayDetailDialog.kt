@@ -311,47 +311,25 @@ fun GiveawayDetailDialog(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    OutlinedButton(
+                        onClick = onToggleClaimed,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("dialog_toggle_library_button"),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = if (item.isClaimed) NeonGreen.copy(alpha = 0.15f) else Color.Transparent,
+                            contentColor = if (item.isClaimed) NeonGreen else TextSecondary
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, if (item.isClaimed) NeonGreen else GamingCardBorder)
                     ) {
-                        OutlinedButton(
-                            onClick = onToggleBookmark,
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = if (item.isBookmarked) NeonCyan.copy(alpha = 0.15f) else Color.Transparent,
-                                contentColor = if (item.isBookmarked) NeonCyan else TextSecondary
-                            ),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, if (item.isBookmarked) NeonCyan else GamingCardBorder)
-                        ) {
-                            Icon(
-                                imageVector = if (item.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(if (item.isBookmarked) "Saved" else "Save for Later", fontSize = 12.sp)
-                        }
-
-                        OutlinedButton(
-                            onClick = onToggleClaimed,
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = if (item.isClaimed) NeonGreen.copy(alpha = 0.15f) else Color.Transparent,
-                                contentColor = if (item.isClaimed) NeonGreen else TextSecondary
-                            ),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, if (item.isClaimed) NeonGreen else GamingCardBorder)
-                        ) {
-                            Icon(
-                                imageVector = if (item.isClaimed) Icons.Default.CheckCircle else Icons.Outlined.CheckCircleOutline,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(if (item.isClaimed) "In Library" else "Mark Claimed", fontSize = 12.sp)
-                        }
+                        Icon(
+                            imageVector = if (item.isClaimed) Icons.Default.CheckCircle else Icons.Outlined.CheckCircleOutline,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(if (item.isClaimed) "In Library (Claimed)" else "Add to 'In Library'", fontSize = 13.sp)
                     }
 
                     Spacer(modifier = Modifier.height(18.dp))

@@ -116,4 +116,10 @@ class ExampleRobolectricTest {
         prefs.isAutoCheckOnReopen = true
         assertTrue(prefs.isAutoCheckOnReopen)
     }
+
+    @Test
+    fun `navigation tabs only contain discover claimed and settings without saved tab`() {
+        val tabNames = com.example.ui.MainTab.values().map { it.name }
+        assertEquals(listOf("DISCOVER", "CLAIMED", "SETTINGS"), tabNames)
+    }
 }

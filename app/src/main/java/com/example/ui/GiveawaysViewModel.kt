@@ -28,7 +28,6 @@ import kotlinx.coroutines.launch
 
 enum class MainTab {
     DISCOVER,
-    BOOKMARKS,
     CLAIMED,
     SETTINGS
 }
@@ -222,7 +221,6 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     ) { all, filters ->
         val sourceList = when (filters.tab) {
             MainTab.DISCOVER -> all
-            MainTab.BOOKMARKS -> all.filter { it.isBookmarked }
             MainTab.CLAIMED -> all.filter { it.isClaimed }
             MainTab.SETTINGS -> emptyList()
         }

@@ -6,9 +6,12 @@ import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -105,7 +108,6 @@ fun SettingsScreen(
     val isGamesOnly by viewModel.isGamesOnly.collectAsState()
 
     var showClearClaimedDialog by remember { mutableStateOf(false) }
-    var showClearBookmarksDialog by remember { mutableStateOf(false) }
     var showResyncDialog by remember { mutableStateOf(false) }
 
     val isCurrentDark = when (themeMode) {
@@ -859,16 +861,6 @@ fun SettingsScreen(
             ) {
                 Text("Clear 'In Library' Claimed Games", fontSize = 13.sp)
             }
-
-            OutlinedButton(
-                onClick = { showClearBookmarksDialog = true },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-            ) {
-                Text("Clear Saved Bookmarks", fontSize = 13.sp)
-            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -878,8 +870,16 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Image(
+                painter = painterResource(id = R.drawable.ic_app_logo),
+                contentDescription = "LootDrop Logo",
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(12.dp))
+            )
+            Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = "LootDrop v1.3 • PC Free Games Radar",
+                text = "LootDrop v1.4 • PC Free Games Radar",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -928,30 +928,6 @@ fun SettingsScreen(
         )
     }
 
-    if (showClearBookmarksDialog) {
-        AlertDialog(
-            onDismissRequest = { showClearBookmarksDialog = false },
-            title = { Text("Clear Saved Bookmarks?") },
-            text = { Text("This will remove all saved games from your bookmarks tab.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.clearBookmarkedGames()
-                        showClearBookmarksDialog = false
-                        Toast.makeText(context, "Bookmarks cleared", Toast.LENGTH_SHORT).show()
-                    }
-                ) {
-                    Text("Clear All", color = MaterialTheme.colorScheme.primary)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showClearBookmarksDialog = false }) {
-                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            },
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    }
 
     if (showResyncDialog) {
         AlertDialog(

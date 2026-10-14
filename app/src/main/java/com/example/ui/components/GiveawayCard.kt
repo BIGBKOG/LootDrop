@@ -65,7 +65,7 @@ fun GiveawayCard(
     showExpiration: Boolean = true,
     onClick: () -> Unit,
     onClaimClick: () -> Unit,
-    onToggleBookmark: () -> Unit,
+    onToggleBookmark: () -> Unit = {},
     onToggleClaimed: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -163,19 +163,21 @@ fun GiveawayCard(
                         }
                     }
 
-                    // Trailing claim and bookmark
+                    // Trailing claim and library toggle
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         IconButton(
-                            onClick = onToggleBookmark,
-                            modifier = Modifier.size(32.dp)
+                            onClick = onToggleClaimed,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .testTag("library_toggle_minimal_${item.id}")
                         ) {
                             Icon(
-                                imageVector = if (item.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                                contentDescription = "Save",
-                                tint = if (item.isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                imageVector = if (item.isClaimed) Icons.Default.CheckCircle else Icons.Outlined.CheckCircleOutline,
+                                contentDescription = if (item.isClaimed) "In Library" else "Add to Library",
+                                tint = if (item.isClaimed) NeonGreen else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -295,15 +297,15 @@ fun GiveawayCard(
                                 )
 
                                 IconButton(
-                                    onClick = onToggleBookmark,
+                                    onClick = onToggleClaimed,
                                     modifier = Modifier
                                         .size(24.dp)
-                                        .testTag("bookmark_compact_${item.id}")
+                                        .testTag("library_toggle_compact_${item.id}")
                                 ) {
                                     Icon(
-                                        imageVector = if (item.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                                        contentDescription = "Save",
-                                        tint = if (item.isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        imageVector = if (item.isClaimed) Icons.Default.CheckCircle else Icons.Outlined.CheckCircleOutline,
+                                        contentDescription = if (item.isClaimed) "In Library" else "Add to Library",
+                                        tint = if (item.isClaimed) NeonGreen else MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
@@ -446,17 +448,17 @@ fun GiveawayCard(
                             }
 
                             IconButton(
-                                onClick = onToggleBookmark,
+                                onClick = onToggleClaimed,
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(CircleShape)
                                     .background(Color(0xCC131926))
-                                    .testTag("bookmark_button_${item.id}")
+                                    .testTag("library_toggle_button_${item.id}")
                             ) {
                                 Icon(
-                                    imageVector = if (item.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                                    contentDescription = "Save to bookmarks",
-                                    tint = if (item.isBookmarked) MaterialTheme.colorScheme.primary else Color.White,
+                                    imageVector = if (item.isClaimed) Icons.Default.CheckCircle else Icons.Outlined.CheckCircleOutline,
+                                    contentDescription = if (item.isClaimed) "In Library" else "Add to Library",
+                                    tint = if (item.isClaimed) NeonGreen else Color.White,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
