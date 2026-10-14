@@ -478,7 +478,7 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Display previous retail prices next to the FREE tag",
+                        text = "Display previous retail prices on game cards",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

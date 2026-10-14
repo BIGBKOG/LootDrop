@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.outlined.CheckCircleOutline
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -101,18 +102,42 @@ fun GiveawayCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        // Square thumbnail
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(if (item.thumbnail.isNotBlank()) item.thumbnail else item.image)
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = item.title,
-                            contentScale = ContentScale.Crop,
+                        // Square thumbnail with info icon
+                        Box(
                             modifier = Modifier
                                 .size(50.dp)
                                 .clip(RoundedCornerShape(8.dp))
-                        )
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(if (item.thumbnail.isNotBlank()) item.thumbnail else item.image)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = item.title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+
+                            // Little info symbol in bottom left
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .padding(2.dp)
+                                    .size(18.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xD90B0F19))
+                                    .clickable(onClick = onClick)
+                                    .testTag("info_symbol_minimal_${item.id}"),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Info,
+                                    contentDescription = "Game info for ${item.title}",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
+                        }
 
                         Column(modifier = Modifier.weight(1f)) {
                             Row(
@@ -255,20 +280,27 @@ fun GiveawayCard(
                             )
                         }
 
-                        // FREE Badge
+                        // Info Symbol Button (brings you to the info page)
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomStart)
                                 .padding(6.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(NeonGreen)
-                                .padding(horizontal = 5.dp, vertical = 2.dp)
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xD90B0F19))
+                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.7f), CircleShape)
+                                .clickable(
+                                    onClick = onClick,
+                                    onClickLabel = "View info for ${item.title}"
+                                )
+                                .testTag("info_symbol_compact_${item.id}"),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "FREE",
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = Color(0xFF0B0F19)
+                            Icon(
+                                imageVector = Icons.Outlined.Info,
+                                contentDescription = "Game info for ${item.title}",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
                             )
                         }
                     }
@@ -464,7 +496,7 @@ fun GiveawayCard(
                             }
                         }
 
-                        // Bottom row inside image: Price & Free Value badge + NEW tag
+                        // Bottom row inside image: Info symbol + Price + NEW tag
                         Row(
                             modifier = Modifier
                                 .align(Alignment.BottomStart)
@@ -472,6 +504,28 @@ fun GiveawayCard(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
+                            // Info Symbol Button (brings you to the info page)
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xD90B0F19))
+                                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.7f), CircleShape)
+                                    .clickable(
+                                        onClick = onClick,
+                                        onClickLabel = "View info for ${item.title}"
+                                    )
+                                    .testTag("info_symbol_${item.id}"),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Info,
+                                    contentDescription = "Game info for ${item.title}",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+
                             if (showOriginalPrice && item.worth.isNotBlank() && item.worth != "N/A" && item.worth != "FREE") {
                                 Text(
                                     text = item.worth,
@@ -479,20 +533,6 @@ fun GiveawayCard(
                                     fontWeight = FontWeight.SemiBold,
                                     color = Color(0xFFCBD5E1),
                                     textDecoration = TextDecoration.LineThrough
-                                )
-                            }
-
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(NeonGreen)
-                                    .padding(horizontal = 8.dp, vertical = 3.dp)
-                            ) {
-                                Text(
-                                    text = "100% FREE",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = Color(0xFF0B0F19)
                                 )
                             }
 
@@ -619,7 +659,7 @@ fun GiveawayCard(
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Text(
-                                        text = "Claim Free",
+                                        text = "Claim",
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold
                                     )
