@@ -11,6 +11,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
+data class SyncResult(
+    val totalCount: Int,
+    val newGamesCount: Int
+)
+
 class GiveawaysRepository(
     private val giveawayDao: GiveawayDao,
     private val notificationHelper: NotificationHelper
@@ -31,7 +36,7 @@ class GiveawaysRepository(
             list.map { it.toDomain() }
         }
 
-    suspend fun refreshGiveaways(): Result<Int> = withContext(Dispatchers.IO) {
+    suspend fun refreshGiveaways(): Result<SyncResult> = withContext(Dispatchers.IO) {
         try {
             val dtoList = ApiClient.apiService.getGiveaways(platform = "pc")
             val existingIds = giveawayDao.getAllExistingIds().toSet()
@@ -52,7 +57,8 @@ class GiveawaysRepository(
                 }
             }
 
-            Result.success(entities.size)
+            val newCount = if (isInitialBootstrap) 0 else newlyDiscovered.size
+            Result.success(SyncResult(totalCount = entities.size, newGamesCount = newCount))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -78,7 +84,7 @@ class GiveawaysRepository(
         giveawayDao.clearAllBookmarks()
     }
 
-    suspend fun forceResync(): Result<Int> = withContext(Dispatchers.IO) {
+    suspend fun forceResync(): Result<SyncResult> = withContext(Dispatchers.IO) {
         try {
             giveawayDao.clearAll()
             refreshGiveaways()

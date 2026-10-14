@@ -11,9 +11,12 @@ import com.example.notifications.NotificationHelper
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import com.example.preferences.AccentTheme
 import com.example.preferences.AppPreferences
 import com.example.preferences.BackgroundTheme
+import com.example.preferences.CardDensity
+import com.example.preferences.ThemeMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -108,17 +111,40 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     // Preferences & Theme flows
+    private val _themeMode = MutableStateFlow(preferences.themeMode)
+    val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
+
     private val _accentTheme = MutableStateFlow(preferences.accentTheme)
     val accentTheme: StateFlow<AccentTheme> = _accentTheme.asStateFlow()
 
-    private val _backgroundTheme = MutableStateFlow(preferences.backgroundTheme)
-    val backgroundTheme: StateFlow<BackgroundTheme> = _backgroundTheme.asStateFlow()
+    private val _darkBackgroundTheme = MutableStateFlow(preferences.darkBackgroundTheme)
+    val darkBackgroundTheme: StateFlow<BackgroundTheme> = _darkBackgroundTheme.asStateFlow()
 
-    private val _isCompactCards = MutableStateFlow(preferences.isCompactCards)
-    val isCompactCards: StateFlow<Boolean> = _isCompactCards.asStateFlow()
+    private val _lightBackgroundTheme = MutableStateFlow(preferences.lightBackgroundTheme)
+    val lightBackgroundTheme: StateFlow<BackgroundTheme> = _lightBackgroundTheme.asStateFlow()
+
+    private val _cardDensity = MutableStateFlow(preferences.cardDensity)
+    val cardDensity: StateFlow<CardDensity> = _cardDensity.asStateFlow()
 
     private val _defaultLauncher = MutableStateFlow(preferences.defaultLauncher)
     val defaultLauncher: StateFlow<LauncherType> = _defaultLauncher.asStateFlow()
+
+    private val _isShowOriginalPrice = MutableStateFlow(preferences.isShowOriginalPrice)
+    val isShowOriginalPrice: StateFlow<Boolean> = _isShowOriginalPrice.asStateFlow()
+
+    private val _isShowExpiration = MutableStateFlow(preferences.isShowExpiration)
+    val isShowExpiration: StateFlow<Boolean> = _isShowExpiration.asStateFlow()
+
+    private val _isConfirmToastOnClaim = MutableStateFlow(preferences.isConfirmToastOnClaim)
+    val isConfirmToastOnClaim: StateFlow<Boolean> = _isConfirmToastOnClaim.asStateFlow()
+
+    private val _isAutoCheckOnReopen = MutableStateFlow(preferences.isAutoCheckOnReopen)
+    val isAutoCheckOnReopen: StateFlow<Boolean> = _isAutoCheckOnReopen.asStateFlow()
+
+    private val _reopenStatusMessage = MutableStateFlow<String?>(null)
+    val reopenStatusMessage: StateFlow<String?> = _reopenStatusMessage.asStateFlow()
+
+    private var lastRefreshTimestamp: Long = 0L
 
     // Notification State Flows for Settings Screen
     private val _isNotificationsEnabled = MutableStateFlow(notificationHelper.isNotificationsEnabled)
@@ -239,17 +265,43 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         refreshGiveaways()
     }
 
-    fun refreshGiveaways() {
+    fun refreshGiveaways(isAutoCheck: Boolean = false) {
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
+            lastRefreshTimestamp = System.currentTimeMillis()
             val result = repository.refreshGiveaways()
             _isLoading.value = false
             if (result.isFailure) {
-                _errorMessage.value = result.exceptionOrNull()?.localizedMessage
-                    ?: "Could not fetch latest free games. Check connection."
+                if (!isAutoCheck || allGiveaways.value.isEmpty()) {
+                    _errorMessage.value = result.exceptionOrNull()?.localizedMessage
+                        ?: "Could not fetch latest free games. Check connection."
+                }
+            } else {
+                val syncResult = result.getOrNull()
+                if (syncResult != null && syncResult.newGamesCount > 0) {
+                    _reopenStatusMessage.value = "🎯 Found ${syncResult.newGamesCount} new free game${if (syncResult.newGamesCount > 1) "s" else ""}!"
+                } else if (isAutoCheck) {
+                    _reopenStatusMessage.value = "⚡ Auto-check complete: Games are up to date"
+                }
             }
         }
+    }
+
+    fun checkNewGamesOnAppReopen() {
+        if (!preferences.isAutoCheckOnReopen) return
+
+        val now = System.currentTimeMillis()
+        // If already refreshing or refreshed less than 4 seconds ago, skip redundant check
+        if (_isLoading.value || (now - lastRefreshTimestamp < 4000L && lastRefreshTimestamp != 0L)) {
+            return
+        }
+
+        refreshGiveaways(isAutoCheck = true)
+    }
+
+    fun clearReopenStatusMessage() {
+        _reopenStatusMessage.value = null
     }
 
     fun selectTab(tab: MainTab) {
@@ -291,19 +343,49 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     // Theme & Appearance Actions
+    fun setThemeMode(mode: ThemeMode) {
+        preferences.themeMode = mode
+        _themeMode.value = mode
+    }
+
     fun setAccentTheme(theme: AccentTheme) {
         preferences.accentTheme = theme
         _accentTheme.value = theme
     }
 
-    fun setBackgroundTheme(theme: BackgroundTheme) {
-        preferences.backgroundTheme = theme
-        _backgroundTheme.value = theme
+    fun setDarkBackgroundTheme(theme: BackgroundTheme) {
+        preferences.darkBackgroundTheme = theme
+        _darkBackgroundTheme.value = theme
     }
 
-    fun setCompactCards(compact: Boolean) {
-        preferences.isCompactCards = compact
-        _isCompactCards.value = compact
+    fun setLightBackgroundTheme(theme: BackgroundTheme) {
+        preferences.lightBackgroundTheme = theme
+        _lightBackgroundTheme.value = theme
+    }
+
+    fun setCardDensity(density: CardDensity) {
+        preferences.cardDensity = density
+        _cardDensity.value = density
+    }
+
+    fun setShowOriginalPrice(show: Boolean) {
+        preferences.isShowOriginalPrice = show
+        _isShowOriginalPrice.value = show
+    }
+
+    fun setShowExpiration(show: Boolean) {
+        preferences.isShowExpiration = show
+        _isShowExpiration.value = show
+    }
+
+    fun setConfirmToastOnClaim(confirm: Boolean) {
+        preferences.isConfirmToastOnClaim = confirm
+        _isConfirmToastOnClaim.value = confirm
+    }
+
+    fun setAutoCheckOnReopen(enabled: Boolean) {
+        preferences.isAutoCheckOnReopen = enabled
+        _isAutoCheckOnReopen.value = enabled
     }
 
     fun setDefaultLauncher(launcher: LauncherType) {
@@ -402,6 +484,9 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                 if (_detailItem.value?.id == item.id) {
                     _detailItem.value = _detailItem.value?.copy(isClaimed = true)
                 }
+            }
+            if (_isConfirmToastOnClaim.value) {
+                Toast.makeText(context, "Added '${item.title}' to your library!", Toast.LENGTH_SHORT).show()
             }
         }
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(item.openGiveawayUrl)).apply {

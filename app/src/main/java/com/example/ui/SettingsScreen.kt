@@ -12,6 +12,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,17 +27,20 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ColorLens
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.ViewAgenda
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -66,29 +71,31 @@ import androidx.core.content.ContextCompat
 import com.example.data.model.LauncherType
 import com.example.preferences.AccentTheme
 import com.example.preferences.BackgroundTheme
+import com.example.preferences.CardDensity
+import com.example.preferences.ThemeMode
 import com.example.ui.theme.EpicGamesBlue
-import com.example.ui.theme.GamingCardBorder
-import com.example.ui.theme.GamingDarkBackground
-import com.example.ui.theme.GamingDarkSurface
-import com.example.ui.theme.GamingDarkSurfaceVariant
 import com.example.ui.theme.GogPurple
-import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.SteamBlue
 import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
     viewModel: GiveawaysViewModel,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val themeMode by viewModel.themeMode.collectAsState()
     val accentTheme by viewModel.accentTheme.collectAsState()
-    val backgroundTheme by viewModel.backgroundTheme.collectAsState()
-    val isCompactCards by viewModel.isCompactCards.collectAsState()
+    val darkBgTheme by viewModel.darkBackgroundTheme.collectAsState()
+    val lightBgTheme by viewModel.lightBackgroundTheme.collectAsState()
+    val cardDensity by viewModel.cardDensity.collectAsState()
     val defaultLauncher by viewModel.defaultLauncher.collectAsState()
+    val isShowOriginalPrice by viewModel.isShowOriginalPrice.collectAsState()
+    val isShowExpiration by viewModel.isShowExpiration.collectAsState()
+    val isConfirmToastOnClaim by viewModel.isConfirmToastOnClaim.collectAsState()
+    val isAutoCheckOnReopen by viewModel.isAutoCheckOnReopen.collectAsState()
 
     val isNotificationsEnabled by viewModel.isNotificationsEnabled.collectAsState()
     val isNotifySteam by viewModel.isNotifySteam.collectAsState()
@@ -100,6 +107,12 @@ fun SettingsScreen(
     var showClearClaimedDialog by remember { mutableStateOf(false) }
     var showClearBookmarksDialog by remember { mutableStateOf(false) }
     var showResyncDialog by remember { mutableStateOf(false) }
+
+    val isCurrentDark = when (themeMode) {
+        ThemeMode.DARK -> true
+        ThemeMode.LIGHT -> false
+        ThemeMode.SYSTEM -> true
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -142,19 +155,73 @@ fun SettingsScreen(
                     text = "Settings & Customization",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "Personalize colors, push alerts, and launcher preferences",
+                    text = "Personalize theme modes, accent colors, and app layout",
                     fontSize = 12.sp,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // SECTION 1: Accent Color Themes
+        // SECTION 1: Theme Mode (Light / Dark / System)
+        SectionHeader(title = "THEME MODE", icon = Icons.Default.BrightnessAuto)
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ThemeMode.values().forEach { mode ->
+                val isSelected = mode == themeMode
+                val icon = when (mode) {
+                    ThemeMode.DARK -> Icons.Default.DarkMode
+                    ThemeMode.LIGHT -> Icons.Default.LightMode
+                    ThemeMode.SYSTEM -> Icons.Default.BrightnessAuto
+                }
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface)
+                        .border(
+                            width = if (isSelected) 1.5.dp else 1.dp,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .clickable { viewModel.setThemeMode(mode) }
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = mode.label,
+                            fontSize = 12.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // SECTION 2: Accent Color Themes (12 Palettes)
         SectionHeader(title = "ACCENT COLOR THEME", icon = Icons.Default.Palette)
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -169,76 +236,68 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                text = "Choose your neon gaming color palette:",
+                text = "Choose your vibrant gaming accent color:",
                 fontSize = 13.sp,
-                color = TextSecondary
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            AccentTheme.values().forEach { theme ->
-                val isSelected = theme == accentTheme
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(if (isSelected) theme.primaryColor.copy(alpha = 0.15f) else Color.Transparent)
-                        .border(
-                            width = if (isSelected) 1.5.dp else 1.dp,
-                            color = if (isSelected) theme.primaryColor else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .clickable { viewModel.setAccentTheme(theme) }
-                        .padding(horizontal = 14.dp, vertical = 10.dp)
-                        .testTag("accent_theme_${theme.name.lowercase()}"),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        // Two-tone color dot preview
-                        Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Box(
-                                modifier = Modifier
-                                    .size(16.dp)
-                                    .clip(CircleShape)
-                                    .background(theme.primaryColor)
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .size(16.dp)
-                                    .clip(CircleShape)
-                                    .background(theme.secondaryColor)
-                            )
-                        }
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                AccentTheme.values().forEach { theme ->
+                    val isSelected = theme == accentTheme
+                    val primary = theme.primary(isCurrentDark)
+                    val secondary = theme.secondary(isCurrentDark)
 
-                        Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth(0.48f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isSelected) primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant)
+                            .border(
+                                width = if (isSelected) 1.5.dp else 1.dp,
+                                color = if (isSelected) primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .clickable { viewModel.setAccentTheme(theme) }
+                            .padding(horizontal = 10.dp, vertical = 8.dp)
+                            .testTag("accent_theme_${theme.name.lowercase()}"),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(14.dp)
+                                        .clip(CircleShape)
+                                        .background(primary)
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(14.dp)
+                                        .clip(CircleShape)
+                                        .background(secondary)
+                                )
+                            }
                             Text(
                                 text = theme.title,
-                                fontSize = 14.sp,
+                                fontSize = 12.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                color = if (isSelected) theme.primaryColor else TextPrimary
-                            )
-                            Text(
-                                text = theme.description,
-                                fontSize = 11.sp,
-                                color = TextMuted
+                                color = if (isSelected) primary else MaterialTheme.colorScheme.onSurface
                             )
                         }
-                    }
 
-                    if (isSelected) {
-                        Box(
-                            modifier = Modifier
-                                .size(22.dp)
-                                .clip(CircleShape)
-                                .background(theme.primaryColor),
-                            contentAlignment = Alignment.Center
-                        ) {
+                        if (isSelected) {
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.background,
+                                tint = primary,
                                 modifier = Modifier.size(14.dp)
                             )
                         }
@@ -249,8 +308,11 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // SECTION 2: Background Dark Theme
-        SectionHeader(title = "DARK THEME STYLE", icon = Icons.Default.ColorLens)
+        // SECTION 3: Background Surface Styles
+        SectionHeader(
+            title = if (themeMode == ThemeMode.LIGHT) "LIGHT BACKGROUND STYLE" else "DARK BACKGROUND STYLE",
+            icon = Icons.Default.ColorLens
+        )
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -263,8 +325,14 @@ fun SettingsScreen(
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            BackgroundTheme.values().forEach { bg ->
-                val isSelected = bg == backgroundTheme
+            val availableThemes = if (themeMode == ThemeMode.LIGHT) {
+                BackgroundTheme.values().filter { !it.isDark }
+            } else {
+                BackgroundTheme.values().filter { it.isDark }
+            }
+
+            availableThemes.forEach { bg ->
+                val isSelected = if (themeMode == ThemeMode.LIGHT) bg == lightBgTheme else bg == darkBgTheme
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -275,7 +343,13 @@ fun SettingsScreen(
                             color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
                             shape = RoundedCornerShape(12.dp)
                         )
-                        .clickable { viewModel.setBackgroundTheme(bg) }
+                        .clickable {
+                            if (themeMode == ThemeMode.LIGHT) {
+                                viewModel.setLightBackgroundTheme(bg)
+                            } else {
+                                viewModel.setDarkBackgroundTheme(bg)
+                            }
+                        }
                         .padding(horizontal = 14.dp, vertical = 10.dp)
                         .testTag("bg_theme_${bg.name.lowercase()}"),
                     verticalAlignment = Alignment.CenterVertically,
@@ -296,7 +370,7 @@ fun SettingsScreen(
                             text = bg.title,
                             fontSize = 14.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = TextPrimary
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
 
@@ -314,52 +388,214 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // SECTION 3: Card Layout Density
-        SectionHeader(title = "LAYOUT & VIEW", icon = Icons.Default.ViewAgenda)
+        // SECTION 4: Card Layout Density (Rich vs Compact vs Minimal)
+        SectionHeader(title = "CARD LAYOUT DENSITY", icon = Icons.Default.ViewAgenda)
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
                 .background(MaterialTheme.colorScheme.surface)
                 .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
-                .padding(14.dp)
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            CardDensity.values().forEach { density ->
+                val isSelected = density == cardDensity
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent)
+                        .border(
+                            width = if (isSelected) 1.5.dp else 1.dp,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .clickable { viewModel.setCardDensity(density) }
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                        .testTag("density_${density.name.lowercase()}"),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            text = density.label,
+                            fontSize = 14.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = density.description,
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    if (isSelected) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // SECTION 5: Display & Behavior Options
+        SectionHeader(title = "DISPLAY & BEHAVIOR OPTIONS", icon = Icons.Default.Tune)
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
+                .padding(horizontal = 14.dp, vertical = 6.dp)
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Compact Card Layout",
+                        text = "Show Original Worth Strikethrough",
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Show streamlined cards to fit more freebies on screen",
-                        fontSize = 12.sp,
-                        color = TextSecondary
+                        text = "Display previous retail prices next to the FREE tag",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+
                 Switch(
-                    checked = isCompactCards,
-                    onCheckedChange = { viewModel.setCompactCards(it) },
+                    checked = isShowOriginalPrice,
+                    onCheckedChange = { viewModel.setShowOriginalPrice(it) },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = MaterialTheme.colorScheme.background,
                         checkedTrackColor = MaterialTheme.colorScheme.primary
-                    ),
-                    modifier = Modifier.testTag("compact_cards_switch")
+                    )
+                )
+            }
+
+            Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Show Expiration Countdown",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Display when giveaways end so you don't miss out",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Switch(
+                    checked = isShowExpiration,
+                    onCheckedChange = { viewModel.setShowExpiration(it) },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.background,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+            }
+
+            Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Library Confirmation Toast",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Notify when a clicked game is auto-added to library",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Switch(
+                    checked = isConfirmToastOnClaim,
+                    onCheckedChange = { viewModel.setConfirmToastOnClaim(it) },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.background,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+            }
+
+            Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Auto-Check on App Reopen",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Automatically scan for newly dropped games whenever you reopen the app",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Switch(
+                    checked = isAutoCheckOnReopen,
+                    onCheckedChange = { viewModel.setAutoCheckOnReopen(it) },
+                    modifier = Modifier.testTag("switch_auto_check_on_reopen"),
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.background,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                    )
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // SECTION 4: Push Notifications & Alerts (MOVED HERE)
+        // SECTION 6: Push Notifications & Alerts
         SectionHeader(title = "PUSH NOTIFICATIONS & FREEBIE ALERTS", icon = Icons.Default.NotificationsActive)
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -384,12 +620,12 @@ fun SettingsScreen(
                         text = "New Free Game Alerts",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "Notify immediately when new freebies are discovered",
                         fontSize = 12.sp,
-                        color = TextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -421,7 +657,7 @@ fun SettingsScreen(
                 text = "Store Launchers to Notify:",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = TextSecondary
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             // Launcher switches
@@ -474,12 +710,12 @@ fun SettingsScreen(
                         text = "Full Games Only",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
-                        color = if (isNotificationsEnabled) TextPrimary else TextMuted
+                        color = if (isNotificationsEnabled) MaterialTheme.colorScheme.onSurface else TextMuted
                     )
                     Text(
                         text = "Do not notify for DLC, add-ons, or beta keys",
                         fontSize = 11.sp,
-                        color = if (isNotificationsEnabled) TextSecondary else TextMuted
+                        color = if (isNotificationsEnabled) MaterialTheme.colorScheme.onSurfaceVariant else TextMuted
                     )
                 }
                 Switch(
@@ -509,7 +745,7 @@ fun SettingsScreen(
                         }
                     }
                     viewModel.sendTestNotification()
-                    Toast.makeText(context, "Test alert sent! Check your notifications bar.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Test alert sent! Check notifications bar.", Toast.LENGTH_SHORT).show()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -531,7 +767,7 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // SECTION 5: Default Launcher Filter
+        // SECTION 7: Default Launcher Filter
         SectionHeader(title = "DEFAULT LAUNCHER ON STARTUP", icon = Icons.Default.SportsEsports)
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -548,7 +784,7 @@ fun SettingsScreen(
                 Text(
                     text = "Select which store to open automatically:",
                     fontSize = 13.sp,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 listOf(LauncherType.ALL, LauncherType.STEAM, LauncherType.EPIC, LauncherType.GOG).forEach { launcher ->
@@ -572,7 +808,7 @@ fun SettingsScreen(
                             text = launcher.displayName,
                             fontSize = 13.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) MaterialTheme.colorScheme.primary else TextPrimary
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                         )
                         if (isSelected) {
                             Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
@@ -584,7 +820,7 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // SECTION 6: Library & Data Reset
+        // SECTION 8: Library & Data Reset
         SectionHeader(title = "DATA & LIBRARY MANAGEMENT", icon = Icons.Default.Delete)
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -602,7 +838,7 @@ fun SettingsScreen(
                 onClick = { showResyncDialog = true },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
             ) {
                 Row(
@@ -618,7 +854,7 @@ fun SettingsScreen(
                 onClick = { showClearClaimedDialog = true },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
             ) {
                 Text("Clear 'In Library' Claimed Games", fontSize = 13.sp)
@@ -628,7 +864,7 @@ fun SettingsScreen(
                 onClick = { showClearBookmarksDialog = true },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
             ) {
                 Text("Clear Saved Bookmarks", fontSize = 13.sp)
@@ -643,16 +879,23 @@ fun SettingsScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "LootDrop v1.2 • PC Free Games Radar",
+                text = "LootDrop v1.3 • PC Free Games Radar",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = TextSecondary
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "Real-time giveaways data powered by GamerPower API",
                 fontSize = 11.sp,
                 color = TextMuted
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "Made by BIGBKOG",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.primary
             )
         }
 
@@ -678,7 +921,7 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showClearClaimedDialog = false }) {
-                    Text("Cancel", color = TextSecondary)
+                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
             containerColor = MaterialTheme.colorScheme.surface
@@ -703,7 +946,7 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showClearBookmarksDialog = false }) {
-                    Text("Cancel", color = TextSecondary)
+                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
             containerColor = MaterialTheme.colorScheme.surface
@@ -728,7 +971,7 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showResyncDialog = false }) {
-                    Text("Cancel", color = TextSecondary)
+                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
             containerColor = MaterialTheme.colorScheme.surface
@@ -793,12 +1036,12 @@ private fun SettingToggleRow(
                     text = title,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
-                    color = if (enabled) TextPrimary else TextMuted
+                    color = if (enabled) MaterialTheme.colorScheme.onSurface else TextMuted
                 )
                 Text(
                     text = subtitle,
                     fontSize = 11.sp,
-                    color = if (enabled) TextSecondary else TextMuted
+                    color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else TextMuted
                 )
             }
         }

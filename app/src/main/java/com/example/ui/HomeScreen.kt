@@ -1,6 +1,10 @@
 package com.example.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -33,6 +37,7 @@ import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,11 +52,13 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -65,6 +72,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.data.model.LauncherType
+import com.example.preferences.CardDensity
 import com.example.ui.components.FilterSortBottomSheet
 import com.example.ui.components.GiveawayCard
 import com.example.ui.components.GiveawayDetailDialog
@@ -90,11 +98,21 @@ fun HomeScreen(
     val displayedGiveaways by viewModel.displayedGiveaways.collectAsState()
     val uiStats by viewModel.uiStats.collectAsState()
     val detailItem by viewModel.detailItem.collectAsState()
-    val isCompactCards by viewModel.isCompactCards.collectAsState()
+    val cardDensity by viewModel.cardDensity.collectAsState()
+    val isShowOriginalPrice by viewModel.isShowOriginalPrice.collectAsState()
+    val isShowExpiration by viewModel.isShowExpiration.collectAsState()
     val isFilterSheetOpen by viewModel.isFilterSheetOpen.collectAsState()
     val activeFilterCount by viewModel.activeFilterCount.collectAsState()
+    val reopenStatusMessage by viewModel.reopenStatusMessage.collectAsState()
 
     var isSearchExpanded by remember { mutableStateOf(false) }
+
+    LaunchedEffect(reopenStatusMessage) {
+        if (reopenStatusMessage != null) {
+            delay(3500L)
+            viewModel.clearReopenStatusMessage()
+        }
+    }
 
     Scaffold(
         modifier = Modifier
@@ -316,6 +334,62 @@ fun HomeScreen(
                     }
                 }
 
+                // Reopen Auto-Check Notification Banner
+                AnimatedVisibility(
+                    visible = reopenStatusMessage != null,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    reopenStatusMessage?.let { msg ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .border(
+                                    width = 1.dp,
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                    shape = RoundedCornerShape(10.dp)
+                                )
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                                .testTag("reopen_status_banner"),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Sync,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = msg,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            IconButton(
+                                onClick = { viewModel.clearReopenStatusMessage() },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Dismiss",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // Stats Banner on Discover
                 if (selectedTab == MainTab.DISCOVER) {
                     StatsBanner(
@@ -472,12 +546,20 @@ fun HomeScreen(
                                 top = 6.dp,
                                 bottom = 24.dp
                             ),
-                            verticalArrangement = Arrangement.spacedBy(if (isCompactCards) 8.dp else 16.dp)
+                            verticalArrangement = Arrangement.spacedBy(
+                                when (cardDensity) {
+                                    CardDensity.RICH_CARDS -> 16.dp
+                                    CardDensity.COMPACT_CARDS -> 10.dp
+                                    CardDensity.MINIMAL_LIST -> 6.dp
+                                }
+                            )
                         ) {
                             items(displayedGiveaways, key = { it.id }) { item ->
                                 GiveawayCard(
                                     item = item,
-                                    isCompact = isCompactCards,
+                                    cardDensity = cardDensity,
+                                    showOriginalPrice = isShowOriginalPrice,
+                                    showExpiration = isShowExpiration,
                                     onClick = { viewModel.openDetail(item) },
                                     onClaimClick = { viewModel.claimAndLaunch(context, item) },
                                     onToggleBookmark = { viewModel.toggleBookmark(item) },

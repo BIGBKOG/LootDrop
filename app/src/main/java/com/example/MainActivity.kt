@@ -24,16 +24,25 @@ class MainActivity : ComponentActivity() {
         handleIntent(intent)
 
         setContent {
+            val themeMode by viewModel.themeMode.collectAsState()
             val accentTheme by viewModel.accentTheme.collectAsState()
-            val backgroundTheme by viewModel.backgroundTheme.collectAsState()
+            val darkBgTheme by viewModel.darkBackgroundTheme.collectAsState()
+            val lightBgTheme by viewModel.lightBackgroundTheme.collectAsState()
 
             LootDropTheme(
+                themeMode = themeMode,
                 accentTheme = accentTheme,
-                backgroundTheme = backgroundTheme
+                darkBackgroundTheme = darkBgTheme,
+                lightBackgroundTheme = lightBgTheme
             ) {
                 HomeScreen(viewModel = viewModel)
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.checkNewGamesOnAppReopen()
     }
 
     override fun onNewIntent(intent: Intent) {

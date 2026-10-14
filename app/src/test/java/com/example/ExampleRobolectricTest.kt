@@ -105,4 +105,15 @@ class ExampleRobolectricTest {
         helper.isNotificationsEnabled = true
         assertTrue(helper.isNotificationsEnabled)
     }
+
+    @Test
+    fun `auto-check on reopen preference defaults to true and toggles cleanly`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val prefs = com.example.preferences.AppPreferences(context)
+        assertTrue(prefs.isAutoCheckOnReopen)
+        prefs.isAutoCheckOnReopen = false
+        org.junit.Assert.assertFalse(prefs.isAutoCheckOnReopen)
+        prefs.isAutoCheckOnReopen = true
+        assertTrue(prefs.isAutoCheckOnReopen)
+    }
 }
