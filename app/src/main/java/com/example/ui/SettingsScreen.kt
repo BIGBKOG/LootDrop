@@ -40,6 +40,9 @@ import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Tune
@@ -79,8 +82,10 @@ import com.example.preferences.ThemeMode
 import com.example.ui.theme.EpicGamesBlue
 import com.example.ui.theme.GogPurple
 import com.example.ui.theme.NeonGreen
+import com.example.ui.theme.PlayStationBlue
 import com.example.ui.theme.SteamBlue
 import com.example.ui.theme.TextMuted
+import com.example.ui.theme.XboxGreen
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -99,8 +104,11 @@ fun SettingsScreen(
     val isShowExpiration by viewModel.isShowExpiration.collectAsState()
     val isConfirmToastOnClaim by viewModel.isConfirmToastOnClaim.collectAsState()
     val isAutoCheckOnReopen by viewModel.isAutoCheckOnReopen.collectAsState()
+    val isAnimationsEnabled by viewModel.isAnimationsEnabled.collectAsState()
 
     val isNotificationsEnabled by viewModel.isNotificationsEnabled.collectAsState()
+    val isNotifyPlayStation by viewModel.isNotifyPlayStation.collectAsState()
+    val isNotifyXbox by viewModel.isNotifyXbox.collectAsState()
     val isNotifySteam by viewModel.isNotifySteam.collectAsState()
     val isNotifyEpic by viewModel.isNotifyEpic.collectAsState()
     val isNotifyGog by viewModel.isNotifyGog.collectAsState()
@@ -593,6 +601,40 @@ fun SettingsScreen(
                     )
                 )
             }
+
+            Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Fluid UI Animations",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Enable smooth page transitions, radar sweeps, and micro-interactions",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Switch(
+                    checked = isAnimationsEnabled,
+                    onCheckedChange = { viewModel.setAnimationsEnabled(it) },
+                    modifier = Modifier.testTag("switch_ui_animations"),
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.background,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -656,10 +698,29 @@ fun SettingsScreen(
             Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
 
             Text(
-                text = "Store Launchers to Notify:",
+                text = "Platforms & Stores to Notify:",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            // PlayStation & Xbox console switches
+            SettingToggleRow(
+                title = "PlayStation Deals & Drops",
+                subtitle = "PS5 & PS4 100% discount free games & loot",
+                color = PlayStationBlue,
+                checked = isNotifyPlayStation,
+                enabled = isNotificationsEnabled,
+                onCheckedChange = { viewModel.setNotifyPlayStation(it) }
+            )
+
+            SettingToggleRow(
+                title = "Xbox Deals & Drops",
+                subtitle = "Series X|S & Xbox One free games & keys",
+                color = XboxGreen,
+                checked = isNotifyXbox,
+                enabled = isNotificationsEnabled,
+                onCheckedChange = { viewModel.setNotifyXbox(it) }
             )
 
             // Launcher switches
@@ -789,7 +850,14 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                listOf(LauncherType.ALL, LauncherType.STEAM, LauncherType.EPIC, LauncherType.GOG).forEach { launcher ->
+                listOf(
+                    LauncherType.ALL,
+                    LauncherType.PLAYSTATION,
+                    LauncherType.XBOX,
+                    LauncherType.STEAM,
+                    LauncherType.EPIC,
+                    LauncherType.GOG
+                ).forEach { launcher ->
                     val isSelected = launcher == defaultLauncher
                     Row(
                         modifier = Modifier
@@ -816,6 +884,86 @@ fun SettingsScreen(
                             Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
                         }
                     }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // SECTION: App Feature Tour & Animated Guide
+        SectionHeader(title = "APP FEATURE TOUR & GUIDE", icon = Icons.Default.AutoAwesome)
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PlayCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Interactive Feature Walkthrough",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Replay the animated showcase of radar scanning, 1-tap claiming, and money savings tracking",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = 15.sp
+                    )
+                }
+            }
+
+            Button(
+                onClick = { viewModel.replayOnboarding() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+                    .testTag("replay_onboarding_button"),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.background
+                )
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = "Replay App Feature Tour",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
@@ -879,7 +1027,7 @@ fun SettingsScreen(
             )
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = "LootDrop v1.4 • PC Free Games Radar",
+                text = "LootDrop v2.0 • PlayStation, Xbox & PC Free Games Radar",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

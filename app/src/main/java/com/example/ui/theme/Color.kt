@@ -19,6 +19,8 @@ val EpicGamesBlue = Color(0xFF0078F2)
 val GogPurple = Color(0xFFBA55D3)
 val UbisoftBlue = Color(0xFF00A2FF)
 val ItchRed = Color(0xFFFA5C5C)
+val PlayStationBlue = Color(0xFF0070D1)
+val XboxGreen = Color(0xFF107C10)
 
 // Dark Mode Typography & Text
 val TextPrimary = Color(0xFFF1F5F9)

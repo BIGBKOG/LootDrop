@@ -50,6 +50,24 @@ class ExampleRobolectricTest {
 
         val gogItem = steamItem.copy(platforms = "GOG, PC")
         assertEquals(LauncherType.GOG, gogItem.launcherCategory)
+
+        val psItem = steamItem.copy(platforms = "Playstation 5, Playstation 4")
+        assertEquals(LauncherType.PLAYSTATION, psItem.launcherCategory)
+        assertTrue(psItem.isPlayStation)
+        assertTrue(psItem.matchesLauncher(LauncherType.PLAYSTATION))
+
+        val xboxItem = steamItem.copy(platforms = "Xbox Series X|S, Xbox One")
+        assertEquals(LauncherType.XBOX, xboxItem.launcherCategory)
+        assertTrue(xboxItem.isXbox)
+        assertTrue(xboxItem.matchesLauncher(LauncherType.XBOX))
+
+        // Cross-platform item supporting PC and consoles
+        val crossPlatItem = steamItem.copy(platforms = "PC, Steam, Playstation 5, Xbox Series X|S")
+        assertTrue(crossPlatItem.isPlayStation)
+        assertTrue(crossPlatItem.isXbox)
+        assertTrue(crossPlatItem.matchesLauncher(LauncherType.PLAYSTATION))
+        assertTrue(crossPlatItem.matchesLauncher(LauncherType.XBOX))
+        assertTrue(crossPlatItem.matchesLauncher(LauncherType.STEAM))
     }
 
     @Test
@@ -104,6 +122,10 @@ class ExampleRobolectricTest {
         assertNotNull(helper)
         helper.isNotificationsEnabled = true
         assertTrue(helper.isNotificationsEnabled)
+        helper.isNotifyPlayStation = true
+        assertTrue(helper.isNotifyPlayStation)
+        helper.isNotifyXbox = true
+        assertTrue(helper.isNotifyXbox)
     }
 
     @Test

@@ -17,12 +17,14 @@ import com.example.preferences.AppPreferences
 import com.example.preferences.BackgroundTheme
 import com.example.preferences.CardDensity
 import com.example.preferences.ThemeMode
+import com.example.data.model.LauncherOption
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -48,7 +50,7 @@ enum class TypeFilter(val label: String, val apiMatch: String?) {
 
 data class FilterCriteria(
     val tab: MainTab = MainTab.DISCOVER,
-    val launcher: LauncherType = LauncherType.ALL,
+    val launchers: Set<LauncherType> = emptySet(),
     val typeFilter: TypeFilter = TypeFilter.ALL,
     val sort: SortOption = SortOption.NEWEST,
     val query: String = ""
@@ -73,8 +75,15 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     private val _selectedTab = MutableStateFlow(MainTab.DISCOVER)
     val selectedTab: StateFlow<MainTab> = _selectedTab.asStateFlow()
 
-    private val _selectedLauncher = MutableStateFlow(preferences.defaultLauncher)
-    val selectedLauncher: StateFlow<LauncherType> = _selectedLauncher.asStateFlow()
+    private val _selectedLaunchers = MutableStateFlow<Set<LauncherType>>(
+        if (preferences.defaultLauncher == LauncherType.ALL) emptySet() else setOf(preferences.defaultLauncher)
+    )
+    val selectedLaunchers: StateFlow<Set<LauncherType>> = _selectedLaunchers.asStateFlow()
+
+    // Backward-compatibility property
+    val selectedLauncher: StateFlow<LauncherType> = _selectedLaunchers.map { set ->
+        if (set.isEmpty() || set.contains(LauncherType.ALL)) LauncherType.ALL else set.first()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LauncherType.ALL)
 
     private val _selectedTypeFilter = MutableStateFlow(TypeFilter.ALL)
     val selectedTypeFilter: StateFlow<TypeFilter> = _selectedTypeFilter.asStateFlow()
@@ -98,12 +107,14 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     val isFilterSheetOpen: StateFlow<Boolean> = _isFilterSheetOpen.asStateFlow()
 
     val activeFilterCount: StateFlow<Int> = combine(
-        _selectedLauncher,
+        _selectedLaunchers,
         _selectedTypeFilter,
         _selectedSort
-    ) { launcher, typeFilter, sort ->
+    ) { launchers, typeFilter, sort ->
         var count = 0
-        if (launcher != LauncherType.ALL) count++
+        if (launchers.isNotEmpty() && !launchers.contains(LauncherType.ALL)) {
+            count += launchers.size
+        }
         if (typeFilter != TypeFilter.ALL) count++
         if (sort != SortOption.NEWEST) count++
         count
@@ -140,6 +151,12 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isAutoCheckOnReopen = MutableStateFlow(preferences.isAutoCheckOnReopen)
     val isAutoCheckOnReopen: StateFlow<Boolean> = _isAutoCheckOnReopen.asStateFlow()
 
+    private val _isAnimationsEnabled = MutableStateFlow(preferences.isAnimationsEnabled)
+    val isAnimationsEnabled: StateFlow<Boolean> = _isAnimationsEnabled.asStateFlow()
+
+    private val _showOnboardingWalkthrough = MutableStateFlow(!preferences.hasSeenOnboarding)
+    val showOnboardingWalkthrough: StateFlow<Boolean> = _showOnboardingWalkthrough.asStateFlow()
+
     private val _reopenStatusMessage = MutableStateFlow<String?>(null)
     val reopenStatusMessage: StateFlow<String?> = _reopenStatusMessage.asStateFlow()
 
@@ -148,6 +165,12 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     // Notification State Flows for Settings Screen
     private val _isNotificationsEnabled = MutableStateFlow(notificationHelper.isNotificationsEnabled)
     val isNotificationsEnabled: StateFlow<Boolean> = _isNotificationsEnabled.asStateFlow()
+
+    private val _isNotifyPlayStation = MutableStateFlow(notificationHelper.isNotifyPlayStation)
+    val isNotifyPlayStation: StateFlow<Boolean> = _isNotifyPlayStation.asStateFlow()
+
+    private val _isNotifyXbox = MutableStateFlow(notificationHelper.isNotifyXbox)
+    val isNotifyXbox: StateFlow<Boolean> = _isNotifyXbox.asStateFlow()
 
     private val _isNotifySteam = MutableStateFlow(notificationHelper.isNotifySteam)
     val isNotifySteam: StateFlow<Boolean> = _isNotifySteam.asStateFlow()
@@ -184,7 +207,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
             if (launcher == LauncherType.ALL) {
                 platformMap[launcher] = all.size
             } else {
-                platformMap[launcher] = all.count { it.launcherCategory == launcher }
+                platformMap[launcher] = all.count { it.matchesLauncher(launcher) }
             }
         }
         UiStats(
@@ -200,14 +223,14 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     // Combine user filters into criteria flow
     private val filterCriteriaFlow: Flow<FilterCriteria> = combine(
         _selectedTab,
-        _selectedLauncher,
+        _selectedLaunchers,
         _selectedTypeFilter,
         _selectedSort,
         _searchQuery
-    ) { tab, launcher, typeFilter, sort, query ->
+    ) { tab, launchers, typeFilter, sort, query ->
         FilterCriteria(
             tab = tab,
-            launcher = launcher,
+            launchers = launchers,
             typeFilter = typeFilter,
             sort = sort,
             query = query
@@ -227,9 +250,11 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
 
         var filtered = sourceList
 
-        // Launcher filter
-        if (filters.launcher != LauncherType.ALL) {
-            filtered = filtered.filter { it.launcherCategory == filters.launcher }
+        // Multi-Platform / Store filter
+        if (filters.launchers.isNotEmpty() && !filters.launchers.contains(LauncherType.ALL)) {
+            filtered = filtered.filter { item ->
+                filters.launchers.any { launcher -> item.matchesLauncher(launcher) }
+            }
         }
 
         // Type filter
@@ -244,7 +269,12 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
             filtered = filtered.filter {
                 it.title.lowercase().contains(q) ||
                 it.description.lowercase().contains(q) ||
-                it.platforms.lowercase().contains(q)
+                it.platforms.lowercase().contains(q) ||
+                (q.contains("playstation") && it.isPlayStation) ||
+                (q.contains("ps5") && it.isPlayStation) ||
+                (q.contains("ps4") && it.isPlayStation) ||
+                (q.contains("xbox") && it.isXbox) ||
+                (q.contains("console") && it.isConsole)
             }
         }
 
@@ -306,8 +336,27 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         _selectedTab.value = tab
     }
 
+    fun toggleLauncher(launcher: LauncherType) {
+        if (launcher == LauncherType.ALL) {
+            _selectedLaunchers.value = emptySet()
+            return
+        }
+        val current = _selectedLaunchers.value.toMutableSet()
+        current.remove(LauncherType.ALL)
+        if (current.contains(launcher)) {
+            current.remove(launcher)
+        } else {
+            current.add(launcher)
+        }
+        _selectedLaunchers.value = current
+    }
+
     fun selectLauncher(launcher: LauncherType) {
-        _selectedLauncher.value = launcher
+        toggleLauncher(launcher)
+    }
+
+    fun clearLauncherFilters() {
+        _selectedLaunchers.value = emptySet()
     }
 
     fun selectTypeFilter(type: TypeFilter) {
@@ -323,7 +372,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun resetFilters() {
-        _selectedLauncher.value = LauncherType.ALL
+        _selectedLaunchers.value = emptySet()
         _selectedTypeFilter.value = TypeFilter.ALL
         _selectedSort.value = SortOption.NEWEST
     }
@@ -391,10 +440,39 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         _defaultLauncher.value = launcher
     }
 
+    fun setAnimationsEnabled(enabled: Boolean) {
+        preferences.isAnimationsEnabled = enabled
+        _isAnimationsEnabled.value = enabled
+    }
+
+    fun completeOnboarding() {
+        preferences.hasSeenOnboarding = true
+        _showOnboardingWalkthrough.value = false
+    }
+
+    fun dismissOnboarding() {
+        preferences.hasSeenOnboarding = true
+        _showOnboardingWalkthrough.value = false
+    }
+
+    fun replayOnboarding() {
+        _showOnboardingWalkthrough.value = true
+    }
+
     // Notification Preferences Actions
     fun setNotificationsEnabled(enabled: Boolean) {
         notificationHelper.isNotificationsEnabled = enabled
         _isNotificationsEnabled.value = enabled
+    }
+
+    fun setNotifyPlayStation(enabled: Boolean) {
+        notificationHelper.isNotifyPlayStation = enabled
+        _isNotifyPlayStation.value = enabled
+    }
+
+    fun setNotifyXbox(enabled: Boolean) {
+        notificationHelper.isNotifyXbox = enabled
+        _isNotifyXbox.value = enabled
     }
 
     fun setNotifySteam(enabled: Boolean) {
@@ -475,7 +553,33 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun claimAndLaunch(context: Context, item: GiveawayItem) {
+    fun getLauncherOptionsFor(item: GiveawayItem): List<LauncherOption> {
+        val baseOptions = item.availableLaunchers.toMutableList()
+        val cleanTitle = item.title.trim().lowercase()
+            .replace(Regex("(?i)\\b(giveaway|free|dlc|pack|key|bundle|edition|standard|steam|epic|gog|playstation|ps5|ps4|xbox)\\b"), "")
+            .trim()
+
+        if (cleanTitle.length >= 3) {
+            val matchingGiveaways = allGiveaways.value.filter { other ->
+                other.id != item.id && other.title.trim().lowercase().contains(cleanTitle)
+            }
+            for (match in matchingGiveaways) {
+                for (opt in match.availableLaunchers) {
+                    if (opt.launcherType != LauncherType.OTHER && baseOptions.none { it.launcherType == opt.launcherType }) {
+                        baseOptions.add(opt)
+                    }
+                }
+            }
+        }
+        return baseOptions
+    }
+
+    fun claimAndLaunch(
+        context: Context,
+        item: GiveawayItem,
+        targetUrl: String? = null,
+        launcherName: String? = null
+    ) {
         if (!item.isClaimed) {
             viewModelScope.launch {
                 repository.toggleClaimed(item.id, false)
@@ -484,10 +588,12 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                 }
             }
             if (_isConfirmToastOnClaim.value) {
-                Toast.makeText(context, "Added '${item.title}' to your library!", Toast.LENGTH_SHORT).show()
+                val label = if (launcherName != null) " on $launcherName" else ""
+                Toast.makeText(context, "Claiming '${item.title}'$label! Added to library.", Toast.LENGTH_SHORT).show()
             }
         }
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(item.openGiveawayUrl)).apply {
+        val url = targetUrl ?: item.openGiveawayUrl
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
         context.startActivity(intent)

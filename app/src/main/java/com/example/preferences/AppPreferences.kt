@@ -126,6 +126,22 @@ enum class AccentTheme(
         Color(0xFF047857),
         Color(0xFF059669),
         "Lush emerald gemstone green"
+    ),
+    PLAYSTATION_BLUE(
+        "PlayStation Blue",
+        Color(0xFF0070D1),
+        Color(0xFF38BDF8),
+        Color(0xFF003791),
+        Color(0xFF0070D1),
+        "Official PlayStation electric cobalt"
+    ),
+    XBOX_GREEN(
+        "Xbox Green",
+        Color(0xFF107C10),
+        Color(0xFF22C55E),
+        Color(0xFF0E5A0E),
+        Color(0xFF107C10),
+        "Iconic Xbox emerald neon green"
     );
 
     fun primary(isDark: Boolean): Color = if (isDark) darkPrimary else lightPrimary
@@ -222,6 +238,8 @@ class AppPreferences(context: Context) {
         private const val KEY_SHOW_EXPIRATION = "key_show_expiration"
         private const val KEY_CONFIRM_ON_CLAIM = "key_confirm_on_claim"
         private const val KEY_AUTO_CHECK_ON_REOPEN = "key_auto_check_on_reopen"
+        private const val KEY_HAS_SEEN_ONBOARDING = "key_has_seen_onboarding"
+        private const val KEY_UI_ANIMATIONS_ENABLED = "key_ui_animations_enabled"
     }
 
     var themeMode: ThemeMode
@@ -305,4 +323,12 @@ class AppPreferences(context: Context) {
     var isAutoCheckOnReopen: Boolean
         get() = prefs.getBoolean(KEY_AUTO_CHECK_ON_REOPEN, true)
         set(value) = prefs.edit().putBoolean(KEY_AUTO_CHECK_ON_REOPEN, value).apply()
+
+    var hasSeenOnboarding: Boolean
+        get() = prefs.getBoolean(KEY_HAS_SEEN_ONBOARDING, false)
+        set(value) = prefs.edit().putBoolean(KEY_HAS_SEEN_ONBOARDING, value).apply()
+
+    var isAnimationsEnabled: Boolean
+        get() = prefs.getBoolean(KEY_UI_ANIMATIONS_ENABLED, true)
+        set(value) = prefs.edit().putBoolean(KEY_UI_ANIMATIONS_ENABLED, value).apply()
 }

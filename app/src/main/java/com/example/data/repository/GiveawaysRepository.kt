@@ -38,7 +38,8 @@ class GiveawaysRepository(
 
     suspend fun refreshGiveaways(): Result<SyncResult> = withContext(Dispatchers.IO) {
         try {
-            val dtoList = ApiClient.apiService.getGiveaways(platform = "pc")
+            // Fetch all giveaways across all platforms (PC, PlayStation 4/5, Xbox Series X|S / One, etc.)
+            val dtoList = ApiClient.apiService.getGiveaways(platform = null)
             val existingIds = giveawayDao.getAllExistingIds().toSet()
             val isInitialBootstrap = existingIds.isEmpty()
 

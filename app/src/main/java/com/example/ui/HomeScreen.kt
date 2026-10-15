@@ -1,11 +1,32 @@
 package com.example.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.offset
+import com.example.ui.components.OnboardingWalkthroughDialog
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -72,8 +93,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import com.example.data.model.GiveawayItem
 import com.example.data.model.LauncherType
 import com.example.preferences.CardDensity
+import com.example.ui.components.ChooseLauncherDialog
 import com.example.ui.components.FilterSortBottomSheet
 import com.example.ui.components.GiveawayCard
 import com.example.ui.components.GiveawayDetailDialog
@@ -91,6 +114,7 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val selectedTab by viewModel.selectedTab.collectAsState()
+    val selectedLaunchers by viewModel.selectedLaunchers.collectAsState()
     val selectedLauncher by viewModel.selectedLauncher.collectAsState()
     val selectedTypeFilter by viewModel.selectedTypeFilter.collectAsState()
     val selectedSort by viewModel.selectedSort.collectAsState()
@@ -105,8 +129,11 @@ fun HomeScreen(
     val isFilterSheetOpen by viewModel.isFilterSheetOpen.collectAsState()
     val activeFilterCount by viewModel.activeFilterCount.collectAsState()
     val reopenStatusMessage by viewModel.reopenStatusMessage.collectAsState()
+    val showOnboardingWalkthrough by viewModel.showOnboardingWalkthrough.collectAsState()
+    val isAnimationsEnabled by viewModel.isAnimationsEnabled.collectAsState()
 
     var isSearchExpanded by remember { mutableStateOf(false) }
+    var launcherChooserItem by remember { mutableStateOf<GiveawayItem?>(null) }
 
     LaunchedEffect(reopenStatusMessage) {
         if (reopenStatusMessage != null) {
@@ -132,10 +159,35 @@ fun HomeScreen(
                 containerColor = MaterialTheme.colorScheme.surface,
                 tonalElevation = 8.dp
             ) {
+                val discoverScale by animateFloatAsState(
+                    targetValue = if (selectedTab == MainTab.DISCOVER) 1.15f else 1f,
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
+                    label = "nav_discover_scale"
+                )
+                val claimedScale by animateFloatAsState(
+                    targetValue = if (selectedTab == MainTab.CLAIMED) 1.15f else 1f,
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
+                    label = "nav_claimed_scale"
+                )
+                val settingsScale by animateFloatAsState(
+                    targetValue = if (selectedTab == MainTab.SETTINGS) 1.15f else 1f,
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
+                    label = "nav_settings_scale"
+                )
+
                 NavigationBarItem(
                     selected = selectedTab == MainTab.DISCOVER,
                     onClick = { viewModel.selectTab(MainTab.DISCOVER) },
-                    icon = { Icon(Icons.Default.Explore, contentDescription = "Discover") },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Explore,
+                            contentDescription = "Discover",
+                            modifier = Modifier.graphicsLayer {
+                                scaleX = discoverScale
+                                scaleY = discoverScale
+                            }
+                        )
+                    },
                     label = { Text("Discover") },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = MaterialTheme.colorScheme.background,
@@ -150,7 +202,16 @@ fun HomeScreen(
                 NavigationBarItem(
                     selected = selectedTab == MainTab.CLAIMED,
                     onClick = { viewModel.selectTab(MainTab.CLAIMED) },
-                    icon = { Icon(Icons.Default.CheckCircle, contentDescription = "In Library") },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "In Library",
+                            modifier = Modifier.graphicsLayer {
+                                scaleX = claimedScale
+                                scaleY = claimedScale
+                            }
+                        )
+                    },
                     label = { Text("In Library") },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = MaterialTheme.colorScheme.background,
@@ -165,7 +226,16 @@ fun HomeScreen(
                 NavigationBarItem(
                     selected = selectedTab == MainTab.SETTINGS,
                     onClick = { viewModel.selectTab(MainTab.SETTINGS) },
-                    icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings",
+                            modifier = Modifier.graphicsLayer {
+                                scaleX = settingsScale
+                                scaleY = settingsScale
+                            }
+                        )
+                    },
                     label = { Text("Settings") },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = MaterialTheme.colorScheme.background,
@@ -179,27 +249,64 @@ fun HomeScreen(
             }
         }
     ) { innerPadding ->
-        Column(
+        AnimatedContent(
+            targetState = selectedTab,
+            transitionSpec = {
+                if (!isAnimationsEnabled) {
+                    EnterTransition.None togetherWith ExitTransition.None
+                } else {
+                    val isForward = targetState.ordinal > initialState.ordinal
+                    (slideInHorizontally(
+                        initialOffsetX = { if (isForward) (it * 0.28f).toInt() else (-it * 0.28f).toInt() },
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioLowBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        )
+                    ) + fadeIn(
+                        animationSpec = tween(220, easing = FastOutSlowInEasing)
+                    ) + scaleIn(
+                        initialScale = 0.95f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        )
+                    )).togetherWith(
+                        slideOutHorizontally(
+                            targetOffsetX = { if (isForward) (-it * 0.28f).toInt() else (it * 0.28f).toInt() },
+                            animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing)
+                        ) + fadeOut(
+                            animationSpec = tween(160)
+                        ) + scaleOut(
+                            targetScale = 0.96f,
+                            animationSpec = tween(durationMillis = 180)
+                        )
+                    )
+                }
+            },
+            label = "tab_animated_content",
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-        ) {
-            if (selectedTab == MainTab.SETTINGS) {
-                // Render Settings Tab
-                SettingsScreen(
-                    viewModel = viewModel,
-                    modifier = Modifier.statusBarsPadding()
-                )
-            } else {
-                // Top App Bar
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
+        ) { currentTab ->
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                if (currentTab == MainTab.SETTINGS) {
+                    // Render Settings Tab
+                    SettingsScreen(
+                        viewModel = viewModel,
+                        modifier = Modifier.statusBarsPadding()
+                    )
+                } else {
+                    // Top App Bar
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -227,7 +334,7 @@ fun HomeScreen(
                                 )
                             }
                             Text(
-                                text = "PC FREE GAMES RADAR",
+                                text = "PC, PS & XBOX FREE RADAR",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = NeonGreen,
@@ -264,8 +371,20 @@ fun HomeScreen(
                                     tint = if (activeFilterCount > 0) MaterialTheme.colorScheme.primary else TextPrimary
                                 )
                                 if (activeFilterCount > 0) {
+                                    val badgeScale by animateFloatAsState(
+                                        targetValue = 1f,
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                                            stiffness = Spring.StiffnessMediumLow
+                                        ),
+                                        label = "filter_badge_scale"
+                                    )
                                     Box(
                                         modifier = Modifier
+                                            .graphicsLayer {
+                                                scaleX = badgeScale
+                                                scaleY = badgeScale
+                                            }
                                             .size(9.dp)
                                             .clip(CircleShape)
                                             .background(MaterialTheme.colorScheme.primary)
@@ -289,8 +408,19 @@ fun HomeScreen(
                     }
                 }
 
-                // Expandable Search Bar
-                AnimatedVisibility(visible = isSearchExpanded) {
+                // Expandable Search Bar with fluid spring animation
+                AnimatedVisibility(
+                    visible = isSearchExpanded,
+                    enter = fadeIn(tween(200)) + expandVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioLowBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        )
+                    ),
+                    exit = fadeOut(tween(160)) + shrinkVertically(
+                        animationSpec = tween(180, easing = FastOutSlowInEasing)
+                    )
+                ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -381,7 +511,7 @@ fun HomeScreen(
                 }
 
                 // Stats Banner on Discover
-                if (selectedTab == MainTab.DISCOVER) {
+                if (currentTab == MainTab.DISCOVER) {
                     StatsBanner(
                         stats = uiStats,
                         isRefreshing = isLoading,
@@ -390,7 +520,7 @@ fun HomeScreen(
                 }
 
                 // Total Money Saved Banner on In Library
-                if (selectedTab == MainTab.CLAIMED) {
+                if (currentTab == MainTab.CLAIMED) {
                     ClaimedSavingsBanner(
                         savingsUsd = uiStats.claimedTotalSavedUsd,
                         claimedCount = uiStats.claimedCount
@@ -398,7 +528,7 @@ fun HomeScreen(
                 }
 
                 // Active Filters Summary Pill (if any non-defaults are selected)
-                if (activeFilterCount > 0 && selectedTab != MainTab.SETTINGS) {
+                if (activeFilterCount > 0 && currentTab != MainTab.SETTINGS) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -424,7 +554,9 @@ fun HomeScreen(
                             )
                             Text(
                                 text = buildString {
-                                    if (selectedLauncher != LauncherType.ALL) append(selectedLauncher.displayName)
+                                    if (selectedLaunchers.isNotEmpty() && !selectedLaunchers.contains(LauncherType.ALL)) {
+                                        append(selectedLaunchers.joinToString(", ") { it.displayName })
+                                    }
                                     if (selectedTypeFilter != TypeFilter.ALL) {
                                         if (isNotEmpty()) append(" • ")
                                         append(selectedTypeFilter.label)
@@ -464,12 +596,22 @@ fun HomeScreen(
                             CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = "Scanning PC Launchers for Free Loot...",
+                                text = "Scanning PC, PlayStation & Xbox for Free Loot...",
                                 fontSize = 14.sp,
                                 color = TextSecondary
                             )
                         }
                     } else if (displayedGiveaways.isEmpty()) {
+                        val emptyIconBob by rememberInfiniteTransition(label = "emptyBob").animateFloat(
+                            initialValue = -4f,
+                            targetValue = 4f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(1600, easing = FastOutSlowInEasing),
+                                repeatMode = RepeatMode.Reverse
+                            ),
+                            label = "emptyIconBob"
+                        )
+
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -479,13 +621,16 @@ fun HomeScreen(
                         ) {
                             Box(
                                 modifier = Modifier
+                                    .graphicsLayer {
+                                        translationY = emptyIconBob
+                                    }
                                     .size(64.dp)
                                     .clip(CircleShape)
                                     .background(MaterialTheme.colorScheme.surfaceVariant),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = when (selectedTab) {
+                                    imageVector = when (currentTab) {
                                         MainTab.DISCOVER -> Icons.Default.SportsEsports
                                         MainTab.CLAIMED -> Icons.Default.CheckCircle
                                         MainTab.SETTINGS -> Icons.Default.Settings
@@ -499,7 +644,7 @@ fun HomeScreen(
                             Spacer(modifier = Modifier.height(16.dp))
 
                             Text(
-                                text = when (selectedTab) {
+                                text = when (currentTab) {
                                     MainTab.DISCOVER -> "No Giveaways Found"
                                     MainTab.CLAIMED -> "No Claimed Games Yet"
                                     MainTab.SETTINGS -> ""
@@ -512,7 +657,7 @@ fun HomeScreen(
                             Spacer(modifier = Modifier.height(6.dp))
 
                             Text(
-                                text = when (selectedTab) {
+                                text = when (currentTab) {
                                     MainTab.DISCOVER -> "Try adjusting your filters in the top menu or clearing your search term."
                                     MainTab.CLAIMED -> "Tap 'Claim Free' on any game to automatically add it to your library and track total dollars saved!"
                                     MainTab.SETTINGS -> ""
@@ -548,9 +693,16 @@ fun HomeScreen(
                                     showOriginalPrice = isShowOriginalPrice,
                                     showExpiration = isShowExpiration,
                                     onClick = { viewModel.openDetail(item) },
-                                    onClaimClick = { viewModel.claimAndLaunch(context, item) },
+                                    onClaimClick = {
+                                        if (item.hasMultipleLaunchers) {
+                                            launcherChooserItem = item
+                                        } else {
+                                            viewModel.claimAndLaunch(context, item)
+                                        }
+                                    },
                                     onToggleBookmark = { viewModel.toggleBookmark(item) },
-                                    onToggleClaimed = { viewModel.toggleClaimed(item) }
+                                    onToggleClaimed = { viewModel.toggleClaimed(item) },
+                                    modifier = if (isAnimationsEnabled) Modifier.animateItem() else Modifier
                                 )
                             }
                         }
@@ -559,12 +711,13 @@ fun HomeScreen(
             }
         }
     }
+}
 
     // Material 3 Filter & Sort Bottom Sheet
     if (isFilterSheetOpen) {
         FilterSortBottomSheet(
-            selectedLauncher = selectedLauncher,
-            onLauncherSelected = { viewModel.selectLauncher(it) },
+            selectedLaunchers = selectedLaunchers,
+            onLauncherToggle = { viewModel.toggleLauncher(it) },
             selectedTypeFilter = selectedTypeFilter,
             onTypeFilterSelected = { viewModel.selectTypeFilter(it) },
             selectedSort = selectedSort,
@@ -582,9 +735,39 @@ fun HomeScreen(
         GiveawayDetailDialog(
             item = item,
             onDismiss = { viewModel.closeDetail() },
-            onClaimClick = { viewModel.claimAndLaunch(context, item) },
+            onClaimClick = {
+                if (item.hasMultipleLaunchers) {
+                    launcherChooserItem = item
+                } else {
+                    viewModel.claimAndLaunch(context, item)
+                }
+            },
+            onLauncherOptionClick = { url, launcherName ->
+                viewModel.claimAndLaunch(context, item, targetUrl = url, launcherName = launcherName)
+            },
             onToggleBookmark = { viewModel.toggleBookmark(item) },
             onToggleClaimed = { viewModel.toggleClaimed(item) }
+        )
+    }
+
+    // Choose Launcher Popup Menu (when a game has multiple launchers at 100% off)
+    launcherChooserItem?.let { item ->
+        ChooseLauncherDialog(
+            item = item,
+            launchers = viewModel.getLauncherOptionsFor(item),
+            onDismiss = { launcherChooserItem = null },
+            onLauncherClaimed = { targetUrl, launcherName ->
+                viewModel.claimAndLaunch(context, item, targetUrl = targetUrl, launcherName = launcherName)
+                launcherChooserItem = null
+            }
+        )
+    }
+
+    // Onboarding Feature Tour Walkthrough (first launch animation or replayed from settings)
+    if (showOnboardingWalkthrough) {
+        OnboardingWalkthroughDialog(
+            onDismiss = { viewModel.dismissOnboarding() },
+            onFinish = { viewModel.completeOnboarding() }
         )
     }
 }
@@ -595,6 +778,35 @@ fun ClaimedSavingsBanner(
     claimedCount: Int,
     modifier: Modifier = Modifier
 ) {
+    val infiniteTransition = rememberInfiniteTransition(label = "claimedBannerAnim")
+    val borderAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 0.9f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "claimedBorderAlpha"
+    )
+    val medalBob by infiniteTransition.animateFloat(
+        initialValue = -2.5f,
+        targetValue = 2.5f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "medalBob"
+    )
+
+    val animatedSavings by animateFloatAsState(
+        targetValue = savingsUsd.toFloat(),
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "animatedSavings"
+    )
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -609,7 +821,7 @@ fun ClaimedSavingsBanner(
                     )
                 )
             )
-            .border(1.dp, NeonGreen.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+            .border(1.dp, NeonGreen.copy(alpha = borderAlpha), RoundedCornerShape(16.dp))
             .padding(16.dp)
             .testTag("claimed_savings_banner")
     ) {
@@ -652,7 +864,7 @@ fun ClaimedSavingsBanner(
                     verticalAlignment = Alignment.Bottom,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    val formattedVal = String.format(Locale.US, "$%.2f", savingsUsd)
+                    val formattedVal = String.format(Locale.US, "$%.2f", animatedSavings)
                     Text(
                         text = formattedVal,
                         fontSize = 28.sp,
@@ -670,7 +882,7 @@ fun ClaimedSavingsBanner(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                val avgSaved = if (claimedCount > 0) savingsUsd / claimedCount else 0.0
+                val avgSaved = if (claimedCount > 0) animatedSavings.toDouble() / claimedCount else 0.0
                 Text(
                     text = if (claimedCount > 0) {
                         "$claimedCount claimed games • avg ${String.format(Locale.US, "$%.2f", avgSaved)} / game"
@@ -684,10 +896,13 @@ fun ClaimedSavingsBanner(
 
             Box(
                 modifier = Modifier
+                    .graphicsLayer {
+                        translationY = medalBob
+                    }
                     .size(48.dp)
                     .clip(CircleShape)
                     .background(NeonGreen.copy(alpha = 0.15f))
-                    .border(1.dp, NeonGreen.copy(alpha = 0.4f), CircleShape),
+                    .border(1.dp, NeonGreen.copy(alpha = borderAlpha), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(

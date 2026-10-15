@@ -1,5 +1,15 @@
 package com.example.ui.components
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -17,13 +27,16 @@ import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -44,6 +57,46 @@ fun StatsBanner(
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Ambient breathing shimmer on border and glow
+    val infiniteTransition = rememberInfiniteTransition(label = "statsBannerInfinite")
+    val borderAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0.85f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "borderGlow"
+    )
+    val badgeScale by infiniteTransition.animateFloat(
+        initialValue = 0.95f,
+        targetValue = 1.05f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "badgePulse"
+    )
+
+    // Fluid smooth counter animation for total free worth
+    val animatedWorth by animateFloatAsState(
+        targetValue = stats.totalFreeWorthUsd.toFloat(),
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "animatedWorth"
+    )
+
+    val animatedCount by animateFloatAsState(
+        targetValue = stats.activeGiveawaysCount.toFloat(),
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "animatedCount"
+    )
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -58,7 +111,11 @@ fun StatsBanner(
                     )
                 )
             )
-            .border(1.dp, GamingCardBorder, RoundedCornerShape(16.dp))
+            .border(
+                1.dp,
+                GamingCardBorder.copy(alpha = borderAlpha),
+                RoundedCornerShape(16.dp)
+            )
             .padding(16.dp)
             .testTag("stats_banner")
     ) {
@@ -101,7 +158,7 @@ fun StatsBanner(
                     verticalAlignment = Alignment.Bottom,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    val formattedVal = String.format(Locale.US, "$%.2f", stats.totalFreeWorthUsd)
+                    val formattedVal = String.format(Locale.US, "$%.2f", animatedWorth)
                     Text(
                         text = formattedVal,
                         fontSize = 26.sp,
@@ -124,13 +181,17 @@ fun StatsBanner(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "${stats.activeGiveawaysCount} active freebies",
+                        text = "${animatedCount.toInt()} active freebies",
                         fontSize = 12.sp,
                         color = TextSecondary
                     )
                     if (stats.newFreebiesCount > 0) {
                         Box(
                             modifier = Modifier
+                                .graphicsLayer {
+                                    scaleX = badgeScale
+                                    scaleY = badgeScale
+                                }
                                 .clip(RoundedCornerShape(4.dp))
                                 .background(NeonCyan.copy(alpha = 0.2f))
                                 .border(0.5.dp, NeonCyan, RoundedCornerShape(4.dp))
@@ -147,7 +208,17 @@ fun StatsBanner(
                 }
             }
 
-            // Quick actions: Refresh only
+            // Quick actions: Refresh with smooth rotation animation
+            val refreshAngle by infiniteTransition.animateFloat(
+                initialValue = 0f,
+                targetValue = 360f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1000, easing = LinearEasing),
+                    repeatMode = RepeatMode.Restart
+                ),
+                label = "refreshAngle"
+            )
+
             IconButton(
                 onClick = onRefresh,
                 enabled = !isRefreshing,
@@ -156,7 +227,10 @@ fun StatsBanner(
                 Icon(
                     imageVector = Icons.Default.Refresh,
                     contentDescription = "Refresh Freebies",
-                    tint = if (isRefreshing) TextMuted else TextPrimary
+                    tint = if (isRefreshing) MaterialTheme.colorScheme.primary else TextPrimary,
+                    modifier = Modifier.graphicsLayer {
+                        rotationZ = if (isRefreshing) refreshAngle else 0f
+                    }
                 )
             }
         }

@@ -37,10 +37,12 @@ import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 
+import androidx.compose.material.icons.filled.Check
+
 @Composable
 fun LauncherFilterChips(
-    selectedLauncher: LauncherType,
-    onLauncherSelected: (LauncherType) -> Unit,
+    selectedLaunchers: Set<LauncherType>,
+    onLauncherToggle: (LauncherType) -> Unit,
     counts: Map<LauncherType, Int>,
     modifier: Modifier = Modifier
 ) {
@@ -52,7 +54,11 @@ fun LauncherFilterChips(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
     ) {
         items(LauncherType.values()) { launcher ->
-            val isSelected = launcher == selectedLauncher
+            val isSelected = if (launcher == LauncherType.ALL) {
+                selectedLaunchers.isEmpty() || selectedLaunchers.contains(LauncherType.ALL)
+            } else {
+                selectedLaunchers.contains(launcher)
+            }
             val count = counts[launcher] ?: 0
             val badgeColor = Color(launcher.badgeColorHex)
 
@@ -74,7 +80,7 @@ fun LauncherFilterChips(
                         color = borderColor,
                         shape = RoundedCornerShape(12.dp)
                     )
-                    .clickable { onLauncherSelected(launcher) }
+                    .clickable { onLauncherToggle(launcher) }
                     .padding(horizontal = 12.dp, vertical = 8.dp)
                     .testTag("launcher_chip_${launcher.name.lowercase()}")
             ) {
@@ -104,11 +110,12 @@ fun LauncherFilterChips(
                                 .background(if (isSelected) badgeColor else Color(0xFF1E283C))
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
+                            val isDarkBrand = launcher == LauncherType.PLAYSTATION || launcher == LauncherType.XBOX || launcher == LauncherType.EPIC
                             Text(
                                 text = count.toString(),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isSelected) Color(0xFF0B0F19) else TextSecondary
+                                color = if (isSelected) (if (isDarkBrand) Color.White else Color(0xFF0B0F19)) else TextSecondary
                             )
                         }
                     }

@@ -1,5 +1,15 @@
 package com.example.ui.components
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -58,8 +68,8 @@ import com.example.ui.theme.TextSecondary
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun FilterSortBottomSheet(
-    selectedLauncher: LauncherType,
-    onLauncherSelected: (LauncherType) -> Unit,
+    selectedLaunchers: Set<LauncherType>,
+    onLauncherToggle: (LauncherType) -> Unit,
     selectedTypeFilter: TypeFilter,
     onTypeFilterSelected: (TypeFilter) -> Unit,
     selectedSort: SortOption,
@@ -117,19 +127,27 @@ fun FilterSortBottomSheet(
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
                         )
-                        if (activeFilterCount > 0) {
-                            Text(
-                                text = "$activeFilterCount active filter${if (activeFilterCount > 1) "s" else ""}",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        } else {
-                            Text(
-                                text = "Showing all PC giveaways",
-                                fontSize = 11.sp,
-                                color = TextSecondary
-                            )
+                        AnimatedContent(
+                            targetState = activeFilterCount,
+                            transitionSpec = {
+                                (slideInVertically { it } + fadeIn()) togetherWith (slideOutVertically { -it } + fadeOut())
+                            },
+                            label = "active_filter_count_anim"
+                        ) { count ->
+                            if (count > 0) {
+                                Text(
+                                    text = "$count active filter${if (count > 1) "s" else ""}",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            } else {
+                                Text(
+                                    text = "Showing all active free giveaways",
+                                    fontSize = 11.sp,
+                                    color = TextSecondary
+                                )
+                            }
                         }
                     }
                 }
@@ -138,8 +156,12 @@ fun FilterSortBottomSheet(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    // Quick Clear Button at top
-                    if (activeFilterCount > 0) {
+                    // Quick Clear Button at top with fluid animation
+                    AnimatedVisibility(
+                        visible = activeFilterCount > 0,
+                        enter = fadeIn() + expandHorizontally(),
+                        exit = fadeOut() + shrinkHorizontally()
+                    ) {
                         TextButton(
                             onClick = onResetFilters,
                             modifier = Modifier.testTag("filter_clear_all_button")
@@ -233,8 +255,16 @@ fun FilterSortBottomSheet(
             Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
             Spacer(modifier = Modifier.height(14.dp))
 
-            // SECTION 2: Store Launcher
-            FilterSectionHeader(title = "STORE LAUNCHERS", icon = Icons.Default.SportsEsports)
+            // SECTION 2: Platforms & Stores
+            FilterSectionHeader(title = "PLATFORMS & STORES", icon = Icons.Default.SportsEsports)
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "Select one or combine multiple platforms (e.g. PlayStation + Xbox):",
+                fontSize = 11.sp,
+                color = TextSecondary
+            )
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -244,13 +274,17 @@ fun FilterSortBottomSheet(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 LauncherType.values().forEach { launcher ->
-                    val isSelected = launcher == selectedLauncher
+                    val isSelected = if (launcher == LauncherType.ALL) {
+                        selectedLaunchers.isEmpty() || selectedLaunchers.contains(LauncherType.ALL)
+                    } else {
+                        selectedLaunchers.contains(launcher)
+                    }
                     val count = platformCounts[launcher] ?: 0
                     val brandColor = Color(launcher.badgeColorHex)
 
                     FilterChip(
                         selected = isSelected,
-                        onClick = { onLauncherSelected(launcher) },
+                        onClick = { onLauncherToggle(launcher) },
                         label = {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -384,11 +418,19 @@ fun FilterSortBottomSheet(
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
-                    Text(
-                        text = "Apply & View ($totalFilteredCount Freebies)",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    AnimatedContent(
+                        targetState = totalFilteredCount,
+                        transitionSpec = {
+                            (slideInVertically { it / 2 } + fadeIn()) togetherWith (slideOutVertically { -it / 2 } + fadeOut())
+                        },
+                        label = "apply_button_count"
+                    ) { count ->
+                        Text(
+                            text = "Apply & View ($count Freebies)",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 

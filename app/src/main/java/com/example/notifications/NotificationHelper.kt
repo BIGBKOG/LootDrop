@@ -26,6 +26,8 @@ class NotificationHelper(private val context: Context) {
         const val EXTRA_CLAIM_URL = "extra_claim_url"
 
         private const val PREF_NOTIF_ENABLED = "pref_notif_enabled"
+        private const val PREF_NOTIFY_PLAYSTATION = "pref_notify_playstation"
+        private const val PREF_NOTIFY_XBOX = "pref_notify_xbox"
         private const val PREF_NOTIFY_STEAM = "pref_notify_steam"
         private const val PREF_NOTIFY_EPIC = "pref_notify_epic"
         private const val PREF_NOTIFY_GOG = "pref_notify_gog"
@@ -44,7 +46,7 @@ class NotificationHelper(private val context: Context) {
                 CHANNEL_NAME,
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Alerts when new free games drop on Steam, Epic, GOG & PC launchers"
+                description = "Alerts when new free games drop on PlayStation, Xbox, Steam, Epic & PC"
                 enableVibration(true)
                 setShowBadge(true)
             }
@@ -56,6 +58,14 @@ class NotificationHelper(private val context: Context) {
     var isNotificationsEnabled: Boolean
         get() = prefs.getBoolean(PREF_NOTIF_ENABLED, true)
         set(value) = prefs.edit().putBoolean(PREF_NOTIF_ENABLED, value).apply()
+
+    var isNotifyPlayStation: Boolean
+        get() = prefs.getBoolean(PREF_NOTIFY_PLAYSTATION, true)
+        set(value) = prefs.edit().putBoolean(PREF_NOTIFY_PLAYSTATION, value).apply()
+
+    var isNotifyXbox: Boolean
+        get() = prefs.getBoolean(PREF_NOTIFY_XBOX, true)
+        set(value) = prefs.edit().putBoolean(PREF_NOTIFY_XBOX, value).apply()
 
     var isNotifySteam: Boolean
         get() = prefs.getBoolean(PREF_NOTIFY_STEAM, true)
@@ -82,14 +92,18 @@ class NotificationHelper(private val context: Context) {
         if (isGamesOnly && !item.type.contains("Game", ignoreCase = true)) return false
 
         val lowerPlat = item.platforms.lowercase()
+        val isPs = item.isPlayStation
+        val isXb = item.isXbox
         val isSteam = lowerPlat.contains("steam")
         val isEpic = lowerPlat.contains("epic")
         val isGog = lowerPlat.contains("gog")
 
+        if (isPs && isNotifyPlayStation) return true
+        if (isXb && isNotifyXbox) return true
         if (isSteam && isNotifySteam) return true
         if (isEpic && isNotifyEpic) return true
         if (isGog && isNotifyGog) return true
-        if (!isSteam && !isEpic && !isGog && isNotifyOthers) return true
+        if (!isSteam && !isEpic && !isGog && !isPs && !isXb && isNotifyOthers) return true
 
         return false
     }

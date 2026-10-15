@@ -8,6 +8,7 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +37,11 @@ import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.outlined.CheckCircleOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -44,11 +50,14 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -61,6 +70,8 @@ import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.data.model.GiveawayItem
+import com.example.data.model.LauncherOption
+import com.example.data.model.LauncherType
 import com.example.ui.theme.GamingCardBorder
 import com.example.ui.theme.GamingDarkBackground
 import com.example.ui.theme.GamingDarkSurface
@@ -77,7 +88,8 @@ fun GiveawayDetailDialog(
     onDismiss: () -> Unit,
     onClaimClick: () -> Unit,
     onToggleBookmark: () -> Unit,
-    onToggleClaimed: () -> Unit
+    onToggleClaimed: () -> Unit,
+    onLauncherOptionClick: ((url: String, launcherName: String) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val launcherColor = Color(item.launcherCategory.badgeColorHex)
@@ -148,21 +160,61 @@ fun GiveawayDetailDialog(
                         )
                     }
 
-                    // Launcher badge on image
-                    Box(
+                    // Launcher & Console badges on image
+                    val isDarkBrand = item.launcherCategory == LauncherType.PLAYSTATION || 
+                                      item.launcherCategory == LauncherType.XBOX || 
+                                      item.launcherCategory == LauncherType.EPIC
+                    Row(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
-                            .padding(16.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(launcherColor)
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = item.launcherCategory.displayName,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF0B0F19)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(launcherColor)
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = item.launcherCategory.displayName,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isDarkBrand) Color.White else Color(0xFF0B0F19)
+                            )
+                        }
+
+                        if (item.isPlayStation && item.launcherCategory != LauncherType.PLAYSTATION) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFF0070D1))
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = "PlayStation",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+
+                        if (item.isXbox && item.launcherCategory != LauncherType.XBOX) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFF107C10))
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = "Xbox",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -227,12 +279,28 @@ fun GiveawayDetailDialog(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Primary Claim CTA Button
+                    // Primary Claim CTA Button with fluid spring scale
+                    val detailClaimInteractionSource = remember { MutableInteractionSource() }
+                    val isDetailClaimPressed by detailClaimInteractionSource.collectIsPressedAsState()
+                    val detailClaimScale by animateFloatAsState(
+                        targetValue = if (isDetailClaimPressed) 0.96f else 1f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        ),
+                        label = "detail_claim_scale"
+                    )
+
                     Button(
                         onClick = onClaimClick,
+                        interactionSource = detailClaimInteractionSource,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp)
+                            .graphicsLayer {
+                                scaleX = detailClaimScale
+                                scaleY = detailClaimScale
+                            }
                             .testTag("detail_claim_button"),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = NeonCyan,
@@ -249,11 +317,60 @@ fun GiveawayDetailDialog(
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp)
                             )
+                            val claimDestination = when {
+                                item.hasMultipleLaunchers -> "Choose Store / Launcher ▾"
+                                item.isPlayStation && !item.isPc -> "PlayStation Store"
+                                item.isXbox && !item.isPc -> "Xbox Store"
+                                else -> item.launcherCategory.displayName
+                            }
                             Text(
-                                text = "Claim on ${item.launcherCategory.displayName}",
+                                text = if (item.hasMultipleLaunchers) "Claim • Choose Launcher ▾" else "Claim on $claimDestination",
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold
                             )
+                        }
+                    }
+
+                    // Direct Launcher Options when game is 100% off across multiple stores/launchers
+                    if (item.hasMultipleLaunchers) {
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(NeonGreen)
+                            )
+                            Text(
+                                text = "AVAILABLE LAUNCHERS (100% OFF)",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = NeonGreen,
+                                letterSpacing = 1.sp
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            item.availableLaunchers.forEach { launcherOption ->
+                                DetailLauncherCardRow(
+                                    launcherOption = launcherOption,
+                                    onClick = {
+                                        if (onLauncherOptionClick != null) {
+                                            onLauncherOptionClick(launcherOption.url, launcherOption.name)
+                                        } else {
+                                            onClaimClick()
+                                        }
+                                    }
+                                )
+                            }
                         }
                     }
 
@@ -289,8 +406,8 @@ fun GiveawayDetailDialog(
                             onClick = {
                                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                     type = "text/plain"
-                                    putExtra(Intent.EXTRA_SUBJECT, "Free PC Game: ${item.title}")
-                                    putExtra(Intent.EXTRA_TEXT, "Grab '${item.title}' for free on ${item.launcherCategory.displayName}!\n${item.openGiveawayUrl}")
+                                    putExtra(Intent.EXTRA_SUBJECT, "Free Game: ${item.title}")
+                                    putExtra(Intent.EXTRA_TEXT, "Grab '${item.title}' 100% free on ${item.platforms}!\n${item.openGiveawayUrl}")
                                 }
                                 context.startActivity(Intent.createChooser(shareIntent, "Share free game"))
                             },
@@ -423,6 +540,100 @@ fun GiveawayDetailDialog(
 
                     Spacer(modifier = Modifier.height(20.dp))
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailLauncherCardRow(
+    launcherOption: LauncherOption,
+    onClick: () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.965f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "detail_launcher_scale"
+    )
+    val optColor = Color(launcherOption.badgeColorHex)
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clip(RoundedCornerShape(10.dp))
+            .border(1.dp, optColor.copy(alpha = if (isPressed) 0.85f else 0.5f), RoundedCornerShape(10.dp))
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            )
+            .testTag("detail_launcher_${launcherOption.name.lowercase().replace(" ", "_")}"),
+        colors = CardDefaults.cardColors(containerColor = com.example.ui.theme.GamingDarkSurfaceVariant)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(optColor)
+                )
+                Column {
+                    Text(
+                        text = launcherOption.name,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = com.example.ui.theme.TextPrimary
+                    )
+                    Text(
+                        text = launcherOption.subtitle,
+                        fontSize = 11.sp,
+                        color = com.example.ui.theme.TextSecondary
+                    )
+                }
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(optColor.copy(alpha = 0.2f))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = "Claim",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = optColor
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Default.OpenInNew,
+                    contentDescription = null,
+                    tint = optColor,
+                    modifier = Modifier.size(14.dp)
+                )
             }
         }
     }

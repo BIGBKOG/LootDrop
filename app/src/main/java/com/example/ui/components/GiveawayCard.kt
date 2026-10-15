@@ -1,9 +1,22 @@
 package com.example.ui.components
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -55,6 +68,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.data.model.GiveawayItem
+import com.example.data.model.LauncherType
 import com.example.preferences.CardDensity
 import com.example.ui.theme.NeonGreen
 
@@ -73,17 +87,85 @@ fun GiveawayCard(
     val context = LocalContext.current
     val launcherColor = Color(item.launcherCategory.badgeColorHex)
 
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val cardScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.985f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "card_press_scale"
+    )
+
+    // Pulsing breathing animation for fresh new drops
+    val infiniteTransition = rememberInfiniteTransition(label = "card_infinite")
+    val pulseGlow by infiniteTransition.animateFloat(
+        initialValue = 0.65f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse_glow"
+    )
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.96f,
+        targetValue = 1.04f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse_scale"
+    )
+
+    // Fluid Claimed status animation
+    val claimedScale by animateFloatAsState(
+        targetValue = if (item.isClaimed) 1.15f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
+        label = "claimed_scale"
+    )
+
+    val claimInteractionSource = remember { MutableInteractionSource() }
+    val isClaimPressed by claimInteractionSource.collectIsPressedAsState()
+    val claimButtonScale by animateFloatAsState(
+        targetValue = if (isClaimPressed) 0.94f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "claim_button_press_scale"
+    )
+
+    val cardBorderColor by animateColorAsState(
+        targetValue = when {
+            item.isClaimed -> NeonGreen.copy(alpha = 0.65f)
+            item.isNew -> MaterialTheme.colorScheme.primary.copy(alpha = pulseGlow)
+            else -> MaterialTheme.colorScheme.outline
+        },
+        animationSpec = tween(300, easing = FastOutSlowInEasing),
+        label = "card_border_color"
+    )
+
     when (cardDensity) {
         CardDensity.MINIMAL_LIST -> {
             // Minimal Streamlined List Card (~72dp)
             Card(
                 modifier = modifier
                     .fillMaxWidth()
+                    .graphicsLayer {
+                        scaleX = cardScale
+                        scaleY = cardScale
+                    }
                     .clip(RoundedCornerShape(12.dp))
-                    .clickable { onClick() }
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                        onClick = onClick
+                    )
                     .border(
                         width = 1.dp,
-                        color = if (item.isNew) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outline,
+                        color = cardBorderColor,
                         shape = RoundedCornerShape(12.dp)
                     )
                     .testTag("giveaway_card_minimal_${item.id}"),
@@ -203,14 +285,24 @@ fun GiveawayCard(
                                 imageVector = if (item.isClaimed) Icons.Default.CheckCircle else Icons.Outlined.CheckCircleOutline,
                                 contentDescription = if (item.isClaimed) "In Library" else "Add to Library",
                                 tint = if (item.isClaimed) NeonGreen else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .graphicsLayer {
+                                        scaleX = claimedScale
+                                        scaleY = claimedScale
+                                    }
                             )
                         }
 
                         Button(
                             onClick = onClaimClick,
+                            interactionSource = claimInteractionSource,
                             modifier = Modifier
                                 .height(32.dp)
+                                .graphicsLayer {
+                                    scaleX = claimButtonScale
+                                    scaleY = claimButtonScale
+                                }
                                 .testTag("claim_minimal_${item.id}"),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
@@ -219,7 +311,11 @@ fun GiveawayCard(
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 0.dp)
                         ) {
-                            Text("Claim", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = if (item.hasMultipleLaunchers) "Launchers ▾" else "Claim",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
@@ -231,11 +327,19 @@ fun GiveawayCard(
             Card(
                 modifier = modifier
                     .fillMaxWidth()
+                    .graphicsLayer {
+                        scaleX = cardScale
+                        scaleY = cardScale
+                    }
                     .clip(RoundedCornerShape(14.dp))
-                    .clickable { onClick() }
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                        onClick = onClick
+                    )
                     .border(
                         width = if (item.isNew) 1.5.dp else 1.dp,
-                        color = if (item.isNew) MaterialTheme.colorScheme.primary.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outline,
+                        color = cardBorderColor,
                         shape = RoundedCornerShape(14.dp)
                     )
                     .testTag("giveaway_card_compact_${item.id}"),
@@ -272,11 +376,14 @@ fun GiveawayCard(
                                 .background(launcherColor.copy(alpha = 0.95f))
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
+                            val isDarkBrand = item.launcherCategory == LauncherType.PLAYSTATION || 
+                                              item.launcherCategory == LauncherType.XBOX || 
+                                              item.launcherCategory == LauncherType.EPIC
                             Text(
                                 text = item.launcherCategory.displayName,
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF0B0F19)
+                                color = if (isDarkBrand) Color.White else Color(0xFF0B0F19)
                             )
                         }
 
@@ -338,7 +445,12 @@ fun GiveawayCard(
                                         imageVector = if (item.isClaimed) Icons.Default.CheckCircle else Icons.Outlined.CheckCircleOutline,
                                         contentDescription = if (item.isClaimed) "In Library" else "Add to Library",
                                         tint = if (item.isClaimed) NeonGreen else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(16.dp)
+                                        modifier = Modifier
+                                            .size(16.dp)
+                                            .graphicsLayer {
+                                                scaleX = claimedScale
+                                                scaleY = claimedScale
+                                            }
                                     )
                                 }
                             }
@@ -370,8 +482,13 @@ fun GiveawayCard(
 
                             Button(
                                 onClick = onClaimClick,
+                                interactionSource = claimInteractionSource,
                                 modifier = Modifier
                                     .height(32.dp)
+                                    .graphicsLayer {
+                                        scaleX = claimButtonScale
+                                        scaleY = claimButtonScale
+                                    }
                                     .testTag("claim_compact_${item.id}"),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.primary,
@@ -384,8 +501,16 @@ fun GiveawayCard(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(12.dp))
-                                    Text("Claim", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Icon(
+                                        imageVector = if (item.hasMultipleLaunchers) Icons.Default.SportsEsports else Icons.Default.OpenInNew,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Text(
+                                        text = if (item.hasMultipleLaunchers) "Launchers ▾" else "Claim",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
                             }
                         }
@@ -399,11 +524,19 @@ fun GiveawayCard(
             Card(
                 modifier = modifier
                     .fillMaxWidth()
+                    .graphicsLayer {
+                        scaleX = cardScale
+                        scaleY = cardScale
+                    }
                     .clip(RoundedCornerShape(16.dp))
-                    .clickable { onClick() }
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                        onClick = onClick
+                    )
                     .border(
                         width = if (item.isNew) 1.5.dp else 1.dp,
-                        color = if (item.isNew) MaterialTheme.colorScheme.primary.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outline,
+                        color = cardBorderColor,
                         shape = RoundedCornerShape(16.dp)
                     )
                     .testTag("giveaway_card_${item.id}"),
@@ -449,6 +582,9 @@ fun GiveawayCard(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            val isDarkBrand = item.launcherCategory == LauncherType.PLAYSTATION || 
+                                              item.launcherCategory == LauncherType.XBOX || 
+                                              item.launcherCategory == LauncherType.EPIC
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Box(
                                     modifier = Modifier
@@ -460,8 +596,56 @@ fun GiveawayCard(
                                         text = item.launcherCategory.displayName,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF0B0F19)
+                                        color = if (isDarkBrand) Color.White else Color(0xFF0B0F19)
                                     )
+                                }
+
+                                if (item.isPlayStation && item.launcherCategory != LauncherType.PLAYSTATION) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Color(0xFF0070D1))
+                                            .padding(horizontal = 7.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = "PlayStation",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                    }
+                                }
+
+                                if (item.isXbox && item.launcherCategory != LauncherType.XBOX) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Color(0xFF107C10))
+                                            .padding(horizontal = 7.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = "Xbox",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                    }
+                                }
+
+                                if (item.hasMultipleLaunchers) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(NeonGreen)
+                                            .padding(horizontal = 7.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = "Multi-Launcher 100% Off",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = Color(0xFF0B0F19)
+                                        )
+                                    }
                                 }
 
                                 Box(
@@ -491,7 +675,12 @@ fun GiveawayCard(
                                     imageVector = if (item.isClaimed) Icons.Default.CheckCircle else Icons.Outlined.CheckCircleOutline,
                                     contentDescription = if (item.isClaimed) "In Library" else "Add to Library",
                                     tint = if (item.isClaimed) NeonGreen else Color.White,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .graphicsLayer {
+                                            scaleX = claimedScale
+                                            scaleY = claimedScale
+                                        }
                                 )
                             }
                         }
@@ -539,6 +728,11 @@ fun GiveawayCard(
                             if (item.isNew) {
                                 Box(
                                     modifier = Modifier
+                                        .graphicsLayer {
+                                            scaleX = pulseScale
+                                            scaleY = pulseScale
+                                            alpha = pulseGlow
+                                        }
                                         .clip(RoundedCornerShape(6.dp))
                                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
                                         .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(6.dp))
@@ -639,9 +833,14 @@ fun GiveawayCard(
                         ) {
                             Button(
                                 onClick = onClaimClick,
+                                interactionSource = claimInteractionSource,
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(44.dp)
+                                    .graphicsLayer {
+                                        scaleX = claimButtonScale
+                                        scaleY = claimButtonScale
+                                    }
                                     .testTag("claim_button_${item.id}"),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.primary,
@@ -654,12 +853,12 @@ fun GiveawayCard(
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.OpenInNew,
+                                        imageVector = if (item.hasMultipleLaunchers) Icons.Default.SportsEsports else Icons.Default.OpenInNew,
                                         contentDescription = null,
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Text(
-                                        text = "Claim",
+                                        text = if (item.hasMultipleLaunchers) "Choose Launcher ▾" else "Claim",
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold
                                     )
