@@ -21,6 +21,9 @@ val UbisoftBlue = Color(0xFF00A2FF)
 val ItchRed = Color(0xFFFA5C5C)
 val PlayStationBlue = Color(0xFF0070D1)
 val XboxGreen = Color(0xFF107C10)
+val NintendoRed = Color(0xFFE60012)
+val DiscordBlurple = Color(0xFF5865F2)
+val DiscordBlurpleLight = Color(0xFF4752C4)
 
 // Dark Mode Typography & Text
 val TextPrimary = Color(0xFFF1F5F9)

@@ -16,6 +16,8 @@ import com.example.preferences.AccentTheme
 import com.example.preferences.AppPreferences
 import com.example.preferences.BackgroundTheme
 import com.example.preferences.CardDensity
+import com.example.preferences.DpiScaleMode
+import com.example.preferences.TargetFrameRate
 import com.example.preferences.ThemeMode
 import com.example.data.model.LauncherOption
 import kotlinx.coroutines.flow.Flow
@@ -154,6 +156,24 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isAnimationsEnabled = MutableStateFlow(preferences.isAnimationsEnabled)
     val isAnimationsEnabled: StateFlow<Boolean> = _isAnimationsEnabled.asStateFlow()
 
+    private val _targetFrameRate = MutableStateFlow(preferences.targetFrameRate)
+    val targetFrameRate: StateFlow<TargetFrameRate> = _targetFrameRate.asStateFlow()
+
+    private val _detectedRefreshRate = MutableStateFlow(90)
+    val detectedRefreshRate: StateFlow<Int> = _detectedRefreshRate.asStateFlow()
+
+    private val _isDpiOptimizationEnabled = MutableStateFlow(preferences.isDpiOptimizationEnabled)
+    val isDpiOptimizationEnabled: StateFlow<Boolean> = _isDpiOptimizationEnabled.asStateFlow()
+
+    private val _dpiScaleMode = MutableStateFlow(preferences.dpiScaleMode)
+    val dpiScaleMode: StateFlow<DpiScaleMode> = _dpiScaleMode.asStateFlow()
+
+    private val _detectedScreenDpi = MutableStateFlow(preferences.detectedScreenDpi)
+    val detectedScreenDpi: StateFlow<Int> = _detectedScreenDpi.asStateFlow()
+
+    private val _isNewTodayDismissed = MutableStateFlow(preferences.isNewTodayDismissed)
+    val isNewTodayDismissed: StateFlow<Boolean> = _isNewTodayDismissed.asStateFlow()
+
     private val _showOnboardingWalkthrough = MutableStateFlow(!preferences.hasSeenOnboarding)
     val showOnboardingWalkthrough: StateFlow<Boolean> = _showOnboardingWalkthrough.asStateFlow()
 
@@ -171,6 +191,9 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _isNotifyXbox = MutableStateFlow(notificationHelper.isNotifyXbox)
     val isNotifyXbox: StateFlow<Boolean> = _isNotifyXbox.asStateFlow()
+
+    private val _isNotifyNintendo = MutableStateFlow(notificationHelper.isNotifyNintendo)
+    val isNotifyNintendo: StateFlow<Boolean> = _isNotifyNintendo.asStateFlow()
 
     private val _isNotifySteam = MutableStateFlow(notificationHelper.isNotifySteam)
     val isNotifySteam: StateFlow<Boolean> = _isNotifySteam.asStateFlow()
@@ -274,6 +297,8 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                 (q.contains("ps5") && it.isPlayStation) ||
                 (q.contains("ps4") && it.isPlayStation) ||
                 (q.contains("xbox") && it.isXbox) ||
+                (q.contains("nintendo") && it.isNintendo) ||
+                (q.contains("switch") && it.isNintendo) ||
                 (q.contains("console") && it.isConsole)
             }
         }
@@ -309,6 +334,8 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                 val syncResult = result.getOrNull()
                 if (syncResult != null && syncResult.newGamesCount > 0) {
                     _reopenStatusMessage.value = "🎯 Found ${syncResult.newGamesCount} new free game${if (syncResult.newGamesCount > 1) "s" else ""}!"
+                    preferences.isNewTodayDismissed = false
+                    _isNewTodayDismissed.value = false
                 } else if (isAutoCheck) {
                     _reopenStatusMessage.value = "⚡ Auto-check complete: Games are up to date"
                 }
@@ -329,6 +356,10 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun clearReopenStatusMessage() {
+        _reopenStatusMessage.value = null
+    }
+
+    fun onAppClosedOrLeft() {
         _reopenStatusMessage.value = null
     }
 
@@ -445,6 +476,30 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         _isAnimationsEnabled.value = enabled
     }
 
+    fun setTargetFrameRate(frameRate: TargetFrameRate) {
+        preferences.targetFrameRate = frameRate
+        _targetFrameRate.value = frameRate
+    }
+
+    fun setDetectedRefreshRate(rate: Int) {
+        _detectedRefreshRate.value = rate
+    }
+
+    fun setDpiOptimizationEnabled(enabled: Boolean) {
+        preferences.isDpiOptimizationEnabled = enabled
+        _isDpiOptimizationEnabled.value = enabled
+    }
+
+    fun setDpiScaleMode(mode: DpiScaleMode) {
+        preferences.dpiScaleMode = mode
+        _dpiScaleMode.value = mode
+    }
+
+    fun setDetectedScreenDpi(dpi: Int) {
+        preferences.detectedScreenDpi = dpi
+        _detectedScreenDpi.value = dpi
+    }
+
     fun completeOnboarding() {
         preferences.hasSeenOnboarding = true
         _showOnboardingWalkthrough.value = false
@@ -457,6 +512,16 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun replayOnboarding() {
         _showOnboardingWalkthrough.value = true
+    }
+
+    fun dismissNewToday() {
+        preferences.isNewTodayDismissed = true
+        _isNewTodayDismissed.value = true
+    }
+
+    fun resetNewTodayDismissed() {
+        preferences.isNewTodayDismissed = false
+        _isNewTodayDismissed.value = false
     }
 
     // Notification Preferences Actions
@@ -473,6 +538,11 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     fun setNotifyXbox(enabled: Boolean) {
         notificationHelper.isNotifyXbox = enabled
         _isNotifyXbox.value = enabled
+    }
+
+    fun setNotifyNintendo(enabled: Boolean) {
+        notificationHelper.isNotifyNintendo = enabled
+        _isNotifyNintendo.value = enabled
     }
 
     fun setNotifySteam(enabled: Boolean) {
@@ -593,9 +663,19 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
             }
         }
         val url = targetUrl ?: item.openGiveawayUrl
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+            clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("Giveaway URL", url))
+            Toast.makeText(
+                context,
+                "No browser found. Link copied to clipboard!",
+                Toast.LENGTH_LONG
+            ).show()
         }
-        context.startActivity(intent)
     }
 }

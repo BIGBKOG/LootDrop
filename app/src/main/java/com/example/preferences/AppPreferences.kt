@@ -23,13 +23,36 @@ enum class CardDensity(val label: String, val description: String) {
     MINIMAL_LIST("Minimal List", "Compact text-first list view")
 }
 
+enum class TargetFrameRate(val label: String, val fps: Int, val description: String) {
+    AUTO("Adaptive (60/90/120)", 0, "Hardware adaptive sync up to 120Hz"),
+    FPS_60("60 FPS", 60, "Standard 60Hz display refresh rate"),
+    FPS_90("90 FPS", 90, "Smooth 90Hz enhanced motion (Pixel & 90Hz screens)"),
+    FPS_120("120 FPS", 120, "Extreme 120Hz maximum fluidity")
+}
+
+enum class DpiScaleMode(val label: String, val shortName: String, val description: String) {
+    AUTO_ADAPTIVE("Auto (DPI-Aware)", "Auto", "Automatically tunes layout, spacing & targets to screen DPI"),
+    COMPACT("Compact (High-Density)", "Compact", "Condensed spacing to display maximum deals on screen"),
+    BALANCED("Balanced Standard", "Balanced", "Standard Material 3 spacing and dimensions"),
+    SPACIOUS("Spacious Comfort", "Spacious", "Larger touch targets and generous padding")
+}
+
+enum class AccentCategory(val label: String) {
+    ALL("All (16)"),
+    GAMING("Gaming (6)"),
+    CYBER("Cyber (5)"),
+    VAULT("Vault (5)")
+}
+
 enum class AccentTheme(
     val title: String,
     val darkPrimary: Color,
     val darkSecondary: Color,
     val lightPrimary: Color,
     val lightSecondary: Color,
-    val description: String
+    val description: String,
+    val shortName: String,
+    val category: AccentCategory
 ) {
     CYBER_CYAN(
         "Cyber Cyan",
@@ -37,7 +60,9 @@ enum class AccentTheme(
         NeonGreen,
         Color(0xFF0284C7),
         Color(0xFF0D9488),
-        "Vibrant high-contrast cyber blue"
+        "Vibrant high-contrast cyber blue",
+        "Cyan",
+        AccentCategory.CYBER
     ),
     STEAM_BLUE(
         "Steam Sky",
@@ -45,7 +70,9 @@ enum class AccentTheme(
         Color(0xFF38BDF8),
         Color(0xFF0369A1),
         Color(0xFF0284C7),
-        "Classic PC gaming blue"
+        "Classic PC gaming blue",
+        "Steam",
+        AccentCategory.GAMING
     ),
     GOG_PURPLE(
         "Ultraviolet",
@@ -53,7 +80,9 @@ enum class AccentTheme(
         Color(0xFFD946EF),
         Color(0xFF7E22CE),
         Color(0xFFA855F7),
-        "Deep electric violet & magenta"
+        "Deep electric violet & magenta",
+        "Ultra Violet",
+        AccentCategory.CYBER
     ),
     RAZER_LIME(
         "Toxic Lime",
@@ -61,7 +90,9 @@ enum class AccentTheme(
         Color(0xFF10B981),
         Color(0xFF15803D),
         Color(0xFF16A34A),
-        "High-energy matrix green"
+        "High-energy matrix green",
+        "Toxic Lime",
+        AccentCategory.CYBER
     ),
     INFERNO_RED(
         "Inferno Red",
@@ -69,7 +100,9 @@ enum class AccentTheme(
         Color(0xFFF97316),
         Color(0xFFB91C1C),
         Color(0xFFDC2626),
-        "Warm battle red & ember"
+        "Warm battle red & ember",
+        "Inferno",
+        AccentCategory.CYBER
     ),
     GOLDEN_LOOT(
         "Loot Gold",
@@ -77,7 +110,9 @@ enum class AccentTheme(
         Color(0xFFF59E0B),
         Color(0xFFB45309),
         Color(0xFFD97706),
-        "Legendary gold drops"
+        "Legendary gold drops",
+        "Loot Gold",
+        AccentCategory.VAULT
     ),
     EPIC_INDIGO(
         "Epic Indigo",
@@ -85,7 +120,9 @@ enum class AccentTheme(
         Color(0xFF8B5CF6),
         Color(0xFF4338CA),
         Color(0xFF6366F1),
-        "Deep launcher indigo"
+        "Deep launcher indigo",
+        "Epic",
+        AccentCategory.GAMING
     ),
     CHERRY_ROSE(
         "Cherry Blossom",
@@ -93,7 +130,9 @@ enum class AccentTheme(
         Color(0xFFF43F5E),
         Color(0xFFBE185D),
         Color(0xFFE11D48),
-        "Vivid neon pink & sakura"
+        "Vivid neon pink & sakura",
+        "Sakura",
+        AccentCategory.CYBER
     ),
     OCEAN_TEAL(
         "Ocean Teal",
@@ -101,7 +140,9 @@ enum class AccentTheme(
         Color(0xFF06B6D4),
         Color(0xFF0F766E),
         Color(0xFF0D9488),
-        "Deep oceanic crystal teal"
+        "Deep oceanic crystal teal",
+        "Teal",
+        AccentCategory.VAULT
     ),
     SUNSET_CORAL(
         "Sunset Coral",
@@ -109,7 +150,9 @@ enum class AccentTheme(
         Color(0xFFF43F5E),
         Color(0xFFC2410C),
         Color(0xFFEA580C),
-        "Warm twilight sunset blaze"
+        "Warm twilight sunset blaze",
+        "Sunset",
+        AccentCategory.VAULT
     ),
     DEEP_ROYALE(
         "Royal Violet",
@@ -117,7 +160,9 @@ enum class AccentTheme(
         Color(0xFFC084FC),
         Color(0xFF6D28D9),
         Color(0xFF7C3AED),
-        "Majestic royal imperial purple"
+        "Majestic royal imperial purple",
+        "Royale",
+        AccentCategory.VAULT
     ),
     EMERALD_MINT(
         "Emerald Vault",
@@ -125,7 +170,9 @@ enum class AccentTheme(
         Color(0xFF34D399),
         Color(0xFF047857),
         Color(0xFF059669),
-        "Lush emerald gemstone green"
+        "Lush emerald gemstone green",
+        "Emerald",
+        AccentCategory.VAULT
     ),
     PLAYSTATION_BLUE(
         "PlayStation Blue",
@@ -133,7 +180,9 @@ enum class AccentTheme(
         Color(0xFF38BDF8),
         Color(0xFF003791),
         Color(0xFF0070D1),
-        "Official PlayStation electric cobalt"
+        "Official PlayStation electric cobalt",
+        "PlayStation",
+        AccentCategory.GAMING
     ),
     XBOX_GREEN(
         "Xbox Green",
@@ -141,7 +190,29 @@ enum class AccentTheme(
         Color(0xFF22C55E),
         Color(0xFF0E5A0E),
         Color(0xFF107C10),
-        "Iconic Xbox emerald neon green"
+        "Iconic Xbox emerald neon green",
+        "Xbox",
+        AccentCategory.GAMING
+    ),
+    NINTENDO_RED(
+        "Nintendo Red",
+        Color(0xFFE60012),
+        Color(0xFFFF4D5A),
+        Color(0xFF99000C),
+        Color(0xFFE60012),
+        "Iconic Nintendo Switch neon crimson",
+        "Nintendo",
+        AccentCategory.GAMING
+    ),
+    DISCORD_BLURPLE(
+        "Discord Blurple",
+        Color(0xFF5865F2),
+        Color(0xFF818CF8),
+        Color(0xFF4752C4),
+        Color(0xFF5865F2),
+        "Iconic gamer community blurple",
+        "Discord",
+        AccentCategory.GAMING
     );
 
     fun primary(isDark: Boolean): Color = if (isDark) darkPrimary else lightPrimary
@@ -240,6 +311,11 @@ class AppPreferences(context: Context) {
         private const val KEY_AUTO_CHECK_ON_REOPEN = "key_auto_check_on_reopen"
         private const val KEY_HAS_SEEN_ONBOARDING = "key_has_seen_onboarding"
         private const val KEY_UI_ANIMATIONS_ENABLED = "key_ui_animations_enabled"
+        private const val KEY_NEW_TODAY_DISMISSED = "key_new_today_dismissed"
+        private const val KEY_TARGET_FRAME_RATE = "key_target_frame_rate"
+        private const val KEY_DPI_OPTIMIZATION_ENABLED = "key_dpi_optimization_enabled"
+        private const val KEY_DPI_SCALE_MODE = "key_dpi_scale_mode"
+        private const val KEY_DETECTED_SCREEN_DPI = "key_detected_screen_dpi"
     }
 
     var themeMode: ThemeMode
@@ -331,4 +407,38 @@ class AppPreferences(context: Context) {
     var isAnimationsEnabled: Boolean
         get() = prefs.getBoolean(KEY_UI_ANIMATIONS_ENABLED, true)
         set(value) = prefs.edit().putBoolean(KEY_UI_ANIMATIONS_ENABLED, value).apply()
+
+    var isNewTodayDismissed: Boolean
+        get() = prefs.getBoolean(KEY_NEW_TODAY_DISMISSED, false)
+        set(value) = prefs.edit().putBoolean(KEY_NEW_TODAY_DISMISSED, value).apply()
+
+    var targetFrameRate: TargetFrameRate
+        get() {
+            val saved = prefs.getString(KEY_TARGET_FRAME_RATE, TargetFrameRate.AUTO.name)
+            return try {
+                TargetFrameRate.valueOf(saved ?: TargetFrameRate.AUTO.name)
+            } catch (_: Exception) {
+                TargetFrameRate.AUTO
+            }
+        }
+        set(value) = prefs.edit().putString(KEY_TARGET_FRAME_RATE, value.name).apply()
+
+    var isDpiOptimizationEnabled: Boolean
+        get() = prefs.getBoolean(KEY_DPI_OPTIMIZATION_ENABLED, true)
+        set(value) = prefs.edit().putBoolean(KEY_DPI_OPTIMIZATION_ENABLED, value).apply()
+
+    var dpiScaleMode: DpiScaleMode
+        get() {
+            val saved = prefs.getString(KEY_DPI_SCALE_MODE, DpiScaleMode.AUTO_ADAPTIVE.name)
+            return try {
+                DpiScaleMode.valueOf(saved ?: DpiScaleMode.AUTO_ADAPTIVE.name)
+            } catch (_: Exception) {
+                DpiScaleMode.AUTO_ADAPTIVE
+            }
+        }
+        set(value) = prefs.edit().putString(KEY_DPI_SCALE_MODE, value.name).apply()
+
+    var detectedScreenDpi: Int
+        get() = prefs.getInt(KEY_DETECTED_SCREEN_DPI, 420)
+        set(value) = prefs.edit().putInt(KEY_DETECTED_SCREEN_DPI, value).apply()
 }

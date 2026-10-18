@@ -13,6 +13,15 @@ import com.example.ui.GiveawaysViewModel
 import com.example.ui.HomeScreen
 import com.example.ui.theme.LootDropTheme
 
+import android.os.Build
+import android.view.Surface
+import androidx.compose.runtime.LaunchedEffect
+import com.example.preferences.TargetFrameRate
+
+import androidx.compose.runtime.CompositionLocalProvider
+import com.example.ui.density.LocalScreenDensityInfo
+import com.example.ui.density.rememberScreenDensityInfo
+
 class MainActivity : ComponentActivity() {
 
     private val viewModel: GiveawaysViewModel by viewModels()
@@ -21,6 +30,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        val dm = resources.displayMetrics
+        viewModel.setDetectedScreenDpi(dm.densityDpi)
+
         handleIntent(intent)
 
         setContent {
@@ -28,21 +40,91 @@ class MainActivity : ComponentActivity() {
             val accentTheme by viewModel.accentTheme.collectAsState()
             val darkBgTheme by viewModel.darkBackgroundTheme.collectAsState()
             val lightBgTheme by viewModel.lightBackgroundTheme.collectAsState()
+            val targetFrameRate by viewModel.targetFrameRate.collectAsState()
+            val isDpiOptimizationEnabled by viewModel.isDpiOptimizationEnabled.collectAsState()
+            val dpiScaleMode by viewModel.dpiScaleMode.collectAsState()
 
-            LootDropTheme(
-                themeMode = themeMode,
-                accentTheme = accentTheme,
-                darkBackgroundTheme = darkBgTheme,
-                lightBackgroundTheme = lightBgTheme
-            ) {
-                HomeScreen(viewModel = viewModel)
+            val screenDensityInfo = rememberScreenDensityInfo(
+                dpiScaleMode = dpiScaleMode,
+                isOptimizationEnabled = isDpiOptimizationEnabled
+            )
+
+            LaunchedEffect(screenDensityInfo.densityDpi) {
+                viewModel.setDetectedScreenDpi(screenDensityInfo.densityDpi)
             }
+
+            LaunchedEffect(targetFrameRate) {
+                applyDisplayRefreshRate(targetFrameRate)
+            }
+
+            CompositionLocalProvider(LocalScreenDensityInfo provides screenDensityInfo) {
+                LootDropTheme(
+                    themeMode = themeMode,
+                    accentTheme = accentTheme,
+                    darkBackgroundTheme = darkBgTheme,
+                    lightBackgroundTheme = lightBgTheme
+                ) {
+                    HomeScreen(viewModel = viewModel)
+                }
+            }
+        }
+    }
+
+    private fun applyDisplayRefreshRate(targetRate: TargetFrameRate) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val currentDisplay = display
+                val detectedHz = currentDisplay?.refreshRate?.toInt() ?: 90
+                viewModel.setDetectedRefreshRate(detectedHz)
+
+                val targetFps = when (targetRate) {
+                    TargetFrameRate.FPS_60 -> 60f
+                    TargetFrameRate.FPS_90 -> 90f
+                    TargetFrameRate.FPS_120 -> 120f
+                    TargetFrameRate.AUTO -> 0f
+                }
+                val params = window.attributes
+                params.preferredRefreshRate = targetFps
+                window.attributes = params
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val currentDisplay = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    display
+                } else {
+                    @Suppress("DEPRECATION")
+                    windowManager.defaultDisplay
+                }
+                val modes = currentDisplay?.supportedModes ?: emptyArray()
+
+                val matchedMode = when (targetRate) {
+                    TargetFrameRate.FPS_60 -> modes.find { it.refreshRate in 59.0f..61.0f }
+                    TargetFrameRate.FPS_90 -> modes.find { it.refreshRate in 89.0f..91.0f }
+                        ?: modes.maxByOrNull { it.refreshRate }
+                    TargetFrameRate.FPS_120 -> modes.find { it.refreshRate in 119.0f..121.0f }
+                        ?: modes.maxByOrNull { it.refreshRate }
+                    TargetFrameRate.AUTO -> modes.maxByOrNull { it.refreshRate }
+                }
+
+                if (matchedMode != null) {
+                    val params = window.attributes
+                    params.preferredDisplayModeId = matchedMode.modeId
+                    window.attributes = params
+                }
+            }
+        } catch (_: Exception) {
+            // Safe fallback if display mode adjustment is not supported by device/emulator
         }
     }
 
     override fun onResume() {
         super.onResume()
         viewModel.checkNewGamesOnAppReopen()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        viewModel.onAppClosedOrLeft()
     }
 
     override fun onNewIntent(intent: Intent) {

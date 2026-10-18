@@ -44,8 +44,14 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import com.example.ui.density.LocalScreenDensityInfo
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -71,6 +77,8 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -78,9 +86,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -113,6 +125,7 @@ fun HomeScreen(
     viewModel: GiveawaysViewModel
 ) {
     val context = LocalContext.current
+    val screenDensityInfo = LocalScreenDensityInfo.current
     val selectedTab by viewModel.selectedTab.collectAsState()
     val selectedLaunchers by viewModel.selectedLaunchers.collectAsState()
     val selectedLauncher by viewModel.selectedLauncher.collectAsState()
@@ -131,6 +144,7 @@ fun HomeScreen(
     val reopenStatusMessage by viewModel.reopenStatusMessage.collectAsState()
     val showOnboardingWalkthrough by viewModel.showOnboardingWalkthrough.collectAsState()
     val isAnimationsEnabled by viewModel.isAnimationsEnabled.collectAsState()
+    val isNewTodayDismissed by viewModel.isNewTodayDismissed.collectAsState()
 
     var isSearchExpanded by remember { mutableStateOf(false) }
     var launcherChooserItem by remember { mutableStateOf<GiveawayItem?>(null) }
@@ -142,8 +156,33 @@ fun HomeScreen(
         }
     }
 
+    val tabs = remember { MainTab.values() }
+    val pagerState = rememberPagerState(
+        initialPage = selectedTab.ordinal,
+        pageCount = { tabs.size }
+    )
+    val coroutineScope = rememberCoroutineScope()
+
+    // Sync pager swipe to ViewModel's selectedTab
+    LaunchedEffect(pagerState.currentPage) {
+        val targetTab = tabs[pagerState.currentPage]
+        if (selectedTab != targetTab) {
+            viewModel.selectTab(targetTab)
+        }
+    }
+
+    // Sync ViewModel's selectedTab to pager scroll
+    LaunchedEffect(selectedTab) {
+        if (pagerState.currentPage != selectedTab.ordinal) {
+            pagerState.animateScrollToPage(selectedTab.ordinal)
+        }
+    }
+
     BackHandler(enabled = selectedTab != MainTab.DISCOVER) {
         viewModel.selectTab(MainTab.DISCOVER)
+        coroutineScope.launch {
+            pagerState.animateScrollToPage(MainTab.DISCOVER.ordinal)
+        }
     }
 
     Scaffold(
@@ -177,7 +216,12 @@ fun HomeScreen(
 
                 NavigationBarItem(
                     selected = selectedTab == MainTab.DISCOVER,
-                    onClick = { viewModel.selectTab(MainTab.DISCOVER) },
+                    onClick = {
+                        viewModel.selectTab(MainTab.DISCOVER)
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(MainTab.DISCOVER.ordinal)
+                        }
+                    },
                     icon = {
                         Icon(
                             imageVector = Icons.Default.Explore,
@@ -201,7 +245,12 @@ fun HomeScreen(
 
                 NavigationBarItem(
                     selected = selectedTab == MainTab.CLAIMED,
-                    onClick = { viewModel.selectTab(MainTab.CLAIMED) },
+                    onClick = {
+                        viewModel.selectTab(MainTab.CLAIMED)
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(MainTab.CLAIMED.ordinal)
+                        }
+                    },
                     icon = {
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
@@ -225,7 +274,12 @@ fun HomeScreen(
 
                 NavigationBarItem(
                     selected = selectedTab == MainTab.SETTINGS,
-                    onClick = { viewModel.selectTab(MainTab.SETTINGS) },
+                    onClick = {
+                        viewModel.selectTab(MainTab.SETTINGS)
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(MainTab.SETTINGS.ordinal)
+                        }
+                    },
                     icon = {
                         Icon(
                             imageVector = Icons.Default.Settings,
@@ -249,45 +303,15 @@ fun HomeScreen(
             }
         }
     ) { innerPadding ->
-        AnimatedContent(
-            targetState = selectedTab,
-            transitionSpec = {
-                if (!isAnimationsEnabled) {
-                    EnterTransition.None togetherWith ExitTransition.None
-                } else {
-                    val isForward = targetState.ordinal > initialState.ordinal
-                    (slideInHorizontally(
-                        initialOffsetX = { if (isForward) (it * 0.28f).toInt() else (-it * 0.28f).toInt() },
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioLowBouncy,
-                            stiffness = Spring.StiffnessMediumLow
-                        )
-                    ) + fadeIn(
-                        animationSpec = tween(220, easing = FastOutSlowInEasing)
-                    ) + scaleIn(
-                        initialScale = 0.95f,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessMediumLow
-                        )
-                    )).togetherWith(
-                        slideOutHorizontally(
-                            targetOffsetX = { if (isForward) (-it * 0.28f).toInt() else (it * 0.28f).toInt() },
-                            animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing)
-                        ) + fadeOut(
-                            animationSpec = tween(160)
-                        ) + scaleOut(
-                            targetScale = 0.96f,
-                            animationSpec = tween(durationMillis = 180)
-                        )
-                    )
-                }
-            },
-            label = "tab_animated_content",
+        HorizontalPager(
+            state = pagerState,
+            beyondViewportPageCount = 1,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-        ) { currentTab ->
+                .testTag("main_horizontal_pager")
+        ) { page ->
+            val currentTab = tabs[page]
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
@@ -332,6 +356,20 @@ fun HomeScreen(
                                     fontWeight = FontWeight.Black,
                                     color = MaterialTheme.colorScheme.primary
                                 )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                                        .padding(horizontal = 5.dp, vertical = 1.5.dp)
+                                ) {
+                                    Text(
+                                        text = "${screenDensityInfo.densityDpi} DPI",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
                             Text(
                                 text = "PC, PS & XBOX FREE RADAR",
@@ -392,18 +430,6 @@ fun HomeScreen(
                                     )
                                 }
                             }
-                        }
-
-                        // Jump to Settings
-                        IconButton(
-                            onClick = { viewModel.selectTab(MainTab.SETTINGS) },
-                            modifier = Modifier.testTag("top_bar_settings_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = "Settings",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
                         }
                     }
                 }
@@ -515,7 +541,10 @@ fun HomeScreen(
                     StatsBanner(
                         stats = uiStats,
                         isRefreshing = isLoading,
-                        onRefresh = { viewModel.refreshGiveaways() }
+                        onRefresh = { viewModel.refreshGiveaways() },
+                        isNewTodayDismissed = isNewTodayDismissed,
+                        onDismissNewToday = { viewModel.dismissNewToday() },
+                        onNewTodayClick = { viewModel.selectSort(SortOption.NEWEST) }
                     )
                 }
 
@@ -585,8 +614,14 @@ fun HomeScreen(
                     }
                 }
 
-                // Main List
-                Box(modifier = Modifier.fillMaxSize()) {
+                // Main List with Pull-to-Refresh
+                PullToRefreshBox(
+                    isRefreshing = isLoading,
+                    onRefresh = { viewModel.refreshGiveaways() },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag("pull_to_refresh_box")
+                ) {
                     if (isLoading && displayedGiveaways.isEmpty()) {
                         Column(
                             modifier = Modifier.fillMaxSize(),
@@ -596,7 +631,7 @@ fun HomeScreen(
                             CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = "Scanning PC, PlayStation & Xbox for Free Loot...",
+                                text = "Scanning PC, PlayStation, Xbox & Nintendo for Free Loot...",
                                 fontSize = 14.sp,
                                 color = TextSecondary
                             )
@@ -668,42 +703,78 @@ fun HomeScreen(
                             )
                         }
                     } else {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .testTag("giveaways_list"),
-                            contentPadding = PaddingValues(
-                                start = 16.dp,
-                                end = 16.dp,
-                                top = 6.dp,
-                                bottom = 24.dp
-                            ),
-                            verticalArrangement = Arrangement.spacedBy(
-                                when (cardDensity) {
-                                    CardDensity.RICH_CARDS -> 16.dp
-                                    CardDensity.COMPACT_CARDS -> 10.dp
-                                    CardDensity.MINIMAL_LIST -> 6.dp
+                        if (screenDensityInfo.gridColumns > 1) {
+                            LazyVerticalGrid(
+                                columns = GridCells.Fixed(screenDensityInfo.gridColumns),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .testTag("giveaways_list"),
+                                contentPadding = PaddingValues(
+                                    start = screenDensityInfo.adaptiveHorizontalPadding,
+                                    end = screenDensityInfo.adaptiveHorizontalPadding,
+                                    top = 6.dp,
+                                    bottom = 24.dp
+                                ),
+                                horizontalArrangement = Arrangement.spacedBy(screenDensityInfo.adaptiveCardSpacing),
+                                verticalArrangement = Arrangement.spacedBy(screenDensityInfo.adaptiveCardSpacing)
+                            ) {
+                                items(displayedGiveaways, key = { it.id }) { item ->
+                                    GiveawayCard(
+                                        item = item,
+                                        cardDensity = cardDensity,
+                                        showOriginalPrice = isShowOriginalPrice,
+                                        showExpiration = isShowExpiration,
+                                        onClick = { viewModel.openDetail(item) },
+                                        onClaimClick = {
+                                            if (item.hasMultipleLaunchers) {
+                                                launcherChooserItem = item
+                                            } else {
+                                                viewModel.claimAndLaunch(context, item)
+                                            }
+                                        },
+                                        onToggleBookmark = { viewModel.toggleBookmark(item) },
+                                        onToggleClaimed = { viewModel.toggleClaimed(item) }
+                                    )
                                 }
-                            )
-                        ) {
-                            items(displayedGiveaways, key = { it.id }) { item ->
-                                GiveawayCard(
-                                    item = item,
-                                    cardDensity = cardDensity,
-                                    showOriginalPrice = isShowOriginalPrice,
-                                    showExpiration = isShowExpiration,
-                                    onClick = { viewModel.openDetail(item) },
-                                    onClaimClick = {
-                                        if (item.hasMultipleLaunchers) {
-                                            launcherChooserItem = item
-                                        } else {
-                                            viewModel.claimAndLaunch(context, item)
-                                        }
-                                    },
-                                    onToggleBookmark = { viewModel.toggleBookmark(item) },
-                                    onToggleClaimed = { viewModel.toggleClaimed(item) },
-                                    modifier = if (isAnimationsEnabled) Modifier.animateItem() else Modifier
+                            }
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .testTag("giveaways_list"),
+                                contentPadding = PaddingValues(
+                                    start = screenDensityInfo.adaptiveHorizontalPadding,
+                                    end = screenDensityInfo.adaptiveHorizontalPadding,
+                                    top = 6.dp,
+                                    bottom = 24.dp
+                                ),
+                                verticalArrangement = Arrangement.spacedBy(
+                                    when (cardDensity) {
+                                        CardDensity.RICH_CARDS -> screenDensityInfo.adaptiveCardSpacing
+                                        CardDensity.COMPACT_CARDS -> (screenDensityInfo.adaptiveCardSpacing.value * 0.75f).dp
+                                        CardDensity.MINIMAL_LIST -> 6.dp
+                                    }
                                 )
+                            ) {
+                                items(displayedGiveaways, key = { it.id }) { item ->
+                                    GiveawayCard(
+                                        item = item,
+                                        cardDensity = cardDensity,
+                                        showOriginalPrice = isShowOriginalPrice,
+                                        showExpiration = isShowExpiration,
+                                        onClick = { viewModel.openDetail(item) },
+                                        onClaimClick = {
+                                            if (item.hasMultipleLaunchers) {
+                                                launcherChooserItem = item
+                                            } else {
+                                                viewModel.claimAndLaunch(context, item)
+                                            }
+                                        },
+                                        onToggleBookmark = { viewModel.toggleBookmark(item) },
+                                        onToggleClaimed = { viewModel.toggleClaimed(item) },
+                                        modifier = if (isAnimationsEnabled) Modifier.animateItem() else Modifier
+                                    )
+                                }
                             }
                         }
                     }

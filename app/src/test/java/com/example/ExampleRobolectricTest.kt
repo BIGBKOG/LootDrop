@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.data.model.GiveawayItem
 import com.example.data.model.LauncherType
 import com.example.notifications.NotificationHelper
+import com.example.preferences.AppPreferences
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -143,5 +144,189 @@ class ExampleRobolectricTest {
     fun `navigation tabs only contain discover claimed and settings without saved tab`() {
         val tabNames = com.example.ui.MainTab.values().map { it.name }
         assertEquals(listOf("DISCOVER", "CLAIMED", "SETTINGS"), tabNames)
+    }
+
+    @Test
+    fun `new today dismissal preference defaults to false and toggles correctly`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val prefs = com.example.preferences.AppPreferences(context)
+        org.junit.Assert.assertFalse(prefs.isNewTodayDismissed)
+        prefs.isNewTodayDismissed = true
+        assertTrue(prefs.isNewTodayDismissed)
+        prefs.isNewTodayDismissed = false
+        org.junit.Assert.assertFalse(prefs.isNewTodayDismissed)
+    }
+
+    @Test
+    fun `settings categories contains appearance alerts and general tabs`() {
+        val categories = com.example.ui.SettingsCategory.values()
+        assertEquals(3, categories.size)
+        val names = categories.map { it.name }
+        assertEquals(listOf("APPEARANCE", "ALERTS", "GENERAL"), names)
+        val labels = categories.map { it.label }
+        assertEquals(listOf("Appearance", "Alerts", "General"), labels)
+    }
+
+    @Test
+    fun `pre-rendering target frame rate supports 60, 90, and 120 FPS`() {
+        val frameRates = com.example.preferences.TargetFrameRate.values()
+        assertEquals(4, frameRates.size)
+        val names = frameRates.map { it.name }
+        assertTrue(names.contains("FPS_60"))
+        assertTrue(names.contains("FPS_90"))
+        assertTrue(names.contains("FPS_120"))
+        assertTrue(names.contains("AUTO"))
+
+        val fps90 = com.example.preferences.TargetFrameRate.FPS_90
+        assertEquals(90, fps90.fps)
+        assertEquals("90 FPS", fps90.label)
+
+        val fps60 = com.example.preferences.TargetFrameRate.FPS_60
+        assertEquals(60, fps60.fps)
+
+        val fps120 = com.example.preferences.TargetFrameRate.FPS_120
+        assertEquals(120, fps120.fps)
+
+        // Test persistence in AppPreferences
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val prefs = com.example.preferences.AppPreferences(context)
+        prefs.targetFrameRate = com.example.preferences.TargetFrameRate.FPS_90
+        assertEquals(com.example.preferences.TargetFrameRate.FPS_90, prefs.targetFrameRate)
+        prefs.targetFrameRate = com.example.preferences.TargetFrameRate.FPS_120
+        assertEquals(com.example.preferences.TargetFrameRate.FPS_120, prefs.targetFrameRate)
+        prefs.targetFrameRate = com.example.preferences.TargetFrameRate.FPS_60
+        assertEquals(com.example.preferences.TargetFrameRate.FPS_60, prefs.targetFrameRate)
+    }
+
+    @Test
+    fun `screen dpi detection and adaptive computation scales correctly`() {
+        // Standard phone test (420 dpi, 411 x 914 dp)
+        val phoneInfo = com.example.ui.density.computeScreenDensityInfo(
+            densityDpi = 420,
+            densityScale = 2.625f,
+            fontScale = 1.0f,
+            widthPx = 1080,
+            heightPx = 2400,
+            widthDp = 411,
+            heightDp = 914
+        )
+        assertEquals("XXHDPI (~400-440)", phoneInfo.densityBucket)
+        assertEquals(com.example.ui.density.ScreenCategory.STANDARD, phoneInfo.screenCategory)
+        assertEquals(1, phoneInfo.gridColumns)
+        assertTrue(phoneInfo.isHighDensity)
+        org.junit.Assert.assertFalse(phoneInfo.isTabletOrFoldable)
+
+        // Tablet test (320 dpi, 800 x 1280 dp)
+        val tabletInfo = com.example.ui.density.computeScreenDensityInfo(
+            densityDpi = 320,
+            densityScale = 2.0f,
+            fontScale = 1.0f,
+            widthPx = 1600,
+            heightPx = 2560,
+            widthDp = 800,
+            heightDp = 1280
+        )
+        assertEquals("XHDPI", tabletInfo.densityBucket)
+        assertEquals(com.example.ui.density.ScreenCategory.FOLDABLE, tabletInfo.screenCategory)
+        assertEquals(2, tabletInfo.gridColumns)
+        assertTrue(tabletInfo.isTabletOrFoldable)
+
+        // Wide desktop/tablet test (widthDp >= 900)
+        val wideInfo = com.example.ui.density.computeScreenDensityInfo(
+            densityDpi = 320,
+            densityScale = 2.0f,
+            fontScale = 1.0f,
+            widthPx = 2000,
+            heightPx = 1200,
+            widthDp = 1000,
+            heightDp = 600
+        )
+        assertEquals(3, wideInfo.gridColumns)
+        assertEquals(com.example.ui.density.ScreenCategory.TABLET, wideInfo.screenCategory)
+    }
+
+    @Test
+    fun `dpi scale modes and preferences persist correctly`() {
+        val modes = com.example.preferences.DpiScaleMode.values()
+        assertEquals(4, modes.size)
+
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val prefs = com.example.preferences.AppPreferences(context)
+        prefs.isDpiOptimizationEnabled = true
+        assertTrue(prefs.isDpiOptimizationEnabled)
+
+        prefs.dpiScaleMode = com.example.preferences.DpiScaleMode.COMPACT
+        assertEquals(com.example.preferences.DpiScaleMode.COMPACT, prefs.dpiScaleMode)
+
+        prefs.dpiScaleMode = com.example.preferences.DpiScaleMode.SPACIOUS
+        assertEquals(com.example.preferences.DpiScaleMode.SPACIOUS, prefs.dpiScaleMode)
+
+        prefs.dpiScaleMode = com.example.preferences.DpiScaleMode.AUTO_ADAPTIVE
+        assertEquals(com.example.preferences.DpiScaleMode.AUTO_ADAPTIVE, prefs.dpiScaleMode)
+
+        prefs.detectedScreenDpi = 480
+        assertEquals(480, prefs.detectedScreenDpi)
+    }
+
+    @Test
+    fun `walkthrough adaptive sizing responds to screen dpi and height`() {
+        // Ultra-compact height screen (height < 600)
+        val shortPhone = com.example.ui.density.computeScreenDensityInfo(
+            densityDpi = 320,
+            densityScale = 2.0f,
+            fontScale = 1.0f,
+            widthPx = 720,
+            heightPx = 1100,
+            widthDp = 360,
+            heightDp = 550
+        )
+        assertTrue(shortPhone.isUltraCompactHeight)
+        assertTrue(shortPhone.isCompactHeight)
+        assertEquals(40, shortPhone.walkthroughButtonHeight.value.toInt())
+        assertEquals(72, shortPhone.walkthroughAnimBoxSize.value.toInt())
+
+        // Standard phone screen (height >= 700)
+        val standardPhone = com.example.ui.density.computeScreenDensityInfo(
+            densityDpi = 420,
+            densityScale = 2.625f,
+            fontScale = 1.0f,
+            widthPx = 1080,
+            heightPx = 2400,
+            widthDp = 411,
+            heightDp = 914
+        )
+        org.junit.Assert.assertFalse(standardPhone.isCompactHeight)
+        org.junit.Assert.assertFalse(standardPhone.isUltraCompactHeight)
+        assertEquals(48, standardPhone.walkthroughButtonHeight.value.toInt())
+        assertEquals(135, standardPhone.walkthroughAnimBoxSize.value.toInt())
+    }
+
+    @Test
+    fun `default launcher supports Nintendo and persists across restarts`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val prefs = AppPreferences(context)
+        prefs.defaultLauncher = LauncherType.NINTENDO
+        assertEquals(LauncherType.NINTENDO, prefs.defaultLauncher)
+
+        val nintendoItem = GiveawayItem(
+            id = 555,
+            title = "Super Kirby Clash Gem Apples",
+            worth = "$10.00",
+            numericWorth = 10.0,
+            thumbnail = "https://example.com/thumb.jpg",
+            image = "https://example.com/img.jpg",
+            description = "Free gem apples on Nintendo Switch eShop",
+            instructions = "Redeem on Switch",
+            openGiveawayUrl = "https://nintendo.com/item",
+            publishedDate = "2026-10-18",
+            type = "DLC",
+            platforms = "Nintendo Switch",
+            endDate = "2026-12-31",
+            users = 400,
+            status = "Active"
+        )
+        assertTrue(nintendoItem.isNintendo)
+        assertTrue(nintendoItem.matchesLauncher(LauncherType.NINTENDO))
+        assertEquals(LauncherType.NINTENDO, nintendoItem.launcherCategory)
     }
 }

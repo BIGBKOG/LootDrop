@@ -60,10 +60,13 @@ import com.example.ui.theme.GamingDarkSurfaceVariant
 import com.example.ui.theme.GogPurple
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGreen
+import com.example.ui.theme.NintendoRed
+import com.example.ui.theme.PlayStationBlue
 import com.example.ui.theme.SteamBlue
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
+import com.example.ui.theme.XboxGreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,6 +78,9 @@ fun NotificationSettingsSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var isNotificationsEnabled by remember { mutableStateOf(notificationHelper.isNotificationsEnabled) }
+    var isNotifyPlayStation by remember { mutableStateOf(notificationHelper.isNotifyPlayStation) }
+    var isNotifyXbox by remember { mutableStateOf(notificationHelper.isNotifyXbox) }
+    var isNotifyNintendo by remember { mutableStateOf(notificationHelper.isNotifyNintendo) }
     var isNotifySteam by remember { mutableStateOf(notificationHelper.isNotifySteam) }
     var isNotifyEpic by remember { mutableStateOf(notificationHelper.isNotifyEpic) }
     var isNotifyGog by remember { mutableStateOf(notificationHelper.isNotifyGog) }
@@ -228,6 +234,48 @@ fun NotificationSettingsSheet(
                     .padding(horizontal = 14.dp, vertical = 6.dp)
             ) {
                 Column {
+                    NotificationSettingRow(
+                        title = "PlayStation Store (PS5 / PS4)",
+                        subtitle = "PS Store giveaways & 100% discount promotions",
+                        color = PlayStationBlue,
+                        checked = isNotifyPlayStation,
+                        enabled = isNotificationsEnabled,
+                        onCheckedChange = {
+                            isNotifyPlayStation = it
+                            notificationHelper.isNotifyPlayStation = it
+                        }
+                    )
+
+                    Divider(color = GamingCardBorder, thickness = 0.5.dp)
+
+                    NotificationSettingRow(
+                        title = "Xbox & Microsoft Store",
+                        subtitle = "Xbox Series X|S, Xbox One & Windows Store",
+                        color = XboxGreen,
+                        checked = isNotifyXbox,
+                        enabled = isNotificationsEnabled,
+                        onCheckedChange = {
+                            isNotifyXbox = it
+                            notificationHelper.isNotifyXbox = it
+                        }
+                    )
+
+                    Divider(color = GamingCardBorder, thickness = 0.5.dp)
+
+                    NotificationSettingRow(
+                        title = "Nintendo Switch eShop",
+                        subtitle = "Nintendo Switch 100% off deals & freebies",
+                        color = NintendoRed,
+                        checked = isNotifyNintendo,
+                        enabled = isNotificationsEnabled,
+                        onCheckedChange = {
+                            isNotifyNintendo = it
+                            notificationHelper.isNotifyNintendo = it
+                        }
+                    )
+
+                    Divider(color = GamingCardBorder, thickness = 0.5.dp)
+
                     NotificationSettingRow(
                         title = "Steam Freebies",
                         subtitle = "Steam store giveaways & 100% discount keys",

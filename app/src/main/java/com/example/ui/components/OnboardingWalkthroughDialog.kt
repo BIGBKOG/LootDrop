@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -35,7 +36,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import com.example.ui.density.LocalScreenDensityInfo
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -55,6 +58,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -87,10 +91,13 @@ import com.example.ui.theme.EpicGamesBlue
 import com.example.ui.theme.GogPurple
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGreen
+import com.example.ui.theme.NintendoRed
+import com.example.ui.theme.PlayStationBlue
 import com.example.ui.theme.SteamBlue
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
+import com.example.ui.theme.XboxGreen
 import kotlinx.coroutines.delay
 import kotlin.math.cos
 import kotlin.math.sin
@@ -115,10 +122,10 @@ fun OnboardingWalkthroughDialog(
             OnboardingStep(
                 title = "PC & Console Free Radar",
                 subtitle = "NEVER MISS A $60 DROP GONE FREE",
-                description = "LootDrop continuously tracks PlayStation (PS5/PS4), Xbox (Series X|S/One), Steam, Epic Games, GOG, and top stores 24/7. When a premium game drops to 100% discount, it appears on your radar immediately.",
+                description = "LootDrop continuously tracks PlayStation (PS5/PS4), Xbox (Series X|S/One), Nintendo Switch, Steam, Epic Games, GOG, and top stores 24/7. When a premium game drops to 100% discount, it appears on your radar immediately.",
                 badge = "REAL-TIME RADAR",
                 icon = Icons.Default.Radar,
-                tags = listOf("PlayStation", "Xbox", "Steam", "Epic Games", "GOG.com", "Prime")
+                tags = listOf("PlayStation", "Xbox", "Nintendo", "Steam", "Epic Games", "GOG.com")
             ),
             OnboardingStep(
                 title = "Direct 1-Tap Claim",
@@ -138,17 +145,24 @@ fun OnboardingWalkthroughDialog(
             ),
             OnboardingStep(
                 title = "Custom Alerts & UI",
-                subtitle = "12 CYBER THEMES • DROP ALERTS",
-                description = "Get notified the instant flash giveaways drop so you never miss a 24-hour giveaway. Tailor LootDrop with 12 cyber themes, OLED midnight mode, and rich or compact card views.",
+                subtitle = "16 CYBER & BRAND THEMES • DROP ALERTS",
+                description = "Get notified the instant flash giveaways drop so you never miss a 24-hour giveaway. Tailor LootDrop with 16 vibrant themes, OLED midnight mode, and rich or compact card views.",
                 badge = "GAMER CUSTOMIZATION",
                 icon = Icons.Default.Palette,
-                tags = listOf("Instant Notifications", "12 Accent Themes", "OLED Dark Mode", "Custom Density")
+                tags = listOf("Instant Notifications", "16 Accent Themes", "OLED Dark Mode", "Custom Density")
             )
         )
     }
 
     var currentStepIndex by remember { mutableIntStateOf(0) }
     val totalSteps = steps.size
+    val screenDensityInfo = LocalScreenDensityInfo.current
+    val isCompactHeight = screenDensityInfo.isCompactHeight
+    val isUltraCompactHeight = screenDensityInfo.isUltraCompactHeight
+    val isSmallPhone = screenDensityInfo.isNarrowScreen || screenDensityInfo.widthDp < 380
+
+    val animBoxSize = screenDensityInfo.walkthroughAnimBoxSize
+    val buttonHeight = screenDensityInfo.walkthroughButtonHeight
 
     BackHandler {
         if (currentStepIndex > 0) {
@@ -182,317 +196,388 @@ fun OnboardingWalkthroughDialog(
                                 MaterialTheme.colorScheme.background
                             )
                         )
-                    )
+                    ),
+                contentAlignment = Alignment.Center
             ) {
-                Column(
+                Scaffold(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .statusBarsPadding()
-                        .navigationBarsPadding()
-                        .padding(horizontal = 20.dp, vertical = 12.dp)
-                ) {
-                    // Top App Header & Skip Button
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.AutoAwesome,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                            Text(
-                                text = "LootDrop Feature Tour",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-
-                        TextButton(
-                            onClick = onFinish,
-                            modifier = Modifier.testTag("onboarding_skip_button")
-                        ) {
-                            Text(
-                                text = "Skip",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // Step Indicator Progress Pills
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        for (i in 0 until totalSteps) {
-                            val isActive = i == currentStepIndex
-                            val isCompleted = i < currentStepIndex
-                            val pillWidth by animateDpAsState(
-                                targetValue = if (isActive) 28.dp else 8.dp,
-                                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-                                label = "pillWidth"
-                            )
-
-                            Box(
-                                modifier = Modifier
-                                    .padding(horizontal = 4.dp)
-                                    .height(8.dp)
-                                    .width(pillWidth)
-                                    .clip(CircleShape)
-                                    .background(
-                                        when {
-                                            isActive -> MaterialTheme.colorScheme.primary
-                                            isCompleted -> NeonGreen
-                                            else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
-                                        }
-                                    )
-                                    .clickable { currentStepIndex = i }
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Animated Step Content
-                    AnimatedContent(
-                        targetState = currentStepIndex,
-                        transitionSpec = {
-                            if (targetState > initialState) {
-                                (slideInHorizontally(
-                                    initialOffsetX = { it },
-                                    animationSpec = tween(350, easing = FastOutSlowInEasing)
-                                ) + fadeIn(tween(350))).togetherWith(
-                                    slideOutHorizontally(
-                                        targetOffsetX = { -it },
-                                        animationSpec = tween(350, easing = FastOutSlowInEasing)
-                                    ) + fadeOut(tween(350))
-                                )
-                            } else {
-                                (slideInHorizontally(
-                                    initialOffsetX = { -it },
-                                    animationSpec = tween(350, easing = FastOutSlowInEasing)
-                                ) + fadeIn(tween(350))).togetherWith(
-                                    slideOutHorizontally(
-                                        targetOffsetX = { it },
-                                        animationSpec = tween(350, easing = FastOutSlowInEasing)
-                                    ) + fadeOut(tween(350))
-                                )
-                            }
-                        },
-                        modifier = Modifier.weight(1f),
-                        label = "onboarding_step_content"
-                    ) { stepIdx ->
-                        val step = steps[stepIdx]
+                        .fillMaxHeight()
+                        .widthIn(max = screenDensityInfo.maxDialogWidth)
+                        .fillMaxWidth(),
+                    containerColor = Color.Transparent,
+                    contentColor = MaterialTheme.colorScheme.onBackground,
+                    topBar = {
                         Column(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .verticalScroll(rememberScrollState()),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
+                                .fillMaxWidth()
+                                .statusBarsPadding()
+                                .padding(top = 4.dp)
                         ) {
-                            // High-Craft Custom Animation Canvas per Step
-                            Box(
+                            // Top App Header & Skip Button
+                            Row(
                                 modifier = Modifier
-                                    .size(220.dp)
-                                    .clip(RoundedCornerShape(24.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
-                                    .border(
-                                        1.5.dp,
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                                        RoundedCornerShape(24.dp)
+                                    .fillMaxWidth()
+                                    .padding(
+                                        horizontal = if (isSmallPhone) 12.dp else 18.dp,
+                                        vertical = if (isCompactHeight) 4.dp else 8.dp
                                     ),
-                                contentAlignment = Alignment.Center
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                when (stepIdx) {
-                                    0 -> RadarScanAnimation()
-                                    1 -> DirectClaimAnimation()
-                                    2 -> SavingsTrackerAnimation()
-                                    3 -> AlertsAndThemesAnimation()
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(24.dp))
-
-                            // Badge
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
-                                    .border(
-                                        1.dp,
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                                        RoundedCornerShape(6.dp)
-                                    )
-                                    .padding(horizontal = 10.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = step.badge,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    letterSpacing = 1.2.sp
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            // Main Title
-                            Text(
-                                text = step.title,
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Black,
-                                color = TextPrimary,
-                                textAlign = TextAlign.Center
-                            )
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            // Subtitle
-                            Text(
-                                text = step.subtitle,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = NeonGreen,
-                                letterSpacing = 1.sp,
-                                textAlign = TextAlign.Center
-                            )
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            // Description
-                            Text(
-                                text = step.description,
-                                fontSize = 14.sp,
-                                color = TextSecondary,
-                                textAlign = TextAlign.Center,
-                                lineHeight = 20.sp,
-                                modifier = Modifier.padding(horizontal = 12.dp)
-                            )
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            // Highlight Chips
-                            FlowRow(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                step.tags.forEach { tag ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
                                     Box(
                                         modifier = Modifier
-                                            .padding(horizontal = 4.dp)
+                                            .size(if (isCompactHeight) 28.dp else 32.dp)
                                             .clip(RoundedCornerShape(8.dp))
-                                            .background(MaterialTheme.colorScheme.surface)
-                                            .border(
-                                                1.dp,
-                                                MaterialTheme.colorScheme.outline.copy(alpha = 0.7f),
-                                                RoundedCornerShape(8.dp)
-                                            )
-                                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.AutoAwesome,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(if (isCompactHeight) 16.dp else 18.dp)
+                                        )
+                                    }
+                                    Text(
+                                        text = "LootDrop Feature Tour",
+                                        fontSize = if (isCompactHeight) 13.sp else 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                                            .padding(horizontal = 4.dp, vertical = 1.5.dp)
                                     ) {
                                         Text(
-                                            text = tag,
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface
+                                            text = "${screenDensityInfo.densityDpi} DPI",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
                                         )
                                     }
                                 }
+
+                                TextButton(
+                                    onClick = onFinish,
+                                    modifier = Modifier.testTag("onboarding_skip_button")
+                                ) {
+                                    Text(
+                                        text = "Skip",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(if (isCompactHeight) 4.dp else 8.dp))
+
+                            // Step Indicator Progress Pills
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = if (isCompactHeight) 4.dp else 6.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                for (i in 0 until totalSteps) {
+                                    val isActive = i == currentStepIndex
+                                    val isCompleted = i < currentStepIndex
+                                    val pillWidth by animateDpAsState(
+                                        targetValue = if (isActive) (if (isSmallPhone) 20.dp else 28.dp) else 8.dp,
+                                        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                                        label = "pillWidth"
+                                    )
+
+                                    Box(
+                                        modifier = Modifier
+                                            .padding(horizontal = 4.dp)
+                                            .height(if (isCompactHeight) 6.dp else 8.dp)
+                                            .width(pillWidth)
+                                            .clip(CircleShape)
+                                            .background(
+                                                when {
+                                                    isActive -> MaterialTheme.colorScheme.primary
+                                                    isCompleted -> NeonGreen
+                                                    else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
+                                                }
+                                            )
+                                            .clickable { currentStepIndex = i }
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(if (isCompactHeight) 4.dp else 8.dp))
+                        }
+                    },
+                    bottomBar = {
+                        // Bottom Navigation Action Buttons - Fixed & Docked permanently above navigation bars
+                        Surface(
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+                            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .navigationBarsPadding()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(
+                                        horizontal = if (isSmallPhone) 12.dp else 18.dp,
+                                        vertical = if (isUltraCompactHeight) 6.dp else if (isCompactHeight) 8.dp else 12.dp
+                                    ),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                if (currentStepIndex > 0) {
+                                    OutlinedButton(
+                                        onClick = { currentStepIndex-- },
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(buttonHeight)
+                                            .testTag("onboarding_back_button"),
+                                        shape = RoundedCornerShape(12.dp),
+                                        border = androidx.compose.foundation.BorderStroke(
+                                            1.dp,
+                                            MaterialTheme.colorScheme.outline
+                                        )
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                            contentDescription = "Back",
+                                            tint = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "Back",
+                                            fontSize = if (isSmallPhone) 12.sp else 14.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                }
+
+                                Button(
+                                    onClick = {
+                                        if (currentStepIndex < totalSteps - 1) {
+                                            currentStepIndex++
+                                        } else {
+                                            onFinish()
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .weight(if (currentStepIndex > 0) 1.5f else 1f)
+                                        .height(buttonHeight)
+                                        .testTag("onboarding_next_button"),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (currentStepIndex == totalSteps - 1) NeonGreen else MaterialTheme.colorScheme.primary
+                                    )
+                                ) {
+                                    Text(
+                                        text = if (currentStepIndex == totalSteps - 1) "Explore Free Loot" else "Next Step",
+                                        fontSize = if (isSmallPhone) 13.sp else 15.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF0B0F19)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Icon(
+                                        imageVector = if (currentStepIndex == totalSteps - 1) Icons.Default.CheckCircle else Icons.AutoMirrored.Filled.ArrowForward,
+                                        contentDescription = null,
+                                        tint = Color(0xFF0B0F19),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
                             }
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Bottom Navigation Buttons
-                    Row(
+                ) { innerPadding ->
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                            .fillMaxSize()
+                            .padding(innerPadding)
                     ) {
-                        if (currentStepIndex > 0) {
-                            OutlinedButton(
-                                onClick = { currentStepIndex-- },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(50.dp)
-                                    .testTag("onboarding_back_button"),
-                                shape = RoundedCornerShape(12.dp),
-                                border = androidx.compose.foundation.BorderStroke(
-                                    1.dp,
-                                    MaterialTheme.colorScheme.outline
-                                )
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Back",
-                                    tint = MaterialTheme.colorScheme.onSurface
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "Back",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                        }
-
-                        Button(
-                            onClick = {
-                                if (currentStepIndex < totalSteps - 1) {
-                                    currentStepIndex++
+                        AnimatedContent(
+                            targetState = currentStepIndex,
+                            transitionSpec = {
+                                if (targetState > initialState) {
+                                    (slideInHorizontally(
+                                        initialOffsetX = { it },
+                                        animationSpec = tween(350, easing = FastOutSlowInEasing)
+                                    ) + fadeIn(tween(350))).togetherWith(
+                                        slideOutHorizontally(
+                                            targetOffsetX = { -it },
+                                            animationSpec = tween(350, easing = FastOutSlowInEasing)
+                                        ) + fadeOut(tween(350))
+                                    )
                                 } else {
-                                    onFinish()
+                                    (slideInHorizontally(
+                                        initialOffsetX = { -it },
+                                        animationSpec = tween(350, easing = FastOutSlowInEasing)
+                                    ) + fadeIn(tween(350))).togetherWith(
+                                        slideOutHorizontally(
+                                            targetOffsetX = { it },
+                                            animationSpec = tween(350, easing = FastOutSlowInEasing)
+                                        ) + fadeOut(tween(350))
+                                    )
                                 }
                             },
-                            modifier = Modifier
-                                .weight(if (currentStepIndex > 0) 1.5f else 1f)
-                                .height(50.dp)
-                                .testTag("onboarding_next_button"),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (currentStepIndex == totalSteps - 1) NeonGreen else MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Text(
-                                text = if (currentStepIndex == totalSteps - 1) "Explore Free Loot" else "Next Step",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF0B0F19)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Icon(
-                                imageVector = if (currentStepIndex == totalSteps - 1) Icons.Default.CheckCircle else Icons.AutoMirrored.Filled.ArrowForward,
-                                contentDescription = null,
-                                tint = Color(0xFF0B0F19),
-                                modifier = Modifier.size(18.dp)
-                            )
+                            modifier = Modifier.fillMaxSize(),
+                            label = "onboarding_step_content"
+                        ) { stepIdx ->
+                            val step = steps[stepIdx]
+                            val animScale = (animBoxSize.value / 135f).coerceIn(0.6f, 1.15f)
+
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = if (isSmallPhone) 14.dp else 20.dp)
+                                    .verticalScroll(rememberScrollState()),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Top
+                            ) {
+                                Spacer(modifier = Modifier.height(if (isUltraCompactHeight) 2.dp else 6.dp))
+
+                                // Custom Animation Canvas per Step (DPI adaptive size and scale)
+                                Box(
+                                    modifier = Modifier
+                                        .size(animBoxSize)
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                                        .border(
+                                            1.5.dp,
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                            RoundedCornerShape(16.dp)
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .graphicsLayer {
+                                                scaleX = animScale
+                                                scaleY = animScale
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        when (stepIdx) {
+                                            0 -> RadarScanAnimation()
+                                            1 -> DirectClaimAnimation()
+                                            2 -> SavingsTrackerAnimation()
+                                            3 -> AlertsAndThemesAnimation()
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(if (isUltraCompactHeight) 6.dp else if (isCompactHeight) 8.dp else 12.dp))
+
+                                // Badge
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
+                                        .border(
+                                            1.dp,
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                            RoundedCornerShape(6.dp)
+                                        )
+                                        .padding(
+                                            horizontal = if (isUltraCompactHeight) 8.dp else 10.dp,
+                                            vertical = if (isUltraCompactHeight) 2.dp else 4.dp
+                                        )
+                                ) {
+                                    Text(
+                                        text = step.badge,
+                                        fontSize = if (isUltraCompactHeight) 9.5.sp else 11.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        letterSpacing = 1.2.sp
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(if (isUltraCompactHeight) 4.dp else 8.dp))
+
+                                // Main Title
+                                Text(
+                                    text = step.title,
+                                    fontSize = if (isUltraCompactHeight) 17.sp else if (isCompactHeight) 19.sp else 22.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = TextPrimary,
+                                    textAlign = TextAlign.Center
+                                )
+
+                                Spacer(modifier = Modifier.height(if (isUltraCompactHeight) 2.dp else 4.dp))
+
+                                // Subtitle
+                                Text(
+                                    text = step.subtitle,
+                                    fontSize = if (isUltraCompactHeight) 9.5.sp else if (isCompactHeight) 10.5.sp else 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = NeonGreen,
+                                    letterSpacing = 1.sp,
+                                    textAlign = TextAlign.Center
+                                )
+
+                                Spacer(modifier = Modifier.height(if (isUltraCompactHeight) 4.dp else 8.dp))
+
+                                // Description
+                                Text(
+                                    text = step.description,
+                                    fontSize = if (isUltraCompactHeight) 11.5.sp else if (isCompactHeight) 12.5.sp else 13.5.sp,
+                                    color = TextSecondary,
+                                    textAlign = TextAlign.Center,
+                                    lineHeight = if (isUltraCompactHeight) 15.sp else if (isCompactHeight) 16.5.sp else 18.sp,
+                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                )
+
+                                Spacer(modifier = Modifier.height(if (isUltraCompactHeight) 6.dp else 10.dp))
+
+                                // Highlight Chips
+                                FlowRow(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalArrangement = Arrangement.spacedBy(if (isUltraCompactHeight) 4.dp else 6.dp)
+                                ) {
+                                    step.tags.forEach { tag ->
+                                        Box(
+                                            modifier = Modifier
+                                                .padding(horizontal = 3.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(MaterialTheme.colorScheme.surface)
+                                                .border(
+                                                    1.dp,
+                                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.7f),
+                                                    RoundedCornerShape(8.dp)
+                                                )
+                                                .padding(
+                                                    horizontal = if (isUltraCompactHeight) 7.dp else 9.dp,
+                                                    vertical = if (isUltraCompactHeight) 3.dp else 5.dp
+                                                )
+                                        ) {
+                                            Text(
+                                                text = tag,
+                                                fontSize = if (isUltraCompactHeight) 10.5.sp else 12.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(if (isUltraCompactHeight) 6.dp else 12.dp))
+                            }
                         }
                     }
                 }
@@ -542,7 +627,9 @@ fun RadarScanAnimation() {
     val neonGreen = NeonGreen
 
     Box(
-        modifier = Modifier.size(200.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(4.dp),
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -599,14 +686,18 @@ fun RadarScanAnimation() {
                 cap = StrokeCap.Round
             )
 
-            // Target Loot nodes (Steam blip, Epic blip, GOG blip)
-            val blip1 = Offset(center.x + maxRadius * 0.5f, center.y - maxRadius * 0.4f)
-            val blip2 = Offset(center.x - maxRadius * 0.6f, center.y + maxRadius * 0.3f)
-            val blip3 = Offset(center.x + maxRadius * 0.2f, center.y + maxRadius * 0.6f)
+            // Target Loot nodes (PlayStation, Xbox, Nintendo, Steam, Epic blips)
+            val blipPs = Offset(center.x - maxRadius * 0.45f, center.y - maxRadius * 0.4f)
+            val blipXbox = Offset(center.x + maxRadius * 0.55f, center.y - maxRadius * 0.35f)
+            val blipNintendo = Offset(center.x, center.y + maxRadius * 0.55f)
+            val blipSteam = Offset(center.x - maxRadius * 0.55f, center.y + maxRadius * 0.35f)
+            val blipEpic = Offset(center.x + maxRadius * 0.45f, center.y + maxRadius * 0.4f)
 
-            drawCircle(color = SteamBlue, radius = 5.dp.toPx(), center = blip1)
-            drawCircle(color = EpicGamesBlue, radius = 6.dp.toPx(), center = blip2)
-            drawCircle(color = GogPurple, radius = 5.dp.toPx(), center = blip3)
+            drawCircle(color = PlayStationBlue, radius = 5.dp.toPx(), center = blipPs)
+            drawCircle(color = XboxGreen, radius = 5.dp.toPx(), center = blipXbox)
+            drawCircle(color = NintendoRed, radius = 6.dp.toPx(), center = blipNintendo)
+            drawCircle(color = SteamBlue, radius = 5.dp.toPx(), center = blipSteam)
+            drawCircle(color = EpicGamesBlue, radius = 5.dp.toPx(), center = blipEpic)
         }
 
         // Center hub radar dot
@@ -907,9 +998,9 @@ fun AlertsAndThemesAnimation() {
             val themeColors = listOf(
                 NeonCyan,
                 NeonGreen,
+                NintendoRed,
                 SteamBlue,
                 GogPurple,
-                Color(0xFFEF4444),
                 Color(0xFFFBBF24)
             )
             themeColors.forEach { color ->

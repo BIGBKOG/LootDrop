@@ -70,6 +70,7 @@ import coil.request.ImageRequest
 import com.example.data.model.GiveawayItem
 import com.example.data.model.LauncherType
 import com.example.preferences.CardDensity
+import com.example.ui.density.LocalScreenDensityInfo
 import com.example.ui.theme.NeonGreen
 
 @Composable
@@ -85,6 +86,7 @@ fun GiveawayCard(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val screenDensityInfo = LocalScreenDensityInfo.current
     val launcherColor = Color(item.launcherCategory.badgeColorHex)
 
     val interactionSource = remember { MutableInteractionSource() }
@@ -354,7 +356,7 @@ fun GiveawayCard(
                     // Left thumbnail
                     Box(
                         modifier = Modifier
-                            .width(125.dp)
+                            .width(if (screenDensityInfo.isNarrowScreen) 110.dp else 125.dp)
                             .fillMaxHeight()
                     ) {
                         AsyncImage(
@@ -422,7 +424,6 @@ fun GiveawayCard(
                         Column {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.Top
                             ) {
                                 Text(
@@ -432,27 +433,8 @@ fun GiveawayCard(
                                     color = MaterialTheme.colorScheme.onSurface,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.fillMaxWidth()
                                 )
-
-                                IconButton(
-                                    onClick = onToggleClaimed,
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .testTag("library_toggle_compact_${item.id}")
-                                ) {
-                                    Icon(
-                                        imageVector = if (item.isClaimed) Icons.Default.CheckCircle else Icons.Outlined.CheckCircleOutline,
-                                        contentDescription = if (item.isClaimed) "In Library" else "Add to Library",
-                                        tint = if (item.isClaimed) NeonGreen else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier
-                                            .size(16.dp)
-                                            .graphicsLayer {
-                                                scaleX = claimedScale
-                                                scaleY = claimedScale
-                                            }
-                                    )
-                                }
                             }
 
                             Text(
@@ -548,7 +530,7 @@ fun GiveawayCard(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(180.dp)
+                            .height(screenDensityInfo.cardCoverHeight)
                     ) {
                         AsyncImage(
                             model = ImageRequest.Builder(context)
@@ -574,12 +556,12 @@ fun GiveawayCard(
                                 )
                         )
 
-                        // Top row badges: Launcher & Type & Bookmark
+                        // Top row badges: Launcher & Type
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            horizontalArrangement = Arrangement.Start,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             val isDarkBrand = item.launcherCategory == LauncherType.PLAYSTATION || 
@@ -661,27 +643,6 @@ fun GiveawayCard(
                                         color = Color.White
                                     )
                                 }
-                            }
-
-                            IconButton(
-                                onClick = onToggleClaimed,
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xCC131926))
-                                    .testTag("library_toggle_button_${item.id}")
-                            ) {
-                                Icon(
-                                    imageVector = if (item.isClaimed) Icons.Default.CheckCircle else Icons.Outlined.CheckCircleOutline,
-                                    contentDescription = if (item.isClaimed) "In Library" else "Add to Library",
-                                    tint = if (item.isClaimed) NeonGreen else Color.White,
-                                    modifier = Modifier
-                                        .size(20.dp)
-                                        .graphicsLayer {
-                                            scaleX = claimedScale
-                                            scaleY = claimedScale
-                                        }
-                                )
                             }
                         }
 

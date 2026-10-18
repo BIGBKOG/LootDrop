@@ -2,6 +2,9 @@ package com.example.ui.components
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
@@ -10,6 +13,7 @@ import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -50,6 +54,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -213,6 +219,14 @@ fun FilterSortBottomSheet(
             ) {
                 SortOption.values().forEach { sort ->
                     val isSelected = sort == selectedSort
+                    val chipScale by animateFloatAsState(
+                        targetValue = if (isSelected) 1.04f else 1f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        ),
+                        label = "sort_chip_scale_${sort.name}"
+                    )
                     FilterChip(
                         selected = isSelected,
                         onClick = { onSortSelected(sort) },
@@ -246,7 +260,12 @@ fun FilterSortBottomSheet(
                             selectedBorderColor = MaterialTheme.colorScheme.primary
                         ),
                         shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.testTag("sort_chip_${sort.name.lowercase()}")
+                        modifier = Modifier
+                            .graphicsLayer {
+                                scaleX = chipScale
+                                scaleY = chipScale
+                            }
+                            .testTag("sort_chip_${sort.name.lowercase()}")
                     )
                 }
             }
@@ -281,6 +300,14 @@ fun FilterSortBottomSheet(
                     }
                     val count = platformCounts[launcher] ?: 0
                     val brandColor = Color(launcher.badgeColorHex)
+                    val chipScale by animateFloatAsState(
+                        targetValue = if (isSelected) 1.04f else 1f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        ),
+                        label = "platform_chip_scale_${launcher.name}"
+                    )
 
                     FilterChip(
                         selected = isSelected,
@@ -335,7 +362,12 @@ fun FilterSortBottomSheet(
                             selectedBorderColor = MaterialTheme.colorScheme.primary
                         ),
                         shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.testTag("launcher_chip_${launcher.name.lowercase()}")
+                        modifier = Modifier
+                            .graphicsLayer {
+                                scaleX = chipScale
+                                scaleY = chipScale
+                            }
+                            .testTag("launcher_chip_${launcher.name.lowercase()}")
                     )
                 }
             }
@@ -356,6 +388,14 @@ fun FilterSortBottomSheet(
             ) {
                 TypeFilter.values().forEach { type ->
                     val isSelected = type == selectedTypeFilter
+                    val chipScale by animateFloatAsState(
+                        targetValue = if (isSelected) 1.04f else 1f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        ),
+                        label = "type_chip_scale_${type.name}"
+                    )
                     FilterChip(
                         selected = isSelected,
                         onClick = { onTypeFilterSelected(type) },
@@ -389,7 +429,12 @@ fun FilterSortBottomSheet(
                             selectedBorderColor = MaterialTheme.colorScheme.primary
                         ),
                         shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.testTag("type_chip_${type.name.lowercase()}")
+                        modifier = Modifier
+                            .graphicsLayer {
+                                scaleX = chipScale
+                                scaleY = chipScale
+                            }
+                            .testTag("type_chip_${type.name.lowercase()}")
                     )
                 }
             }

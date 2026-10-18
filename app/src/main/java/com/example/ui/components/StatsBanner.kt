@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -10,8 +11,13 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,9 +27,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,6 +39,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,6 +49,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -55,7 +67,10 @@ fun StatsBanner(
     stats: UiStats,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isNewTodayDismissed: Boolean = false,
+    onDismissNewToday: (() -> Unit)? = null,
+    onNewTodayClick: (() -> Unit)? = null
 ) {
     // Ambient breathing shimmer on border and glow
     val infiniteTransition = rememberInfiniteTransition(label = "statsBannerInfinite")
@@ -77,6 +92,9 @@ fun StatsBanner(
         ),
         label = "badgePulse"
     )
+
+    var localDismissed by rememberSaveable { mutableStateOf(false) }
+    val effectiveDismissed = isNewTodayDismissed || localDismissed
 
     // Fluid smooth counter animation for total free worth
     val animatedWorth by animateFloatAsState(
@@ -185,24 +203,65 @@ fun StatsBanner(
                         fontSize = 12.sp,
                         color = TextSecondary
                     )
-                    if (stats.newFreebiesCount > 0) {
-                        Box(
+                    AnimatedVisibility(
+                        visible = !effectiveDismissed && stats.newFreebiesCount > 0,
+                        enter = fadeIn() + expandHorizontally(),
+                        exit = fadeOut() + shrinkHorizontally()
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .graphicsLayer {
                                     scaleX = badgeScale
                                     scaleY = badgeScale
                                 }
-                                .clip(RoundedCornerShape(4.dp))
+                                .clip(RoundedCornerShape(6.dp))
                                 .background(NeonCyan.copy(alpha = 0.2f))
-                                .border(0.5.dp, NeonCyan, RoundedCornerShape(4.dp))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .border(0.5.dp, NeonCyan.copy(alpha = 0.8f), RoundedCornerShape(6.dp))
+                                .testTag("new_today_badge")
                         ) {
-                            Text(
-                                text = "${stats.newFreebiesCount} NEW TODAY",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = NeonCyan
-                            )
+                            // "NEW TODAY" button label
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .clickable(
+                                        enabled = onNewTodayClick != null,
+                                        onClick = { onNewTodayClick?.invoke() }
+                                    )
+                                    .padding(start = 7.dp, end = 3.dp, top = 3.dp, bottom = 3.dp)
+                            ) {
+                                Text(
+                                    text = "${stats.newFreebiesCount} NEW TODAY",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = NeonCyan
+                                )
+                            }
+
+                            // Dedicated 'X' button to dismiss and get rid of the badge
+                            Box(
+                                modifier = Modifier
+                                    .padding(end = 4.dp, top = 2.dp, bottom = 2.dp)
+                                    .size(18.dp)
+                                    .clip(CircleShape)
+                                    .background(NeonCyan.copy(alpha = 0.25f))
+                                    .clickable(
+                                        onClick = {
+                                            localDismissed = true
+                                            onDismissNewToday?.invoke()
+                                        },
+                                        role = Role.Button
+                                    )
+                                    .testTag("dismiss_new_today_button"),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Dismiss New Today alert",
+                                    tint = NeonCyan,
+                                    modifier = Modifier.size(11.dp)
+                                )
+                            }
                         }
                     }
                 }

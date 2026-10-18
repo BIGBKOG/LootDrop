@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -72,6 +73,7 @@ import coil.request.ImageRequest
 import com.example.data.model.GiveawayItem
 import com.example.data.model.LauncherOption
 import com.example.data.model.LauncherType
+import com.example.ui.density.LocalScreenDensityInfo
 import com.example.ui.theme.GamingCardBorder
 import com.example.ui.theme.GamingDarkBackground
 import com.example.ui.theme.GamingDarkSurface
@@ -92,32 +94,39 @@ fun GiveawayDetailDialog(
     onLauncherOptionClick: ((url: String, launcherName: String) -> Unit)? = null
 ) {
     val context = LocalContext.current
+    val screenDensityInfo = LocalScreenDensityInfo.current
     val launcherColor = Color(item.launcherCategory.badgeColorHex)
 
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Surface(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .border(1.dp, GamingCardBorder, RoundedCornerShape(20.dp))
-                .testTag("giveaway_detail_dialog"),
-            color = GamingDarkSurface
+                .padding(screenDensityInfo.adaptiveHorizontalPadding),
+            contentAlignment = Alignment.Center
         ) {
-            Column(
+            Surface(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
+                    .widthIn(max = screenDensityInfo.maxDialogWidth)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .border(1.dp, GamingCardBorder, RoundedCornerShape(20.dp))
+                    .testTag("giveaway_detail_dialog"),
+                color = GamingDarkSurface
             ) {
-                // Header Image Container
-                Box(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(230.dp)
+                        .verticalScroll(rememberScrollState())
                 ) {
+                    // Header Image Container
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(minOf(240.dp, (screenDensityInfo.cardCoverHeight.value * 1.25f).dp))
+                    ) {
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(if (item.image.isNotBlank()) item.image else item.thumbnail)
@@ -543,6 +552,7 @@ fun GiveawayDetailDialog(
             }
         }
     }
+}
 }
 
 @Composable

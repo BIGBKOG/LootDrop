@@ -29,6 +29,11 @@ data class GiveawayItem(
     val isXbox: Boolean
         get() = platforms.lowercase().contains("xbox")
 
+    val isNintendo: Boolean
+        get() = platforms.lowercase().let {
+            it.contains("nintendo") || it.contains("switch")
+        }
+
     val isSteam: Boolean
         get() = platforms.lowercase().contains("steam")
 
@@ -46,7 +51,7 @@ data class GiveawayItem(
         }
 
     val isConsole: Boolean
-        get() = isPlayStation || isXbox
+        get() = isPlayStation || isXbox || isNintendo
 
     val launcherCategory: LauncherType
         get() {
@@ -56,11 +61,13 @@ data class GiveawayItem(
                 (lower.contains("playstation") || lower.contains("ps5") || lower.contains("ps4")) &&
                         !lower.contains("steam") && !lower.contains("epic") && !lower.contains("gog") && !lower.contains("pc") -> LauncherType.PLAYSTATION
                 lower.contains("xbox") && !lower.contains("steam") && !lower.contains("epic") && !lower.contains("gog") && !lower.contains("pc") -> LauncherType.XBOX
+                (lower.contains("nintendo") || lower.contains("switch")) && !lower.contains("steam") && !lower.contains("epic") && !lower.contains("gog") && !lower.contains("pc") -> LauncherType.NINTENDO
                 lower.contains("steam") -> LauncherType.STEAM
                 lower.contains("epic") -> LauncherType.EPIC
                 lower.contains("gog") -> LauncherType.GOG
                 lower.contains("playstation") || lower.contains("ps5") || lower.contains("ps4") -> LauncherType.PLAYSTATION
                 lower.contains("xbox") -> LauncherType.XBOX
+                lower.contains("nintendo") || lower.contains("switch") -> LauncherType.NINTENDO
                 lower.contains("ubisoft") || lower.contains("uplay") -> LauncherType.UBISOFT
                 lower.contains("itch.io") || lower.contains("itchio") || lower.split(Regex("[,/ ]+")).any { it == "itch" } -> LauncherType.ITCH_IO
                 lower.contains("amazon") || lower.contains("prime") -> LauncherType.PRIME
@@ -144,6 +151,19 @@ data class GiveawayItem(
                     subtitle = xbSub,
                     url = xbUrl,
                     badgeColorHex = 0xFF107C10
+                )
+            )
+        }
+
+        if (lower.contains("nintendo") || lower.contains("switch")) {
+            val nintendoUrl = if (openGiveawayUrl.contains("nintendo.com")) openGiveawayUrl else "https://www.nintendo.com/us/search/#q=$encodedTitle&p=1&cat=gme&f=corePlatforms&corePlatforms=Nintendo+Switch"
+            options.add(
+                LauncherOption(
+                    launcherType = LauncherType.NINTENDO,
+                    name = "Nintendo eShop",
+                    subtitle = "Nintendo Switch eShop (100% Off)",
+                    url = nintendoUrl,
+                    badgeColorHex = 0xFFE60012
                 )
             )
         }
@@ -244,6 +264,7 @@ data class GiveawayItem(
             LauncherType.ALL -> true
             LauncherType.PLAYSTATION -> isPlayStation
             LauncherType.XBOX -> isXbox
+            LauncherType.NINTENDO -> isNintendo
             LauncherType.STEAM -> lower.contains("steam")
             LauncherType.EPIC -> lower.contains("epic")
             LauncherType.GOG -> lower.contains("gog")
@@ -253,7 +274,8 @@ data class GiveawayItem(
             LauncherType.EA_ORIGIN -> lower.contains("origin") || lower.contains("ea app") || tokens.any { it == "ea" }
             LauncherType.BATTLENET -> lower.contains("battlenet") || lower.contains("battle.net")
             LauncherType.OTHER -> !lower.contains("steam") && !lower.contains("epic") && !lower.contains("gog") &&
-                    !lower.contains("playstation") && !lower.contains("xbox") && !lower.contains("ubisoft") &&
+                    !lower.contains("playstation") && !lower.contains("xbox") && !lower.contains("nintendo") &&
+                    !lower.contains("switch") && !lower.contains("ubisoft") &&
                     !(lower.contains("itch.io") || lower.contains("itchio") || tokens.any { it == "itch" }) &&
                     !lower.contains("prime") && !lower.contains("origin") && !tokens.any { it == "ea" }
         }
@@ -278,6 +300,7 @@ enum class LauncherType(
     ALL("All Platforms", null, 0xFF00E5FF, "all"),
     PLAYSTATION("PlayStation", "ps4+ps5", 0xFF0070D1, "playstation"),
     XBOX("Xbox", "xbox-one+xbox-series-xs", 0xFF107C10, "xbox"),
+    NINTENDO("Nintendo Switch", "switch", 0xFFE60012, "nintendo"),
     STEAM("Steam", "steam", 0xFF66C0F4, "steam"),
     EPIC("Epic Games", "epic-games-store", 0xFF0078F2, "epic"),
     GOG("GOG", "gog", 0xFFBA55D3, "gog"),
