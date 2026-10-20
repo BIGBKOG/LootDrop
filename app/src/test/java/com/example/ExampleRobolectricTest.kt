@@ -127,6 +127,16 @@ class ExampleRobolectricTest {
         assertTrue(helper.isNotifyPlayStation)
         helper.isNotifyXbox = true
         assertTrue(helper.isNotifyXbox)
+        helper.isNotificationSoundEnabled = true
+        assertTrue(helper.isNotificationSoundEnabled)
+        helper.isNotificationVibrateEnabled = true
+        assertTrue(helper.isNotificationVibrateEnabled)
+        helper.isKeepForeverOnly = true
+        assertTrue(helper.isKeepForeverOnly)
+        helper.isNotificationRichArtwork = true
+        assertTrue(helper.isNotificationRichArtwork)
+        helper.isNotificationActionsEnabled = true
+        assertTrue(helper.isNotificationActionsEnabled)
     }
 
     @Test
@@ -158,13 +168,13 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `settings categories contains appearance alerts and general tabs`() {
+    fun `settings categories contains appearance alerts general and storage tabs`() {
         val categories = com.example.ui.SettingsCategory.values()
-        assertEquals(3, categories.size)
+        assertEquals(4, categories.size)
         val names = categories.map { it.name }
-        assertEquals(listOf("APPEARANCE", "ALERTS", "GENERAL"), names)
+        assertEquals(listOf("APPEARANCE", "ALERTS", "GENERAL", "STORAGE"), names)
         val labels = categories.map { it.label }
-        assertEquals(listOf("Appearance", "Alerts", "General"), labels)
+        assertEquals(listOf("Appearance", "Alerts", "General", "Storage & Data"), labels)
     }
 
     @Test
@@ -328,5 +338,139 @@ class ExampleRobolectricTest {
         assertTrue(nintendoItem.isNintendo)
         assertTrue(nintendoItem.matchesLauncher(LauncherType.NINTENDO))
         assertEquals(LauncherType.NINTENDO, nintendoItem.launcherCategory)
+    }
+
+    @Test
+    fun `data saver and auto prune preferences persist correctly`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val prefs = AppPreferences(context)
+
+        prefs.isDataSaverMode = true
+        assertTrue(prefs.isDataSaverMode)
+        prefs.isDataSaverMode = false
+        org.junit.Assert.assertFalse(prefs.isDataSaverMode)
+
+        prefs.isAutoPruneExpired = true
+        assertTrue(prefs.isAutoPruneExpired)
+        prefs.isAutoPruneExpired = false
+        org.junit.Assert.assertFalse(prefs.isAutoPruneExpired)
+    }
+
+    @Test
+    fun `storage metrics formats byte counts accurately`() {
+        val metrics = com.example.StorageMetrics(
+            imageCacheBytes = 4_500_000L,
+            httpCacheBytes = 256_000L,
+            databaseBytes = 120_000L,
+            totalFootprintBytes = 4_876_000L
+        )
+
+        assertEquals("4.3 MB", metrics.formattedImageCache)
+        assertEquals("250 KB", metrics.formattedHttpCache)
+        assertEquals("117 KB", metrics.formattedDatabase)
+        assertEquals("4.7 MB", metrics.formattedTotal)
+
+        val zeroMetrics = com.example.StorageMetrics(0L, 0L, 0L, 0L)
+        assertEquals("0 KB", zeroMetrics.formattedTotal)
+    }
+
+    @Test
+    fun `database vacuum and compaction executes cleanly`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        com.example.data.local.AppDatabase.vacuumAndCompact(context)
+        val metrics = com.example.LootDropApplication.getStorageMetrics(context as android.app.Application)
+        assertNotNull(metrics)
+    }
+
+    @Test
+    fun `notification helper evaluates filters threshold and channels correctly`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val helper = NotificationHelper(context)
+        assertNotNull(helper)
+
+        val testItem = GiveawayItem(
+            id = 777,
+            title = "Metro Exodus",
+            worth = "$29.99",
+            numericWorth = 29.99,
+            thumbnail = "https://example.com/thumb.jpg",
+            image = "https://example.com/img.jpg",
+            description = "Post-apocalyptic masterpiece",
+            instructions = "Redeem on Steam",
+            openGiveawayUrl = "https://store.steampowered.com",
+            publishedDate = "2026-10-19",
+            type = "Game",
+            platforms = "Steam, PC",
+            endDate = "2026-10-25",
+            users = 5000,
+            status = "Active"
+        )
+
+        helper.isNotificationsEnabled = true
+        helper.isNotifySteam = true
+        helper.isGamesOnly = false
+        helper.minWorthAlertThreshold = 0f
+        assertTrue(helper.shouldNotifyForGiveaway(testItem))
+
+        // Threshold filter test
+        helper.minWorthAlertThreshold = 50f
+        org.junit.Assert.assertFalse(helper.shouldNotifyForGiveaway(testItem))
+        helper.minWorthAlertThreshold = 20f
+        assertTrue(helper.shouldNotifyForGiveaway(testItem))
+
+        // Platform mute test
+        helper.isNotifySteam = false
+        org.junit.Assert.assertFalse(helper.shouldNotifyForGiveaway(testItem))
+        helper.isNotifySteam = true
+        assertTrue(helper.shouldNotifyForGiveaway(testItem))
+
+        // Keep-forever only filter test
+        val weekendItem = testItem.copy(title = "Battlefield 2042 Free Weekend")
+        helper.isKeepForeverOnly = true
+        org.junit.Assert.assertFalse(helper.shouldNotifyForGiveaway(weekendItem))
+        helper.isKeepForeverOnly = false
+        assertTrue(helper.shouldNotifyForGiveaway(weekendItem))
+    }
+
+    @Test
+    fun `notification history dao records and queries alert inbox`() = kotlinx.coroutines.runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val db = com.example.data.local.AppDatabase.getInstance(context)
+        val dao = db.notificationHistoryDao()
+
+        dao.clearAllNotifications()
+        assertEquals(0, dao.getTotalCount())
+
+        val entry = com.example.data.local.NotificationHistoryEntity(
+            giveawayId = 1234,
+            title = "Subnautica",
+            worth = "$19.99",
+            platforms = "Epic Games, PC",
+            thumbnail = "https://example.com/sub.jpg",
+            image = "https://example.com/sub_banner.jpg",
+            openGiveawayUrl = "https://store.epicgames.com",
+            channelType = "MAJOR_GAME",
+            timestamp = System.currentTimeMillis(),
+            isRead = false
+        )
+
+        val id = dao.insertNotification(entry)
+        assertTrue(id > 0)
+        assertEquals(1, dao.getTotalCount())
+
+        dao.markAsRead(id)
+        val list = dao.getRecentNotifications()
+        assertEquals(1, list.size)
+        assertTrue(list.first().isRead)
+
+        dao.clearAllNotifications()
+        assertEquals(0, dao.getTotalCount())
+    }
+
+    @Test
+    fun `notification scheduler configures alarm without crash`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        com.example.notifications.NotificationScheduler.schedulePeriodicSync(context)
+        com.example.notifications.NotificationScheduler.cancelPeriodicSync(context)
     }
 }

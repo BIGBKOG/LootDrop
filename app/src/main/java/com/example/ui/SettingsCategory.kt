@@ -3,12 +3,16 @@ package com.example.ui
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
- * Categorization tabs for the Settings screen: Appearance, Alerts, and General.
- * Data management and feature tours are integrated directly within General.
+ * Categorization tabs for the Settings screen:
+ * - APPEARANCE: Theme mode, 16 accent colors, background style & card density
+ * - ALERTS: Smart notifications hub, sound & haptics, store platforms & rules
+ * - GENERAL: Startup store, screen DPI detection, adaptive display, FPS & app guide
+ * - STORAGE: Storage metrics, 1-tap deep clean, database vacuum & data saver
  */
 enum class SettingsCategory(
     val label: String,
@@ -23,11 +27,16 @@ enum class SettingsCategory(
     ALERTS(
         label = "Alerts",
         icon = Icons.Default.NotificationsActive,
-        description = "Push notifications, store platforms & games-only alerts"
+        description = "Smart notifications hub, sound & haptics, store platforms & rules"
     ),
     GENERAL(
         label = "General",
         icon = Icons.Default.Tune,
-        description = "Startup store, screen DPI detection & adaptive display, FPS performance & guide"
+        description = "Startup store, screen DPI detection, adaptive display, FPS & app guide"
+    ),
+    STORAGE(
+        label = "Storage & Data",
+        icon = Icons.Default.Storage,
+        description = "Storage metrics, 1-tap deep clean, database vacuum & data saver"
     )
 }

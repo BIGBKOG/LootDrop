@@ -8,6 +8,8 @@ import com.example.data.model.GiveawayItem
 import com.example.data.model.LauncherType
 import com.example.data.repository.GiveawaysRepository
 import com.example.notifications.NotificationHelper
+import com.example.notifications.NotificationScheduler
+import com.example.data.local.NotificationHistoryEntity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -29,6 +31,10 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import androidx.compose.runtime.Immutable
+import com.example.LootDropApplication
+import com.example.StorageMetrics
 
 enum class MainTab {
     DISCOVER,
@@ -57,7 +63,7 @@ data class FilterCriteria(
     val sort: SortOption = SortOption.NEWEST,
     val query: String = ""
 )
-
+@Immutable
 data class UiStats(
     val totalFreeWorthUsd: Double = 0.0,
     val activeGiveawaysCount: Int = 0,
@@ -171,6 +177,12 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     private val _detectedScreenDpi = MutableStateFlow(preferences.detectedScreenDpi)
     val detectedScreenDpi: StateFlow<Int> = _detectedScreenDpi.asStateFlow()
 
+    private val _isDataSaverMode = MutableStateFlow(preferences.isDataSaverMode)
+    val isDataSaverMode: StateFlow<Boolean> = _isDataSaverMode.asStateFlow()
+
+    private val _isAutoPruneExpired = MutableStateFlow(preferences.isAutoPruneExpired)
+    val isAutoPruneExpired: StateFlow<Boolean> = _isAutoPruneExpired.asStateFlow()
+
     private val _isNewTodayDismissed = MutableStateFlow(preferences.isNewTodayDismissed)
     val isNewTodayDismissed: StateFlow<Boolean> = _isNewTodayDismissed.asStateFlow()
 
@@ -210,6 +222,59 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isGamesOnly = MutableStateFlow(notificationHelper.isGamesOnly)
     val isGamesOnly: StateFlow<Boolean> = _isGamesOnly.asStateFlow()
 
+    private val _isNotifyEndingSoon = MutableStateFlow(preferences.isNotifyEndingSoon)
+    val isNotifyEndingSoon: StateFlow<Boolean> = _isNotifyEndingSoon.asStateFlow()
+
+    private val _minWorthAlertThreshold = MutableStateFlow(preferences.minWorthAlertThreshold)
+    val minWorthAlertThreshold: StateFlow<Float> = _minWorthAlertThreshold.asStateFlow()
+
+    private val _isQuietHoursEnabled = MutableStateFlow(preferences.isQuietHoursEnabled)
+    val isQuietHoursEnabled: StateFlow<Boolean> = _isQuietHoursEnabled.asStateFlow()
+
+    private val _isNotificationSoundEnabled = MutableStateFlow(notificationHelper.isNotificationSoundEnabled)
+    val isNotificationSoundEnabled: StateFlow<Boolean> = _isNotificationSoundEnabled.asStateFlow()
+
+    private val _isNotificationVibrateEnabled = MutableStateFlow(notificationHelper.isNotificationVibrateEnabled)
+    val isNotificationVibrateEnabled: StateFlow<Boolean> = _isNotificationVibrateEnabled.asStateFlow()
+
+    private val _isKeepForeverOnly = MutableStateFlow(notificationHelper.isKeepForeverOnly)
+    val isKeepForeverOnly: StateFlow<Boolean> = _isKeepForeverOnly.asStateFlow()
+
+    private val _isNotificationRichArtwork = MutableStateFlow(notificationHelper.isNotificationRichArtwork)
+    val isNotificationRichArtwork: StateFlow<Boolean> = _isNotificationRichArtwork.asStateFlow()
+
+    private val _isNotificationActionsEnabled = MutableStateFlow(notificationHelper.isNotificationActionsEnabled)
+    val isNotificationActionsEnabled: StateFlow<Boolean> = _isNotificationActionsEnabled.asStateFlow()
+
+    private val _quietHoursStartHour = MutableStateFlow(preferences.quietHoursStartHour)
+    val quietHoursStartHour: StateFlow<Int> = _quietHoursStartHour.asStateFlow()
+
+    private val _quietHoursEndHour = MutableStateFlow(preferences.quietHoursEndHour)
+    val quietHoursEndHour: StateFlow<Int> = _quietHoursEndHour.asStateFlow()
+
+    private val _backgroundSyncIntervalHours = MutableStateFlow(preferences.backgroundSyncIntervalHours)
+    val backgroundSyncIntervalHours: StateFlow<Int> = _backgroundSyncIntervalHours.asStateFlow()
+
+    private val _backgroundSyncWifiOnly = MutableStateFlow(preferences.backgroundSyncWifiOnly)
+    val backgroundSyncWifiOnly: StateFlow<Boolean> = _backgroundSyncWifiOnly.asStateFlow()
+
+    private val _isNotificationHistorySheetOpen = MutableStateFlow(false)
+    val isNotificationHistorySheetOpen: StateFlow<Boolean> = _isNotificationHistorySheetOpen.asStateFlow()
+
+    val notificationHistory: StateFlow<List<NotificationHistoryEntity>> =
+        database.notificationHistoryDao().getAllNotificationsFlow().stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            emptyList()
+        )
+
+    val unreadNotificationCount: StateFlow<Int> =
+        database.notificationHistoryDao().getUnreadCountFlow().stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            0
+        )
+
     // Base flow from repository
     val allGiveaways: StateFlow<List<GiveawayItem>> = repository.allGiveawaysFlow.stateIn(
         viewModelScope,
@@ -243,52 +308,32 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiStats())
 
-    // Combine user filters into criteria flow
-    private val filterCriteriaFlow: Flow<FilterCriteria> = combine(
-        _selectedTab,
-        _selectedLaunchers,
-        _selectedTypeFilter,
-        _selectedSort,
-        _searchQuery
-    ) { tab, launchers, typeFilter, sort, query ->
-        FilterCriteria(
-            tab = tab,
-            launchers = launchers,
-            typeFilter = typeFilter,
-            sort = sort,
-            query = query
-        )
-    }
-
-    // Filtered & sorted list
-    val displayedGiveaways: StateFlow<List<GiveawayItem>> = combine(
-        allGiveaways,
-        filterCriteriaFlow
-    ) { all, filters ->
-        val sourceList = when (filters.tab) {
-            MainTab.DISCOVER -> all
-            MainTab.CLAIMED -> all.filter { it.isClaimed }
-            MainTab.SETTINGS -> emptyList()
-        }
-
-        var filtered = sourceList
+    // Helper method to apply launcher, type, search and sort filters to any giveaway list
+    private fun filterAndSortList(
+        source: List<GiveawayItem>,
+        launchers: Set<LauncherType>,
+        typeFilter: TypeFilter,
+        sort: SortOption,
+        query: String
+    ): List<GiveawayItem> {
+        var filtered = source
 
         // Multi-Platform / Store filter
-        if (filters.launchers.isNotEmpty() && !filters.launchers.contains(LauncherType.ALL)) {
+        if (launchers.isNotEmpty() && !launchers.contains(LauncherType.ALL)) {
             filtered = filtered.filter { item ->
-                filters.launchers.any { launcher -> item.matchesLauncher(launcher) }
+                launchers.any { launcher -> item.matchesLauncher(launcher) }
             }
         }
 
         // Type filter
-        if (filters.typeFilter != TypeFilter.ALL && filters.typeFilter.apiMatch != null) {
-            val match = filters.typeFilter.apiMatch
+        if (typeFilter != TypeFilter.ALL && typeFilter.apiMatch != null) {
+            val match = typeFilter.apiMatch
             filtered = filtered.filter { it.type.contains(match, ignoreCase = true) }
         }
 
         // Search query
-        if (filters.query.isNotBlank()) {
-            val q = filters.query.trim().lowercase()
+        if (query.isNotBlank()) {
+            val q = query.trim().lowercase()
             filtered = filtered.filter {
                 it.title.lowercase().contains(q) ||
                 it.description.lowercase().contains(q) ||
@@ -304,7 +349,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         }
 
         // Sorting
-        when (filters.sort) {
+        return when (sort) {
             SortOption.NEWEST -> filtered.sortedByDescending { it.id }
             SortOption.HIGHEST_VALUE -> filtered.sortedByDescending { it.numericWorth }
             SortOption.MOST_POPULAR -> filtered.sortedByDescending { it.users }
@@ -312,10 +357,120 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                 if (it.endDate == "N/A" || it.endDate.isBlank()) "9999" else it.endDate
             }
         }
+    }
+
+    // Discover giveaways: always all items filtered & sorted (never empties or switches to claimed on tab change)
+    val discoverGiveaways: StateFlow<List<GiveawayItem>> = combine(
+        allGiveaways,
+        _selectedLaunchers,
+        _selectedTypeFilter,
+        _selectedSort,
+        _searchQuery
+    ) { all, launchers, typeFilter, sort, query ->
+        filterAndSortList(all, launchers, typeFilter, sort, query)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Claimed giveaways: always claimed library items filtered & sorted
+    val claimedGiveaways: StateFlow<List<GiveawayItem>> = combine(
+        allGiveaways,
+        _selectedLaunchers,
+        _selectedTypeFilter,
+        _selectedSort,
+        _searchQuery
+    ) { all, launchers, typeFilter, sort, query ->
+        filterAndSortList(all.filter { it.isClaimed }, launchers, typeFilter, sort, query)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Filtered & sorted list matching the currently selected tab
+    val displayedGiveaways: StateFlow<List<GiveawayItem>> = combine(
+        _selectedTab,
+        discoverGiveaways,
+        claimedGiveaways
+    ) { tab, discover, claimed ->
+        when (tab) {
+            MainTab.DISCOVER -> discover
+            MainTab.CLAIMED -> claimed
+            MainTab.SETTINGS -> emptyList()
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _storageMetrics = MutableStateFlow(
+        LootDropApplication.getStorageMetrics(getApplication())
+    )
+    val storageMetrics: StateFlow<StorageMetrics> = _storageMetrics.asStateFlow()
+
+    private val _storageFootprintBytes = MutableStateFlow(0L)
+    val storageFootprintBytes: StateFlow<Long> = _storageFootprintBytes.asStateFlow()
 
     init {
         refreshGiveaways()
+        updateStorageFootprint()
+        NotificationScheduler.schedulePeriodicSync(application)
+    }
+
+    fun updateStorageFootprint() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val metrics = LootDropApplication.getStorageMetrics(getApplication())
+            _storageMetrics.value = metrics
+            _storageFootprintBytes.value = metrics.totalFootprintBytes
+        }
+    }
+
+    fun clearAllCaches() {
+        performDeepClean()
+    }
+
+    fun performDeepClean() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoading.value = true
+            val reclaimed = repository.clearAllCaches(getApplication())
+            if (preferences.isAutoPruneExpired) {
+                repository.pruneExpiredGiveaways(getApplication())
+            }
+            updateStorageFootprint()
+            _isLoading.value = false
+            val formatted = _storageMetrics.value.formatBytes(reclaimed)
+            _reopenStatusMessage.value = "Deep clean complete! Reclaimed $formatted of disk storage."
+        }
+    }
+
+    fun clearImageCache() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoading.value = true
+            val reclaimed = repository.clearImageCache(getApplication())
+            updateStorageFootprint()
+            _isLoading.value = false
+            val formatted = _storageMetrics.value.formatBytes(reclaimed)
+            _reopenStatusMessage.value = "Image cache cleared! Reclaimed $formatted."
+        }
+    }
+
+    fun clearNetworkCache() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoading.value = true
+            val reclaimed = repository.clearHttpCache(getApplication())
+            updateStorageFootprint()
+            _isLoading.value = false
+            val formatted = _storageMetrics.value.formatBytes(reclaimed)
+            _reopenStatusMessage.value = "Network API cache cleared! Reclaimed $formatted."
+        }
+    }
+
+    fun optimizeDatabase() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoading.value = true
+            val pruned = if (preferences.isAutoPruneExpired) {
+                repository.pruneExpiredGiveaways(getApplication())
+            } else 0
+            repository.vacuumDatabase(getApplication())
+            updateStorageFootprint()
+            _isLoading.value = false
+            _reopenStatusMessage.value = if (pruned > 0) {
+                "Database compacted with VACUUM. Purged $pruned expired freebies."
+            } else {
+                "Database compacted & defragmented successfully."
+            }
+        }
     }
 
     fun refreshGiveaways(isAutoCheck: Boolean = false) {
@@ -331,6 +486,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                         ?: "Could not fetch latest free games. Check connection."
                 }
             } else {
+                updateStorageFootprint()
                 val syncResult = result.getOrNull()
                 if (syncResult != null && syncResult.newGamesCount > 0) {
                     _reopenStatusMessage.value = "🎯 Found ${syncResult.newGamesCount} new free game${if (syncResult.newGamesCount > 1) "s" else ""}!"
@@ -406,6 +562,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         _selectedLaunchers.value = emptySet()
         _selectedTypeFilter.value = TypeFilter.ALL
         _selectedSort.value = SortOption.NEWEST
+        _searchQuery.value = ""
     }
 
     fun updateSearchQuery(query: String) {
@@ -464,6 +621,16 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     fun setAutoCheckOnReopen(enabled: Boolean) {
         preferences.isAutoCheckOnReopen = enabled
         _isAutoCheckOnReopen.value = enabled
+    }
+
+    fun setDataSaverMode(enabled: Boolean) {
+        preferences.isDataSaverMode = enabled
+        _isDataSaverMode.value = enabled
+    }
+
+    fun setAutoPruneExpired(enabled: Boolean) {
+        preferences.isAutoPruneExpired = enabled
+        _isAutoPruneExpired.value = enabled
     }
 
     fun setDefaultLauncher(launcher: LauncherType) {
@@ -570,8 +737,98 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         _isGamesOnly.value = enabled
     }
 
-    fun sendTestNotification() {
-        notificationHelper.sendTestNotification()
+    fun setNotifyEndingSoon(enabled: Boolean) {
+        notificationHelper.isNotifyEndingSoon = enabled
+        _isNotifyEndingSoon.value = enabled
+    }
+
+    fun setMinWorthAlertThreshold(threshold: Float) {
+        notificationHelper.minWorthAlertThreshold = threshold
+        _minWorthAlertThreshold.value = threshold
+    }
+
+    fun setQuietHoursEnabled(enabled: Boolean) {
+        notificationHelper.isQuietHoursEnabled = enabled
+        _isQuietHoursEnabled.value = enabled
+    }
+
+    fun setNotificationSoundEnabled(enabled: Boolean) {
+        notificationHelper.isNotificationSoundEnabled = enabled
+        _isNotificationSoundEnabled.value = enabled
+    }
+
+    fun setNotificationVibrateEnabled(enabled: Boolean) {
+        notificationHelper.isNotificationVibrateEnabled = enabled
+        _isNotificationVibrateEnabled.value = enabled
+    }
+
+    fun setKeepForeverOnly(enabled: Boolean) {
+        notificationHelper.isKeepForeverOnly = enabled
+        _isKeepForeverOnly.value = enabled
+    }
+
+    fun setNotificationRichArtwork(enabled: Boolean) {
+        notificationHelper.isNotificationRichArtwork = enabled
+        _isNotificationRichArtwork.value = enabled
+    }
+
+    fun setNotificationActionsEnabled(enabled: Boolean) {
+        notificationHelper.isNotificationActionsEnabled = enabled
+        _isNotificationActionsEnabled.value = enabled
+    }
+
+    fun setQuietHoursHours(start: Int, end: Int) {
+        preferences.quietHoursStartHour = start
+        preferences.quietHoursEndHour = end
+        _quietHoursStartHour.value = start
+        _quietHoursEndHour.value = end
+    }
+
+    fun setBackgroundSyncInterval(hours: Int) {
+        preferences.backgroundSyncIntervalHours = hours
+        _backgroundSyncIntervalHours.value = hours
+        NotificationScheduler.schedulePeriodicSync(getApplication())
+    }
+
+    fun setBackgroundSyncWifiOnly(wifiOnly: Boolean) {
+        preferences.backgroundSyncWifiOnly = wifiOnly
+        _backgroundSyncWifiOnly.value = wifiOnly
+    }
+
+    fun setNotificationHistorySheetOpen(open: Boolean) {
+        _isNotificationHistorySheetOpen.value = open
+    }
+
+    fun sendTestNotification(isRichPreview: Boolean = true) {
+        notificationHelper.sendTestNotification(isRichPreview)
+    }
+
+    fun sendEndingSoonTestNotification() {
+        notificationHelper.sendTestEndingSoonNotification()
+    }
+
+    fun markNotificationAsRead(id: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            database.notificationHistoryDao().markAsRead(id)
+        }
+    }
+
+    fun markAllNotificationsAsRead() {
+        viewModelScope.launch(Dispatchers.IO) {
+            database.notificationHistoryDao().markAllAsRead()
+        }
+    }
+
+    fun clearAllNotificationHistory() {
+        viewModelScope.launch(Dispatchers.IO) {
+            database.notificationHistoryDao().clearAllNotifications()
+        }
+    }
+
+    fun deleteNotification(id: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            database.notificationHistoryDao().deleteNotification(id)
+        }
     }
 
     // Library Data Management Actions
@@ -610,6 +867,17 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
             repository.toggleBookmarked(item.id, item.isBookmarked)
             if (_detailItem.value?.id == item.id) {
                 _detailItem.value = _detailItem.value?.copy(isBookmarked = !item.isBookmarked)
+            }
+        }
+    }
+
+    fun toggleBookmarkById(id: Int) {
+        viewModelScope.launch {
+            val item = repository.getGiveawayById(id)
+            if (item != null) {
+                repository.toggleBookmarked(item.id, item.isBookmarked)
+            } else {
+                database.giveawayDao().setBookmarked(id, true)
             }
         }
     }

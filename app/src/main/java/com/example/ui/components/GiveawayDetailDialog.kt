@@ -53,6 +53,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -97,6 +98,25 @@ fun GiveawayDetailDialog(
     val screenDensityInfo = LocalScreenDensityInfo.current
     val launcherColor = Color(item.launcherCategory.badgeColorHex)
 
+    var dialogVisible by remember { androidx.compose.runtime.mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        dialogVisible = true
+    }
+
+    val dialogScale by animateFloatAsState(
+        targetValue = if (dialogVisible) 1f else 0.88f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "detail_dialog_scale"
+    )
+    val dialogAlpha by animateFloatAsState(
+        targetValue = if (dialogVisible) 1f else 0f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "detail_dialog_alpha"
+    )
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -111,6 +131,11 @@ fun GiveawayDetailDialog(
                 modifier = Modifier
                     .widthIn(max = screenDensityInfo.maxDialogWidth)
                     .fillMaxWidth()
+                    .graphicsLayer {
+                        scaleX = dialogScale
+                        scaleY = dialogScale
+                        alpha = dialogAlpha
+                    }
                     .clip(RoundedCornerShape(20.dp))
                     .border(1.dp, GamingCardBorder, RoundedCornerShape(20.dp))
                     .testTag("giveaway_detail_dialog"),
@@ -127,11 +152,15 @@ fun GiveawayDetailDialog(
                             .fillMaxWidth()
                             .height(minOf(240.dp, (screenDensityInfo.cardCoverHeight.value * 1.25f).dp))
                     ) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(context)
+                    val detailImageRequest = remember(item.id, item.image, item.thumbnail) {
+                        ImageRequest.Builder(context)
                             .data(if (item.image.isNotBlank()) item.image else item.thumbnail)
                             .crossfade(true)
-                            .build(),
+                            .size(960, 540)
+                            .build()
+                    }
+                    AsyncImage(
+                        model = detailImageRequest,
                         contentDescription = item.title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
@@ -151,22 +180,62 @@ fun GiveawayDetailDialog(
                             )
                     )
 
-                    // Close Button
-                    IconButton(
-                        onClick = onDismiss,
+                    // Header Controls: Bookmark & Close Buttons with fluid spring interaction
+                    Row(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(12.dp)
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xCC0B0F19))
-                            .testTag("detail_close_button")
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = TextPrimary
+                        val bookmarkScale by animateFloatAsState(
+                            targetValue = if (item.isBookmarked) 1.22f else 1.0f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessLow
+                            ),
+                            label = "detail_bookmark_scale"
                         )
+                        IconButton(
+                            onClick = onToggleBookmark,
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(if (item.isBookmarked) NeonCyan.copy(alpha = 0.25f) else Color(0xCC0B0F19))
+                                .border(
+                                    1.dp,
+                                    if (item.isBookmarked) NeonCyan else Color.White.copy(alpha = 0.25f),
+                                    CircleShape
+                                )
+                                .testTag("detail_bookmark_button")
+                        ) {
+                            Icon(
+                                imageVector = if (item.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                                contentDescription = if (item.isBookmarked) "Bookmarked" else "Bookmark",
+                                tint = if (item.isBookmarked) NeonCyan else TextPrimary,
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .graphicsLayer {
+                                        scaleX = bookmarkScale
+                                        scaleY = bookmarkScale
+                                    }
+                            )
+                        }
+
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xCC0B0F19))
+                                .testTag("detail_close_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = TextPrimary
+                            )
+                        }
                     }
 
                     // Launcher & Console badges on image
@@ -386,6 +455,36 @@ fun GiveawayDetailDialog(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     // Secondary Action Buttons: Copy Link, Share, Bookmark, Claimed
+                    val copyInteraction = remember { MutableInteractionSource() }
+                    val isCopyPressed by copyInteraction.collectIsPressedAsState()
+                    val copyScale by animateFloatAsState(
+                        targetValue = if (isCopyPressed) 0.94f else 1f,
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+                        label = "copy_scale"
+                    )
+
+                    val shareInteraction = remember { MutableInteractionSource() }
+                    val isSharePressed by shareInteraction.collectIsPressedAsState()
+                    val shareScale by animateFloatAsState(
+                        targetValue = if (isSharePressed) 0.94f else 1f,
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+                        label = "share_scale"
+                    )
+
+                    val libraryInteraction = remember { MutableInteractionSource() }
+                    val isLibraryPressed by libraryInteraction.collectIsPressedAsState()
+                    val libraryScale by animateFloatAsState(
+                        targetValue = if (isLibraryPressed) 0.96f else 1f,
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+                        label = "library_scale"
+                    )
+
+                    val libraryCheckScale by animateFloatAsState(
+                        targetValue = if (item.isClaimed) 1.25f else 1f,
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
+                        label = "library_check_scale"
+                    )
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -397,7 +496,13 @@ fun GiveawayDetailDialog(
                                 clipboard.setPrimaryClip(clip)
                                 Toast.makeText(context, "Claim link copied to clipboard!", Toast.LENGTH_SHORT).show()
                             },
-                            modifier = Modifier.weight(1f),
+                            interactionSource = copyInteraction,
+                            modifier = Modifier
+                                .weight(1f)
+                                .graphicsLayer {
+                                    scaleX = copyScale
+                                    scaleY = copyScale
+                                },
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
                             border = androidx.compose.foundation.BorderStroke(1.dp, GamingCardBorder)
@@ -420,7 +525,13 @@ fun GiveawayDetailDialog(
                                 }
                                 context.startActivity(Intent.createChooser(shareIntent, "Share free game"))
                             },
-                            modifier = Modifier.weight(1f),
+                            interactionSource = shareInteraction,
+                            modifier = Modifier
+                                .weight(1f)
+                                .graphicsLayer {
+                                    scaleX = shareScale
+                                    scaleY = shareScale
+                                },
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
                             border = androidx.compose.foundation.BorderStroke(1.dp, GamingCardBorder)
@@ -439,8 +550,13 @@ fun GiveawayDetailDialog(
 
                     OutlinedButton(
                         onClick = onToggleClaimed,
+                        interactionSource = libraryInteraction,
                         modifier = Modifier
                             .fillMaxWidth()
+                            .graphicsLayer {
+                                scaleX = libraryScale
+                                scaleY = libraryScale
+                            }
                             .testTag("dialog_toggle_library_button"),
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
@@ -452,7 +568,12 @@ fun GiveawayDetailDialog(
                         Icon(
                             imageVector = if (item.isClaimed) Icons.Default.CheckCircle else Icons.Outlined.CheckCircleOutline,
                             contentDescription = null,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier
+                                .size(16.dp)
+                                .graphicsLayer {
+                                    scaleX = libraryCheckScale
+                                    scaleY = libraryCheckScale
+                                }
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(if (item.isClaimed) "In Library (Claimed)" else "Add to 'In Library'", fontSize = 13.sp)

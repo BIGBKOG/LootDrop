@@ -45,6 +45,10 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -54,10 +58,17 @@ import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.filled.ViewCarousel
+import androidx.compose.material.icons.filled.HourglassTop
+import androidx.compose.material.icons.filled.Nightlight
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.filled.History
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -107,6 +118,7 @@ import com.example.ui.theme.NintendoRed
 import com.example.ui.theme.PlayStationBlue
 import com.example.ui.theme.SteamBlue
 import com.example.ui.theme.TextMuted
+import com.example.ui.components.AlertsSettingsCategoryContent
 import com.example.ui.theme.XboxGreen
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -132,19 +144,11 @@ fun SettingsScreen(
     val isConfirmToastOnClaim by viewModel.isConfirmToastOnClaim.collectAsState()
     val isAutoCheckOnReopen by viewModel.isAutoCheckOnReopen.collectAsState()
     val isAnimationsEnabled by viewModel.isAnimationsEnabled.collectAsState()
-
-    val isNotificationsEnabled by viewModel.isNotificationsEnabled.collectAsState()
-    val isNotifyPlayStation by viewModel.isNotifyPlayStation.collectAsState()
-    val isNotifyXbox by viewModel.isNotifyXbox.collectAsState()
-    val isNotifyNintendo by viewModel.isNotifyNintendo.collectAsState()
-    val isNotifySteam by viewModel.isNotifySteam.collectAsState()
-    val isNotifyEpic by viewModel.isNotifyEpic.collectAsState()
-    val isNotifyGog by viewModel.isNotifyGog.collectAsState()
-    val isNotifyOthers by viewModel.isNotifyOthers.collectAsState()
-    val isGamesOnly by viewModel.isGamesOnly.collectAsState()
+    val storageMetrics by viewModel.storageMetrics.collectAsState()
+    val isDataSaverMode by viewModel.isDataSaverMode.collectAsState()
+    val isAutoPruneExpired by viewModel.isAutoPruneExpired.collectAsState()
 
     var selectedCategory by rememberSaveable { mutableStateOf(SettingsCategory.APPEARANCE) }
-    var totalDragX by remember { mutableFloatStateOf(0f) }
     val categories = remember { SettingsCategory.values() }
     var showClearClaimedDialog by remember { mutableStateOf(false) }
     var showResyncDialog by remember { mutableStateOf(false) }
@@ -175,26 +179,6 @@ fun SettingsScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .pointerInput(selectedCategory) {
-                detectHorizontalDragGestures(
-                    onDragStart = { totalDragX = 0f },
-                    onDragEnd = {
-                        val currentIndex = categories.indexOf(selectedCategory)
-                        if (totalDragX < -50f && currentIndex < categories.size - 1) {
-                            // Slide to the left -> bring up next tab
-                            selectedCategory = categories[currentIndex + 1]
-                        } else if (totalDragX > 50f && currentIndex > 0) {
-                            // Slide to the right -> bring up previous tab
-                            selectedCategory = categories[currentIndex - 1]
-                        }
-                        totalDragX = 0f
-                    },
-                    onDragCancel = { totalDragX = 0f },
-                    onHorizontalDrag = { _, dragAmount ->
-                        totalDragX += dragAmount
-                    }
-                )
-            }
             .verticalScroll(scrollState)
             .padding(horizontal = 16.dp, vertical = 12.dp)
             .testTag("settings_screen")
@@ -1249,6 +1233,279 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    SettingsCategory.STORAGE -> {
+        // SECTION: Storage & Speed Optimization Suite
+        SectionHeader(title = "STORAGE & PERFORMANCE ACCELERATOR", icon = Icons.Default.Speed)
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
+                .padding(14.dp)
+                .testTag("storage_accelerator_card"),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Live Storage Metrics Breakdown
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "Total App Storage Used",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = storageMetrics.formattedTotal,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "OPTIMIZED",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        letterSpacing = 1.sp
+                    )
+                }
+            }
+
+            // Storage Breakdown Chips
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Image Cache Chip
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                ) {
+                    Column {
+                        Text(
+                            text = "IMAGES",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = storageMetrics.formattedImageCache,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+
+                // HTTP Network Cache Chip
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                ) {
+                    Column {
+                        Text(
+                            text = "NETWORK",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = storageMetrics.formattedHttpCache,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+
+                // SQLite Database Chip
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                ) {
+                    Column {
+                        Text(
+                            text = "DATABASE",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = storageMetrics.formattedDatabase,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+
+            // Primary 1-Tap Deep Clean & VACUUM Action
+            Button(
+                onClick = { viewModel.performDeepClean() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+                    .testTag("deep_clean_button"),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.background
+                )
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(Icons.Default.Bolt, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(
+                        text = "1-Tap Deep Clean & Vacuum Database",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            // Granular Cache Buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = { viewModel.clearImageCache() },
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("clear_image_cache_button"),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(Icons.Default.Image, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Text("Clear Images", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = { viewModel.optimizeDatabase() },
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("compact_database_button"),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(Icons.Default.Storage, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Text("Compact DB", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+
+            Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+
+            // Data Saver & Low Memory Mode Toggle
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Data Saver & Low Memory Mode",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Downsample thumbnails to 150-375px and cap image disk cache to 12MB. Great for saving mobile data and phone storage.",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = 15.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Switch(
+                    checked = isDataSaverMode,
+                    onCheckedChange = { viewModel.setDataSaverMode(it) },
+                    modifier = Modifier.testTag("switch_data_saver_mode"),
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.background,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+            }
+
+            Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+
+            // Auto-Prune Expired Freebies Toggle
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Auto-Prune Expired Freebies",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Automatically clean ended giveaways that are not bookmarked or claimed, keeping the database under 100KB.",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = 15.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Switch(
+                    checked = isAutoPruneExpired,
+                    onCheckedChange = { viewModel.setAutoPruneExpired(it) },
+                    modifier = Modifier.testTag("switch_auto_prune_expired"),
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.background,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(20.dp))
 
@@ -1297,201 +1554,8 @@ fun SettingsScreen(
             SettingsCategory.ALERTS -> {
                 // SECTION 6: Push Notifications & Alerts
                 SectionHeader(title = "PUSH NOTIFICATIONS & FREEBIE ALERTS", icon = Icons.Default.NotificationsActive)
-
                 Spacer(modifier = Modifier.height(8.dp))
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.surface)
-                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            // Master Switch
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "New Free Game Alerts",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Notify immediately when new freebies are discovered",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Switch(
-                    checked = isNotificationsEnabled,
-                    onCheckedChange = { checked ->
-                        viewModel.setNotificationsEnabled(checked)
-                        if (checked && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            val hasPermission = ContextCompat.checkSelfPermission(
-                                context,
-                                Manifest.permission.POST_NOTIFICATIONS
-                            ) == PackageManager.PERMISSION_GRANTED
-                            if (!hasPermission) {
-                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            }
-                        }
-                    },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = MaterialTheme.colorScheme.background,
-                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                    ),
-                    modifier = Modifier.testTag("settings_master_notifications_switch")
-                )
-            }
-
-            Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
-
-            Text(
-                text = "Platforms & Stores to Notify:",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            // PlayStation & Xbox console switches
-            SettingToggleRow(
-                title = "PlayStation Deals & Drops",
-                subtitle = "PS5 & PS4 100% discount free games & loot",
-                color = PlayStationBlue,
-                checked = isNotifyPlayStation,
-                enabled = isNotificationsEnabled,
-                onCheckedChange = { viewModel.setNotifyPlayStation(it) }
-            )
-
-            SettingToggleRow(
-                title = "Xbox Deals & Drops",
-                subtitle = "Series X|S & Xbox One free games & keys",
-                color = XboxGreen,
-                checked = isNotifyXbox,
-                enabled = isNotificationsEnabled,
-                onCheckedChange = { viewModel.setNotifyXbox(it) }
-            )
-
-            SettingToggleRow(
-                title = "Nintendo Switch eShop Deals",
-                subtitle = "Nintendo Switch 100% discount freebies & drops",
-                color = NintendoRed,
-                checked = isNotifyNintendo,
-                enabled = isNotificationsEnabled,
-                onCheckedChange = { viewModel.setNotifyNintendo(it) }
-            )
-
-            // Launcher switches
-            SettingToggleRow(
-                title = "Steam Freebies",
-                subtitle = "Steam store drops & 100% discount keys",
-                color = SteamBlue,
-                checked = isNotifySteam,
-                enabled = isNotificationsEnabled,
-                onCheckedChange = { viewModel.setNotifySteam(it) }
-            )
-
-            SettingToggleRow(
-                title = "Epic Games Store",
-                subtitle = "Weekly free games & vault specials",
-                color = EpicGamesBlue,
-                checked = isNotifyEpic,
-                enabled = isNotificationsEnabled,
-                onCheckedChange = { viewModel.setNotifyEpic(it) }
-            )
-
-            SettingToggleRow(
-                title = "GOG.com",
-                subtitle = "DRM-free classic and indie giveaways",
-                color = GogPurple,
-                checked = isNotifyGog,
-                enabled = isNotificationsEnabled,
-                onCheckedChange = { viewModel.setNotifyGog(it) }
-            )
-
-            SettingToggleRow(
-                title = "Other PC Launchers",
-                subtitle = "Ubisoft, itch.io, EA App, Prime Gaming",
-                color = NeonGreen,
-                checked = isNotifyOthers,
-                enabled = isNotificationsEnabled,
-                onCheckedChange = { viewModel.setNotifyOthers(it) }
-            )
-
-            Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
-
-            // Games only switch
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Full Games Only",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = if (isNotificationsEnabled) MaterialTheme.colorScheme.onSurface else TextMuted
-                    )
-                    Text(
-                        text = "Do not notify for DLC, add-ons, or beta keys",
-                        fontSize = 11.sp,
-                        color = if (isNotificationsEnabled) MaterialTheme.colorScheme.onSurfaceVariant else TextMuted
-                    )
-                }
-                Switch(
-                    checked = isGamesOnly,
-                    enabled = isNotificationsEnabled,
-                    onCheckedChange = { viewModel.setGamesOnly(it) },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = MaterialTheme.colorScheme.background,
-                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                    )
-                )
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Test Alert Button
-            OutlinedButton(
-                onClick = {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        val hasPermission = ContextCompat.checkSelfPermission(
-                            context,
-                            Manifest.permission.POST_NOTIFICATIONS
-                        ) == PackageManager.PERMISSION_GRANTED
-                        if (!hasPermission) {
-                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            return@OutlinedButton
-                        }
-                    }
-                    viewModel.sendTestNotification()
-                    Toast.makeText(context, "Test alert sent! Check notifications bar.", Toast.LENGTH_SHORT).show()
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp)
-                    .testTag("settings_test_alert_button"),
-                shape = RoundedCornerShape(10.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(imageVector = Icons.Default.Send, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Text("Send Test Notification Now", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
+                AlertsSettingsCategoryContent(viewModel = viewModel)
             }
         }
 
@@ -1511,7 +1575,7 @@ fun SettingsScreen(
             )
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = "LootDrop V2.5 • PlayStation, Xbox, Nintendo & PC Free Games Radar",
+                text = "LootDrop V3.0 • PlayStation, Xbox, Nintendo & PC Free Games Radar",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

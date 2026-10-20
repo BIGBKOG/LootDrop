@@ -316,6 +316,21 @@ class AppPreferences(context: Context) {
         private const val KEY_DPI_OPTIMIZATION_ENABLED = "key_dpi_optimization_enabled"
         private const val KEY_DPI_SCALE_MODE = "key_dpi_scale_mode"
         private const val KEY_DETECTED_SCREEN_DPI = "key_detected_screen_dpi"
+        private const val KEY_DATA_SAVER_MODE = "key_data_saver_mode"
+        private const val KEY_AUTO_PRUNE_EXPIRED = "key_auto_prune_expired"
+        private const val KEY_OFFLINE_CACHE_FIRST = "key_offline_cache_first"
+        private const val KEY_NOTIFY_ENDING_SOON = "key_notify_ending_soon"
+        private const val KEY_MIN_WORTH_ALERT_THRESHOLD = "key_min_worth_alert_threshold"
+        private const val KEY_QUIET_HOURS_ENABLED = "key_quiet_hours_enabled"
+        private const val KEY_QUIET_HOURS_START = "key_quiet_hours_start"
+        private const val KEY_QUIET_HOURS_END = "key_quiet_hours_end"
+        private const val KEY_BG_SYNC_INTERVAL_HOURS = "key_bg_sync_interval_hours"
+        private const val KEY_BG_SYNC_WIFI_ONLY = "key_bg_sync_wifi_only"
+        private const val KEY_NOTIF_SOUND_ENABLED = "key_notif_sound_enabled"
+        private const val KEY_NOTIF_VIBRATE_ENABLED = "key_notif_vibrate_enabled"
+        private const val KEY_NOTIF_KEEP_FOREVER_ONLY = "key_notif_keep_forever_only"
+        private const val KEY_NOTIF_RICH_ARTWORK = "key_notif_rich_artwork"
+        private const val KEY_NOTIF_ACTIONS_ENABLED = "key_notif_actions_enabled"
     }
 
     var themeMode: ThemeMode
@@ -441,4 +456,64 @@ class AppPreferences(context: Context) {
     var detectedScreenDpi: Int
         get() = prefs.getInt(KEY_DETECTED_SCREEN_DPI, 420)
         set(value) = prefs.edit().putInt(KEY_DETECTED_SCREEN_DPI, value).apply()
+
+    var isDataSaverMode: Boolean
+        get() = prefs.getBoolean(KEY_DATA_SAVER_MODE, false)
+        set(value) = prefs.edit().putBoolean(KEY_DATA_SAVER_MODE, value).apply()
+
+    var isAutoPruneExpired: Boolean
+        get() = prefs.getBoolean(KEY_AUTO_PRUNE_EXPIRED, true)
+        set(value) = prefs.edit().putBoolean(KEY_AUTO_PRUNE_EXPIRED, value).apply()
+
+    var isOfflineCacheFirst: Boolean
+        get() = prefs.getBoolean(KEY_OFFLINE_CACHE_FIRST, true)
+        set(value) = prefs.edit().putBoolean(KEY_OFFLINE_CACHE_FIRST, value).apply()
+
+    var isNotifyEndingSoon: Boolean
+        get() = prefs.getBoolean(KEY_NOTIFY_ENDING_SOON, true)
+        set(value) = prefs.edit().putBoolean(KEY_NOTIFY_ENDING_SOON, value).apply()
+
+    var minWorthAlertThreshold: Float
+        get() = prefs.getFloat(KEY_MIN_WORTH_ALERT_THRESHOLD, 0f)
+        set(value) = prefs.edit().putFloat(KEY_MIN_WORTH_ALERT_THRESHOLD, value).apply()
+
+    var isQuietHoursEnabled: Boolean
+        get() = prefs.getBoolean(KEY_QUIET_HOURS_ENABLED, false)
+        set(value) = prefs.edit().putBoolean(KEY_QUIET_HOURS_ENABLED, value).apply()
+
+    var quietHoursStartHour: Int
+        get() = prefs.getInt(KEY_QUIET_HOURS_START, 23) // 11 PM
+        set(value) = prefs.edit().putInt(KEY_QUIET_HOURS_START, value).apply()
+
+    var quietHoursEndHour: Int
+        get() = prefs.getInt(KEY_QUIET_HOURS_END, 8) // 8 AM
+        set(value) = prefs.edit().putInt(KEY_QUIET_HOURS_END, value).apply()
+
+    var backgroundSyncIntervalHours: Int
+        get() = prefs.getInt(KEY_BG_SYNC_INTERVAL_HOURS, 4) // 4 hours
+        set(value) = prefs.edit().putInt(KEY_BG_SYNC_INTERVAL_HOURS, value).apply()
+
+    var backgroundSyncWifiOnly: Boolean
+        get() = prefs.getBoolean(KEY_BG_SYNC_WIFI_ONLY, false)
+        set(value) = prefs.edit().putBoolean(KEY_BG_SYNC_WIFI_ONLY, value).apply()
+
+    var isNotificationSoundEnabled: Boolean
+        get() = prefs.getBoolean(KEY_NOTIF_SOUND_ENABLED, true)
+        set(value) = prefs.edit().putBoolean(KEY_NOTIF_SOUND_ENABLED, value).apply()
+
+    var isNotificationVibrateEnabled: Boolean
+        get() = prefs.getBoolean(KEY_NOTIF_VIBRATE_ENABLED, true)
+        set(value) = prefs.edit().putBoolean(KEY_NOTIF_VIBRATE_ENABLED, value).apply()
+
+    var isKeepForeverOnly: Boolean
+        get() = prefs.getBoolean(KEY_NOTIF_KEEP_FOREVER_ONLY, false)
+        set(value) = prefs.edit().putBoolean(KEY_NOTIF_KEEP_FOREVER_ONLY, value).apply()
+
+    var isNotificationRichArtwork: Boolean
+        get() = prefs.getBoolean(KEY_NOTIF_RICH_ARTWORK, true)
+        set(value) = prefs.edit().putBoolean(KEY_NOTIF_RICH_ARTWORK, value).apply()
+
+    var isNotificationActionsEnabled: Boolean
+        get() = prefs.getBoolean(KEY_NOTIF_ACTIONS_ENABLED, true)
+        set(value) = prefs.edit().putBoolean(KEY_NOTIF_ACTIONS_ENABLED, value).apply()
 }

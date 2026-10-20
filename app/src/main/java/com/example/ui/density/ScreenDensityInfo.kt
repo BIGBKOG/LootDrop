@@ -2,6 +2,7 @@ package com.example.ui.density
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalConfiguration
@@ -18,6 +19,7 @@ enum class ScreenCategory(val label: String, val description: String) {
     TABLET("Tablet / Desktop", "Spacious large tablet display (840dp+)")
 }
 
+@Immutable
 data class ScreenDensityInfo(
     val densityDpi: Int,
     val densityScale: Float,

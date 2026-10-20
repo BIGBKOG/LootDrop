@@ -85,6 +85,36 @@ class GiveawaysRepository(
         giveawayDao.clearAllBookmarks()
     }
 
+    suspend fun clearAllCaches(context: android.content.Context): Long = withContext(Dispatchers.IO) {
+        (context.applicationContext as? android.app.Application)?.let { app ->
+            com.example.LootDropApplication.deepCleanAll(app)
+        } ?: 0L
+    }
+
+    suspend fun clearImageCache(context: android.content.Context): Long = withContext(Dispatchers.IO) {
+        (context.applicationContext as? android.app.Application)?.let { app ->
+            com.example.LootDropApplication.clearImageDiskCache(app)
+        } ?: 0L
+    }
+
+    suspend fun clearHttpCache(context: android.content.Context): Long = withContext(Dispatchers.IO) {
+        ApiClient.clearHttpCache(context)
+    }
+
+    suspend fun vacuumDatabase(context: android.content.Context) = withContext(Dispatchers.IO) {
+        com.example.data.local.AppDatabase.vacuumAndCompact(context)
+    }
+
+    suspend fun pruneExpiredGiveaways(context: android.content.Context): Int = withContext(Dispatchers.IO) {
+        val isoFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+        val todayStr = isoFormat.format(java.util.Date())
+        val deleted = giveawayDao.pruneExpiredGiveaways(todayStr)
+        if (deleted > 0) {
+            com.example.data.local.AppDatabase.vacuumAndCompact(context)
+        }
+        deleted
+    }
+
     suspend fun forceResync(): Result<SyncResult> = withContext(Dispatchers.IO) {
         try {
             giveawayDao.clearAll()

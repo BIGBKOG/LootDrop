@@ -45,6 +45,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -80,6 +81,24 @@ fun ChooseLauncherDialog(
     launchers: List<LauncherOption> = item.availableLaunchers
 ) {
     val context = LocalContext.current
+    var dialogVisible by remember { androidx.compose.runtime.mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        dialogVisible = true
+    }
+
+    val dialogScale by animateFloatAsState(
+        targetValue = if (dialogVisible) 1f else 0.88f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "choose_launcher_dialog_scale"
+    )
+    val dialogAlpha by animateFloatAsState(
+        targetValue = if (dialogVisible) 1f else 0f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "choose_launcher_dialog_alpha"
+    )
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -88,6 +107,11 @@ fun ChooseLauncherDialog(
         Surface(
             modifier = Modifier
                 .fillMaxWidth(0.94f)
+                .graphicsLayer {
+                    scaleX = dialogScale
+                    scaleY = dialogScale
+                    alpha = dialogAlpha
+                }
                 .clip(RoundedCornerShape(20.dp))
                 .border(1.dp, GamingCardBorder, RoundedCornerShape(20.dp))
                 .testTag("choose_launcher_dialog"),

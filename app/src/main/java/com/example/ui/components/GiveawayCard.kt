@@ -71,6 +71,7 @@ import com.example.data.model.GiveawayItem
 import com.example.data.model.LauncherType
 import com.example.preferences.CardDensity
 import com.example.ui.density.LocalScreenDensityInfo
+import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGreen
 
 @Composable
@@ -139,19 +140,47 @@ fun GiveawayCard(
         label = "claim_button_press_scale"
     )
 
+    // Expressive M3 popping outlines: vibrant launcher brand, neon status, or electric glow
+    val expressiveBorderColor = when {
+        item.isClaimed -> NeonGreen
+        item.isNew -> Color(0xFFFF9100).copy(alpha = pulseGlow.coerceAtLeast(0.85f))
+        item.isBookmarked -> NeonCyan
+        else -> launcherColor
+    }
+
     val cardBorderColor by animateColorAsState(
-        targetValue = when {
-            item.isClaimed -> NeonGreen.copy(alpha = 0.65f)
-            item.isNew -> MaterialTheme.colorScheme.primary.copy(alpha = pulseGlow)
-            else -> MaterialTheme.colorScheme.outline
-        },
-        animationSpec = tween(300, easing = FastOutSlowInEasing),
+        targetValue = expressiveBorderColor,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
         label = "card_border_color"
     )
 
+    val cardBorderWidth = if (item.isClaimed || item.isNew || item.isBookmarked || isPressed) 2.dp else 1.5.dp
+
+    // Dynamic gradient brush that gives the border a luminous, popping halo
+    val cardBorderBrush = remember(cardBorderColor, item.isClaimed, item.isBookmarked, item.isNew, launcherColor) {
+        when {
+            item.isClaimed -> Brush.horizontalGradient(
+                listOf(NeonGreen, Color(0xFF00E5FF), NeonGreen.copy(alpha = 0.8f))
+            )
+            item.isBookmarked -> Brush.horizontalGradient(
+                listOf(NeonCyan, Color(0xFFB388FF), NeonCyan.copy(alpha = 0.8f))
+            )
+            item.isNew -> Brush.horizontalGradient(
+                listOf(Color(0xFFFF9100), Color(0xFFFF3D00), Color(0xFFFFB74D))
+            )
+            else -> Brush.horizontalGradient(
+                listOf(
+                    cardBorderColor,
+                    cardBorderColor.copy(alpha = 0.85f),
+                    cardBorderColor.copy(alpha = 0.55f)
+                )
+            )
+        }
+    }
+
     when (cardDensity) {
         CardDensity.MINIMAL_LIST -> {
-            // Minimal Streamlined List Card (~72dp)
+            // Minimal Streamlined List Card (~72dp) with expressive popping outline
             Card(
                 modifier = modifier
                     .fillMaxWidth()
@@ -159,20 +188,20 @@ fun GiveawayCard(
                         scaleX = cardScale
                         scaleY = cardScale
                     }
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(16.dp))
                     .clickable(
                         interactionSource = interactionSource,
                         indication = null,
                         onClick = onClick
                     )
                     .border(
-                        width = 1.dp,
-                        color = cardBorderColor,
-                        shape = RoundedCornerShape(12.dp)
+                        width = cardBorderWidth,
+                        brush = cardBorderBrush,
+                        shape = RoundedCornerShape(16.dp)
                     )
                     .testTag("giveaway_card_minimal_${item.id}"),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(12.dp)
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF141924)),
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -187,16 +216,20 @@ fun GiveawayCard(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         // Square thumbnail with info icon
+                        val minimalImageRequest = remember(item.id, item.thumbnail, item.image) {
+                            ImageRequest.Builder(context)
+                                .data(if (item.thumbnail.isNotBlank()) item.thumbnail else item.image)
+                                .crossfade(true)
+                                .size(150, 150)
+                                .build()
+                        }
                         Box(
                             modifier = Modifier
                                 .size(50.dp)
                                 .clip(RoundedCornerShape(8.dp))
                         ) {
                             AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(if (item.thumbnail.isNotBlank()) item.thumbnail else item.image)
-                                    .crossfade(true)
-                                    .build(),
+                                model = minimalImageRequest,
                                 contentDescription = item.title,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize()
@@ -333,20 +366,20 @@ fun GiveawayCard(
                         scaleX = cardScale
                         scaleY = cardScale
                     }
-                    .clip(RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(16.dp))
                     .clickable(
                         interactionSource = interactionSource,
                         indication = null,
                         onClick = onClick
                     )
                     .border(
-                        width = if (item.isNew) 1.5.dp else 1.dp,
-                        color = cardBorderColor,
-                        shape = RoundedCornerShape(14.dp)
+                        width = cardBorderWidth,
+                        brush = cardBorderBrush,
+                        shape = RoundedCornerShape(16.dp)
                     )
                     .testTag("giveaway_card_compact_${item.id}"),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(14.dp)
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF141924)),
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -354,28 +387,33 @@ fun GiveawayCard(
                         .height(115.dp)
                 ) {
                     // Left thumbnail
+                    val compactImageRequest = remember(item.id, item.thumbnail, item.image) {
+                        ImageRequest.Builder(context)
+                            .data(if (item.thumbnail.isNotBlank()) item.thumbnail else item.image)
+                            .crossfade(true)
+                            .size(375, 300)
+                            .build()
+                    }
                     Box(
                         modifier = Modifier
                             .width(if (screenDensityInfo.isNarrowScreen) 110.dp else 125.dp)
                             .fillMaxHeight()
                     ) {
                         AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(if (item.thumbnail.isNotBlank()) item.thumbnail else item.image)
-                                .crossfade(true)
-                                .build(),
+                            model = compactImageRequest,
                             contentDescription = item.title,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize()
                         )
 
-                        // Launcher Tag
+                        // Launcher Tag with popping outline
                         Box(
                             modifier = Modifier
                                 .align(Alignment.TopStart)
                                 .padding(6.dp)
                                 .clip(RoundedCornerShape(6.dp))
                                 .background(launcherColor.copy(alpha = 0.95f))
+                                .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             val isDarkBrand = item.launcherCategory == LauncherType.PLAYSTATION || 
@@ -397,7 +435,7 @@ fun GiveawayCard(
                                 .size(28.dp)
                                 .clip(CircleShape)
                                 .background(Color(0xD90B0F19))
-                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.7f), CircleShape)
+                                .border(1.2.dp, launcherColor.copy(alpha = 0.9f), CircleShape)
                                 .clickable(
                                     onClick = onClick,
                                     onClickLabel = "View info for ${item.title}"
@@ -502,7 +540,7 @@ fun GiveawayCard(
         }
 
         CardDensity.RICH_CARDS -> {
-            // Full Hero Cover Card
+            // Full Hero Cover Card with expressive popping outline
             Card(
                 modifier = modifier
                     .fillMaxWidth()
@@ -510,33 +548,37 @@ fun GiveawayCard(
                         scaleX = cardScale
                         scaleY = cardScale
                     }
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(20.dp))
                     .clickable(
                         interactionSource = interactionSource,
                         indication = null,
                         onClick = onClick
                     )
                     .border(
-                        width = if (item.isNew) 1.5.dp else 1.dp,
-                        color = cardBorderColor,
-                        shape = RoundedCornerShape(16.dp)
+                        width = cardBorderWidth,
+                        brush = cardBorderBrush,
+                        shape = RoundedCornerShape(20.dp)
                     )
                     .testTag("giveaway_card_${item.id}"),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(16.dp)
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF141924)),
+                shape = RoundedCornerShape(20.dp)
             ) {
                 Column {
                     // Thumbnail Header
+                    val richImageRequest = remember(item.id, item.image, item.thumbnail) {
+                        ImageRequest.Builder(context)
+                            .data(if (item.image.isNotBlank()) item.image else item.thumbnail)
+                            .crossfade(true)
+                            .size(800, 450)
+                            .build()
+                    }
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(screenDensityInfo.cardCoverHeight)
                     ) {
                         AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(if (item.image.isNotBlank()) item.image else item.thumbnail)
-                                .crossfade(true)
-                                .build(),
+                            model = richImageRequest,
                             contentDescription = item.title,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize()
@@ -556,22 +598,27 @@ fun GiveawayCard(
                                 )
                         )
 
-                        // Top row badges: Launcher & Type
+                        // Top row: Launcher & Type badges on the left, Animated Bookmark on the right
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(12.dp),
-                            horizontalArrangement = Arrangement.Start,
+                            horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             val isDarkBrand = item.launcherCategory == LauncherType.PLAYSTATION || 
                                               item.launcherCategory == LauncherType.XBOX || 
                                               item.launcherCategory == LauncherType.EPIC
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(
+                                modifier = Modifier.weight(1f, fill = false),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(8.dp))
-                                        .background(launcherColor.copy(alpha = 0.9f))
+                                        .background(launcherColor.copy(alpha = 0.95f))
+                                        .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     Text(
@@ -587,6 +634,7 @@ fun GiveawayCard(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(8.dp))
                                             .background(Color(0xFF0070D1))
+                                            .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
                                             .padding(horizontal = 7.dp, vertical = 4.dp)
                                     ) {
                                         Text(
@@ -603,6 +651,7 @@ fun GiveawayCard(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(8.dp))
                                             .background(Color(0xFF107C10))
+                                            .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
                                             .padding(horizontal = 7.dp, vertical = 4.dp)
                                     ) {
                                         Text(
@@ -619,6 +668,7 @@ fun GiveawayCard(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(8.dp))
                                             .background(NeonGreen)
+                                            .border(1.dp, Color(0xFF0B0F19).copy(alpha = 0.35f), RoundedCornerShape(8.dp))
                                             .padding(horizontal = 7.dp, vertical = 4.dp)
                                     ) {
                                         Text(
@@ -634,6 +684,7 @@ fun GiveawayCard(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(8.dp))
                                         .background(Color(0xCC1A2333))
+                                        .border(1.dp, launcherColor.copy(alpha = 0.65f), RoundedCornerShape(8.dp))
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     Text(
@@ -643,6 +694,47 @@ fun GiveawayCard(
                                         color = Color.White
                                     )
                                 }
+                            }
+
+                            // Quick Bookmark button with bouncy spring scale pop
+                            val bookmarkInteraction = remember { MutableInteractionSource() }
+                            val isBookmarkPressed by bookmarkInteraction.collectIsPressedAsState()
+                            val cardBookmarkScale by animateFloatAsState(
+                                targetValue = when {
+                                    isBookmarkPressed -> 0.85f
+                                    item.isBookmarked -> 1.18f
+                                    else -> 1.0f
+                                },
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessLow
+                                ),
+                                label = "card_bookmark_scale"
+                            )
+                            IconButton(
+                                onClick = onToggleBookmark,
+                                interactionSource = bookmarkInteraction,
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .graphicsLayer {
+                                        scaleX = cardBookmarkScale
+                                        scaleY = cardBookmarkScale
+                                    }
+                                    .clip(CircleShape)
+                                    .background(if (item.isBookmarked) NeonCyan.copy(alpha = 0.28f) else Color(0xD90B0F19))
+                                    .border(
+                                        1.2.dp,
+                                        if (item.isBookmarked) NeonCyan else Color.White.copy(alpha = 0.35f),
+                                        CircleShape
+                                    )
+                                    .testTag("bookmark_button_${item.id}")
+                            ) {
+                                Icon(
+                                    imageVector = if (item.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                                    contentDescription = if (item.isBookmarked) "Bookmarked" else "Bookmark",
+                                    tint = if (item.isBookmarked) NeonCyan else Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
                             }
                         }
 
@@ -660,7 +752,7 @@ fun GiveawayCard(
                                     .size(32.dp)
                                     .clip(CircleShape)
                                     .background(Color(0xD90B0F19))
-                                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.7f), CircleShape)
+                                    .border(1.2.dp, launcherColor.copy(alpha = 0.9f), CircleShape)
                                     .clickable(
                                         onClick = onClick,
                                         onClickLabel = "View info for ${item.title}"
@@ -677,13 +769,21 @@ fun GiveawayCard(
                             }
 
                             if (showOriginalPrice && item.worth.isNotBlank() && item.worth != "N/A" && item.worth != "FREE") {
-                                Text(
-                                    text = item.worth,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color(0xFFCBD5E1),
-                                    textDecoration = TextDecoration.LineThrough
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Color(0xD90B0F19))
+                                        .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+                                        .padding(horizontal = 7.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = item.worth,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFFCBD5E1),
+                                        textDecoration = TextDecoration.LineThrough
+                                    )
+                                }
                             }
 
                             if (item.isNew) {
@@ -695,8 +795,8 @@ fun GiveawayCard(
                                             alpha = pulseGlow
                                         }
                                         .clip(RoundedCornerShape(6.dp))
-                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
-                                        .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(6.dp))
+                                        .background(Color(0xFFFF9100).copy(alpha = 0.25f))
+                                        .border(1.2.dp, Color(0xFFFF9100), RoundedCornerShape(6.dp))
                                         .padding(horizontal = 6.dp, vertical = 3.dp)
                                 ) {
                                     Text(
@@ -830,10 +930,35 @@ fun GiveawayCard(
                                 targetValue = if (item.isClaimed) NeonGreen else MaterialTheme.colorScheme.outline,
                                 label = "claimed_border"
                             )
+
+                            val haveItInteraction = remember { MutableInteractionSource() }
+                            val isHaveItPressed by haveItInteraction.collectIsPressedAsState()
+                            val haveItScale by animateFloatAsState(
+                                targetValue = if (isHaveItPressed) 0.93f else 1f,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessLow
+                                ),
+                                label = "have_it_scale"
+                            )
+                            val claimedCheckScale by animateFloatAsState(
+                                targetValue = if (item.isClaimed) 1.25f else 1f,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                ),
+                                label = "claimed_check_scale"
+                            )
+
                             OutlinedButton(
                                 onClick = onToggleClaimed,
+                                interactionSource = haveItInteraction,
                                 modifier = Modifier
                                     .height(44.dp)
+                                    .graphicsLayer {
+                                        scaleX = haveItScale
+                                        scaleY = haveItScale
+                                    }
                                     .testTag("claimed_toggle_${item.id}"),
                                 shape = RoundedCornerShape(10.dp),
                                 colors = ButtonDefaults.outlinedButtonColors(
@@ -849,7 +974,12 @@ fun GiveawayCard(
                                     Icon(
                                         imageVector = if (item.isClaimed) Icons.Default.CheckCircle else Icons.Outlined.CheckCircleOutline,
                                         contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
+                                        modifier = Modifier
+                                            .size(16.dp)
+                                            .graphicsLayer {
+                                                scaleX = claimedCheckScale
+                                                scaleY = claimedCheckScale
+                                            },
                                         tint = if (item.isClaimed) NeonGreen else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     Text(

@@ -1,5 +1,9 @@
 <resources>
     <string name="app_name">LootDrop</string>
     <string name="notification_channel_name">Free Game Alerts</string>
-    <string name="notification_channel_description">Notifications when new free PC games are available to claim</string>
+    <string name="notification_channel_description">Notifications when new free PC and console games are available to claim</string>
+    <string name="channel_major_games">Major Free Games</string>
+    <string name="channel_ending_soon">Expiring Soon Alerts</string>
+    <string name="channel_dlc">DLC, Add-ons &amp; Loot</string>
+    <string name="channel_system">System &amp; Sync Alerts</string>
 </resources>

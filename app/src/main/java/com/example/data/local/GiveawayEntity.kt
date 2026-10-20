@@ -1,10 +1,19 @@
 package com.example.data.local
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.example.data.model.GiveawayItem
 
-@Entity(tableName = "giveaways")
+@Entity(
+    tableName = "giveaways",
+    indices = [
+        Index(value = ["isClaimed", "id"]),
+        Index(value = ["isBookmarked", "id"]),
+        Index(value = ["status", "id"]),
+        Index(value = ["type"])
+    ]
+)
 data class GiveawayEntity(
     @PrimaryKey val id: Int,
     val title: String,

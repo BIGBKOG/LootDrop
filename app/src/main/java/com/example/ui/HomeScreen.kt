@@ -47,10 +47,19 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import com.example.ui.density.ScreenDensityInfo
 import com.example.ui.density.LocalScreenDensityInfo
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -59,19 +68,27 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.FilterAltOff
 import androidx.compose.material.icons.filled.MilitaryTech
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -86,13 +103,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -109,10 +122,14 @@ import com.example.data.model.GiveawayItem
 import com.example.data.model.LauncherType
 import com.example.preferences.CardDensity
 import com.example.ui.components.ChooseLauncherDialog
+import com.example.ui.components.ExpressiveFloatingNavBar
 import com.example.ui.components.FilterSortBottomSheet
 import com.example.ui.components.GiveawayCard
 import com.example.ui.components.GiveawayDetailDialog
 import com.example.ui.components.StatsBanner
+import com.example.ui.components.NotificationHistorySheet
+import com.example.ui.components.NotificationSettingsSheet
+import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
@@ -134,6 +151,8 @@ fun HomeScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val displayedGiveaways by viewModel.displayedGiveaways.collectAsState()
+    val discoverGiveaways by viewModel.discoverGiveaways.collectAsState()
+    val claimedGiveaways by viewModel.claimedGiveaways.collectAsState()
     val uiStats by viewModel.uiStats.collectAsState()
     val detailItem by viewModel.detailItem.collectAsState()
     val cardDensity by viewModel.cardDensity.collectAsState()
@@ -145,9 +164,40 @@ fun HomeScreen(
     val showOnboardingWalkthrough by viewModel.showOnboardingWalkthrough.collectAsState()
     val isAnimationsEnabled by viewModel.isAnimationsEnabled.collectAsState()
     val isNewTodayDismissed by viewModel.isNewTodayDismissed.collectAsState()
+    val unreadNotificationCount by viewModel.unreadNotificationCount.collectAsState()
+    val isNotificationHistorySheetOpen by viewModel.isNotificationHistorySheetOpen.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
 
     var isSearchExpanded by remember { mutableStateOf(false) }
+    var isNotificationSettingsSheetOpen by remember { mutableStateOf(false) }
     var launcherChooserItem by remember { mutableStateOf<GiveawayItem?>(null) }
+
+    val tabs = remember { listOf(MainTab.DISCOVER, MainTab.CLAIMED, MainTab.SETTINGS) }
+    val pagerState = rememberPagerState(
+        initialPage = tabs.indexOf(selectedTab).coerceAtLeast(0),
+        pageCount = { tabs.size }
+    )
+    val coroutineScope = rememberCoroutineScope()
+
+    // Sync pager page changes (when user swipes) to ViewModel's selectedTab
+    LaunchedEffect(pagerState.currentPage) {
+        val tab = tabs[pagerState.currentPage]
+        if (tab != selectedTab) {
+            viewModel.selectTab(tab)
+        }
+    }
+
+    // Sync ViewModel's selectedTab (e.g. from bottom bar taps, back button) to pager
+    LaunchedEffect(selectedTab) {
+        val targetIndex = tabs.indexOf(selectedTab)
+        if (targetIndex >= 0 && targetIndex != pagerState.currentPage) {
+            if (kotlin.math.abs(targetIndex - pagerState.currentPage) > 1) {
+                pagerState.scrollToPage(targetIndex)
+            } else {
+                pagerState.animateScrollToPage(targetIndex)
+            }
+        }
+    }
 
     LaunchedEffect(reopenStatusMessage) {
         if (reopenStatusMessage != null) {
@@ -156,33 +206,13 @@ fun HomeScreen(
         }
     }
 
-    val tabs = remember { MainTab.values() }
-    val pagerState = rememberPagerState(
-        initialPage = selectedTab.ordinal,
-        pageCount = { tabs.size }
-    )
-    val coroutineScope = rememberCoroutineScope()
-
-    // Sync pager swipe to ViewModel's selectedTab
-    LaunchedEffect(pagerState.currentPage) {
-        val targetTab = tabs[pagerState.currentPage]
-        if (selectedTab != targetTab) {
-            viewModel.selectTab(targetTab)
-        }
-    }
-
-    // Sync ViewModel's selectedTab to pager scroll
-    LaunchedEffect(selectedTab) {
-        if (pagerState.currentPage != selectedTab.ordinal) {
-            pagerState.animateScrollToPage(selectedTab.ordinal)
-        }
-    }
+    val discoverListState = rememberLazyListState()
+    val claimedListState = rememberLazyListState()
+    val discoverGridState = rememberLazyGridState()
+    val claimedGridState = rememberLazyGridState()
 
     BackHandler(enabled = selectedTab != MainTab.DISCOVER) {
         viewModel.selectTab(MainTab.DISCOVER)
-        coroutineScope.launch {
-            pagerState.animateScrollToPage(MainTab.DISCOVER.ordinal)
-        }
     }
 
     Scaffold(
@@ -191,137 +221,30 @@ fun HomeScreen(
             .background(MaterialTheme.colorScheme.background),
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            NavigationBar(
+            Box(
                 modifier = Modifier
+                    .fillMaxWidth()
                     .navigationBarsPadding()
-                    .testTag("bottom_nav_bar"),
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 8.dp
+                    .padding(horizontal = 20.dp, vertical = 10.dp),
+                contentAlignment = Alignment.Center
             ) {
-                val discoverScale by animateFloatAsState(
-                    targetValue = if (selectedTab == MainTab.DISCOVER) 1.15f else 1f,
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
-                    label = "nav_discover_scale"
-                )
-                val claimedScale by animateFloatAsState(
-                    targetValue = if (selectedTab == MainTab.CLAIMED) 1.15f else 1f,
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
-                    label = "nav_claimed_scale"
-                )
-                val settingsScale by animateFloatAsState(
-                    targetValue = if (selectedTab == MainTab.SETTINGS) 1.15f else 1f,
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
-                    label = "nav_settings_scale"
-                )
-
-                NavigationBarItem(
-                    selected = selectedTab == MainTab.DISCOVER,
-                    onClick = {
-                        viewModel.selectTab(MainTab.DISCOVER)
-                        coroutineScope.launch {
-                            pagerState.animateScrollToPage(MainTab.DISCOVER.ordinal)
-                        }
+                val currentTab = tabs[pagerState.currentPage]
+                ExpressiveFloatingNavBar(
+                    selectedTab = currentTab,
+                    onTabSelected = { tab ->
+                        viewModel.selectTab(tab)
                     },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.Explore,
-                            contentDescription = "Discover",
-                            modifier = Modifier.graphicsLayer {
-                                scaleX = discoverScale
-                                scaleY = discoverScale
-                            }
-                        )
-                    },
-                    label = { Text("Discover") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MaterialTheme.colorScheme.background,
-                        indicatorColor = MaterialTheme.colorScheme.primary,
-                        selectedTextColor = MaterialTheme.colorScheme.primary,
-                        unselectedIconColor = TextMuted,
-                        unselectedTextColor = TextMuted
-                    ),
-                    modifier = Modifier.testTag("nav_tab_discover")
-                )
-
-                NavigationBarItem(
-                    selected = selectedTab == MainTab.CLAIMED,
-                    onClick = {
-                        viewModel.selectTab(MainTab.CLAIMED)
-                        coroutineScope.launch {
-                            pagerState.animateScrollToPage(MainTab.CLAIMED.ordinal)
-                        }
-                    },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "In Library",
-                            modifier = Modifier.graphicsLayer {
-                                scaleX = claimedScale
-                                scaleY = claimedScale
-                            }
-                        )
-                    },
-                    label = { Text("In Library") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MaterialTheme.colorScheme.background,
-                        indicatorColor = NeonGreen,
-                        selectedTextColor = NeonGreen,
-                        unselectedIconColor = TextMuted,
-                        unselectedTextColor = TextMuted
-                    ),
-                    modifier = Modifier.testTag("nav_tab_claimed")
-                )
-
-                NavigationBarItem(
-                    selected = selectedTab == MainTab.SETTINGS,
-                    onClick = {
-                        viewModel.selectTab(MainTab.SETTINGS)
-                        coroutineScope.launch {
-                            pagerState.animateScrollToPage(MainTab.SETTINGS.ordinal)
-                        }
-                    },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Settings",
-                            modifier = Modifier.graphicsLayer {
-                                scaleX = settingsScale
-                                scaleY = settingsScale
-                            }
-                        )
-                    },
-                    label = { Text("Settings") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MaterialTheme.colorScheme.background,
-                        indicatorColor = MaterialTheme.colorScheme.primary,
-                        selectedTextColor = MaterialTheme.colorScheme.primary,
-                        unselectedIconColor = TextMuted,
-                        unselectedTextColor = TextMuted
-                    ),
-                    modifier = Modifier.testTag("nav_tab_settings")
+                    claimedCount = claimedGiveaways.size
                 )
             }
         }
     ) { innerPadding ->
-        HorizontalPager(
-            state = pagerState,
-            beyondViewportPageCount = 1,
+        val currentTab = tabs[pagerState.currentPage]
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .testTag("main_horizontal_pager")
-        ) { page ->
-            val currentTab = tabs[page]
-            Column(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                if (currentTab == MainTab.SETTINGS) {
-                    // Render Settings Tab
-                    SettingsScreen(
-                        viewModel = viewModel,
-                        modifier = Modifier.statusBarsPadding()
-                    )
-                } else {
+        ) {
                     // Top App Bar
                     Row(
                         modifier = Modifier
@@ -364,7 +287,7 @@ fun HomeScreen(
                                         .padding(horizontal = 5.dp, vertical = 1.5.dp)
                                 ) {
                                     Text(
-                                        text = "${screenDensityInfo.densityDpi} DPI",
+                                        text = if (currentTab == MainTab.SETTINGS) "SETTINGS" else "${screenDensityInfo.densityDpi} DPI",
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.ExtraBold,
                                         color = MaterialTheme.colorScheme.primary
@@ -372,62 +295,114 @@ fun HomeScreen(
                                 }
                             }
                             Text(
-                                text = "PC, PS & XBOX FREE RADAR",
+                                text = if (currentTab == MainTab.SETTINGS) "APP PREFERENCES & CONTROLS" else "PC, PS & XBOX FREE RADAR",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = NeonGreen,
+                                color = if (currentTab == MainTab.SETTINGS) MaterialTheme.colorScheme.primary else NeonGreen,
                                 letterSpacing = 1.sp
                             )
                         }
                     }
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        // Search Button
-                        IconButton(
-                            onClick = { isSearchExpanded = !isSearchExpanded },
-                            modifier = Modifier.testTag("toggle_search_button")
+                    if (currentTab != MainTab.SETTINGS) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Icon(
-                                imageVector = if (isSearchExpanded) Icons.Default.Close else Icons.Default.Search,
-                                contentDescription = "Search Games",
-                                tint = if (isSearchExpanded) MaterialTheme.colorScheme.primary else TextPrimary
-                            )
-                        }
-
-                        // Consolidated Material 3 Filter Menu Button (3 lines / tune icon)
-                        IconButton(
-                            onClick = { viewModel.setFilterSheetOpen(true) },
-                            modifier = Modifier.testTag("filter_menu_button")
-                        ) {
-                            Box {
+                            // Search Button
+                            IconButton(
+                                onClick = { isSearchExpanded = !isSearchExpanded },
+                                modifier = Modifier.testTag("toggle_search_button")
+                            ) {
                                 Icon(
-                                    imageVector = Icons.Default.Tune,
-                                    contentDescription = "Filter & Sort Menu",
-                                    tint = if (activeFilterCount > 0) MaterialTheme.colorScheme.primary else TextPrimary
+                                    imageVector = if (isSearchExpanded) Icons.Default.Close else Icons.Default.Search,
+                                    contentDescription = "Search Games",
+                                    tint = if (isSearchExpanded) MaterialTheme.colorScheme.primary else TextPrimary
                                 )
-                                if (activeFilterCount > 0) {
-                                    val badgeScale by animateFloatAsState(
-                                        targetValue = 1f,
-                                        animationSpec = spring(
-                                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                                            stiffness = Spring.StiffnessMediumLow
-                                        ),
-                                        label = "filter_badge_scale"
+                            }
+
+                            // Consolidated Material 3 Filter Menu Button (3 lines / tune icon)
+                            IconButton(
+                                onClick = { viewModel.setFilterSheetOpen(true) },
+                                modifier = Modifier.testTag("filter_menu_button")
+                            ) {
+                                Box {
+                                    Icon(
+                                        imageVector = Icons.Default.Tune,
+                                        contentDescription = "Filter & Sort Menu",
+                                        tint = if (activeFilterCount > 0) MaterialTheme.colorScheme.primary else TextPrimary
                                     )
-                                    Box(
-                                        modifier = Modifier
-                                            .graphicsLayer {
-                                                scaleX = badgeScale
-                                                scaleY = badgeScale
-                                            }
-                                            .size(9.dp)
-                                            .clip(CircleShape)
-                                            .background(MaterialTheme.colorScheme.primary)
-                                            .align(Alignment.TopEnd)
+                                    if (activeFilterCount > 0) {
+                                        val badgeScale by animateFloatAsState(
+                                            targetValue = 1f,
+                                            animationSpec = spring(
+                                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                stiffness = Spring.StiffnessMediumLow
+                                            ),
+                                            label = "filter_badge_scale"
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .graphicsLayer {
+                                                    scaleX = badgeScale
+                                                    scaleY = badgeScale
+                                                }
+                                                .size(9.dp)
+                                                .clip(CircleShape)
+                                                .background(MaterialTheme.colorScheme.primary)
+                                                .align(Alignment.TopEnd)
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Notification Alert Inbox Button with playful wiggle when unread alerts arrive
+                            val bellInfinite = rememberInfiniteTransition(label = "bellWiggleTransition")
+                            val bellRotation by bellInfinite.animateFloat(
+                                initialValue = if (unreadNotificationCount > 0) -9f else 0f,
+                                targetValue = if (unreadNotificationCount > 0) 9f else 0f,
+                                animationSpec = infiniteRepeatable(
+                                    animation = tween(380, easing = FastOutSlowInEasing),
+                                    repeatMode = RepeatMode.Reverse
+                                ),
+                                label = "bellRotation"
+                            )
+                            val dotPulseScale by bellInfinite.animateFloat(
+                                initialValue = 0.85f,
+                                targetValue = 1.25f,
+                                animationSpec = infiniteRepeatable(
+                                    animation = tween(750, easing = FastOutSlowInEasing),
+                                    repeatMode = RepeatMode.Reverse
+                                ),
+                                label = "dotPulseScale"
+                            )
+
+                            IconButton(
+                                onClick = { viewModel.setNotificationHistorySheetOpen(true) },
+                                modifier = Modifier.testTag("notification_inbox_button")
+                            ) {
+                                Box {
+                                    Icon(
+                                        imageVector = if (unreadNotificationCount > 0) Icons.Default.NotificationsActive else Icons.Default.Notifications,
+                                        contentDescription = "Alert Inbox & History",
+                                        tint = if (unreadNotificationCount > 0) NeonCyan else TextPrimary,
+                                        modifier = Modifier.graphicsLayer {
+                                            rotationZ = bellRotation
+                                        }
                                     )
+                                    if (unreadNotificationCount > 0) {
+                                        Box(
+                                            modifier = Modifier
+                                                .graphicsLayer {
+                                                    scaleX = dotPulseScale
+                                                    scaleY = dotPulseScale
+                                                }
+                                                .size(8.dp)
+                                                .clip(CircleShape)
+                                                .background(NeonGreen)
+                                                .align(Alignment.TopEnd)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -436,7 +411,7 @@ fun HomeScreen(
 
                 // Expandable Search Bar with fluid spring animation
                 AnimatedVisibility(
-                    visible = isSearchExpanded,
+                    visible = isSearchExpanded && currentTab != MainTab.SETTINGS,
                     enter = fadeIn(tween(200)) + expandVertically(
                         animationSpec = spring(
                             dampingRatio = Spring.DampingRatioLowBouncy,
@@ -482,7 +457,7 @@ fun HomeScreen(
 
                 // Reopen Auto-Check Notification Banner
                 AnimatedVisibility(
-                    visible = reopenStatusMessage != null,
+                    visible = reopenStatusMessage != null && currentTab != MainTab.SETTINGS,
                     enter = fadeIn() + expandVertically(),
                     exit = fadeOut() + shrinkVertically()
                 ) {
@@ -536,253 +511,102 @@ fun HomeScreen(
                     }
                 }
 
-                // Stats Banner on Discover
-                if (currentTab == MainTab.DISCOVER) {
-                    StatsBanner(
-                        stats = uiStats,
-                        isRefreshing = isLoading,
-                        onRefresh = { viewModel.refreshGiveaways() },
-                        isNewTodayDismissed = isNewTodayDismissed,
-                        onDismissNewToday = { viewModel.dismissNewToday() },
-                        onNewTodayClick = { viewModel.selectSort(SortOption.NEWEST) }
-                    )
-                }
 
-                // Total Money Saved Banner on In Library
-                if (currentTab == MainTab.CLAIMED) {
-                    ClaimedSavingsBanner(
-                        savingsUsd = uiStats.claimedTotalSavedUsd,
-                        claimedCount = uiStats.claimedCount
-                    )
-                }
 
-                // Active Filters Summary Pill (if any non-defaults are selected)
-                if (activeFilterCount > 0 && currentTab != MainTab.SETTINGS) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
-                                .clickable { viewModel.setFilterSheetOpen(true) }
-                                .padding(horizontal = 10.dp, vertical = 5.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Tune,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(13.dp)
-                            )
-                            Text(
-                                text = buildString {
-                                    if (selectedLaunchers.isNotEmpty() && !selectedLaunchers.contains(LauncherType.ALL)) {
-                                        append(selectedLaunchers.joinToString(", ") { it.displayName })
-                                    }
-                                    if (selectedTypeFilter != TypeFilter.ALL) {
-                                        if (isNotEmpty()) append(" • ")
-                                        append(selectedTypeFilter.label)
-                                    }
-                                    if (selectedSort != SortOption.NEWEST) {
-                                        if (isNotEmpty()) append(" • ")
-                                        append(selectedSort.label)
-                                    }
-                                },
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = TextPrimary
-                            )
-                        }
-
-                        Text(
-                            text = "Reset",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .clickable { viewModel.resetFilters() }
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
+            // HorizontalPager allowing fluid swiping right and left between all tabs
+            HorizontalPager(
+                state = pagerState,
+                beyondViewportPageCount = 1,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .weight(1f)
+                    .testTag("main_horizontal_pager")
+            ) { page ->
+                when (tabs[page]) {
+                    MainTab.DISCOVER -> {
+                        GiveawaysTabContent(
+                            tab = MainTab.DISCOVER,
+                            giveaways = discoverGiveaways,
+                            isLoading = isLoading,
+                            errorMessage = errorMessage,
+                            searchQuery = searchQuery,
+                            uiStats = uiStats,
+                            isNewTodayDismissed = isNewTodayDismissed,
+                            activeFilterCount = activeFilterCount,
+                            selectedLaunchers = selectedLaunchers,
+                            selectedTypeFilter = selectedTypeFilter,
+                            selectedSort = selectedSort,
+                            cardDensity = cardDensity,
+                            isShowOriginalPrice = isShowOriginalPrice,
+                            isShowExpiration = isShowExpiration,
+                            isAnimationsEnabled = isAnimationsEnabled,
+                            screenDensityInfo = screenDensityInfo,
+                            listState = discoverListState,
+                            gridState = discoverGridState,
+                            onRefresh = { viewModel.refreshGiveaways() },
+                            onDismissNewToday = { viewModel.dismissNewToday() },
+                            onNewTodayClick = { viewModel.selectSort(SortOption.NEWEST) },
+                            onOpenFilterSheet = { viewModel.setFilterSheetOpen(true) },
+                            onResetFilters = { viewModel.resetFilters() },
+                            onItemClick = { viewModel.openDetail(it) },
+                            onClaimClick = { item ->
+                                if (item.hasMultipleLaunchers) {
+                                    launcherChooserItem = item
+                                } else {
+                                    viewModel.claimAndLaunch(context, item)
+                                }
+                            },
+                            onToggleBookmark = { viewModel.toggleBookmark(it) },
+                            onToggleClaimed = { viewModel.toggleClaimed(it) }
                         )
                     }
-                }
-
-                // Main List with Pull-to-Refresh
-                PullToRefreshBox(
-                    isRefreshing = isLoading,
-                    onRefresh = { viewModel.refreshGiveaways() },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .testTag("pull_to_refresh_box")
-                ) {
-                    if (isLoading && displayedGiveaways.isEmpty()) {
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = "Scanning PC, PlayStation, Xbox & Nintendo for Free Loot...",
-                                fontSize = 14.sp,
-                                color = TextSecondary
-                            )
-                        }
-                    } else if (displayedGiveaways.isEmpty()) {
-                        val emptyIconBob by rememberInfiniteTransition(label = "emptyBob").animateFloat(
-                            initialValue = -4f,
-                            targetValue = 4f,
-                            animationSpec = infiniteRepeatable(
-                                animation = tween(1600, easing = FastOutSlowInEasing),
-                                repeatMode = RepeatMode.Reverse
-                            ),
-                            label = "emptyIconBob"
+                    MainTab.CLAIMED -> {
+                        GiveawaysTabContent(
+                            tab = MainTab.CLAIMED,
+                            giveaways = claimedGiveaways,
+                            isLoading = isLoading,
+                            errorMessage = errorMessage,
+                            searchQuery = searchQuery,
+                            uiStats = uiStats,
+                            isNewTodayDismissed = isNewTodayDismissed,
+                            activeFilterCount = activeFilterCount,
+                            selectedLaunchers = selectedLaunchers,
+                            selectedTypeFilter = selectedTypeFilter,
+                            selectedSort = selectedSort,
+                            cardDensity = cardDensity,
+                            isShowOriginalPrice = isShowOriginalPrice,
+                            isShowExpiration = isShowExpiration,
+                            isAnimationsEnabled = isAnimationsEnabled,
+                            screenDensityInfo = screenDensityInfo,
+                            listState = claimedListState,
+                            gridState = claimedGridState,
+                            onRefresh = { viewModel.refreshGiveaways() },
+                            onDismissNewToday = { viewModel.dismissNewToday() },
+                            onNewTodayClick = { viewModel.selectSort(SortOption.NEWEST) },
+                            onOpenFilterSheet = { viewModel.setFilterSheetOpen(true) },
+                            onResetFilters = { viewModel.resetFilters() },
+                            onItemClick = { viewModel.openDetail(it) },
+                            onClaimClick = { item ->
+                                if (item.hasMultipleLaunchers) {
+                                    launcherChooserItem = item
+                                } else {
+                                    viewModel.claimAndLaunch(context, item)
+                                }
+                            },
+                            onToggleBookmark = { viewModel.toggleBookmark(it) },
+                            onToggleClaimed = { viewModel.toggleClaimed(it) }
                         )
-
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(32.dp),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .graphicsLayer {
-                                        translationY = emptyIconBob
-                                    }
-                                    .size(64.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = when (currentTab) {
-                                        MainTab.DISCOVER -> Icons.Default.SportsEsports
-                                        MainTab.CLAIMED -> Icons.Default.CheckCircle
-                                        MainTab.SETTINGS -> Icons.Default.Settings
-                                    },
-                                    contentDescription = null,
-                                    tint = TextMuted,
-                                    modifier = Modifier.size(32.dp)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Text(
-                                text = when (currentTab) {
-                                    MainTab.DISCOVER -> "No Giveaways Found"
-                                    MainTab.CLAIMED -> "No Claimed Games Yet"
-                                    MainTab.SETTINGS -> ""
-                                },
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimary
-                            )
-
-                            Spacer(modifier = Modifier.height(6.dp))
-
-                            Text(
-                                text = when (currentTab) {
-                                    MainTab.DISCOVER -> "Try adjusting your filters in the top menu or clearing your search term."
-                                    MainTab.CLAIMED -> "Tap 'Claim Free' on any game to automatically add it to your library and track total dollars saved!"
-                                    MainTab.SETTINGS -> ""
-                                },
-                                fontSize = 13.sp,
-                                color = TextSecondary,
-                                lineHeight = 18.sp
-                            )
-                        }
-                    } else {
-                        if (screenDensityInfo.gridColumns > 1) {
-                            LazyVerticalGrid(
-                                columns = GridCells.Fixed(screenDensityInfo.gridColumns),
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .testTag("giveaways_list"),
-                                contentPadding = PaddingValues(
-                                    start = screenDensityInfo.adaptiveHorizontalPadding,
-                                    end = screenDensityInfo.adaptiveHorizontalPadding,
-                                    top = 6.dp,
-                                    bottom = 24.dp
-                                ),
-                                horizontalArrangement = Arrangement.spacedBy(screenDensityInfo.adaptiveCardSpacing),
-                                verticalArrangement = Arrangement.spacedBy(screenDensityInfo.adaptiveCardSpacing)
-                            ) {
-                                items(displayedGiveaways, key = { it.id }) { item ->
-                                    GiveawayCard(
-                                        item = item,
-                                        cardDensity = cardDensity,
-                                        showOriginalPrice = isShowOriginalPrice,
-                                        showExpiration = isShowExpiration,
-                                        onClick = { viewModel.openDetail(item) },
-                                        onClaimClick = {
-                                            if (item.hasMultipleLaunchers) {
-                                                launcherChooserItem = item
-                                            } else {
-                                                viewModel.claimAndLaunch(context, item)
-                                            }
-                                        },
-                                        onToggleBookmark = { viewModel.toggleBookmark(item) },
-                                        onToggleClaimed = { viewModel.toggleClaimed(item) }
-                                    )
-                                }
-                            }
-                        } else {
-                            LazyColumn(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .testTag("giveaways_list"),
-                                contentPadding = PaddingValues(
-                                    start = screenDensityInfo.adaptiveHorizontalPadding,
-                                    end = screenDensityInfo.adaptiveHorizontalPadding,
-                                    top = 6.dp,
-                                    bottom = 24.dp
-                                ),
-                                verticalArrangement = Arrangement.spacedBy(
-                                    when (cardDensity) {
-                                        CardDensity.RICH_CARDS -> screenDensityInfo.adaptiveCardSpacing
-                                        CardDensity.COMPACT_CARDS -> (screenDensityInfo.adaptiveCardSpacing.value * 0.75f).dp
-                                        CardDensity.MINIMAL_LIST -> 6.dp
-                                    }
-                                )
-                            ) {
-                                items(displayedGiveaways, key = { it.id }) { item ->
-                                    GiveawayCard(
-                                        item = item,
-                                        cardDensity = cardDensity,
-                                        showOriginalPrice = isShowOriginalPrice,
-                                        showExpiration = isShowExpiration,
-                                        onClick = { viewModel.openDetail(item) },
-                                        onClaimClick = {
-                                            if (item.hasMultipleLaunchers) {
-                                                launcherChooserItem = item
-                                            } else {
-                                                viewModel.claimAndLaunch(context, item)
-                                            }
-                                        },
-                                        onToggleBookmark = { viewModel.toggleBookmark(item) },
-                                        onToggleClaimed = { viewModel.toggleClaimed(item) },
-                                        modifier = if (isAnimationsEnabled) Modifier.animateItem() else Modifier
-                                    )
-                                }
-                            }
-                        }
+                    }
+                    MainTab.SETTINGS -> {
+                        SettingsScreen(
+                            viewModel = viewModel,
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
                 }
             }
         }
     }
-}
 
     // Material 3 Filter & Sort Bottom Sheet
     if (isFilterSheetOpen) {
@@ -841,6 +665,30 @@ fun HomeScreen(
             onFinish = { viewModel.completeOnboarding() }
         )
     }
+
+    // Notification History Inbox Sheet
+    if (isNotificationHistorySheetOpen) {
+        NotificationHistorySheet(
+            viewModel = viewModel,
+            onDismiss = { viewModel.setNotificationHistorySheetOpen(false) },
+            onOpenSettings = {
+                viewModel.setNotificationHistorySheetOpen(false)
+                isNotificationSettingsSheetOpen = true
+            }
+        )
+    }
+
+    // Notification Settings Sheet
+    if (isNotificationSettingsSheetOpen) {
+        NotificationSettingsSheet(
+            notificationHelper = viewModel.notificationHelper,
+            onDismiss = { isNotificationSettingsSheetOpen = false },
+            onOpenInbox = {
+                isNotificationSettingsSheetOpen = false
+                viewModel.setNotificationHistorySheetOpen(true)
+            }
+        )
+    }
 }
 
 @Composable
@@ -867,6 +715,15 @@ fun ClaimedSavingsBanner(
             repeatMode = RepeatMode.Reverse
         ),
         label = "medalBob"
+    )
+    val medalRot by infiniteTransition.animateFloat(
+        initialValue = -5f,
+        targetValue = 5f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "medalRot"
     )
 
     val animatedSavings by animateFloatAsState(
@@ -969,6 +826,7 @@ fun ClaimedSavingsBanner(
                 modifier = Modifier
                     .graphicsLayer {
                         translationY = medalBob
+                        rotationZ = medalRot
                     }
                     .size(48.dp)
                     .clip(CircleShape)
@@ -986,3 +844,370 @@ fun ClaimedSavingsBanner(
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GiveawaysTabContent(
+    tab: MainTab,
+    giveaways: List<GiveawayItem>,
+    isLoading: Boolean,
+    errorMessage: String? = null,
+    searchQuery: String = "",
+    uiStats: UiStats,
+    isNewTodayDismissed: Boolean,
+    activeFilterCount: Int,
+    selectedLaunchers: Set<LauncherType>,
+    selectedTypeFilter: TypeFilter,
+    selectedSort: SortOption,
+    cardDensity: CardDensity,
+    isShowOriginalPrice: Boolean,
+    isShowExpiration: Boolean,
+    isAnimationsEnabled: Boolean,
+    screenDensityInfo: ScreenDensityInfo,
+    listState: LazyListState,
+    gridState: LazyGridState,
+    onRefresh: () -> Unit,
+    onDismissNewToday: () -> Unit,
+    onNewTodayClick: () -> Unit,
+    onOpenFilterSheet: () -> Unit,
+    onResetFilters: () -> Unit,
+    onItemClick: (GiveawayItem) -> Unit,
+    onClaimClick: (GiveawayItem) -> Unit,
+    onToggleBookmark: (GiveawayItem) -> Unit,
+    onToggleClaimed: (GiveawayItem) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxSize()) {
+        // Stats Banner on Discover
+        if (tab == MainTab.DISCOVER) {
+            StatsBanner(
+                stats = uiStats,
+                isRefreshing = isLoading,
+                onRefresh = onRefresh,
+                isNewTodayDismissed = isNewTodayDismissed,
+                onDismissNewToday = onDismissNewToday,
+                onNewTodayClick = onNewTodayClick
+            )
+        }
+
+        // Total Money Saved Banner on In Library
+        if (tab == MainTab.CLAIMED) {
+            ClaimedSavingsBanner(
+                savingsUsd = uiStats.claimedTotalSavedUsd,
+                claimedCount = uiStats.claimedCount
+            )
+        }
+
+        // Active Filters Summary Pill (if any non-defaults are selected)
+        if (activeFilterCount > 0) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                        .clickable { onOpenFilterSheet() }
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Tune,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Text(
+                        text = buildString {
+                            if (selectedLaunchers.isNotEmpty() && !selectedLaunchers.contains(LauncherType.ALL)) {
+                                append(selectedLaunchers.joinToString(", ") { it.displayName })
+                            }
+                            if (selectedTypeFilter != TypeFilter.ALL && selectedTypeFilter.apiMatch != null) {
+                                if (isNotEmpty()) append(" • ")
+                                append(selectedTypeFilter.label)
+                            }
+                            if (selectedSort != SortOption.NEWEST) {
+                                if (isNotEmpty()) append(" • ")
+                                append(selectedSort.label)
+                            }
+                        },
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary
+                    )
+                }
+
+                Text(
+                    text = "Reset",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .clickable { onResetFilters() }
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+        }
+
+        // Main List with Pull-to-Refresh
+        PullToRefreshBox(
+            isRefreshing = isLoading,
+            onRefresh = onRefresh,
+            modifier = Modifier
+                .fillMaxSize()
+                .testTag("pull_to_refresh_box")
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // If there is an error message and we have cached giveaways, show an alert banner
+                if (errorMessage != null && giveaways.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.85f))
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CloudOff,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = errorMessage,
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                maxLines = 2
+                            )
+                        }
+                        IconButton(
+                            onClick = onRefresh,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Retry",
+                                tint = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+
+                if (isLoading && giveaways.isEmpty()) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Scanning PC, PlayStation, Xbox & Nintendo for Free Loot...",
+                            fontSize = 14.sp,
+                            color = TextSecondary
+                        )
+                    }
+                } else if (giveaways.isEmpty()) {
+                    val emptyIconBob by rememberInfiniteTransition(label = "emptyBob").animateFloat(
+                        initialValue = -4f,
+                        targetValue = 4f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1600, easing = FastOutSlowInEasing),
+                            repeatMode = RepeatMode.Reverse
+                        ),
+                        label = "emptyIconBob"
+                    )
+
+                    val isFiltered = activeFilterCount > 0 || searchQuery.isNotBlank()
+                    val hasError = errorMessage != null
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .graphicsLayer {
+                                    translationY = emptyIconBob
+                                }
+                                .size(64.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = when {
+                                    tab == MainTab.CLAIMED -> Icons.Default.CheckCircle
+                                    hasError -> Icons.Default.CloudOff
+                                    isFiltered -> Icons.Default.FilterAltOff
+                                    else -> Icons.Default.SportsEsports
+                                },
+                                contentDescription = null,
+                                tint = if (hasError) MaterialTheme.colorScheme.error else TextMuted,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            text = when {
+                                tab == MainTab.CLAIMED -> "No Claimed Games Yet"
+                                hasError -> "Unable to Fetch Giveaways"
+                                isFiltered -> "No Matches Found"
+                                else -> "No Giveaways Found"
+                            },
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Text(
+                            text = when {
+                                tab == MainTab.CLAIMED -> "Tap 'Claim Free' on any game to automatically add it to your library and track total dollars saved!"
+                                hasError -> errorMessage ?: "Network issue or server unavailable. Tap retry to check again."
+                                isFiltered -> if (searchQuery.isNotBlank()) "No games match \"${searchQuery.take(20)}\" or your active launcher filters." else "No free games match your active filters in the top menu."
+                                else -> "Currently no active giveaways reported. Pull down to refresh or check back soon!"
+                            },
+                            fontSize = 13.sp,
+                            color = TextSecondary,
+                            lineHeight = 18.sp,
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        if (hasError) {
+                            Button(
+                                onClick = onRefresh,
+                                modifier = Modifier.testTag("retry_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Retry")
+                            }
+                        } else if (isFiltered && tab == MainTab.DISCOVER) {
+                            OutlinedButton(
+                                onClick = onResetFilters,
+                                modifier = Modifier.testTag("reset_filters_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.FilterAltOff,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Reset All Filters")
+                            }
+                        } else if (tab == MainTab.DISCOVER) {
+                            Button(
+                                onClick = onRefresh,
+                                modifier = Modifier.testTag("refresh_giveaways_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Refresh Feed")
+                            }
+                        }
+                    }
+                } else {
+                    if (screenDensityInfo.gridColumns > 1) {
+                        LazyVerticalGrid(
+                            state = gridState,
+                            columns = GridCells.Fixed(screenDensityInfo.gridColumns),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .testTag("giveaways_list"),
+                            contentPadding = PaddingValues(
+                                start = screenDensityInfo.adaptiveHorizontalPadding,
+                                end = screenDensityInfo.adaptiveHorizontalPadding,
+                                top = 6.dp,
+                                bottom = 24.dp
+                            ),
+                            horizontalArrangement = Arrangement.spacedBy(screenDensityInfo.adaptiveCardSpacing),
+                            verticalArrangement = Arrangement.spacedBy(screenDensityInfo.adaptiveCardSpacing)
+                        ) {
+                            items(giveaways, key = { it.id }, contentType = { "giveaway_card" }) { item ->
+                                GiveawayCard(
+                                    item = item,
+                                    cardDensity = cardDensity,
+                                    showOriginalPrice = isShowOriginalPrice,
+                                    showExpiration = isShowExpiration,
+                                    onClick = { onItemClick(item) },
+                                    onClaimClick = { onClaimClick(item) },
+                                    onToggleBookmark = { onToggleBookmark(item) },
+                                    onToggleClaimed = { onToggleClaimed(item) },
+                                    modifier = if (isAnimationsEnabled) Modifier.animateItem() else Modifier
+                                )
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .testTag("giveaways_list"),
+                            contentPadding = PaddingValues(
+                                start = screenDensityInfo.adaptiveHorizontalPadding,
+                                end = screenDensityInfo.adaptiveHorizontalPadding,
+                                top = 6.dp,
+                                bottom = 24.dp
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(
+                                when (cardDensity) {
+                                    CardDensity.RICH_CARDS -> screenDensityInfo.adaptiveCardSpacing
+                                    CardDensity.COMPACT_CARDS -> (screenDensityInfo.adaptiveCardSpacing.value * 0.75f).dp
+                                    CardDensity.MINIMAL_LIST -> 6.dp
+                                }
+                            )
+                        ) {
+                            items(giveaways, key = { it.id }, contentType = { "giveaway_card" }) { item ->
+                                GiveawayCard(
+                                    item = item,
+                                    cardDensity = cardDensity,
+                                    showOriginalPrice = isShowOriginalPrice,
+                                    showExpiration = isShowExpiration,
+                                    onClick = { onItemClick(item) },
+                                    onClaimClick = { onClaimClick(item) },
+                                    onToggleBookmark = { onToggleBookmark(item) },
+                                    onToggleClaimed = { onToggleClaimed(item) },
+                                    modifier = if (isAnimationsEnabled) Modifier.animateItem() else Modifier
+                                )
+                            }
+                        }
+                    }
+            }
+        }
+    }
+}
+}
+

@@ -1,5 +1,8 @@
 package com.example.data.model
 
+import androidx.compose.runtime.Immutable
+
+@Immutable
 data class GiveawayItem(
     val id: Int,
     val title: String,
@@ -282,6 +285,7 @@ data class GiveawayItem(
     }
 }
 
+@Immutable
 data class LauncherOption(
     val launcherType: LauncherType,
     val name: String,
