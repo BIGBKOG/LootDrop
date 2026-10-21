@@ -47,6 +47,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -97,6 +98,18 @@ fun GiveawayDetailDialog(
     val context = LocalContext.current
     val screenDensityInfo = LocalScreenDensityInfo.current
     val launcherColor = Color(item.launcherCategory.badgeColorHex)
+    val themePrimary = MaterialTheme.colorScheme.primary
+    val themeSecondary = MaterialTheme.colorScheme.secondary
+
+    val dialogBorderBrush = remember(themePrimary, themeSecondary, launcherColor) {
+        Brush.horizontalGradient(
+            listOf(
+                themePrimary,
+                launcherColor.copy(alpha = 0.9f),
+                themeSecondary.copy(alpha = 0.7f)
+            )
+        )
+    }
 
     var dialogVisible by remember { androidx.compose.runtime.mutableStateOf(false) }
     androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -137,7 +150,7 @@ fun GiveawayDetailDialog(
                         alpha = dialogAlpha
                     }
                     .clip(RoundedCornerShape(20.dp))
-                    .border(1.dp, GamingCardBorder, RoundedCornerShape(20.dp))
+                    .border(1.5.dp, dialogBorderBrush, RoundedCornerShape(20.dp))
                     .testTag("giveaway_detail_dialog"),
                 color = GamingDarkSurface
             ) {
@@ -201,10 +214,10 @@ fun GiveawayDetailDialog(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(if (item.isBookmarked) NeonCyan.copy(alpha = 0.25f) else Color(0xCC0B0F19))
+                                .background(if (item.isBookmarked) themePrimary.copy(alpha = 0.25f) else Color(0xCC0B0F19))
                                 .border(
-                                    1.dp,
-                                    if (item.isBookmarked) NeonCyan else Color.White.copy(alpha = 0.25f),
+                                    1.2.dp,
+                                    if (item.isBookmarked) themePrimary else Color.White.copy(alpha = 0.25f),
                                     CircleShape
                                 )
                                 .testTag("detail_bookmark_button")
@@ -212,7 +225,7 @@ fun GiveawayDetailDialog(
                             Icon(
                                 imageVector = if (item.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                                 contentDescription = if (item.isBookmarked) "Bookmarked" else "Bookmark",
-                                tint = if (item.isBookmarked) NeonCyan else TextPrimary,
+                                tint = if (item.isBookmarked) themePrimary else TextPrimary,
                                 modifier = Modifier
                                     .size(18.dp)
                                     .graphicsLayer {
@@ -381,8 +394,8 @@ fun GiveawayDetailDialog(
                             }
                             .testTag("detail_claim_button"),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = NeonCyan,
-                            contentColor = Color(0xFF0B0F19)
+                            containerColor = themePrimary,
+                            contentColor = MaterialTheme.colorScheme.background
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -505,7 +518,7 @@ fun GiveawayDetailDialog(
                                 },
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, GamingCardBorder)
+                            border = androidx.compose.foundation.BorderStroke(1.dp, themePrimary.copy(alpha = 0.4f))
                         ) {
                             Icon(
                                 imageVector = Icons.Default.ContentCopy,
@@ -534,7 +547,7 @@ fun GiveawayDetailDialog(
                                 },
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, GamingCardBorder)
+                            border = androidx.compose.foundation.BorderStroke(1.dp, themePrimary.copy(alpha = 0.4f))
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Share,

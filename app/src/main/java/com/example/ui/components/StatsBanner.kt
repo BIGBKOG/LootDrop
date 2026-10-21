@@ -131,7 +131,7 @@ fun StatsBanner(
             )
             .border(
                 1.dp,
-                GamingCardBorder.copy(alpha = borderAlpha),
+                MaterialTheme.colorScheme.primary.copy(alpha = borderAlpha * 0.7f),
                 RoundedCornerShape(16.dp)
             )
             .padding(16.dp)

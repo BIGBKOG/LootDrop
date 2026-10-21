@@ -140,12 +140,15 @@ fun GiveawayCard(
         label = "claim_button_press_scale"
     )
 
-    // Expressive M3 popping outlines: vibrant launcher brand, neon status, or electric glow
+    val themePrimary = MaterialTheme.colorScheme.primary
+    val themeSecondary = MaterialTheme.colorScheme.secondary
+
+    // Expressive M3 popping outlines: dynamically synced to the user's chosen theme!
     val expressiveBorderColor = when {
         item.isClaimed -> NeonGreen
         item.isNew -> Color(0xFFFF9100).copy(alpha = pulseGlow.coerceAtLeast(0.85f))
-        item.isBookmarked -> NeonCyan
-        else -> launcherColor
+        item.isBookmarked -> themePrimary
+        else -> themePrimary
     }
 
     val cardBorderColor by animateColorAsState(
@@ -156,23 +159,23 @@ fun GiveawayCard(
 
     val cardBorderWidth = if (item.isClaimed || item.isNew || item.isBookmarked || isPressed) 2.dp else 1.5.dp
 
-    // Dynamic gradient brush that gives the border a luminous, popping halo
-    val cardBorderBrush = remember(cardBorderColor, item.isClaimed, item.isBookmarked, item.isNew, launcherColor) {
+    // Dynamic gradient brush that gives the border a luminous, popping halo synced to theme choice
+    val cardBorderBrush = remember(themePrimary, themeSecondary, cardBorderColor, item.isClaimed, item.isBookmarked, item.isNew, launcherColor) {
         when {
             item.isClaimed -> Brush.horizontalGradient(
-                listOf(NeonGreen, Color(0xFF00E5FF), NeonGreen.copy(alpha = 0.8f))
+                listOf(NeonGreen, themePrimary, NeonGreen.copy(alpha = 0.8f))
             )
             item.isBookmarked -> Brush.horizontalGradient(
-                listOf(NeonCyan, Color(0xFFB388FF), NeonCyan.copy(alpha = 0.8f))
+                listOf(themePrimary, themeSecondary, themePrimary.copy(alpha = 0.8f))
             )
             item.isNew -> Brush.horizontalGradient(
-                listOf(Color(0xFFFF9100), Color(0xFFFF3D00), Color(0xFFFFB74D))
+                listOf(Color(0xFFFF9100), themePrimary, Color(0xFFFF3D00))
             )
             else -> Brush.horizontalGradient(
                 listOf(
-                    cardBorderColor,
-                    cardBorderColor.copy(alpha = 0.85f),
-                    cardBorderColor.copy(alpha = 0.55f)
+                    themePrimary,
+                    launcherColor.copy(alpha = 0.90f),
+                    themeSecondary.copy(alpha = 0.70f)
                 )
             )
         }
@@ -721,10 +724,10 @@ fun GiveawayCard(
                                         scaleY = cardBookmarkScale
                                     }
                                     .clip(CircleShape)
-                                    .background(if (item.isBookmarked) NeonCyan.copy(alpha = 0.28f) else Color(0xD90B0F19))
+                                    .background(if (item.isBookmarked) themePrimary.copy(alpha = 0.28f) else Color(0xD90B0F19))
                                     .border(
                                         1.2.dp,
-                                        if (item.isBookmarked) NeonCyan else Color.White.copy(alpha = 0.35f),
+                                        if (item.isBookmarked) themePrimary else Color.White.copy(alpha = 0.35f),
                                         CircleShape
                                     )
                                     .testTag("bookmark_button_${item.id}")
@@ -732,7 +735,7 @@ fun GiveawayCard(
                                 Icon(
                                     imageVector = if (item.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                                     contentDescription = if (item.isBookmarked) "Bookmarked" else "Bookmark",
-                                    tint = if (item.isBookmarked) NeonCyan else Color.White,
+                                    tint = if (item.isBookmarked) themePrimary else Color.White,
                                     modifier = Modifier.size(16.dp)
                                 )
                             }

@@ -1575,7 +1575,7 @@ fun SettingsScreen(
             )
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = "LootDrop V3.0 • PlayStation, Xbox, Nintendo & PC Free Games Radar",
+                text = "LootDrop V3.1 • PlayStation, Xbox, Nintendo & PC Free Games Radar",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -31,6 +30,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -48,13 +49,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.MainTab
-import com.example.ui.theme.NeonGreen
 
 /**
- * Material 3 Expressive Floating Navigation Bar recreated from the reference design.
- * Features a floating capsule pill with a dark surface outline, and a fluid sliding
- * indicator capsule that smoothly glides with spring physics across the bar to the
- * selected destination tab when switching.
+ * Material 3 Expressive Floating Navigation Bar synced with the user's theme choice.
+ * Features a floating capsule pill with dynamic theme-reactive borders and a fluid
+ * sliding indicator capsule that smoothly glides with spring physics across the bar.
  */
 @Composable
 fun ExpressiveFloatingNavBar(
@@ -73,6 +72,10 @@ fun ExpressiveFloatingNavBar(
         MainTab.SETTINGS -> 2
     }
 
+    // Theme synchronization: dynamically sync active colors with user's accent theme choice!
+    val themePrimary = MaterialTheme.colorScheme.primary
+    val themeSecondary = MaterialTheme.colorScheme.secondary
+
     // Fluid spring animation for the sliding indicator pill
     val animatedIndex by animateFloatAsState(
         targetValue = targetIndex.toFloat(),
@@ -83,7 +86,29 @@ fun ExpressiveFloatingNavBar(
         label = "sliding_nav_indicator_index"
     )
 
-    // Outer floating capsule container matching reference screenshot
+    // Dynamic gradient brush for the sliding active indicator synced to the theme
+    val activePillBrush = remember(themePrimary, themeSecondary) {
+        Brush.horizontalGradient(
+            listOf(
+                themePrimary.copy(alpha = 0.35f),
+                themeSecondary.copy(alpha = 0.22f)
+            )
+        )
+    }
+
+    val activePillBorderColor by animateColorAsState(
+        targetValue = themePrimary.copy(alpha = 0.75f),
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "nav_pill_border_color"
+    )
+
+    val outerBorderColor by animateColorAsState(
+        targetValue = themePrimary.copy(alpha = 0.32f),
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "nav_outer_border_color"
+    )
+
+    // Outer floating capsule container matching reference screenshot, synced to theme
     Surface(
         modifier = modifier
             .width(navBarWidth)
@@ -91,12 +116,12 @@ fun ExpressiveFloatingNavBar(
             .shadow(
                 elevation = 16.dp,
                 shape = RoundedCornerShape(36.dp),
-                spotColor = Color(0x80000000),
+                spotColor = themePrimary.copy(alpha = 0.25f),
                 ambientColor = Color(0x40000000)
             )
             .border(
                 width = 1.dp,
-                color = Color(0xFF383E4C),
+                color = outerBorderColor,
                 shape = RoundedCornerShape(36.dp)
             )
             .testTag("bottom_nav_bar"),
@@ -112,7 +137,7 @@ fun ExpressiveFloatingNavBar(
             val totalWidth = maxWidth
             val singleTabWidth = totalWidth / tabCount
 
-            // Sliding Active Pill Indicator that slides across tabs
+            // Sliding Active Pill Indicator that slides across tabs, synced to chosen theme
             Box(
                 modifier = Modifier
                     .offset(x = singleTabWidth * animatedIndex)
@@ -120,10 +145,10 @@ fun ExpressiveFloatingNavBar(
                     .fillMaxHeight()
                     .padding(horizontal = 2.dp, vertical = 2.dp)
                     .clip(RoundedCornerShape(24.dp))
-                    .background(Color(0xFF263D66)) // Deep slate blue matching reference screenshot
+                    .background(activePillBrush)
                     .border(
-                        width = 1.dp,
-                        color = Color(0xFF3F5D99).copy(alpha = 0.5f),
+                        width = 1.2.dp,
+                        color = activePillBorderColor,
                         shape = RoundedCornerShape(24.dp)
                     )
             )
@@ -139,6 +164,7 @@ fun ExpressiveFloatingNavBar(
                     title = "Discover",
                     icon = Icons.Default.Explore,
                     isSelected = selectedTab == MainTab.DISCOVER,
+                    activeColor = themePrimary,
                     onClick = { onTabSelected(MainTab.DISCOVER) },
                     testTag = "nav_tab_discover",
                     modifier = Modifier
@@ -151,6 +177,7 @@ fun ExpressiveFloatingNavBar(
                     title = "In Library",
                     icon = Icons.Default.CheckCircle,
                     isSelected = selectedTab == MainTab.CLAIMED,
+                    activeColor = themePrimary,
                     onClick = { onTabSelected(MainTab.CLAIMED) },
                     testTag = "nav_tab_claimed",
                     badgeCount = if (claimedCount > 0) claimedCount else null,
@@ -164,6 +191,7 @@ fun ExpressiveFloatingNavBar(
                     title = "Settings",
                     icon = Icons.Default.Settings,
                     isSelected = selectedTab == MainTab.SETTINGS,
+                    activeColor = themePrimary,
                     onClick = { onTabSelected(MainTab.SETTINGS) },
                     testTag = "nav_tab_settings",
                     modifier = Modifier
@@ -181,6 +209,7 @@ private fun ExpressiveNavTab(
     title: String,
     icon: ImageVector,
     isSelected: Boolean,
+    activeColor: Color,
     onClick: () -> Unit,
     testTag: String,
     modifier: Modifier = Modifier,
@@ -209,7 +238,7 @@ private fun ExpressiveNavTab(
     )
 
     val contentColor by animateColorAsState(
-        targetValue = if (isSelected) Color(0xFFF1F5F9) else Color(0xFF9E9FA7),
+        targetValue = if (isSelected) activeColor else Color(0xFF9E9FA7),
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
         label = "nav_tab_content_${tab.name}"
     )
@@ -237,7 +266,7 @@ private fun ExpressiveNavTab(
                 BadgedBox(
                     badge = {
                         Badge(
-                            containerColor = NeonGreen,
+                            containerColor = activeColor,
                             contentColor = Color(0xFF0B0F19),
                             modifier = Modifier.padding(bottom = 2.dp)
                         ) {
