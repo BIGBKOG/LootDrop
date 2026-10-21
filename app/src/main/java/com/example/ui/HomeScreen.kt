@@ -295,7 +295,7 @@ fun HomeScreen(
                                 }
                             }
                             Text(
-                                text = if (currentTab == MainTab.SETTINGS) "APP PREFERENCES & CONTROLS" else "PC, PS & XBOX FREE RADAR",
+                                text = if (currentTab == MainTab.SETTINGS) "APP PREFERENCES & CONTROLS" else "PC & CONSOLE FREE RADAR",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (currentTab == MainTab.SETTINGS) MaterialTheme.colorScheme.primary else NeonGreen,
@@ -1018,7 +1018,7 @@ fun GiveawaysTabContent(
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "Scanning PC, PlayStation, Xbox & Nintendo for Free Loot...",
+                            text = "Scanning PC & Console for Free Loot...",
                             fontSize = 14.sp,
                             color = TextSecondary
                         )

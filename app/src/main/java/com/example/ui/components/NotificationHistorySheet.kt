@@ -336,7 +336,7 @@ fun NotificationHistorySheet(
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = if (history.isEmpty()) {
-                                "LootDrop scans Steam, Epic, GOG, PS & Xbox in the background. When free games or ending deals appear, you'll see them here!"
+                                "LootDrop scans PC & Console stores in the background. When free games or ending deals appear, you'll see them here!"
                             } else {
                                 "Try switching to 'All Alerts' to see your complete notifications log."
                             },

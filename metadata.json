@@ -1,6 +1,6 @@
 {
   "name": "LootDrop",
-  "description": "Real-time free game & 100% discount tracker for PlayStation, Xbox, Steam, Epic Games, GOG, and top platforms with instant claim links, new freebie alerts, and library bookmarking.",
+  "description": "Real-time free game & 100% discount tracker for PC & Console (PlayStation, Xbox, Steam, Epic Games, GOG) with instant claim links, new freebie alerts, and library bookmarking.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
