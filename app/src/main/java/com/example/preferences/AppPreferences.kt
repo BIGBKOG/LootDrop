@@ -295,10 +295,12 @@ enum class BackgroundTheme(
 }
 
 class AppPreferences(context: Context) {
+    private val appContext: Context = context.applicationContext
     private val prefs: SharedPreferences =
         context.getSharedPreferences("lootdrop_app_settings", Context.MODE_PRIVATE)
 
     companion object {
+        private const val KEY_LOW_END_OPTIMIZATION = "key_low_end_optimization"
         private const val KEY_THEME_MODE = "key_theme_mode"
         private const val KEY_ACCENT_THEME = "key_accent_theme"
         private const val KEY_BG_THEME_DARK = "key_bg_theme_dark"
@@ -422,6 +424,10 @@ class AppPreferences(context: Context) {
     var isAnimationsEnabled: Boolean
         get() = prefs.getBoolean(KEY_UI_ANIMATIONS_ENABLED, true)
         set(value) = prefs.edit().putBoolean(KEY_UI_ANIMATIONS_ENABLED, value).apply()
+
+    var isLowEndOptimization: Boolean
+        get() = prefs.getBoolean(KEY_LOW_END_OPTIMIZATION, com.example.util.DevicePerformanceHelper.isLowEndDevice(appContext))
+        set(value) = prefs.edit().putBoolean(KEY_LOW_END_OPTIMIZATION, value).apply()
 
     var isNewTodayDismissed: Boolean
         get() = prefs.getBoolean(KEY_NEW_TODAY_DISMISSED, false)

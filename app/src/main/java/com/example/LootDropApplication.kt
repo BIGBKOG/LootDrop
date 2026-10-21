@@ -43,30 +43,33 @@ class LootDropApplication : Application(), ImageLoaderFactory {
 
     override fun newImageLoader(): ImageLoader {
         val prefs = AppPreferences(this)
+        val perfProfile = com.example.util.DevicePerformanceHelper.getProfile(this)
         val isDataSaver = prefs.isDataSaverMode
-        val memoryPercent = if (isDataSaver) 0.12 else 0.18
-        val diskMaxBytes = if (isDataSaver) 12L * 1024L * 1024L else 22L * 1024L * 1024L
+        val isLowEnd = perfProfile.isLowEndDevice || isDataSaver
+
+        // Conservative memory cache on low-end hardware to avoid OutOfMemoryErrors
+        val memoryPercent = if (isLowEnd) 0.10 else 0.18
+        val diskMaxBytes = if (isDataSaver) 12L * 1024L * 1024L else if (isLowEnd) 16L * 1024L * 1024L else 24L * 1024L * 1024L
 
         return ImageLoader.Builder(this)
             .memoryCache {
                 MemoryCache.Builder(this)
-                    // Dynamically bound memory cache based on data saver setting
                     .maxSizePercent(memoryPercent)
-                    .strongReferencesEnabled(true)
+                    .strongReferencesEnabled(!isLowEnd)
                     .build()
             }
             .diskCache {
                 DiskCache.Builder()
                     .directory(cacheDir.resolve("image_cache"))
-                    // Bound image disk cache to prevent large storage consumption
                     .maxSizeBytes(diskMaxBytes)
                     .build()
             }
             .okHttpClient {
                 ApiClient.getOkHttpClient(this)
             }
-            .crossfade(true)
-            .allowHardware(true)
+            .bitmapConfig(perfProfile.recommendedBitmapConfig)
+            .crossfade(!isLowEnd)
+            .allowHardware(!perfProfile.isLowRamDevice)
             .respectCacheHeaders(false)
             .build()
     }

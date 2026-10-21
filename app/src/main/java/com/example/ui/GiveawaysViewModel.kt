@@ -162,6 +162,9 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isAnimationsEnabled = MutableStateFlow(preferences.isAnimationsEnabled)
     val isAnimationsEnabled: StateFlow<Boolean> = _isAnimationsEnabled.asStateFlow()
 
+    private val _isLowEndOptimization = MutableStateFlow(preferences.isLowEndOptimization)
+    val isLowEndOptimization: StateFlow<Boolean> = _isLowEndOptimization.asStateFlow()
+
     private val _targetFrameRate = MutableStateFlow(preferences.targetFrameRate)
     val targetFrameRate: StateFlow<TargetFrameRate> = _targetFrameRate.asStateFlow()
 
@@ -641,6 +644,11 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     fun setAnimationsEnabled(enabled: Boolean) {
         preferences.isAnimationsEnabled = enabled
         _isAnimationsEnabled.value = enabled
+    }
+
+    fun setLowEndOptimization(enabled: Boolean) {
+        preferences.isLowEndOptimization = enabled
+        _isLowEndOptimization.value = enabled
     }
 
     fun setTargetFrameRate(frameRate: TargetFrameRate) {

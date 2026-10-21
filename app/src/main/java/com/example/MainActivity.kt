@@ -8,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import com.example.notifications.NotificationHelper
 import com.example.ui.GiveawaysViewModel
 import com.example.ui.HomeScreen
@@ -57,7 +58,12 @@ class MainActivity : ComponentActivity() {
                 applyDisplayRefreshRate(targetFrameRate)
             }
 
-            CompositionLocalProvider(LocalScreenDensityInfo provides screenDensityInfo) {
+            val perfProfile = remember { com.example.util.DevicePerformanceHelper.getProfile(this@MainActivity) }
+
+            CompositionLocalProvider(
+                LocalScreenDensityInfo provides screenDensityInfo,
+                com.example.util.LocalDevicePerformance provides perfProfile
+            ) {
                 LootDropTheme(
                     themeMode = themeMode,
                     accentTheme = accentTheme,

@@ -163,6 +163,7 @@ fun HomeScreen(
     val reopenStatusMessage by viewModel.reopenStatusMessage.collectAsState()
     val showOnboardingWalkthrough by viewModel.showOnboardingWalkthrough.collectAsState()
     val isAnimationsEnabled by viewModel.isAnimationsEnabled.collectAsState()
+    val isLowEndOptimization by viewModel.isLowEndOptimization.collectAsState()
     val isNewTodayDismissed by viewModel.isNewTodayDismissed.collectAsState()
     val unreadNotificationCount by viewModel.unreadNotificationCount.collectAsState()
     val isNotificationHistorySheetOpen by viewModel.isNotificationHistorySheetOpen.collectAsState()
@@ -540,6 +541,7 @@ fun HomeScreen(
                             isShowOriginalPrice = isShowOriginalPrice,
                             isShowExpiration = isShowExpiration,
                             isAnimationsEnabled = isAnimationsEnabled,
+                            isLowEndOptimization = isLowEndOptimization,
                             screenDensityInfo = screenDensityInfo,
                             listState = discoverListState,
                             gridState = discoverGridState,
@@ -577,6 +579,7 @@ fun HomeScreen(
                             isShowOriginalPrice = isShowOriginalPrice,
                             isShowExpiration = isShowExpiration,
                             isAnimationsEnabled = isAnimationsEnabled,
+                            isLowEndOptimization = isLowEndOptimization,
                             screenDensityInfo = screenDensityInfo,
                             listState = claimedListState,
                             gridState = claimedGridState,
@@ -863,6 +866,7 @@ fun GiveawaysTabContent(
     isShowOriginalPrice: Boolean,
     isShowExpiration: Boolean,
     isAnimationsEnabled: Boolean,
+    isLowEndOptimization: Boolean = false,
     screenDensityInfo: ScreenDensityInfo,
     listState: LazyListState,
     gridState: LazyGridState,
@@ -886,7 +890,8 @@ fun GiveawaysTabContent(
                 onRefresh = onRefresh,
                 isNewTodayDismissed = isNewTodayDismissed,
                 onDismissNewToday = onDismissNewToday,
-                onNewTodayClick = onNewTodayClick
+                onNewTodayClick = onNewTodayClick,
+                isAnimationsEnabled = isAnimationsEnabled && !isLowEndOptimization
             )
         }
 
@@ -1156,7 +1161,7 @@ fun GiveawaysTabContent(
                             horizontalArrangement = Arrangement.spacedBy(screenDensityInfo.adaptiveCardSpacing),
                             verticalArrangement = Arrangement.spacedBy(screenDensityInfo.adaptiveCardSpacing)
                         ) {
-                            items(giveaways, key = { it.id }, contentType = { "giveaway_card" }) { item ->
+                            items(giveaways, key = { it.id }, contentType = { cardDensity.name }) { item ->
                                 GiveawayCard(
                                     item = item,
                                     cardDensity = cardDensity,
@@ -1166,7 +1171,9 @@ fun GiveawaysTabContent(
                                     onClaimClick = { onClaimClick(item) },
                                     onToggleBookmark = { onToggleBookmark(item) },
                                     onToggleClaimed = { onToggleClaimed(item) },
-                                    modifier = if (isAnimationsEnabled) Modifier.animateItem() else Modifier
+                                    isAnimationsEnabled = isAnimationsEnabled,
+                                    isLowEndOptimization = isLowEndOptimization,
+                                    modifier = if (isAnimationsEnabled && !isLowEndOptimization) Modifier.animateItem() else Modifier
                                 )
                             }
                         }
@@ -1190,7 +1197,7 @@ fun GiveawaysTabContent(
                                 }
                             )
                         ) {
-                            items(giveaways, key = { it.id }, contentType = { "giveaway_card" }) { item ->
+                            items(giveaways, key = { it.id }, contentType = { cardDensity.name }) { item ->
                                 GiveawayCard(
                                     item = item,
                                     cardDensity = cardDensity,
@@ -1200,7 +1207,9 @@ fun GiveawaysTabContent(
                                     onClaimClick = { onClaimClick(item) },
                                     onToggleBookmark = { onToggleBookmark(item) },
                                     onToggleClaimed = { onToggleClaimed(item) },
-                                    modifier = if (isAnimationsEnabled) Modifier.animateItem() else Modifier
+                                    isAnimationsEnabled = isAnimationsEnabled,
+                                    isLowEndOptimization = isLowEndOptimization,
+                                    modifier = if (isAnimationsEnabled && !isLowEndOptimization) Modifier.animateItem() else Modifier
                                 )
                             }
                         }

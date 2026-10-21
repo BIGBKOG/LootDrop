@@ -70,28 +70,37 @@ fun StatsBanner(
     modifier: Modifier = Modifier,
     isNewTodayDismissed: Boolean = false,
     onDismissNewToday: (() -> Unit)? = null,
-    onNewTodayClick: (() -> Unit)? = null
+    onNewTodayClick: (() -> Unit)? = null,
+    isAnimationsEnabled: Boolean = true
 ) {
-    // Ambient breathing shimmer on border and glow
-    val infiniteTransition = rememberInfiniteTransition(label = "statsBannerInfinite")
-    val borderAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = 0.85f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "borderGlow"
-    )
-    val badgeScale by infiniteTransition.animateFloat(
-        initialValue = 0.95f,
-        targetValue = 1.05f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "badgePulse"
-    )
+    // Ambient breathing shimmer on border and glow only if animations enabled
+    val borderAlpha = if (isAnimationsEnabled) {
+        val infiniteTransition = rememberInfiniteTransition(label = "statsBannerInfinite")
+        val alpha by infiniteTransition.animateFloat(
+            initialValue = 0.35f,
+            targetValue = 0.85f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(2200, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "borderGlow"
+        )
+        alpha
+    } else 0.6f
+
+    val badgeScale = if (isAnimationsEnabled) {
+        val infiniteTransition = rememberInfiniteTransition(label = "statsBannerInfiniteBadge")
+        val scale by infiniteTransition.animateFloat(
+            initialValue = 0.95f,
+            targetValue = 1.05f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1500, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "badgePulse"
+        )
+        scale
+    } else 1.0f
 
     var localDismissed by rememberSaveable { mutableStateOf(false) }
     val effectiveDismissed = isNewTodayDismissed || localDismissed
@@ -267,16 +276,20 @@ fun StatsBanner(
                 }
             }
 
-            // Quick actions: Refresh with smooth rotation animation
-            val refreshAngle by infiniteTransition.animateFloat(
-                initialValue = 0f,
-                targetValue = 360f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(1000, easing = LinearEasing),
-                    repeatMode = RepeatMode.Restart
-                ),
-                label = "refreshAngle"
-            )
+            // Quick actions: Refresh with rotation animation only when refreshing
+            val refreshAngle = if (isRefreshing && isAnimationsEnabled) {
+                val refreshTransition = rememberInfiniteTransition(label = "refreshAnim")
+                val angle by refreshTransition.animateFloat(
+                    initialValue = 0f,
+                    targetValue = 360f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(1000, easing = LinearEasing),
+                        repeatMode = RepeatMode.Restart
+                    ),
+                    label = "refreshAngle"
+                )
+                angle
+            } else 0f
 
             IconButton(
                 onClick = onRefresh,
@@ -287,9 +300,9 @@ fun StatsBanner(
                     imageVector = Icons.Default.Refresh,
                     contentDescription = "Refresh Freebies",
                     tint = if (isRefreshing) MaterialTheme.colorScheme.primary else TextPrimary,
-                    modifier = Modifier.graphicsLayer {
-                        rotationZ = if (isRefreshing) refreshAngle else 0f
-                    }
+                    modifier = if (isRefreshing && refreshAngle != 0f) {
+                        Modifier.graphicsLayer { rotationZ = refreshAngle }
+                    } else Modifier
                 )
             }
         }

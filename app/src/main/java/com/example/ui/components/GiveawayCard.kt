@@ -57,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -84,6 +85,8 @@ fun GiveawayCard(
     onClaimClick: () -> Unit,
     onToggleBookmark: () -> Unit = {},
     onToggleClaimed: () -> Unit,
+    isAnimationsEnabled: Boolean = true,
+    isLowEndOptimization: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -92,53 +95,77 @@ fun GiveawayCard(
 
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-    val cardScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.985f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "card_press_scale"
-    )
+    val cardScale = if (isAnimationsEnabled && !isLowEndOptimization) {
+        val anim by animateFloatAsState(
+            targetValue = if (isPressed) 0.985f else 1f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessLow
+            ),
+            label = "card_press_scale"
+        )
+        anim
+    } else {
+        if (isPressed) 0.985f else 1f
+    }
 
-    // Pulsing breathing animation for fresh new drops
-    val infiniteTransition = rememberInfiniteTransition(label = "card_infinite")
-    val pulseGlow by infiniteTransition.animateFloat(
-        initialValue = 0.65f,
-        targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulse_glow"
-    )
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 0.96f,
-        targetValue = 1.04f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulse_scale"
-    )
+    // Pulsing breathing animation ONLY if item is new and animations are enabled (avoids ticking for non-new cards)
+    val shouldAnimatePulse = item.isNew && isAnimationsEnabled && !isLowEndOptimization
+    val pulseGlow = if (shouldAnimatePulse) {
+        val infiniteTransition = rememberInfiniteTransition(label = "card_infinite_${item.id}")
+        val glow by infiniteTransition.animateFloat(
+            initialValue = 0.65f,
+            targetValue = 1.0f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1200, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "pulse_glow"
+        )
+        glow
+    } else 1.0f
+
+    val pulseScale = if (shouldAnimatePulse) {
+        val infiniteTransition = rememberInfiniteTransition(label = "card_infinite_scale_${item.id}")
+        val scale by infiniteTransition.animateFloat(
+            initialValue = 0.96f,
+            targetValue = 1.04f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1200, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "pulse_scale"
+        )
+        scale
+    } else 1.0f
 
     // Fluid Claimed status animation
-    val claimedScale by animateFloatAsState(
-        targetValue = if (item.isClaimed) 1.15f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
-        label = "claimed_scale"
-    )
+    val claimedScale = if (isAnimationsEnabled && !isLowEndOptimization) {
+        val anim by animateFloatAsState(
+            targetValue = if (item.isClaimed) 1.15f else 1f,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
+            label = "claimed_scale"
+        )
+        anim
+    } else {
+        if (item.isClaimed) 1.15f else 1f
+    }
 
     val claimInteractionSource = remember { MutableInteractionSource() }
     val isClaimPressed by claimInteractionSource.collectIsPressedAsState()
-    val claimButtonScale by animateFloatAsState(
-        targetValue = if (isClaimPressed) 0.94f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "claim_button_press_scale"
-    )
+    val claimButtonScale = if (isAnimationsEnabled && !isLowEndOptimization) {
+        val anim by animateFloatAsState(
+            targetValue = if (isClaimPressed) 0.94f else 1f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessLow
+            ),
+            label = "claim_button_press_scale"
+        )
+        anim
+    } else {
+        if (isClaimPressed) 0.94f else 1f
+    }
 
     val themePrimary = MaterialTheme.colorScheme.primary
     val themeSecondary = MaterialTheme.colorScheme.secondary
@@ -146,38 +173,45 @@ fun GiveawayCard(
     // Expressive M3 popping outlines: dynamically synced to the user's chosen theme!
     val expressiveBorderColor = when {
         item.isClaimed -> NeonGreen
-        item.isNew -> Color(0xFFFF9100).copy(alpha = pulseGlow.coerceAtLeast(0.85f))
+        item.isNew -> Color(0xFFFF9100)
         item.isBookmarked -> themePrimary
         else -> themePrimary
     }
 
-    val cardBorderColor by animateColorAsState(
-        targetValue = expressiveBorderColor,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-        label = "card_border_color"
-    )
+    val cardBorderColor = if (isAnimationsEnabled && !isLowEndOptimization) {
+        val anim by animateColorAsState(
+            targetValue = expressiveBorderColor,
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+            label = "card_border_color"
+        )
+        anim
+    } else expressiveBorderColor
 
     val cardBorderWidth = if (item.isClaimed || item.isNew || item.isBookmarked || isPressed) 2.dp else 1.5.dp
 
-    // Dynamic gradient brush that gives the border a luminous, popping halo synced to theme choice
-    val cardBorderBrush = remember(themePrimary, themeSecondary, cardBorderColor, item.isClaimed, item.isBookmarked, item.isNew, launcherColor) {
-        when {
-            item.isClaimed -> Brush.horizontalGradient(
-                listOf(NeonGreen, themePrimary, NeonGreen.copy(alpha = 0.8f))
-            )
-            item.isBookmarked -> Brush.horizontalGradient(
-                listOf(themePrimary, themeSecondary, themePrimary.copy(alpha = 0.8f))
-            )
-            item.isNew -> Brush.horizontalGradient(
-                listOf(Color(0xFFFF9100), themePrimary, Color(0xFFFF3D00))
-            )
-            else -> Brush.horizontalGradient(
-                listOf(
-                    themePrimary,
-                    launcherColor.copy(alpha = 0.90f),
-                    themeSecondary.copy(alpha = 0.70f)
+    // Dynamic gradient brush on high performance; solid stroke on low-end hardware to avoid fragment shader cost
+    val cardBorderBrush = remember(themePrimary, themeSecondary, cardBorderColor, item.isClaimed, item.isBookmarked, item.isNew, launcherColor, isLowEndOptimization) {
+        if (isLowEndOptimization) {
+            SolidColor(cardBorderColor)
+        } else {
+            when {
+                item.isClaimed -> Brush.horizontalGradient(
+                    listOf(NeonGreen, themePrimary, NeonGreen.copy(alpha = 0.8f))
                 )
-            )
+                item.isBookmarked -> Brush.horizontalGradient(
+                    listOf(themePrimary, themeSecondary, themePrimary.copy(alpha = 0.8f))
+                )
+                item.isNew -> Brush.horizontalGradient(
+                    listOf(Color(0xFFFF9100), themePrimary, Color(0xFFFF3D00))
+                )
+                else -> Brush.horizontalGradient(
+                    listOf(
+                        themePrimary,
+                        launcherColor.copy(alpha = 0.90f),
+                        themeSecondary.copy(alpha = 0.70f)
+                    )
+                )
+            }
         }
     }
 
@@ -187,10 +221,7 @@ fun GiveawayCard(
             Card(
                 modifier = modifier
                     .fillMaxWidth()
-                    .graphicsLayer {
-                        scaleX = cardScale
-                        scaleY = cardScale
-                    }
+                    .then(if (cardScale != 1f) Modifier.graphicsLayer { scaleX = cardScale; scaleY = cardScale } else Modifier)
                     .clip(RoundedCornerShape(16.dp))
                     .clickable(
                         interactionSource = interactionSource,
@@ -219,11 +250,11 @@ fun GiveawayCard(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         // Square thumbnail with info icon
-                        val minimalImageRequest = remember(item.id, item.thumbnail, item.image) {
+                        val minimalImageRequest = remember(item.id, item.thumbnail, item.image, isLowEndOptimization) {
                             ImageRequest.Builder(context)
                                 .data(if (item.thumbnail.isNotBlank()) item.thumbnail else item.image)
-                                .crossfade(true)
-                                .size(150, 150)
+                                .crossfade(!isLowEndOptimization)
+                                .size(if (isLowEndOptimization) 100 else 150, if (isLowEndOptimization) 100 else 150)
                                 .build()
                         }
                         Box(
@@ -365,10 +396,7 @@ fun GiveawayCard(
             Card(
                 modifier = modifier
                     .fillMaxWidth()
-                    .graphicsLayer {
-                        scaleX = cardScale
-                        scaleY = cardScale
-                    }
+                    .then(if (cardScale != 1f) Modifier.graphicsLayer { scaleX = cardScale; scaleY = cardScale } else Modifier)
                     .clip(RoundedCornerShape(16.dp))
                     .clickable(
                         interactionSource = interactionSource,
@@ -390,11 +418,11 @@ fun GiveawayCard(
                         .height(115.dp)
                 ) {
                     // Left thumbnail
-                    val compactImageRequest = remember(item.id, item.thumbnail, item.image) {
+                    val compactImageRequest = remember(item.id, item.thumbnail, item.image, isLowEndOptimization) {
                         ImageRequest.Builder(context)
                             .data(if (item.thumbnail.isNotBlank()) item.thumbnail else item.image)
-                            .crossfade(true)
-                            .size(375, 300)
+                            .crossfade(!isLowEndOptimization)
+                            .size(if (isLowEndOptimization) 240 else 375, if (isLowEndOptimization) 190 else 300)
                             .build()
                     }
                     Box(
@@ -547,10 +575,7 @@ fun GiveawayCard(
             Card(
                 modifier = modifier
                     .fillMaxWidth()
-                    .graphicsLayer {
-                        scaleX = cardScale
-                        scaleY = cardScale
-                    }
+                    .then(if (cardScale != 1f) Modifier.graphicsLayer { scaleX = cardScale; scaleY = cardScale } else Modifier)
                     .clip(RoundedCornerShape(20.dp))
                     .clickable(
                         interactionSource = interactionSource,
@@ -568,11 +593,11 @@ fun GiveawayCard(
             ) {
                 Column {
                     // Thumbnail Header
-                    val richImageRequest = remember(item.id, item.image, item.thumbnail) {
+                    val richImageRequest = remember(item.id, item.image, item.thumbnail, isLowEndOptimization) {
                         ImageRequest.Builder(context)
                             .data(if (item.image.isNotBlank()) item.image else item.thumbnail)
-                            .crossfade(true)
-                            .size(800, 450)
+                            .crossfade(!isLowEndOptimization)
+                            .size(if (isLowEndOptimization) 480 else 800, if (isLowEndOptimization) 270 else 450)
                             .build()
                     }
                     Box(
@@ -702,27 +727,33 @@ fun GiveawayCard(
                             // Quick Bookmark button with bouncy spring scale pop
                             val bookmarkInteraction = remember { MutableInteractionSource() }
                             val isBookmarkPressed by bookmarkInteraction.collectIsPressedAsState()
-                            val cardBookmarkScale by animateFloatAsState(
-                                targetValue = when {
+                            val cardBookmarkScale = if (isAnimationsEnabled && !isLowEndOptimization) {
+                                val anim by animateFloatAsState(
+                                    targetValue = when {
+                                        isBookmarkPressed -> 0.85f
+                                        item.isBookmarked -> 1.18f
+                                        else -> 1.0f
+                                    },
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessLow
+                                    ),
+                                    label = "card_bookmark_scale"
+                                )
+                                anim
+                            } else {
+                                when {
                                     isBookmarkPressed -> 0.85f
                                     item.isBookmarked -> 1.18f
                                     else -> 1.0f
-                                },
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                                    stiffness = Spring.StiffnessLow
-                                ),
-                                label = "card_bookmark_scale"
-                            )
+                                }
+                            }
                             IconButton(
                                 onClick = onToggleBookmark,
                                 interactionSource = bookmarkInteraction,
                                 modifier = Modifier
                                     .size(32.dp)
-                                    .graphicsLayer {
-                                        scaleX = cardBookmarkScale
-                                        scaleY = cardBookmarkScale
-                                    }
+                                    .then(if (cardBookmarkScale != 1f) Modifier.graphicsLayer { scaleX = cardBookmarkScale; scaleY = cardBookmarkScale } else Modifier)
                                     .clip(CircleShape)
                                     .background(if (item.isBookmarked) themePrimary.copy(alpha = 0.28f) else Color(0xD90B0F19))
                                     .border(
@@ -792,11 +823,15 @@ fun GiveawayCard(
                             if (item.isNew) {
                                 Box(
                                     modifier = Modifier
-                                        .graphicsLayer {
-                                            scaleX = pulseScale
-                                            scaleY = pulseScale
-                                            alpha = pulseGlow
-                                        }
+                                        .then(
+                                            if (pulseScale != 1f || pulseGlow != 1f) {
+                                                Modifier.graphicsLayer {
+                                                    scaleX = pulseScale
+                                                    scaleY = pulseScale
+                                                    alpha = pulseGlow
+                                                }
+                                            } else Modifier
+                                        )
                                         .clip(RoundedCornerShape(6.dp))
                                         .background(Color(0xFFFF9100).copy(alpha = 0.25f))
                                         .border(1.2.dp, Color(0xFFFF9100), RoundedCornerShape(6.dp))
@@ -929,39 +964,38 @@ fun GiveawayCard(
                                 }
                             }
 
-                            val claimedBorderColor by animateColorAsState(
-                                targetValue = if (item.isClaimed) NeonGreen else MaterialTheme.colorScheme.outline,
-                                label = "claimed_border"
-                            )
+                            val claimedBorderColor = if (isAnimationsEnabled && !isLowEndOptimization) {
+                                val anim by animateColorAsState(
+                                    targetValue = if (item.isClaimed) NeonGreen else MaterialTheme.colorScheme.outline,
+                                    label = "claimed_border"
+                                )
+                                anim
+                            } else {
+                                if (item.isClaimed) NeonGreen else MaterialTheme.colorScheme.outline
+                            }
 
                             val haveItInteraction = remember { MutableInteractionSource() }
                             val isHaveItPressed by haveItInteraction.collectIsPressedAsState()
-                            val haveItScale by animateFloatAsState(
-                                targetValue = if (isHaveItPressed) 0.93f else 1f,
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                                    stiffness = Spring.StiffnessLow
-                                ),
-                                label = "have_it_scale"
-                            )
-                            val claimedCheckScale by animateFloatAsState(
-                                targetValue = if (item.isClaimed) 1.25f else 1f,
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                                    stiffness = Spring.StiffnessMediumLow
-                                ),
-                                label = "claimed_check_scale"
-                            )
+                            val haveItScale = if (isAnimationsEnabled && !isLowEndOptimization) {
+                                val anim by animateFloatAsState(
+                                    targetValue = if (isHaveItPressed) 0.93f else 1f,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessLow
+                                    ),
+                                    label = "have_it_scale"
+                                )
+                                anim
+                            } else {
+                                if (isHaveItPressed) 0.93f else 1f
+                            }
 
                             OutlinedButton(
                                 onClick = onToggleClaimed,
                                 interactionSource = haveItInteraction,
                                 modifier = Modifier
                                     .height(44.dp)
-                                    .graphicsLayer {
-                                        scaleX = haveItScale
-                                        scaleY = haveItScale
-                                    }
+                                    .then(if (haveItScale != 1f) Modifier.graphicsLayer { scaleX = haveItScale; scaleY = haveItScale } else Modifier)
                                     .testTag("claimed_toggle_${item.id}"),
                                 shape = RoundedCornerShape(10.dp),
                                 colors = ButtonDefaults.outlinedButtonColors(
@@ -979,10 +1013,7 @@ fun GiveawayCard(
                                         contentDescription = null,
                                         modifier = Modifier
                                             .size(16.dp)
-                                            .graphicsLayer {
-                                                scaleX = claimedCheckScale
-                                                scaleY = claimedCheckScale
-                                            },
+                                            .then(if (claimedScale != 1f) Modifier.graphicsLayer { scaleX = claimedScale; scaleY = claimedScale } else Modifier),
                                         tint = if (item.isClaimed) NeonGreen else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     Text(

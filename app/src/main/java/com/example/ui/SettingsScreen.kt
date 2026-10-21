@@ -144,6 +144,7 @@ fun SettingsScreen(
     val isConfirmToastOnClaim by viewModel.isConfirmToastOnClaim.collectAsState()
     val isAutoCheckOnReopen by viewModel.isAutoCheckOnReopen.collectAsState()
     val isAnimationsEnabled by viewModel.isAnimationsEnabled.collectAsState()
+    val isLowEndOptimization by viewModel.isLowEndOptimization.collectAsState()
     val storageMetrics by viewModel.storageMetrics.collectAsState()
     val isDataSaverMode by viewModel.isDataSaverMode.collectAsState()
     val isAutoPruneExpired by viewModel.isAutoPruneExpired.collectAsState()
@@ -1151,6 +1152,8 @@ fun SettingsScreen(
         PreRenderingPerformanceSection(
             targetFrameRate = targetFrameRate,
             detectedRefreshRate = detectedRefreshRate,
+            isLowEndOptimization = isLowEndOptimization,
+            onToggleLowEndOptimization = { viewModel.setLowEndOptimization(it) },
             onSelectFrameRate = { viewModel.setTargetFrameRate(it) }
         )
 
@@ -1575,7 +1578,7 @@ fun SettingsScreen(
             )
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = "LootDrop V3.2 • PC & Console Free Games Radar",
+                text = "LootDrop V3.3 • PC & Console Free Games Radar",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1749,9 +1752,14 @@ private fun SettingToggleRow(
 private fun PreRenderingPerformanceSection(
     targetFrameRate: TargetFrameRate,
     detectedRefreshRate: Int,
+    isLowEndOptimization: Boolean,
+    onToggleLowEndOptimization: (Boolean) -> Unit,
     onSelectFrameRate: (TargetFrameRate) -> Unit
 ) {
-    SectionHeader(title = "PRE-RENDERING PERFORMANCE", icon = Icons.Default.Speed)
+    val context = LocalContext.current
+    val perfProfile = remember(context) { com.example.util.DevicePerformanceHelper.getProfile(context) }
+
+    SectionHeader(title = "HARDWARE & RENDERING PERFORMANCE", icon = Icons.Default.Speed)
 
     Spacer(modifier = Modifier.height(8.dp))
 
@@ -1786,12 +1794,19 @@ private fun PreRenderingPerformanceSection(
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.primary)
                     )
-                    Text(
-                        text = "Hardware Screen Detection",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Column {
+                        Text(
+                            text = "Detected SoC & Memory Profile",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = perfProfile.telemetrySummary,
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
                 Surface(
                     shape = RoundedCornerShape(6.dp),
@@ -1799,7 +1814,7 @@ private fun PreRenderingPerformanceSection(
                     modifier = Modifier.padding(start = 4.dp)
                 ) {
                     Text(
-                        text = "${detectedRefreshRate}Hz Active",
+                        text = "${detectedRefreshRate}Hz",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimary,
@@ -1808,6 +1823,48 @@ private fun PreRenderingPerformanceSection(
                 }
             }
         }
+
+        // Low-End Hardware Acceleration Toggle
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(if (isLowEndOptimization) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent)
+                .border(
+                    1.dp,
+                    if (isLowEndOptimization) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                    RoundedCornerShape(12.dp)
+                )
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f).padding(end = 10.dp)) {
+                Text(
+                    text = "Low-End Device Acceleration",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Halves memory using 16-bit RGB textures, pauses idle infinite clocks, eliminates off-screen GPU layers & accelerates list recycling",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 14.sp
+                )
+            }
+            Switch(
+                checked = isLowEndOptimization,
+                onCheckedChange = onToggleLowEndOptimization,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.background,
+                    checkedTrackColor = MaterialTheme.colorScheme.primary
+                ),
+                modifier = Modifier.testTag("switch_low_end_optimization")
+            )
+        }
+
+        Spacer(modifier = Modifier.height(2.dp))
 
         Text(
             text = "Select UI pre-rendering frame rate target (60 FPS, 90 FPS, 120 FPS):",
