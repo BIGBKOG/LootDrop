@@ -7,9 +7,7 @@ import com.example.data.model.LauncherType
 import com.example.notifications.NotificationHelper
 import com.example.preferences.AppPreferences
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -153,37 +151,9 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `navigation tabs contain discover calendar in library and settings in exact order`() {
+    fun `navigation tabs only contain discover claimed and settings without saved tab`() {
         val tabNames = com.example.ui.MainTab.values().map { it.name }
-        assertEquals(listOf("DISCOVER", "CALENDAR", "CLAIMED", "SETTINGS"), tabNames)
-    }
-
-    @Test
-    fun `expiration calendar utils accurately parses dates and calculates days remaining`() {
-        val today = java.time.LocalDate.now()
-        val tomorrow = today.plusDays(1)
-        val inFiveDays = today.plusDays(5)
-        val inTwentyDays = today.plusDays(20)
-
-        val tomorrowStr = tomorrow.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
-        val inFiveDaysStr = inFiveDays.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
-        val inTwentyDaysStr = inTwentyDays.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
-
-        // Null / N/A handling
-        assertNull(com.example.ui.calendar.ExpirationCalendarUtils.parseExpirationDate("N/A"))
-        assertNull(com.example.ui.calendar.ExpirationCalendarUtils.parseExpirationDate(""))
-        assertNull(com.example.ui.calendar.ExpirationCalendarUtils.daysRemaining("N/A", today))
-
-        // Range checks for next week or two (0..14 days)
-        assertEquals(1L, com.example.ui.calendar.ExpirationCalendarUtils.daysRemaining(tomorrowStr, today))
-        assertTrue(com.example.ui.calendar.ExpirationCalendarUtils.isExpiringInDayRange(tomorrowStr, 0, 14, today))
-        assertTrue(com.example.ui.calendar.ExpirationCalendarUtils.isExpiringInDayRange(inFiveDaysStr, 0, 14, today))
-        // 20 days is outside 14 days
-        org.junit.Assert.assertFalse(com.example.ui.calendar.ExpirationCalendarUtils.isExpiringInDayRange(inTwentyDaysStr, 0, 14, today))
-
-        // Badge text
-        val badgeTomorrow = com.example.ui.calendar.ExpirationCalendarUtils.getExpirationBadgeText(tomorrowStr)
-        assertEquals("Ends Tomorrow", badgeTomorrow)
+        assertEquals(listOf("DISCOVER", "CLAIMED", "SETTINGS"), tabNames)
     }
 
     @Test
