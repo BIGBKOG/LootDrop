@@ -87,11 +87,17 @@ fun GiveawayCard(
     onToggleClaimed: () -> Unit,
     isAnimationsEnabled: Boolean = true,
     isLowEndOptimization: Boolean = false,
+    beamAngle: Float = 0f,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val screenDensityInfo = LocalScreenDensityInfo.current
     val launcherColor = Color(item.launcherCategory.badgeColorHex)
+
+    val cardAngleOffset = remember(item.id) {
+        val h = item.id.hashCode()
+        ((if (h == Int.MIN_VALUE) 0 else kotlin.math.abs(h)) % 360).toFloat()
+    }
 
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -187,37 +193,11 @@ fun GiveawayCard(
         anim
     } else expressiveBorderColor
 
-    val cardBorderWidth = if (item.isClaimed || item.isNew || item.isBookmarked || isPressed) 2.dp else 1.5.dp
-
-    // Dynamic gradient brush on high performance; solid stroke on low-end hardware to avoid fragment shader cost
-    val cardBorderBrush = remember(themePrimary, themeSecondary, cardBorderColor, item.isClaimed, item.isBookmarked, item.isNew, launcherColor, isLowEndOptimization) {
-        if (isLowEndOptimization) {
-            SolidColor(cardBorderColor)
-        } else {
-            when {
-                item.isClaimed -> Brush.horizontalGradient(
-                    listOf(NeonGreen, themePrimary, NeonGreen.copy(alpha = 0.8f))
-                )
-                item.isBookmarked -> Brush.horizontalGradient(
-                    listOf(themePrimary, themeSecondary, themePrimary.copy(alpha = 0.8f))
-                )
-                item.isNew -> Brush.horizontalGradient(
-                    listOf(Color(0xFFFF9100), themePrimary, Color(0xFFFF3D00))
-                )
-                else -> Brush.horizontalGradient(
-                    listOf(
-                        themePrimary,
-                        launcherColor.copy(alpha = 0.90f),
-                        themeSecondary.copy(alpha = 0.70f)
-                    )
-                )
-            }
-        }
-    }
+    val cardBorderWidth = if (item.isClaimed || item.isNew || item.isBookmarked || isPressed) 2.2.dp else 1.8.dp
 
     when (cardDensity) {
         CardDensity.MINIMAL_LIST -> {
-            // Minimal Streamlined List Card (~72dp) with expressive popping outline
+            // Minimal Streamlined List Card (~72dp) with expressive popping outline & moving bright beam
             Card(
                 modifier = modifier
                     .fillMaxWidth()
@@ -228,10 +208,12 @@ fun GiveawayCard(
                         indication = null,
                         onClick = onClick
                     )
-                    .border(
-                        width = cardBorderWidth,
-                        brush = cardBorderBrush,
-                        shape = RoundedCornerShape(16.dp)
+                    .borderBeam(
+                        strokeWidth = cardBorderWidth,
+                        cornerRadius = 16.dp,
+                        borderColor = cardBorderColor,
+                        beamAngleProvider = { (beamAngle + cardAngleOffset) % 360f },
+                        isAnimated = isAnimationsEnabled && !isLowEndOptimization
                     )
                     .testTag("giveaway_card_minimal_${item.id}"),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF141924)),
@@ -403,10 +385,12 @@ fun GiveawayCard(
                         indication = null,
                         onClick = onClick
                     )
-                    .border(
-                        width = cardBorderWidth,
-                        brush = cardBorderBrush,
-                        shape = RoundedCornerShape(16.dp)
+                    .borderBeam(
+                        strokeWidth = cardBorderWidth,
+                        cornerRadius = 16.dp,
+                        borderColor = cardBorderColor,
+                        beamAngleProvider = { (beamAngle + cardAngleOffset) % 360f },
+                        isAnimated = isAnimationsEnabled && !isLowEndOptimization
                     )
                     .testTag("giveaway_card_compact_${item.id}"),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF141924)),
@@ -582,10 +566,12 @@ fun GiveawayCard(
                         indication = null,
                         onClick = onClick
                     )
-                    .border(
-                        width = cardBorderWidth,
-                        brush = cardBorderBrush,
-                        shape = RoundedCornerShape(20.dp)
+                    .borderBeam(
+                        strokeWidth = cardBorderWidth,
+                        cornerRadius = 20.dp,
+                        borderColor = cardBorderColor,
+                        beamAngleProvider = { (beamAngle + cardAngleOffset) % 360f },
+                        isAnimated = isAnimationsEnabled && !isLowEndOptimization
                     )
                     .testTag("giveaway_card_${item.id}"),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF141924)),

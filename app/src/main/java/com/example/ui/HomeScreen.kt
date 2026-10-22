@@ -102,6 +102,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -168,6 +169,21 @@ fun HomeScreen(
     val unreadNotificationCount by viewModel.unreadNotificationCount.collectAsState()
     val isNotificationHistorySheetOpen by viewModel.isNotificationHistorySheetOpen.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+
+    val borderBeamTransition = rememberInfiniteTransition(label = "borderBeamTransition")
+    val borderBeamAngle by if (isAnimationsEnabled && !isLowEndOptimization) {
+        borderBeamTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 3800, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "borderBeamAngle"
+        )
+    } else {
+        remember { mutableFloatStateOf(0f) }
+    }
 
     var isSearchExpanded by remember { mutableStateOf(false) }
     var isNotificationSettingsSheetOpen by remember { mutableStateOf(false) }
@@ -542,6 +558,7 @@ fun HomeScreen(
                             isShowExpiration = isShowExpiration,
                             isAnimationsEnabled = isAnimationsEnabled,
                             isLowEndOptimization = isLowEndOptimization,
+                            beamAngle = borderBeamAngle,
                             screenDensityInfo = screenDensityInfo,
                             listState = discoverListState,
                             gridState = discoverGridState,
@@ -580,6 +597,7 @@ fun HomeScreen(
                             isShowExpiration = isShowExpiration,
                             isAnimationsEnabled = isAnimationsEnabled,
                             isLowEndOptimization = isLowEndOptimization,
+                            beamAngle = borderBeamAngle,
                             screenDensityInfo = screenDensityInfo,
                             listState = claimedListState,
                             gridState = claimedGridState,
@@ -867,6 +885,7 @@ fun GiveawaysTabContent(
     isShowExpiration: Boolean,
     isAnimationsEnabled: Boolean,
     isLowEndOptimization: Boolean = false,
+    beamAngle: Float = 0f,
     screenDensityInfo: ScreenDensityInfo,
     listState: LazyListState,
     gridState: LazyGridState,
@@ -1173,6 +1192,7 @@ fun GiveawaysTabContent(
                                     onToggleClaimed = { onToggleClaimed(item) },
                                     isAnimationsEnabled = isAnimationsEnabled,
                                     isLowEndOptimization = isLowEndOptimization,
+                                    beamAngle = beamAngle,
                                     modifier = if (isAnimationsEnabled && !isLowEndOptimization) Modifier.animateItem() else Modifier
                                 )
                             }
@@ -1209,6 +1229,7 @@ fun GiveawaysTabContent(
                                     onToggleClaimed = { onToggleClaimed(item) },
                                     isAnimationsEnabled = isAnimationsEnabled,
                                     isLowEndOptimization = isLowEndOptimization,
+                                    beamAngle = beamAngle,
                                     modifier = if (isAnimationsEnabled && !isLowEndOptimization) Modifier.animateItem() else Modifier
                                 )
                             }
