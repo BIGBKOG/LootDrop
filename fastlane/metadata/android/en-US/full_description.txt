@@ -1,0 +1,10 @@
+LootDrop is a clean, 100% Free and Open Source (FOSS) radar for discovering, tracking, and claiming 100% free PC and console games, loot drops, and giveaways. Built with modern Jetpack Compose and designed specifically for pure AOSP with zero Google Mobile Services (0 GMS) dependencies.
+
+Features:
+• Free Games Radar: Real-time tracking of active 100% discount giveaways and promotions across Steam, Epic Games Store, GOG, Prime Gaming, PlayStation 5/4, Xbox Series X|S, Nintendo Switch, Ubisoft, and DRM-Free stores.
+• Expiration Calendar: Day-by-day interactive timeline covering the next 1–2 weeks so you never miss a limited-time free game before it expires.
+• In Library Tracker: Keep track of every game you claim and watch your total dollars saved grow with live statistics.
+• Zero Proprietary Dependencies: 100% pure AOSP compliant with no Google Play Services, no analytics trackers, no telemetry, and no accounts required.
+• Storage & Performance Accelerator: Low-end device optimization mode, disk cache prune controls, and zero battery drain background check alarms.
+• Material 3 Expressive UI: Fluid gesture navigation, customizable color themes (Emerald, Cyber Cyan, Neon Purple, Sunset Gold), and dark/light modes.
+• Open Data: Powered by GamerPower API with offline caching via local Room database.

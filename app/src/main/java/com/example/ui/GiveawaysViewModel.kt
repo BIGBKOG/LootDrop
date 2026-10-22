@@ -38,6 +38,7 @@ import com.example.StorageMetrics
 
 enum class MainTab {
     DISCOVER,
+    CALENDAR,
     CLAIMED,
     SETTINGS
 }
@@ -70,7 +71,9 @@ data class UiStats(
     val newFreebiesCount: Int = 0,
     val platformCounts: Map<LauncherType, Int> = emptyMap(),
     val claimedTotalSavedUsd: Double = 0.0,
-    val claimedCount: Int = 0
+    val claimedCount: Int = 0,
+    val expiringSoonCount: Int = 0,
+    val expiringNext14DaysCount: Int = 0
 )
 
 class GiveawaysViewModel(application: Application) : AndroidViewModel(application) {
@@ -301,13 +304,19 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                 platformMap[launcher] = all.count { it.matchesLauncher(launcher) }
             }
         }
+        val today = java.time.LocalDate.now()
+        val expiringSoon = all.count { com.example.ui.calendar.ExpirationCalendarUtils.isExpiringInDayRange(it.endDate, 0, 2, today) }
+        val expiringNext14 = all.count { com.example.ui.calendar.ExpirationCalendarUtils.isExpiringInDayRange(it.endDate, 0, 14, today) }
+
         UiStats(
             totalFreeWorthUsd = totalWorth,
             activeGiveawaysCount = all.size,
             newFreebiesCount = newCount,
             platformCounts = platformMap,
             claimedTotalSavedUsd = claimedTotalSaved,
-            claimedCount = claimedCount
+            claimedCount = claimedCount,
+            expiringSoonCount = expiringSoon,
+            expiringNext14DaysCount = expiringNext14
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiStats())
 
@@ -392,6 +401,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     ) { tab, discover, claimed ->
         when (tab) {
             MainTab.DISCOVER -> discover
+            MainTab.CALENDAR -> discover
             MainTab.CLAIMED -> claimed
             MainTab.SETTINGS -> emptyList()
         }

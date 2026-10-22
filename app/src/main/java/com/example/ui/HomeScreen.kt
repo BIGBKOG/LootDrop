@@ -122,6 +122,7 @@ import com.example.R
 import com.example.data.model.GiveawayItem
 import com.example.data.model.LauncherType
 import com.example.preferences.CardDensity
+import com.example.ui.calendar.CalendarTabContent
 import com.example.ui.components.ChooseLauncherDialog
 import com.example.ui.components.ExpressiveFloatingNavBar
 import com.example.ui.components.FilterSortBottomSheet
@@ -189,7 +190,7 @@ fun HomeScreen(
     var isNotificationSettingsSheetOpen by remember { mutableStateOf(false) }
     var launcherChooserItem by remember { mutableStateOf<GiveawayItem?>(null) }
 
-    val tabs = remember { listOf(MainTab.DISCOVER, MainTab.CLAIMED, MainTab.SETTINGS) }
+    val tabs = remember { listOf(MainTab.DISCOVER, MainTab.CALENDAR, MainTab.CLAIMED, MainTab.SETTINGS) }
     val pagerState = rememberPagerState(
         initialPage = tabs.indexOf(selectedTab).coerceAtLeast(0),
         pageCount = { tabs.size }
@@ -224,6 +225,7 @@ fun HomeScreen(
     }
 
     val discoverListState = rememberLazyListState()
+    val calendarListState = rememberLazyListState()
     val claimedListState = rememberLazyListState()
     val discoverGridState = rememberLazyGridState()
     val claimedGridState = rememberLazyGridState()
@@ -251,7 +253,8 @@ fun HomeScreen(
                     onTabSelected = { tab ->
                         viewModel.selectTab(tab)
                     },
-                    claimedCount = claimedGiveaways.size
+                    claimedCount = claimedGiveaways.size,
+                    expiringSoonCount = uiStats.expiringSoonCount
                 )
             }
         }
@@ -304,7 +307,11 @@ fun HomeScreen(
                                         .padding(horizontal = 5.dp, vertical = 1.5.dp)
                                 ) {
                                     Text(
-                                        text = if (currentTab == MainTab.SETTINGS) "SETTINGS" else "${screenDensityInfo.densityDpi} DPI",
+                                        text = when (currentTab) {
+                                            MainTab.SETTINGS -> "SETTINGS"
+                                            MainTab.CALENDAR -> "CALENDAR"
+                                            else -> "${screenDensityInfo.densityDpi} DPI"
+                                        },
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.ExtraBold,
                                         color = MaterialTheme.colorScheme.primary
@@ -312,10 +319,14 @@ fun HomeScreen(
                                 }
                             }
                             Text(
-                                text = if (currentTab == MainTab.SETTINGS) "APP PREFERENCES & CONTROLS" else "PC & CONSOLE FREE RADAR",
+                                text = when (currentTab) {
+                                    MainTab.SETTINGS -> "APP PREFERENCES & CONTROLS"
+                                    MainTab.CALENDAR -> "EXPIRING IN 1-2 WEEKS"
+                                    else -> "PC & CONSOLE FREE RADAR"
+                                },
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (currentTab == MainTab.SETTINGS) MaterialTheme.colorScheme.primary else NeonGreen,
+                                color = if (currentTab == MainTab.SETTINGS || currentTab == MainTab.CALENDAR) MaterialTheme.colorScheme.primary else NeonGreen,
                                 letterSpacing = 1.sp
                             )
                         }
@@ -567,6 +578,33 @@ fun HomeScreen(
                             onNewTodayClick = { viewModel.selectSort(SortOption.NEWEST) },
                             onOpenFilterSheet = { viewModel.setFilterSheetOpen(true) },
                             onResetFilters = { viewModel.resetFilters() },
+                            onItemClick = { viewModel.openDetail(it) },
+                            onClaimClick = { item ->
+                                if (item.hasMultipleLaunchers) {
+                                    launcherChooserItem = item
+                                } else {
+                                    viewModel.claimAndLaunch(context, item)
+                                }
+                            },
+                            onToggleBookmark = { viewModel.toggleBookmark(it) },
+                            onToggleClaimed = { viewModel.toggleClaimed(it) }
+                        )
+                    }
+                    MainTab.CALENDAR -> {
+                        CalendarTabContent(
+                            giveaways = discoverGiveaways,
+                            isLoading = isLoading,
+                            errorMessage = errorMessage,
+                            searchQuery = searchQuery,
+                            cardDensity = cardDensity,
+                            isShowOriginalPrice = isShowOriginalPrice,
+                            isShowExpiration = isShowExpiration,
+                            isAnimationsEnabled = isAnimationsEnabled,
+                            isLowEndOptimization = isLowEndOptimization,
+                            beamAngle = borderBeamAngle,
+                            screenDensityInfo = screenDensityInfo,
+                            listState = calendarListState,
+                            onRefresh = { viewModel.refreshGiveaways() },
                             onItemClick = { viewModel.openDetail(it) },
                             onClaimClick = { item ->
                                 if (item.hasMultipleLaunchers) {

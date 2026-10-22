@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Settings
@@ -60,16 +61,18 @@ fun ExpressiveFloatingNavBar(
     selectedTab: MainTab,
     onTabSelected: (MainTab) -> Unit,
     claimedCount: Int = 0,
+    expiringSoonCount: Int = 0,
     modifier: Modifier = Modifier
 ) {
-    val navBarWidth = 324.dp
+    val navBarWidth = 356.dp
     val navBarHeight = 64.dp
-    val tabCount = 3
+    val tabCount = 4
 
     val targetIndex = when (selectedTab) {
         MainTab.DISCOVER -> 0
-        MainTab.CLAIMED -> 1
-        MainTab.SETTINGS -> 2
+        MainTab.CALENDAR -> 1
+        MainTab.CLAIMED -> 2
+        MainTab.SETTINGS -> 3
     }
 
     // Theme synchronization: dynamically sync active colors with user's accent theme choice!
@@ -167,6 +170,20 @@ fun ExpressiveFloatingNavBar(
                     activeColor = themePrimary,
                     onClick = { onTabSelected(MainTab.DISCOVER) },
                     testTag = "nav_tab_discover",
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                )
+
+                ExpressiveNavTab(
+                    tab = MainTab.CALENDAR,
+                    title = "Calendar",
+                    icon = Icons.Default.CalendarMonth,
+                    isSelected = selectedTab == MainTab.CALENDAR,
+                    activeColor = themePrimary,
+                    onClick = { onTabSelected(MainTab.CALENDAR) },
+                    testTag = "nav_tab_calendar",
+                    badgeCount = if (expiringSoonCount > 0) expiringSoonCount else null,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()

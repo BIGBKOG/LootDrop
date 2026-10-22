@@ -33,8 +33,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Schedule
@@ -612,12 +610,12 @@ fun GiveawayCard(
                                 )
                         )
 
-                        // Top row: Launcher & Type badges on the left, Animated Bookmark on the right
+                        // Top row: Launcher & Type badges
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            horizontalArrangement = Arrangement.Start,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             val isDarkBrand = item.launcherCategory == LauncherType.PLAYSTATION || 
@@ -708,53 +706,6 @@ fun GiveawayCard(
                                         color = Color.White
                                     )
                                 }
-                            }
-
-                            // Quick Bookmark button with bouncy spring scale pop
-                            val bookmarkInteraction = remember { MutableInteractionSource() }
-                            val isBookmarkPressed by bookmarkInteraction.collectIsPressedAsState()
-                            val cardBookmarkScale = if (isAnimationsEnabled && !isLowEndOptimization) {
-                                val anim by animateFloatAsState(
-                                    targetValue = when {
-                                        isBookmarkPressed -> 0.85f
-                                        item.isBookmarked -> 1.18f
-                                        else -> 1.0f
-                                    },
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                                        stiffness = Spring.StiffnessLow
-                                    ),
-                                    label = "card_bookmark_scale"
-                                )
-                                anim
-                            } else {
-                                when {
-                                    isBookmarkPressed -> 0.85f
-                                    item.isBookmarked -> 1.18f
-                                    else -> 1.0f
-                                }
-                            }
-                            IconButton(
-                                onClick = onToggleBookmark,
-                                interactionSource = bookmarkInteraction,
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .then(if (cardBookmarkScale != 1f) Modifier.graphicsLayer { scaleX = cardBookmarkScale; scaleY = cardBookmarkScale } else Modifier)
-                                    .clip(CircleShape)
-                                    .background(if (item.isBookmarked) themePrimary.copy(alpha = 0.28f) else Color(0xD90B0F19))
-                                    .border(
-                                        1.2.dp,
-                                        if (item.isBookmarked) themePrimary else Color.White.copy(alpha = 0.35f),
-                                        CircleShape
-                                    )
-                                    .testTag("bookmark_button_${item.id}")
-                            ) {
-                                Icon(
-                                    imageVector = if (item.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                                    contentDescription = if (item.isBookmarked) "Bookmarked" else "Bookmark",
-                                    tint = if (item.isBookmarked) themePrimary else Color.White,
-                                    modifier = Modifier.size(16.dp)
-                                )
                             }
                         }
 
