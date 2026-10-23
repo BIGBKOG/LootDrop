@@ -66,7 +66,6 @@ import com.example.data.model.GiveawayItem
 import com.example.preferences.CardDensity
 import com.example.ui.components.GiveawayCard
 import com.example.ui.density.ScreenDensityInfo
-import com.example.ui.theme.NeonAmber
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.TextMuted
@@ -76,6 +75,8 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
+
+private val NeonAmber = Color(0xFFFFB300)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
