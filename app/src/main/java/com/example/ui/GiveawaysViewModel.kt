@@ -39,6 +39,7 @@ import com.example.StorageMetrics
 enum class MainTab {
     DISCOVER,
     CLAIMED,
+    CALENDAR,
     SETTINGS
 }
 
@@ -393,6 +394,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         when (tab) {
             MainTab.DISCOVER -> discover
             MainTab.CLAIMED -> claimed
+            MainTab.CALENDAR -> discover
             MainTab.SETTINGS -> emptyList()
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

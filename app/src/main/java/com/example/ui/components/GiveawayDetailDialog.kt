@@ -28,6 +28,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
@@ -590,6 +591,57 @@ fun GiveawayDetailDialog(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(if (item.isClaimed) "In Library (Claimed)" else "Add to 'In Library'", fontSize = 13.sp)
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    val hasValidEndDate = com.example.ui.calendar.ExpirationCalendarUtils.parseExpirationDate(item.endDate) != null
+                    if (hasValidEndDate) {
+                        OutlinedButton(
+                            onClick = {
+                                val parsedDate = com.example.ui.calendar.ExpirationCalendarUtils.parseExpirationDate(item.endDate)
+                                val intent = Intent(Intent.ACTION_INSERT).apply {
+                                    data = android.provider.CalendarContract.Events.CONTENT_URI
+                                    putExtra(android.provider.CalendarContract.Events.TITLE, "Claim Free: ${item.title}")
+                                    putExtra(
+                                        android.provider.CalendarContract.Events.DESCRIPTION,
+                                        "Giveaway for '${item.title}' expires soon!\nPlatforms: ${item.platforms}\nClaim link: ${item.openGiveawayUrl}"
+                                    )
+                                    putExtra(android.provider.CalendarContract.Events.EVENT_LOCATION, item.platforms)
+                                    if (parsedDate != null) {
+                                        val epochMillis = parsedDate.atTime(18, 0)
+                                            .atZone(java.time.ZoneId.systemDefault())
+                                            .toInstant()
+                                            .toEpochMilli()
+                                        putExtra(android.provider.CalendarContract.EXTRA_EVENT_BEGIN_TIME, epochMillis)
+                                        putExtra(android.provider.CalendarContract.EXTRA_EVENT_END_TIME, epochMillis + 3600_000L)
+                                    }
+                                }
+                                try {
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {
+                                    Toast.makeText(context, "No calendar application installed", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("detail_add_to_calendar_button"),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = Color.Transparent,
+                                contentColor = themePrimary
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, themePrimary.copy(alpha = 0.45f))
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CalendarMonth,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = themePrimary
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Set Calendar Reminder", fontSize = 13.sp)
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(18.dp))
