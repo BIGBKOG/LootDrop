@@ -64,14 +64,15 @@ data class FilterCriteria(
     val sort: SortOption = SortOption.NEWEST,
     val query: String = ""
 )
-@Immutable
+@Immutable 
 data class UiStats(
     val totalFreeWorthUsd: Double = 0.0,
     val activeGiveawaysCount: Int = 0,
     val newFreebiesCount: Int = 0,
     val platformCounts: Map<LauncherType, Int> = emptyMap(),
     val claimedTotalSavedUsd: Double = 0.0,
-    val claimedCount: Int = 0
+    val claimedCount: Int = 0,
+    val expiringSoon: Int = 0
 )
 
 class GiveawaysViewModel(application: Application) : AndroidViewModel(application) {
@@ -287,20 +288,30 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     )
 
     // Compute live UI stats
-    val uiStats: StateFlow<UiStats> = allGiveaways.combine(_selectedTab) { all, _ ->
-        val totalWorth = all.sumOf { it.numericWorth }
-        val newCount = all.count { it.isNew }
-        val claimedGames = all.filter { it.isClaimed }
-        val claimedTotalSaved = claimedGames.sumOf { it.numericWorth }
-        val claimedCount = claimedGames.size
-
-        val platformMap = mutableMapOf<LauncherType, Int>()
-        for (launcher in LauncherType.values()) {
-            if (launcher == LauncherType.ALL) {
-                platformMap[launcher] = all.size
-            } else {
-                platformMap[launcher] = all.count { it.matchesLauncher(launcher) }
-            }
+   val uiStats: StateFlow<UiStats> = allGiveaways.combine(_selectedTab) { all, _ ->
+    val totalWorth = all.sumOf { it.numericWorth }
+    val newCount = all.count { it.isNew }
+    val claimedGames = all.filter { it.isClaimed }
+    val claimedTotalSaved = claimedGames.sumOf { it.numericWorth }
+    val claimedCount = claimedGames.size
+    val expiringCount = all.count { it.endDate != "N/A" && it.endDate.isNotBlank() } // or your specific expiring logic
+    val platformMap = mutableMapOf<LauncherType, Int>()
+    for (launcher in LauncherType.values()) {
+        if (launcher == LauncherType.ALL) {
+            platformMap[launcher] = all.size
+        } else {
+            platformMap[launcher] = all.count { it.matchesLauncher(launcher) }
+            
+    UiStats(
+        totalFreeWorthUsd = totalWorth,
+        activeGiveawaysCount = all.size,
+        newFreebiesCount = newCount,
+        platformCounts = platformMap,
+        claimedTotalSavedUsd = claimedTotalSaved,
+        claimedCount = claimedCount,
+        expiringSoon = expiringCount
+    )
+}.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiStats())
         }
         UiStats(
             totalFreeWorthUsd = totalWorth,
