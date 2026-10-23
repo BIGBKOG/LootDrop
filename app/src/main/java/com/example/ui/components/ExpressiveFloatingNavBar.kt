@@ -68,10 +68,11 @@ fun ExpressiveFloatingNavBar(
     val navBarHeight = 64.dp
     val tabCount = 3
 
-    val targetIndex = when (selectedTab) {
+ val targetIndex = when (selectedTab) {
         MainTab.DISCOVER -> 0
         MainTab.CLAIMED -> 1
         MainTab.SETTINGS -> 2
+        else -> 0
     }
 
     // Theme synchronization: dynamically sync active colors with user's accent theme choice!
