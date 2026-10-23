@@ -17,15 +17,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Settings
@@ -52,34 +51,28 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.MainTab
 
-/**
- * Material 3 Expressive Floating Navigation Bar synced with the user's theme choice.
- * Features a floating capsule pill with dynamic theme-reactive borders and a fluid
- * sliding indicator capsule that smoothly glides with spring physics across the bar.
- */
 @Composable
 fun ExpressiveFloatingNavBar(
     selectedTab: MainTab,
     onTabSelected: (MainTab) -> Unit,
     claimedCount: Int = 0,
+    expiringSoonCount: Int = 0,
     modifier: Modifier = Modifier
 ) {
-    val navBarWidth = 324.dp
+    val navBarWidth = 356.dp
     val navBarHeight = 64.dp
-    val tabCount = 3
+    val tabCount = 4
 
- val targetIndex = when (selectedTab) {
+    val targetIndex = when (selectedTab) {
         MainTab.DISCOVER -> 0
-        MainTab.CLAIMED -> 1
-        MainTab.SETTINGS -> 2
-        else -> 0
+        MainTab.CALENDAR -> 1
+        MainTab.CLAIMED -> 2
+        MainTab.SETTINGS -> 3
     }
 
-    // Theme synchronization: dynamically sync active colors with user's accent theme choice!
     val themePrimary = MaterialTheme.colorScheme.primary
     val themeSecondary = MaterialTheme.colorScheme.secondary
 
-    // Fluid spring animation for the sliding indicator pill
     val animatedIndex by animateFloatAsState(
         targetValue = targetIndex.toFloat(),
         animationSpec = spring(
@@ -89,7 +82,6 @@ fun ExpressiveFloatingNavBar(
         label = "sliding_nav_indicator_index"
     )
 
-    // Dynamic gradient brush for the sliding active indicator synced to the theme
     val activePillBrush = remember(themePrimary, themeSecondary) {
         Brush.horizontalGradient(
             listOf(
@@ -111,7 +103,6 @@ fun ExpressiveFloatingNavBar(
         label = "nav_outer_border_color"
     )
 
-    // Outer floating capsule container matching reference screenshot, synced to theme
     Surface(
         modifier = modifier
             .width(navBarWidth)
@@ -129,7 +120,7 @@ fun ExpressiveFloatingNavBar(
             )
             .testTag("bottom_nav_bar"),
         shape = RoundedCornerShape(36.dp),
-        color = Color(0xFF1B1E26), // Dark slate/charcoal matching screenshot
+        color = Color(0xFF1B1E26),
         tonalElevation = 8.dp
     ) {
         BoxWithConstraints(
@@ -140,7 +131,6 @@ fun ExpressiveFloatingNavBar(
             val totalWidth = maxWidth
             val singleTabWidth = totalWidth / tabCount
 
-            // Sliding Active Pill Indicator that slides across tabs, synced to chosen theme
             Box(
                 modifier = Modifier
                     .offset(x = singleTabWidth * animatedIndex)
@@ -156,7 +146,6 @@ fun ExpressiveFloatingNavBar(
                     )
             )
 
-            // The Navigation Items placed on top of the sliding indicator
             Row(
                 modifier = Modifier.fillMaxSize(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
@@ -170,9 +159,19 @@ fun ExpressiveFloatingNavBar(
                     activeColor = themePrimary,
                     onClick = { onTabSelected(MainTab.DISCOVER) },
                     testTag = "nav_tab_discover",
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
+                    modifier = Modifier.weight(1f).fillMaxHeight()
+                )
+
+                ExpressiveNavTab(
+                    tab = MainTab.CALENDAR,
+                    title = "Calendar",
+                    icon = Icons.Default.CalendarMonth,
+                    isSelected = selectedTab == MainTab.CALENDAR,
+                    activeColor = themePrimary,
+                    onClick = { onTabSelected(MainTab.CALENDAR) },
+                    testTag = "nav_tab_calendar",
+                    badgeCount = if (expiringSoonCount > 0) expiringSoonCount else null,
+                    modifier = Modifier.weight(1f).fillMaxHeight()
                 )
 
                 ExpressiveNavTab(
@@ -184,9 +183,7 @@ fun ExpressiveFloatingNavBar(
                     onClick = { onTabSelected(MainTab.CLAIMED) },
                     testTag = "nav_tab_claimed",
                     badgeCount = if (claimedCount > 0) claimedCount else null,
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
+                    modifier = Modifier.weight(1f).fillMaxHeight()
                 )
 
                 ExpressiveNavTab(
@@ -197,9 +194,7 @@ fun ExpressiveFloatingNavBar(
                     activeColor = themePrimary,
                     onClick = { onTabSelected(MainTab.SETTINGS) },
                     testTag = "nav_tab_settings",
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
+                    modifier = Modifier.weight(1f).fillMaxHeight()
                 )
             }
         }
@@ -221,7 +216,6 @@ private fun ExpressiveNavTab(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
-    // Tactile press scale
     val pressScale by animateFloatAsState(
         targetValue = if (isPressed) 0.92f else 1.0f,
         animationSpec = spring(
