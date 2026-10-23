@@ -253,7 +253,8 @@ fun HomeScreen(
                     onTabSelected = { tab ->
                         viewModel.selectTab(tab)
                     },
-                    claimedCount = claimedGiveaways.size
+                    claimedCount = claimedGiveaways.size,
+                    expiringSoonCount = uiStats.expiringSoon
                 )
             }
         }
