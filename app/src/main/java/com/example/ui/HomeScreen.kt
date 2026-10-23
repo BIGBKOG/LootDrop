@@ -190,7 +190,7 @@ fun HomeScreen(
     var isNotificationSettingsSheetOpen by remember { mutableStateOf(false) }
     var launcherChooserItem by remember { mutableStateOf<GiveawayItem?>(null) }
 
-    val tabs = remember { listOf(MainTab.DISCOVER, MainTab.CLAIMED, MainTab.CALENDAR, MainTab.SETTINGS) }
+    val tabs = remember { listOf(MainTab.DISCOVER, MainTab.CALENDAR, MainTab.CLAIMED, MainTab.SETTINGS) }
     val pagerState = rememberPagerState(
         initialPage = tabs.indexOf(selectedTab).coerceAtLeast(0),
         pageCount = { tabs.size }
