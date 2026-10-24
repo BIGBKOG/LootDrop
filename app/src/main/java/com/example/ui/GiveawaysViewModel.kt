@@ -287,18 +287,16 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         emptyList()
     )
 
-    // Compute live UI stats
-  val uiStats: StateFlow<UiStats> = allGiveaways.combine(_selectedTab) { all, _ ->
+   // Compute live UI stats
+    val uiStats: StateFlow<UiStats> = allGiveaways.map { all ->
         val totalWorth = all.sumOf { it.numericWorth }
         val newCount = all.count { it.isNew }
         val claimedGames = all.filter { it.isClaimed }
         val claimedTotalSaved = claimedGames.sumOf { it.numericWorth }
         val claimedCount = claimedGames.size
-        val expiringCount = all.count { 
-            it.endDate != "N/A" && it.endDate.isNotBlank() 
-        }
+        val expiringCount = all.count { it.endDate != "N/A" && it.endDate.isNotBlank() }
         val platformMap = mutableMapOf<LauncherType, Int>()
-        for (launcher in LauncherType.entries) {
+        for (launcher in LauncherType.values()) {
             if (launcher == LauncherType.ALL) {
                 platformMap[launcher] = all.size
             } else {
@@ -318,7 +316,8 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = UiStats()
-
+    )
+   
     // Helper method to apply launcher, type, search and sort filters to any giveaway list
     private fun filterAndSortList(
         source: List<GiveawayItem>,
