@@ -18,6 +18,7 @@ import com.example.MainActivity
 import com.example.R
 import com.example.data.local.AppDatabase
 import com.example.data.local.NotificationHistoryEntity
+import com.example.data.model.AppUpdateInfo
 import com.example.data.model.GiveawayItem
 import com.example.preferences.AppPreferences
 import kotlinx.coroutines.CoroutineScope
@@ -581,6 +582,55 @@ class NotificationHelper(private val context: Context) {
             (result.drawable as? BitmapDrawable)?.bitmap
         } catch (_: Exception) {
             null
+        }
+    }
+
+    fun sendUpdateNotification(updateInfo: AppUpdateInfo) {
+        if (!isNotificationsEnabled) return
+
+        val title = "🚀 LootDrop ${updateInfo.latestVersion} Available!"
+        val content = "New update released on GitHub with improvements. Tap to download."
+        val targetUrl = updateInfo.downloadUrl ?: updateInfo.releaseUrl
+
+        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl)).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        val browserPendingIntent = PendingIntent.getActivity(
+            context,
+            999901,
+            browserIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val appIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val appPendingIntent = PendingIntent.getActivity(
+            context,
+            999902,
+            appIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_SYSTEM)
+            .setSmallIcon(R.drawable.ic_stat_gamepad)
+            .setContentTitle(title)
+            .setContentText(content)
+            .setSubText("App Update")
+            .setColor(0xFF00E5FF.toInt())
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .setContentIntent(browserPendingIntent)
+            .addAction(0, if (updateInfo.isApkAvailable) "Download APK" else "View Release", browserPendingIntent)
+            .addAction(0, "Open App", appPendingIntent)
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText("${updateInfo.releaseTitle.ifBlank { "LootDrop " + updateInfo.latestVersion }}\n\n${updateInfo.releaseNotes.take(300)}")
+            )
+
+        try {
+            NotificationManagerCompat.from(context).notify(99999, builder.build())
+        } catch (_: SecurityException) {
         }
     }
 

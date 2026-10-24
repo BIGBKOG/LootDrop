@@ -474,4 +474,33 @@ class ExampleRobolectricTest {
         com.example.notifications.NotificationScheduler.schedulePeriodicSync(context)
         com.example.notifications.NotificationScheduler.cancelPeriodicSync(context)
     }
+
+    @Test
+    fun `github release version comparison handles semver tags correctly`() {
+        // Newer versions
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V4.1", "4.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("v4.0.1", "4.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V5.0", "4.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("4.1.0", "4.0"))
+
+        // Same version
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V4.0", "4.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("4.0", "4.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("v4.0", "4.0"))
+
+        // Older version
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.5", "4.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.9.9", "4.0"))
+    }
+
+    @Test
+    fun `github release update preference toggles correctly`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val prefs = com.example.preferences.AppPreferences(context)
+        assertTrue(prefs.isAutoCheckGithubUpdates)
+        prefs.isAutoCheckGithubUpdates = false
+        org.junit.Assert.assertFalse(prefs.isAutoCheckGithubUpdates)
+        prefs.isAutoCheckGithubUpdates = true
+        assertTrue(prefs.isAutoCheckGithubUpdates)
+    }
 }

@@ -333,6 +333,10 @@ class AppPreferences(context: Context) {
         private const val KEY_NOTIF_KEEP_FOREVER_ONLY = "key_notif_keep_forever_only"
         private const val KEY_NOTIF_RICH_ARTWORK = "key_notif_rich_artwork"
         private const val KEY_NOTIF_ACTIONS_ENABLED = "key_notif_actions_enabled"
+        private const val KEY_AUTO_CHECK_GITHUB_UPDATES = "key_auto_check_github_updates"
+        private const val KEY_LAST_GITHUB_CHECK_TIME = "key_last_github_check_time"
+        private const val KEY_LAST_DISMISSED_UPDATE_TAG = "key_last_dismissed_update_tag"
+        private const val KEY_CACHED_LATEST_VERSION = "key_cached_latest_version"
     }
 
     var themeMode: ThemeMode
@@ -522,4 +526,20 @@ class AppPreferences(context: Context) {
     var isNotificationActionsEnabled: Boolean
         get() = prefs.getBoolean(KEY_NOTIF_ACTIONS_ENABLED, true)
         set(value) = prefs.edit().putBoolean(KEY_NOTIF_ACTIONS_ENABLED, value).apply()
+
+    var isAutoCheckGithubUpdates: Boolean
+        get() = prefs.getBoolean(KEY_AUTO_CHECK_GITHUB_UPDATES, true)
+        set(value) = prefs.edit().putBoolean(KEY_AUTO_CHECK_GITHUB_UPDATES, value).apply()
+
+    var lastGithubCheckTime: Long
+        get() = prefs.getLong(KEY_LAST_GITHUB_CHECK_TIME, 0L)
+        set(value) = prefs.edit().putLong(KEY_LAST_GITHUB_CHECK_TIME, value).apply()
+
+    var lastDismissedUpdateTag: String
+        get() = prefs.getString(KEY_LAST_DISMISSED_UPDATE_TAG, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_LAST_DISMISSED_UPDATE_TAG, value).apply()
+
+    var cachedLatestGithubVersion: String
+        get() = prefs.getString(KEY_CACHED_LATEST_VERSION, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_CACHED_LATEST_VERSION, value).apply()
 }

@@ -61,6 +61,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import com.example.ui.density.ScreenDensityInfo
 import com.example.ui.density.LocalScreenDensityInfo
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -68,6 +70,7 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.NewReleases
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.FilterAltOff
 import androidx.compose.material.icons.filled.MilitaryTech
@@ -123,6 +126,7 @@ import com.example.data.model.GiveawayItem
 import com.example.data.model.LauncherType
 import com.example.preferences.CardDensity
 import com.example.ui.calendar.CalendarTabContent
+import com.example.ui.components.AppUpdateDialog
 import com.example.ui.components.ChooseLauncherDialog
 import com.example.ui.components.ExpressiveFloatingNavBar
 import com.example.ui.components.FilterSortBottomSheet
@@ -170,6 +174,8 @@ fun HomeScreen(
     val unreadNotificationCount by viewModel.unreadNotificationCount.collectAsState()
     val isNotificationHistorySheetOpen by viewModel.isNotificationHistorySheetOpen.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val appUpdateInfo by viewModel.appUpdateInfo.collectAsState()
+    val isUpdateDialogVisible by viewModel.isUpdateDialogVisible.collectAsState()
 
     val borderBeamTransition = rememberInfiniteTransition(label = "borderBeamTransition")
     val borderBeamAngle by if (isAnimationsEnabled && !isLowEndOptimization) {
@@ -499,9 +505,14 @@ fun HomeScreen(
                                 .background(MaterialTheme.colorScheme.surfaceVariant)
                                 .border(
                                     width = 1.dp,
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                    color = if (appUpdateInfo?.hasUpdate == true) NeonGreen else MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
                                     shape = RoundedCornerShape(10.dp)
                                 )
+                                .clickable {
+                                    if (appUpdateInfo?.hasUpdate == true) {
+                                        viewModel.setUpdateDialogVisible(true)
+                                    }
+                                }
                                 .padding(horizontal = 12.dp, vertical = 8.dp)
                                 .testTag("reopen_status_banner"),
                             verticalAlignment = Alignment.CenterVertically,
@@ -513,9 +524,9 @@ fun HomeScreen(
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Sync,
+                                    imageVector = if (appUpdateInfo?.hasUpdate == true) Icons.Default.NewReleases else Icons.Default.Sync,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = if (appUpdateInfo?.hasUpdate == true) NeonGreen else MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Text(
@@ -746,6 +757,28 @@ fun HomeScreen(
             onOpenInbox = {
                 isNotificationSettingsSheetOpen = false
                 viewModel.setNotificationHistorySheetOpen(true)
+            }
+        )
+    }
+
+    // GitHub Release Update Dialog
+    if (isUpdateDialogVisible && appUpdateInfo != null) {
+        AppUpdateDialog(
+            updateInfo = appUpdateInfo!!,
+            onDismiss = { viewModel.dismissUpdateDialog() },
+            onDownload = { targetUrl ->
+                val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl)).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(browserIntent)
+                viewModel.dismissUpdateDialog()
+            },
+            onViewReleases = { releasesUrl ->
+                val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(releasesUrl)).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(browserIntent)
+                viewModel.dismissUpdateDialog()
             }
         )
     }

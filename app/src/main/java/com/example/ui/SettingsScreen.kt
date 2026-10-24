@@ -52,21 +52,30 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.NewReleases
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.filled.ViewCarousel
+import androidx.compose.material3.CircularProgressIndicator
+import com.example.BuildConfig
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.Nightlight
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Wifi
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.material.icons.filled.History
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Divider
@@ -143,6 +152,10 @@ fun SettingsScreen(
     val isShowExpiration by viewModel.isShowExpiration.collectAsState()
     val isConfirmToastOnClaim by viewModel.isConfirmToastOnClaim.collectAsState()
     val isAutoCheckOnReopen by viewModel.isAutoCheckOnReopen.collectAsState()
+    val isAutoCheckGithubUpdates by viewModel.isAutoCheckGithubUpdates.collectAsState()
+    val appUpdateInfo by viewModel.appUpdateInfo.collectAsState()
+    val isCheckingUpdates by viewModel.isCheckingUpdates.collectAsState()
+    val updateCheckStatus by viewModel.updateCheckStatus.collectAsState()
     val isAnimationsEnabled by viewModel.isAnimationsEnabled.collectAsState()
     val isLowEndOptimization by viewModel.isLowEndOptimization.collectAsState()
     val storageMetrics by viewModel.storageMetrics.collectAsState()
@@ -1122,6 +1135,40 @@ fun SettingsScreen(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
+                        text = "Check GitHub Releases on Reload",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Run background check for new LootDrop app releases whenever reloading",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Switch(
+                    checked = isAutoCheckGithubUpdates,
+                    onCheckedChange = { viewModel.setAutoCheckGithubUpdates(it) },
+                    modifier = Modifier.testTag("switch_auto_check_github_updates"),
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.background,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+            }
+
+            Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
                         text = "Fluid UI Animations",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
@@ -1233,6 +1280,171 @@ fun SettingsScreen(
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold
                     )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // SECTION: GitHub Releases & App Updates
+        SectionHeader(title = "GITHUB RELEASES & UPDATES", icon = Icons.Default.NewReleases)
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("github_releases_card"),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Installed Version: V${BuildConfig.VERSION_NAME}",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Upstream: github.com/BIGBKOG/LootDrop",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    if (appUpdateInfo?.hasUpdate == true) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(NeonGreen.copy(alpha = 0.2f))
+                                .border(1.dp, NeonGreen, RoundedCornerShape(6.dp))
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                text = "NEW: ${appUpdateInfo?.latestVersion}",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black,
+                                color = NeonGreen
+                            )
+                        }
+                    } else if (appUpdateInfo != null) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                text = "LATEST: ${appUpdateInfo?.latestVersion}",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+
+                if (updateCheckStatus != null) {
+                    Text(
+                        text = updateCheckStatus ?: "",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (appUpdateInfo?.hasUpdate == true) NeonGreen else MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = { viewModel.checkGithubReleases(isManual = true) },
+                        enabled = !isCheckingUpdates,
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("check_updates_button"),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        if (isCheckingUpdates) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Checking...", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary)
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Sync,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Check Updates", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            val target = appUpdateInfo?.releaseUrl?.ifBlank { "https://github.com/BIGBKOG/LootDrop/releases" } ?: "https://github.com/BIGBKOG/LootDrop/releases"
+                            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(target)).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            }
+                            context.startActivity(browserIntent)
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("view_github_repo_button"),
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.OpenInNew,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Releases", fontSize = 11.sp)
+                    }
+                }
+
+                if (appUpdateInfo?.hasUpdate == true) {
+                    Button(
+                        onClick = { viewModel.setUpdateDialogVisible(true) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("view_update_dialog_button"),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = NeonGreen)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CloudDownload,
+                            contentDescription = null,
+                            tint = Color.Black,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "View Release Notes & Download APK",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                    }
                 }
             }
         }
@@ -1578,7 +1790,7 @@ fun SettingsScreen(
             )
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = "LootDrop V4.0 • PC & Console Free Games Radar",
+                text = "LootDrop V4.1 • PC & Console Free Games Radar",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

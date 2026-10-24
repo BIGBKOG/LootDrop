@@ -3,9 +3,12 @@ package com.example.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.BuildConfig
 import com.example.data.local.AppDatabase
+import com.example.data.model.AppUpdateInfo
 import com.example.data.model.GiveawayItem
 import com.example.data.model.LauncherType
+import com.example.data.remote.GithubReleaseClient
 import com.example.data.repository.GiveawaysRepository
 import com.example.notifications.NotificationHelper
 import com.example.notifications.NotificationScheduler
@@ -81,6 +84,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     val preferences = AppPreferences(application)
     private val database = AppDatabase.getInstance(application)
     private val repository = GiveawaysRepository(database.giveawayDao(), notificationHelper)
+    private val githubReleaseClient = GithubReleaseClient(application)
 
     private val _selectedTab = MutableStateFlow(MainTab.DISCOVER)
     val selectedTab: StateFlow<MainTab> = _selectedTab.asStateFlow()
@@ -160,6 +164,21 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _isAutoCheckOnReopen = MutableStateFlow(preferences.isAutoCheckOnReopen)
     val isAutoCheckOnReopen: StateFlow<Boolean> = _isAutoCheckOnReopen.asStateFlow()
+
+    private val _isAutoCheckGithubUpdates = MutableStateFlow(preferences.isAutoCheckGithubUpdates)
+    val isAutoCheckGithubUpdates: StateFlow<Boolean> = _isAutoCheckGithubUpdates.asStateFlow()
+
+    private val _appUpdateInfo = MutableStateFlow<AppUpdateInfo?>(null)
+    val appUpdateInfo: StateFlow<AppUpdateInfo?> = _appUpdateInfo.asStateFlow()
+
+    private val _isCheckingUpdates = MutableStateFlow(false)
+    val isCheckingUpdates: StateFlow<Boolean> = _isCheckingUpdates.asStateFlow()
+
+    private val _updateCheckStatus = MutableStateFlow<String?>(null)
+    val updateCheckStatus: StateFlow<String?> = _updateCheckStatus.asStateFlow()
+
+    private val _isUpdateDialogVisible = MutableStateFlow(false)
+    val isUpdateDialogVisible: StateFlow<Boolean> = _isUpdateDialogVisible.asStateFlow()
 
     private val _isAnimationsEnabled = MutableStateFlow(preferences.isAnimationsEnabled)
     val isAnimationsEnabled: StateFlow<Boolean> = _isAnimationsEnabled.asStateFlow()
@@ -417,6 +436,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         refreshGiveaways()
         updateStorageFootprint()
         NotificationScheduler.schedulePeriodicSync(application)
+        checkGithubReleases(isManual = false)
     }
 
     fun updateStorageFootprint() {
@@ -507,6 +527,8 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                     _reopenStatusMessage.value = "⚡ Auto-check complete: Games are up to date"
                 }
             }
+            // Trigger background task to check for new GitHub releases on reload
+            checkGithubReleases(isManual = false)
         }
     }
 
@@ -520,6 +542,69 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         }
 
         refreshGiveaways(isAutoCheck = true)
+        // Background task to check for new GitHub releases when reopening app
+        checkGithubReleases(isManual = false)
+    }
+
+    fun setAutoCheckGithubUpdates(enabled: Boolean) {
+        preferences.isAutoCheckGithubUpdates = enabled
+        _isAutoCheckGithubUpdates.value = enabled
+    }
+
+    fun setUpdateDialogVisible(visible: Boolean) {
+        _isUpdateDialogVisible.value = visible
+    }
+
+    fun dismissUpdateDialog(neverRemindThisVersion: Boolean = false) {
+        _isUpdateDialogVisible.value = false
+        if (neverRemindThisVersion) {
+            _appUpdateInfo.value?.latestVersion?.let { tag ->
+                preferences.lastDismissedUpdateTag = tag
+            }
+        }
+    }
+
+    fun checkGithubReleases(isManual: Boolean = false) {
+        if (!isManual && !preferences.isAutoCheckGithubUpdates) return
+
+        val now = System.currentTimeMillis()
+        // Throttle automatic background checks (5 minutes) so we don't spam GitHub API on frequent reload taps
+        if (!isManual && preferences.lastGithubCheckTime > 0L && (now - preferences.lastGithubCheckTime < 5 * 60 * 1000L)) {
+            return
+        }
+
+        viewModelScope.launch {
+            _isCheckingUpdates.value = true
+            if (isManual) {
+                _updateCheckStatus.value = "Checking GitHub for new releases..."
+            }
+            val result = githubReleaseClient.checkLatestRelease(currentVersionName = BuildConfig.VERSION_NAME)
+            preferences.lastGithubCheckTime = System.currentTimeMillis()
+            _isCheckingUpdates.value = false
+
+            if (result.isSuccess) {
+                val info = result.getOrNull()
+                _appUpdateInfo.value = info
+                if (info != null) {
+                    preferences.cachedLatestGithubVersion = info.latestVersion
+                    if (info.hasUpdate) {
+                        _updateCheckStatus.value = "🚀 New release ${info.latestVersion} available!"
+                        if (preferences.lastDismissedUpdateTag != info.latestVersion) {
+                            _reopenStatusMessage.value = "🚀 New Release Available: LootDrop ${info.latestVersion} (Tap to view)"
+                            notificationHelper.sendUpdateNotification(info)
+                        }
+                    } else {
+                        if (isManual) {
+                            _updateCheckStatus.value = "LootDrop is up to date (V${BuildConfig.VERSION_NAME})"
+                        }
+                    }
+                }
+            } else {
+                if (isManual) {
+                    _updateCheckStatus.value = "Could not check updates: ${result.exceptionOrNull()?.localizedMessage ?: "Network issue"}"
+                }
+            }
+        }
     }
 
     fun clearReopenStatusMessage() {
