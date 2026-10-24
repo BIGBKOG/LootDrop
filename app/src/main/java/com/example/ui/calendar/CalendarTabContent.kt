@@ -143,12 +143,6 @@ fun CalendarTabContent(
                             ExpirationCalendarUtils.isExpiringInDayRange(it.endDate, 0, 1, today)
                         }
                     }
-                    CalendarFilterScope.ALL_UPCOMING -> {
-                        giveaways.filter {
-                            val days = ExpirationCalendarUtils.daysRemaining(it.endDate, today)
-                            days != null && days >= 0
-                        }
-                    }
                 }
             }
         }

@@ -110,16 +110,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.data.model.LauncherType
-import androidx.compose.material.icons.filled.AspectRatio
 import com.example.preferences.AccentCategory
 import com.example.preferences.AccentTheme
 import com.example.preferences.BackgroundTheme
 import com.example.preferences.CardDensity
-import com.example.preferences.DpiScaleMode
 import com.example.preferences.TargetFrameRate
 import com.example.preferences.ThemeMode
-import com.example.ui.density.LocalScreenDensityInfo
-import com.example.ui.density.ScreenDensityInfo
 import com.example.ui.theme.EpicGamesBlue
 import com.example.ui.theme.GogPurple
 import com.example.ui.theme.NeonGreen
@@ -144,9 +140,6 @@ fun SettingsScreen(
     val cardDensity by viewModel.cardDensity.collectAsState()
     val targetFrameRate by viewModel.targetFrameRate.collectAsState()
     val detectedRefreshRate by viewModel.detectedRefreshRate.collectAsState()
-    val isDpiOptimizationEnabled by viewModel.isDpiOptimizationEnabled.collectAsState()
-    val dpiScaleMode by viewModel.dpiScaleMode.collectAsState()
-    val screenDensityInfo = LocalScreenDensityInfo.current
     val defaultLauncher by viewModel.defaultLauncher.collectAsState()
     val isShowOriginalPrice by viewModel.isShowOriginalPrice.collectAsState()
     val isShowExpiration by viewModel.isShowExpiration.collectAsState()
@@ -969,17 +962,6 @@ fun SettingsScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // SECTION: Screen DPI & Adaptive Display
-                ScreenDpiOptimizationSection(
-                    screenDensityInfo = screenDensityInfo,
-                    isDpiOptimizationEnabled = isDpiOptimizationEnabled,
-                    dpiScaleMode = dpiScaleMode,
-                    onToggleDpiOpt = { viewModel.setDpiOptimizationEnabled(it) },
-                    onSelectDpiScaleMode = { viewModel.setDpiScaleMode(it) }
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
                 // SECTION 5: Display & Behavior Options
                 SectionHeader(title = "DISPLAY & BEHAVIOR OPTIONS", icon = Icons.Default.Tune)
 
@@ -1790,7 +1772,7 @@ fun SettingsScreen(
             )
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = "LootDrop V4.1 • PC & Console Free Games Radar",
+                text = "LootDrop V4.2 • PC & Console Free Games Radar",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -2145,228 +2127,6 @@ private fun PreRenderingPerformanceSection(
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)
                     )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ScreenDpiOptimizationSection(
-    screenDensityInfo: ScreenDensityInfo,
-    isDpiOptimizationEnabled: Boolean,
-    dpiScaleMode: DpiScaleMode,
-    onToggleDpiOpt: (Boolean) -> Unit,
-    onSelectDpiScaleMode: (DpiScaleMode) -> Unit
-) {
-    SectionHeader(title = "DEVICE SCREEN DPI & ADAPTIVE DISPLAY", icon = Icons.Default.AspectRatio)
-
-    Spacer(modifier = Modifier.height(8.dp))
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // Hardware Readout HUD Card
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
-                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
-                .padding(12.dp)
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AspectRatio,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                        Column {
-                            Text(
-                                text = "Detected Screen Telemetry",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Hardware density & viewport metrics",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(MaterialTheme.colorScheme.primary)
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = "${screenDensityInfo.densityDpi} DPI",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFF0B0F19)
-                        )
-                    }
-                }
-
-                Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), thickness = 0.5.dp)
-
-                // 4-item Telemetry Grid
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = "Density Bucket", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(text = screenDensityInfo.densityBucket, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = "Scale Factor", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(text = "${"%.2f".format(screenDensityInfo.densityScale)}× (${(screenDensityInfo.densityScale * 160).toInt()} dpi)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = "Screen Pixels", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(text = "${screenDensityInfo.widthPx} × ${screenDensityInfo.heightPx} px", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = "Viewport Size", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(text = "${screenDensityInfo.widthDp} × ${screenDensityInfo.heightDp} dp", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = "Device Form", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(text = screenDensityInfo.screenCategory.label, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = "Layout Grid", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(text = "${screenDensityInfo.gridColumns} Column${if (screenDensityInfo.gridColumns > 1) "s" else ""}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    }
-                }
-            }
-        }
-
-        // Master Auto-Adapt Switch
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Auto-Adapt UI to Screen DPI",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "Dynamically tune spacing, columns, and card heights to this device's screen",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Switch(
-                checked = isDpiOptimizationEnabled,
-                onCheckedChange = onToggleDpiOpt,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.background,
-                    checkedTrackColor = MaterialTheme.colorScheme.primary
-                ),
-                modifier = Modifier.testTag("switch_dpi_adaptive")
-            )
-        }
-
-        Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
-
-        Text(
-            text = "DPI Scaling Profile:",
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            DpiScaleMode.values().forEach { mode ->
-                val isSelected = mode == dpiScaleMode
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent)
-                        .border(
-                            1.dp,
-                            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
-                            RoundedCornerShape(10.dp)
-                        )
-                        .clickable { onSelectDpiScaleMode(mode) }
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                        .testTag("dpi_mode_${mode.name.lowercase()}"),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(
-                                text = mode.label,
-                                fontSize = 13.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                        Text(
-                            text = mode.description,
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    if (isSelected) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
                 }
             }
         }

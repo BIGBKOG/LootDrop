@@ -120,8 +120,7 @@ object ExpirationCalendarUtils {
 enum class CalendarFilterScope(val label: String) {
     NEXT_14_DAYS("Next 14 Days"),
     NEXT_7_DAYS("Next 7 Days"),
-    URGENT_48H("Urgent (≤ 48h)"),
-    ALL_UPCOMING("All Upcoming")
+    URGENT_48H("Urgent (≤ 48h)")
 }
 
 /**

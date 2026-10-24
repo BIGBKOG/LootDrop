@@ -32,7 +32,7 @@ enum class SettingsCategory(
     GENERAL(
         label = "General",
         icon = Icons.Default.Tune,
-        description = "Startup store, screen DPI detection, adaptive display, FPS & app guide"
+        description = "Startup store, frame rate & performance, updates, and app guide"
     ),
     STORAGE(
         label = "Storage & Data",

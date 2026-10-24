@@ -316,7 +316,8 @@ fun HomeScreen(
                                         text = when (currentTab) {
                                             MainTab.SETTINGS -> "SETTINGS"
                                             MainTab.CALENDAR -> "CALENDAR"
-                                            else -> "${screenDensityInfo.densityDpi} DPI"
+                                            MainTab.CLAIMED -> "VAULT"
+                                            MainTab.DISCOVER -> "RADAR"
                                         },
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.ExtraBold,
