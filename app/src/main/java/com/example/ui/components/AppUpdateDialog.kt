@@ -15,21 +15,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.NewReleases
 import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -38,7 +41,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -47,6 +49,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.AppUpdateInfo
+import com.example.data.model.UpdateDownloadState
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.TextMuted
@@ -56,8 +59,10 @@ import com.example.ui.theme.TextSecondary
 @Composable
 fun AppUpdateDialog(
     updateInfo: AppUpdateInfo,
+    downloadState: UpdateDownloadState,
     onDismiss: () -> Unit,
-    onDownload: (url: String) -> Unit,
+    onStartDownload: () -> Unit,
+    onInstallApk: () -> Unit,
     onViewReleases: (url: String) -> Unit
 ) {
     val themePrimary = MaterialTheme.colorScheme.primary
@@ -98,9 +103,16 @@ fun AppUpdateDialog(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.NewReleases,
+                                imageVector = when (downloadState) {
+                                    is UpdateDownloadState.ReadyToInstall -> Icons.Default.CheckCircle
+                                    is UpdateDownloadState.Downloading -> Icons.Default.CloudDownload
+                                    else -> Icons.Default.NewReleases
+                                },
                                 contentDescription = null,
-                                tint = themePrimary,
+                                tint = when (downloadState) {
+                                    is UpdateDownloadState.ReadyToInstall -> NeonGreen
+                                    else -> themePrimary
+                                },
                                 modifier = Modifier.size(22.dp)
                             )
                         }
@@ -109,19 +121,34 @@ fun AppUpdateDialog(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(4.dp))
-                                    .background(NeonGreen.copy(alpha = 0.15f))
+                                    .background(
+                                        when (downloadState) {
+                                            is UpdateDownloadState.ReadyToInstall -> NeonGreen.copy(alpha = 0.15f)
+                                            is UpdateDownloadState.Downloading -> themePrimary.copy(alpha = 0.15f)
+                                            else -> NeonGreen.copy(alpha = 0.15f)
+                                        }
+                                    )
                                     .padding(horizontal = 6.dp, vertical = 2.dp)
                             ) {
                                 Text(
-                                    text = "UPDATE AVAILABLE",
+                                    text = when (downloadState) {
+                                        is UpdateDownloadState.Downloading -> "DOWNLOADING IN-APP..."
+                                        is UpdateDownloadState.ReadyToInstall -> "READY TO INSTALL"
+                                        is UpdateDownloadState.Error -> "DOWNLOAD FAILED"
+                                        else -> "UPDATE AVAILABLE"
+                                    },
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Black,
-                                    color = NeonGreen,
+                                    color = when (downloadState) {
+                                        is UpdateDownloadState.ReadyToInstall -> NeonGreen
+                                        is UpdateDownloadState.Error -> Color(0xFFFF5252)
+                                        else -> themePrimary
+                                    },
                                     letterSpacing = 0.8.sp
                                 )
                             }
                             Text(
-                                text = "New LootDrop Release",
+                                text = "LootDrop ${updateInfo.latestVersion}",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary
@@ -186,7 +213,7 @@ fun AppUpdateDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Release Title & Notes Header
+                // Release Title & Notes
                 if (updateInfo.releaseTitle.isNotBlank()) {
                     Text(
                         text = updateInfo.releaseTitle,
@@ -197,7 +224,6 @@ fun AppUpdateDialog(
                     Spacer(modifier = Modifier.height(6.dp))
                 }
 
-                // Changelog scroll container
                 if (updateInfo.releaseNotes.isNotBlank()) {
                     Text(
                         text = "WHAT'S NEW",
@@ -211,7 +237,7 @@ fun AppUpdateDialog(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 160.dp)
+                            .heightIn(max = 140.dp)
                             .clip(RoundedCornerShape(10.dp))
                             .background(Color(0xFF0F121B))
                             .border(1.dp, Color(0xFF1E2638), RoundedCornerShape(10.dp))
@@ -226,65 +252,272 @@ fun AppUpdateDialog(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
-                } else {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
                 }
 
-                // Primary Action Button (Download APK or View on GitHub)
-                Button(
-                    onClick = {
-                        val target = updateInfo.downloadUrl ?: updateInfo.releaseUrl
-                        onDownload(target)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(46.dp)
-                        .testTag("download_update_button"),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = themePrimary)
-                ) {
-                    Icon(
-                        imageVector = if (updateInfo.isApkAvailable) Icons.Default.CloudDownload else Icons.Default.OpenInNew,
-                        contentDescription = null,
-                        tint = Color.Black,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = if (updateInfo.isApkAvailable) "Download APK (${updateInfo.latestVersion})" else "View Release on GitHub",
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black,
-                        fontSize = 13.sp
-                    )
+                // IN-APP DOWNLOAD PROGRESS HUD (When Downloading)
+                when (downloadState) {
+                    is UpdateDownloadState.Downloading -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFF171E2D))
+                                .border(1.dp, themePrimary.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                                .padding(12.dp)
+                                .testTag("update_download_progress_card")
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.CloudDownload,
+                                            contentDescription = null,
+                                            tint = themePrimary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Text(
+                                            text = "Downloading APK in app...",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = TextPrimary
+                                        )
+                                    }
+                                    Text(
+                                        text = "${(downloadState.progress * 100).toInt()}%",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = themePrimary
+                                    )
+                                }
+
+                                LinearProgressIndicator(
+                                    progress = { downloadState.progress },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(8.dp)
+                                        .clip(RoundedCornerShape(4.dp)),
+                                    color = themePrimary,
+                                    trackColor = Color(0xFF26334D)
+                                )
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    val downloadedMb = downloadState.bytesDownloaded / 1_048_576.0
+                                    val totalMb = downloadState.totalBytes / 1_048_576.0
+                                    Text(
+                                        text = if (downloadState.totalBytes > 0) {
+                                            "${"%.1f".format(downloadedMb)} MB / ${"%.1f".format(totalMb)} MB"
+                                        } else {
+                                            "${"%.1f".format(downloadedMb)} MB"
+                                        },
+                                        fontSize = 11.sp,
+                                        color = TextMuted
+                                    )
+                                    Text(
+                                        text = "Will prompt installer when finished",
+                                        fontSize = 10.sp,
+                                        color = TextMuted
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+                    }
+
+                    is UpdateDownloadState.ReadyToInstall -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(NeonGreen.copy(alpha = 0.1f))
+                                .border(1.dp, NeonGreen.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                                .padding(12.dp)
+                                .testTag("update_ready_to_install_card")
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = NeonGreen,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Column {
+                                    Text(
+                                        text = "APK Downloaded Successfully!",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = NeonGreen
+                                    )
+                                    Text(
+                                        text = "Tap button below to launch the package installer",
+                                        fontSize = 11.sp,
+                                        color = TextSecondary
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+                    }
+
+                    is UpdateDownloadState.Error -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFF2D1619))
+                                .border(1.dp, Color(0xFFFF5252).copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                                .padding(12.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ErrorOutline,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFF5252),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Column {
+                                    Text(
+                                        text = "In-App Download Error",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFFF5252)
+                                    )
+                                    Text(
+                                        text = downloadState.message,
+                                        fontSize = 11.sp,
+                                        color = TextSecondary
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+                    }
+
+                    else -> {}
+                }
+
+                // Primary Action Button
+                when (downloadState) {
+                    is UpdateDownloadState.Downloading -> {
+                        Button(
+                            onClick = { /* In progress */ },
+                            enabled = false,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(46.dp)
+                                .testTag("downloading_in_progress_button"),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(disabledContainerColor = Color(0xFF26334D))
+                        ) {
+                            Text(
+                                text = "Downloading Update In App...",
+                                fontWeight = FontWeight.Bold,
+                                color = TextMuted,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+
+                    is UpdateDownloadState.ReadyToInstall -> {
+                        Button(
+                            onClick = onInstallApk,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(46.dp)
+                                .testTag("install_update_button"),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = NeonGreen)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SystemUpdate,
+                                contentDescription = null,
+                                tint = Color.Black,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Install Update Now",
+                                fontWeight = FontWeight.Black,
+                                color = Color.Black,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+
+                    else -> {
+                        Button(
+                            onClick = onStartDownload,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(46.dp)
+                                .testTag("download_update_button"),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = themePrimary)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CloudDownload,
+                                contentDescription = null,
+                                tint = Color.Black,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (downloadState is UpdateDownloadState.Error) {
+                                    "Retry In-App Download"
+                                } else {
+                                    "Download & Install Inside App"
+                                },
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Secondary Action Button
+                // Secondary Action Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    if (updateInfo.isApkAvailable) {
-                        OutlinedButton(
-                            onClick = { onViewReleases(updateInfo.releaseUrl) },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(40.dp)
-                                .testTag("view_github_release_button"),
-                            shape = RoundedCornerShape(10.dp),
-                            border = BorderStroke(1.dp, themePrimary.copy(alpha = 0.4f)),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.OpenInNew,
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Release Page", fontSize = 11.sp)
-                        }
+                    OutlinedButton(
+                        onClick = { onViewReleases(updateInfo.releaseUrl) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(40.dp)
+                            .testTag("view_github_release_button"),
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, Color(0xFF26334D)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextMuted)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.OpenInNew,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("View Notes", fontSize = 11.sp)
                     }
 
                     OutlinedButton(

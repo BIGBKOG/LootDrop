@@ -176,6 +176,7 @@ fun HomeScreen(
     val errorMessage by viewModel.errorMessage.collectAsState()
     val appUpdateInfo by viewModel.appUpdateInfo.collectAsState()
     val isUpdateDialogVisible by viewModel.isUpdateDialogVisible.collectAsState()
+    val updateDownloadState by viewModel.updateDownloadState.collectAsState()
 
     val borderBeamTransition = rememberInfiniteTransition(label = "borderBeamTransition")
     val borderBeamAngle by if (isAnimationsEnabled && !isLowEndOptimization) {
@@ -766,13 +767,16 @@ fun HomeScreen(
     if (isUpdateDialogVisible && appUpdateInfo != null) {
         AppUpdateDialog(
             updateInfo = appUpdateInfo!!,
-            onDismiss = { viewModel.dismissUpdateDialog() },
-            onDownload = { targetUrl ->
-                val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl)).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                }
-                context.startActivity(browserIntent)
+            downloadState = updateDownloadState,
+            onDismiss = {
                 viewModel.dismissUpdateDialog()
+                viewModel.resetUpdateDownloadState()
+            },
+            onStartDownload = {
+                viewModel.startInAppUpdateDownload(appUpdateInfo!!, context)
+            },
+            onInstallApk = {
+                viewModel.installDownloadedApk(context)
             },
             onViewReleases = { releasesUrl ->
                 val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(releasesUrl)).apply {

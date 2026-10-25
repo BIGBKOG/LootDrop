@@ -503,4 +503,30 @@ class ExampleRobolectricTest {
         prefs.isAutoCheckGithubUpdates = true
         assertTrue(prefs.isAutoCheckGithubUpdates)
     }
+
+    @Test
+    fun `update download state model transitions correctly`() {
+        val idle = com.example.data.model.UpdateDownloadState.Idle
+        assertTrue(idle is com.example.data.model.UpdateDownloadState.Idle)
+
+        val downloading = com.example.data.model.UpdateDownloadState.Downloading(
+            progress = 0.5f,
+            bytesDownloaded = 5_000_000L,
+            totalBytes = 10_000_000L
+        )
+        assertEquals(0.5f, downloading.progress, 0.001f)
+        assertEquals(5_000_000L, downloading.bytesDownloaded)
+        assertEquals(10_000_000L, downloading.totalBytes)
+
+        val file = java.io.File("/tmp/test.apk")
+        val ready = com.example.data.model.UpdateDownloadState.ReadyToInstall(
+            apkFile = file,
+            versionTag = "V4.2"
+        )
+        assertEquals("V4.2", ready.versionTag)
+        assertEquals("/tmp/test.apk", ready.apkFile.path)
+
+        val error = com.example.data.model.UpdateDownloadState.Error("Network failure")
+        assertEquals("Network failure", error.message)
+    }
 }

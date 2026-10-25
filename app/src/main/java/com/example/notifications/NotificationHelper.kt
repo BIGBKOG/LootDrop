@@ -45,6 +45,7 @@ class NotificationHelper(private val context: Context) {
 
         const val EXTRA_GIVEAWAY_ID = "extra_giveaway_id"
         const val EXTRA_CLAIM_URL = "extra_claim_url"
+        const val EXTRA_OPEN_UPDATE_DIALOG = "extra_open_update_dialog"
 
         private const val PREF_NOTIF_ENABLED = "pref_notif_enabled"
         private const val PREF_NOTIFY_PLAYSTATION = "pref_notify_playstation"
@@ -589,21 +590,11 @@ class NotificationHelper(private val context: Context) {
         if (!isNotificationsEnabled) return
 
         val title = "🚀 LootDrop ${updateInfo.latestVersion} Available!"
-        val content = "New update released on GitHub with improvements. Tap to download."
-        val targetUrl = updateInfo.downloadUrl ?: updateInfo.releaseUrl
-
-        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl)).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        }
-        val browserPendingIntent = PendingIntent.getActivity(
-            context,
-            999901,
-            browserIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val content = "New update released on GitHub. Tap to update inside the app."
 
         val appIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(EXTRA_OPEN_UPDATE_DIALOG, true)
         }
         val appPendingIntent = PendingIntent.getActivity(
             context,
@@ -616,13 +607,12 @@ class NotificationHelper(private val context: Context) {
             .setSmallIcon(R.drawable.ic_stat_gamepad)
             .setContentTitle(title)
             .setContentText(content)
-            .setSubText("App Update")
+            .setSubText("In-App Update")
             .setColor(0xFF00E5FF.toInt())
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
-            .setContentIntent(browserPendingIntent)
-            .addAction(0, if (updateInfo.isApkAvailable) "Download APK" else "View Release", browserPendingIntent)
-            .addAction(0, "Open App", appPendingIntent)
+            .setContentIntent(appPendingIntent)
+            .addAction(0, "Update Now", appPendingIntent)
             .setStyle(
                 NotificationCompat.BigTextStyle()
                     .bigText("${updateInfo.releaseTitle.ifBlank { "LootDrop " + updateInfo.latestVersion }}\n\n${updateInfo.releaseNotes.take(300)}")

@@ -8,8 +8,10 @@ import com.example.data.local.AppDatabase
 import com.example.data.model.AppUpdateInfo
 import com.example.data.model.GiveawayItem
 import com.example.data.model.LauncherType
+import com.example.data.model.UpdateDownloadState
 import com.example.data.remote.GithubReleaseClient
 import com.example.data.repository.GiveawaysRepository
+import com.example.util.AppUpdateInstaller
 import com.example.notifications.NotificationHelper
 import com.example.notifications.NotificationScheduler
 import com.example.data.local.NotificationHistoryEntity
@@ -179,6 +181,9 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _isUpdateDialogVisible = MutableStateFlow(false)
     val isUpdateDialogVisible: StateFlow<Boolean> = _isUpdateDialogVisible.asStateFlow()
+
+    private val _updateDownloadState = MutableStateFlow<UpdateDownloadState>(UpdateDownloadState.Idle)
+    val updateDownloadState: StateFlow<UpdateDownloadState> = _updateDownloadState.asStateFlow()
 
     private val _isAnimationsEnabled = MutableStateFlow(preferences.isAnimationsEnabled)
     val isAnimationsEnabled: StateFlow<Boolean> = _isAnimationsEnabled.asStateFlow()
@@ -562,6 +567,63 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                 preferences.lastDismissedUpdateTag = tag
             }
         }
+    }
+
+    fun startInAppUpdateDownload(updateInfo: AppUpdateInfo, context: Context? = null) {
+        val targetUrl = updateInfo.downloadUrl ?: updateInfo.releaseUrl
+        if (targetUrl.isBlank()) {
+            _updateDownloadState.value = UpdateDownloadState.Error("No download URL found for this release")
+            return
+        }
+
+        viewModelScope.launch {
+            _updateDownloadState.value = UpdateDownloadState.Downloading(
+                progress = 0f,
+                bytesDownloaded = 0L,
+                totalBytes = 0L
+            )
+
+            val result = AppUpdateInstaller.downloadApk(
+                context = getApplication(),
+                downloadUrl = targetUrl,
+                versionTag = updateInfo.latestVersion,
+                onProgress = { progress, downloaded, total ->
+                    _updateDownloadState.value = UpdateDownloadState.Downloading(
+                        progress = progress,
+                        bytesDownloaded = downloaded,
+                        totalBytes = total
+                    )
+                }
+            )
+
+            if (result.isSuccess) {
+                val apkFile = result.getOrThrow()
+                _updateDownloadState.value = UpdateDownloadState.ReadyToInstall(
+                    apkFile = apkFile,
+                    versionTag = updateInfo.latestVersion
+                )
+                // Automatically prompt installation immediately on completion
+                context?.let { ctx ->
+                    AppUpdateInstaller.installApk(ctx, apkFile)
+                } ?: run {
+                    AppUpdateInstaller.installApk(getApplication(), apkFile)
+                }
+            } else {
+                val err = result.exceptionOrNull()?.localizedMessage ?: "Download failed"
+                _updateDownloadState.value = UpdateDownloadState.Error(err)
+            }
+        }
+    }
+
+    fun installDownloadedApk(context: Context) {
+        val state = _updateDownloadState.value
+        if (state is UpdateDownloadState.ReadyToInstall) {
+            AppUpdateInstaller.installApk(context, state.apkFile)
+        }
+    }
+
+    fun resetUpdateDownloadState() {
+        _updateDownloadState.value = UpdateDownloadState.Idle
     }
 
     fun checkGithubReleases(isManual: Boolean = false) {

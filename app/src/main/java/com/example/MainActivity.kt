@@ -140,6 +140,10 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIntent(intent: Intent?) {
         if (intent == null) return
+        val openUpdate = intent.getBooleanExtra(NotificationHelper.EXTRA_OPEN_UPDATE_DIALOG, false)
+        if (openUpdate) {
+            viewModel.setUpdateDialogVisible(true)
+        }
         val giveawayId = intent.getIntExtra(NotificationHelper.EXTRA_GIVEAWAY_ID, -1)
         if (giveawayId != -1) {
             viewModel.openItemById(giveawayId)

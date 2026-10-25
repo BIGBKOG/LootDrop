@@ -1421,7 +1421,7 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "View Release Notes & Download APK",
+                            text = "Update Inside App (${appUpdateInfo?.latestVersion})",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.Black
@@ -1772,7 +1772,7 @@ fun SettingsScreen(
             )
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = "LootDrop V4.2 • PC & Console Free Games Radar",
+                text = "LootDrop V4.3 • PC & Console Free Games Radar",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
