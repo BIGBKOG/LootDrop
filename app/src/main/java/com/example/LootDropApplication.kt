@@ -45,11 +45,11 @@ class LootDropApplication : Application(), ImageLoaderFactory {
         val prefs = AppPreferences(this)
         val perfProfile = com.example.util.DevicePerformanceHelper.getProfile(this)
         val isDataSaver = prefs.isDataSaverMode
-        val isLowEnd = perfProfile.isLowEndDevice || isDataSaver
+        val isLowEnd = perfProfile.isLowEndDevice || prefs.isLowEndOptimization || isDataSaver
 
         // Conservative memory cache on low-end hardware to avoid OutOfMemoryErrors
-        val memoryPercent = if (isLowEnd) 0.10 else 0.18
-        val diskMaxBytes = if (isDataSaver) 12L * 1024L * 1024L else if (isLowEnd) 16L * 1024L * 1024L else 24L * 1024L * 1024L
+        val memoryPercent = if (isLowEnd) 0.07 else 0.18
+        val diskMaxBytes = if (isDataSaver) 10L * 1024L * 1024L else if (isLowEnd) 12L * 1024L * 1024L else 24L * 1024L * 1024L
 
         return ImageLoader.Builder(this)
             .memoryCache {
@@ -67,9 +67,10 @@ class LootDropApplication : Application(), ImageLoaderFactory {
             .okHttpClient {
                 ApiClient.getOkHttpClient(this)
             }
-            .bitmapConfig(perfProfile.recommendedBitmapConfig)
+            .bitmapConfig(if (isLowEnd) android.graphics.Bitmap.Config.RGB_565 else perfProfile.recommendedBitmapConfig)
+            .allowRgb565(true)
             .crossfade(!isLowEnd)
-            .allowHardware(!perfProfile.isLowRamDevice)
+            .allowHardware(!isLowEnd && !perfProfile.isLowRamDevice)
             .respectCacheHeaders(false)
             .build()
     }

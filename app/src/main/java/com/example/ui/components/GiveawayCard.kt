@@ -66,8 +66,11 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.graphics.Bitmap
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import coil.size.Precision
+import com.example.data.model.GameCategory
 import com.example.data.model.GiveawayItem
 import com.example.data.model.LauncherType
 import com.example.preferences.CardDensity
@@ -117,33 +120,7 @@ fun GiveawayCard(
 
     // Pulsing breathing animation ONLY if item is new and animations are enabled (avoids ticking for non-new cards)
     val shouldAnimatePulse = item.isNew && isAnimationsEnabled && !isLowEndOptimization
-    val pulseGlow = if (shouldAnimatePulse) {
-        val infiniteTransition = rememberInfiniteTransition(label = "card_infinite_${item.id}")
-        val glow by infiniteTransition.animateFloat(
-            initialValue = 0.65f,
-            targetValue = 1.0f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(1200, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "pulse_glow"
-        )
-        glow
-    } else 1.0f
-
-    val pulseScale = if (shouldAnimatePulse) {
-        val infiniteTransition = rememberInfiniteTransition(label = "card_infinite_scale_${item.id}")
-        val scale by infiniteTransition.animateFloat(
-            initialValue = 0.96f,
-            targetValue = 1.04f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(1200, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "pulse_scale"
-        )
-        scale
-    } else 1.0f
+    val (pulseGlow, pulseScale) = rememberCardPulse(enabled = shouldAnimatePulse)
 
     // Fluid Claimed status animation
     val claimedScale = if (isAnimationsEnabled && !isLowEndOptimization) {
@@ -236,7 +213,10 @@ fun GiveawayCard(
                             ImageRequest.Builder(context)
                                 .data(if (item.thumbnail.isNotBlank()) item.thumbnail else item.image)
                                 .crossfade(!isLowEndOptimization)
-                                .size(if (isLowEndOptimization) 100 else 150, if (isLowEndOptimization) 100 else 150)
+                                .bitmapConfig(if (isLowEndOptimization) Bitmap.Config.RGB_565 else Bitmap.Config.ARGB_8888)
+                                .allowRgb565(true)
+                                .precision(if (isLowEndOptimization) Precision.INEXACT else Precision.AUTOMATIC)
+                                .size(if (isLowEndOptimization) 80 else 150, if (isLowEndOptimization) 80 else 150)
                                 .build()
                         }
                         Box(
@@ -311,13 +291,30 @@ fun GiveawayCard(
                                 overflow = TextOverflow.Ellipsis
                             )
 
-                            Text(
-                                text = item.platforms,
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = item.platforms,
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+                                if (item.categories.isNotEmpty()) {
+                                    val primaryCat = item.categories.first()
+                                    Text(
+                                        text = "• ${primaryCat.iconEmoji} ${primaryCat.displayName}",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = Color(primaryCat.colorHex),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -406,7 +403,10 @@ fun GiveawayCard(
                         ImageRequest.Builder(context)
                             .data(if (item.thumbnail.isNotBlank()) item.thumbnail else item.image)
                             .crossfade(!isLowEndOptimization)
-                            .size(if (isLowEndOptimization) 240 else 375, if (isLowEndOptimization) 190 else 300)
+                            .bitmapConfig(if (isLowEndOptimization) Bitmap.Config.RGB_565 else Bitmap.Config.ARGB_8888)
+                            .allowRgb565(true)
+                            .precision(if (isLowEndOptimization) Precision.INEXACT else Precision.AUTOMATIC)
+                            .size(if (isLowEndOptimization) 180 else 375, if (isLowEndOptimization) 140 else 300)
                             .build()
                     }
                     Box(
@@ -504,15 +504,35 @@ fun GiveawayCard(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            if (showOriginalPrice && item.worth.isNotBlank() && item.worth != "N/A" && item.worth != "FREE") {
-                                Text(
-                                    text = item.worth,
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                    textDecoration = TextDecoration.LineThrough
-                                )
-                            } else {
-                                Text(item.type, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Row(
+                                modifier = Modifier.weight(1f, fill = false),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                if (showOriginalPrice && item.worth.isNotBlank() && item.worth != "N/A" && item.worth != "FREE") {
+                                    Text(
+                                        text = item.worth,
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                        textDecoration = TextDecoration.LineThrough
+                                    )
+                                }
+                                item.categories.take(2).forEach { cat ->
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(Color(cat.colorHex).copy(alpha = 0.15f))
+                                            .border(0.6.dp, Color(cat.colorHex).copy(alpha = 0.45f), RoundedCornerShape(4.dp))
+                                            .padding(horizontal = 4.dp, vertical = 1.dp)
+                                    ) {
+                                        Text(
+                                            text = "${cat.iconEmoji} ${cat.displayName}",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = Color(cat.colorHex)
+                                        )
+                                    }
+                                }
                             }
 
                             Button(
@@ -583,7 +603,10 @@ fun GiveawayCard(
                         ImageRequest.Builder(context)
                             .data(if (item.image.isNotBlank()) item.image else item.thumbnail)
                             .crossfade(!isLowEndOptimization)
-                            .size(if (isLowEndOptimization) 480 else 800, if (isLowEndOptimization) 270 else 450)
+                            .bitmapConfig(if (isLowEndOptimization) Bitmap.Config.RGB_565 else Bitmap.Config.ARGB_8888)
+                            .allowRgb565(true)
+                            .precision(if (isLowEndOptimization) Precision.INEXACT else Precision.AUTOMATIC)
+                            .size(if (isLowEndOptimization) 360 else 800, if (isLowEndOptimization) 200 else 450)
                             .build()
                     }
                     Box(
@@ -860,6 +883,41 @@ fun GiveawayCard(
                             lineHeight = 18.sp
                         )
 
+                        // Supported Categories Row
+                        if (item.categories.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                item.categories.take(3).forEach { cat ->
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(Color(cat.colorHex).copy(alpha = 0.15f))
+                                            .border(0.8.dp, Color(cat.colorHex).copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                                            .padding(horizontal = 7.dp, vertical = 3.dp)
+                                    ) {
+                                        Text(
+                                            text = "${cat.iconEmoji} ${cat.displayName}",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = Color(cat.colorHex)
+                                        )
+                                    }
+                                }
+                                if (item.categories.size > 3) {
+                                    Text(
+                                        text = "+${item.categories.size - 3}",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+
                         Spacer(modifier = Modifier.height(10.dp))
 
                         // Metadata
@@ -1015,4 +1073,29 @@ fun GiveawayCard(
             }
         }
     }
+}
+
+@Composable
+private fun rememberCardPulse(enabled: Boolean): Pair<Float, Float> {
+    if (!enabled) return 1.0f to 1.0f
+    val infiniteTransition = rememberInfiniteTransition(label = "card_pulse")
+    val glow by infiniteTransition.animateFloat(
+        initialValue = 0.65f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse_glow"
+    )
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 0.96f,
+        targetValue = 1.04f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse_scale"
+    )
+    return glow to scale
 }

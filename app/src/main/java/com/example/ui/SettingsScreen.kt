@@ -1772,7 +1772,7 @@ fun SettingsScreen(
             )
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = "LootDrop V4.3 • PC & Console Free Games Radar",
+                text = "LootDrop V4.5 • PC & Console Free Games Radar",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -2041,11 +2041,35 @@ private fun PreRenderingPerformanceSection(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "Halves memory using 16-bit RGB textures, pauses idle infinite clocks, eliminates off-screen GPU layers & accelerates list recycling",
+                    text = "Halves image RAM via 16-bit RGB_565 textures, pauses idle infinite animation clocks, skips off-screen tab rendering, and optimizes GPU passes.",
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 14.sp
                 )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (isLowEndOptimization) NeonGreen.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(horizontal = 7.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = if (isLowEndOptimization) "⚡ ACCELERATION ACTIVE" else "STANDARD MODE",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isLowEndOptimization) NeonGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text(
+                        text = "${perfProfile.processorCores} Cores • ${perfProfile.totalRamMb}MB RAM • ${perfProfile.memoryClassMb}MB Heap",
+                        fontSize = 10.sp,
+                        color = TextMuted
+                    )
+                }
             }
             Switch(
                 checked = isLowEndOptimization,

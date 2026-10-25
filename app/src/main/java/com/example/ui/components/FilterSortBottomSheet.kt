@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.RestartAlt
@@ -50,6 +51,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -64,6 +67,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.model.GameCategory
 import com.example.data.model.LauncherType
 import com.example.ui.SortOption
 import com.example.ui.TypeFilter
@@ -78,6 +82,9 @@ fun FilterSortBottomSheet(
     onLauncherToggle: (LauncherType) -> Unit,
     selectedTypeFilter: TypeFilter,
     onTypeFilterSelected: (TypeFilter) -> Unit,
+    selectedCategories: Set<GameCategory>,
+    onCategoryToggle: (GameCategory) -> Unit,
+    onOpenCategoryMenu: () -> Unit,
     selectedSort: SortOption,
     onSortSelected: (SortOption) -> Unit,
     activeFilterCount: Int,
@@ -436,6 +443,137 @@ fun FilterSortBottomSheet(
                             }
                             .testTag("type_chip_${type.name.lowercase()}")
                     )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+            Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // SECTION 4: Categories & Genres (with dedicated multi-category menu button)
+            FilterSectionHeader(title = "CATEGORIES & GENRES", icon = Icons.Default.Category)
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "Filter free games by genre, game format, or gameplay style:",
+                fontSize = 11.sp,
+                color = TextSecondary
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Dedicated Button that brings up the secondary menu to choose multiple categories
+            OutlinedButton(
+                onClick = onOpenCategoryMenu,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(46.dp)
+                    .testTag("open_category_menu_button"),
+                shape = RoundedCornerShape(12.dp),
+                border = androidx.compose.foundation.BorderStroke(
+                    width = 1.2.dp,
+                    color = if (selectedCategories.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                ),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = if (selectedCategories.isNotEmpty()) {
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                    },
+                    contentColor = if (selectedCategories.isNotEmpty()) MaterialTheme.colorScheme.primary else TextPrimary
+                )
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Category,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = if (selectedCategories.isNotEmpty()) MaterialTheme.colorScheme.primary else TextMuted
+                        )
+                        Text(
+                            text = if (selectedCategories.isEmpty()) {
+                                "Choose Categories (All Active)"
+                            } else {
+                                "Choose Categories (${selectedCategories.size} selected)"
+                            },
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(
+                                if (selectedCategories.isNotEmpty()) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                }
+                            )
+                            .padding(horizontal = 7.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = if (selectedCategories.isEmpty()) "SELECT ▾" else "${selectedCategories.size} ACTIVE ▾",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Black,
+                            color = if (selectedCategories.isNotEmpty()) MaterialTheme.colorScheme.background else TextMuted
+                        )
+                    }
+                }
+            }
+
+            // Quick display chips for active categories
+            if (selectedCategories.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    selectedCategories.forEach { category ->
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
+                            onClick = { onCategoryToggle(category) },
+                            modifier = Modifier.testTag("selected_cat_pill_${category.id}")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(category.badgeColorHex))
+                                )
+                                Text(
+                                    text = category.displayName,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Remove",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
+                        }
+                    }
                 }
             }
 

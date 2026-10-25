@@ -4,6 +4,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -57,6 +58,7 @@ fun ExpressiveFloatingNavBar(
     onTabSelected: (MainTab) -> Unit,
     claimedCount: Int = 0,
     expiringSoonCount: Int = 0,
+    isLowEndOptimization: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val navBarWidth = 356.dp
@@ -75,7 +77,7 @@ fun ExpressiveFloatingNavBar(
 
     val animatedIndex by animateFloatAsState(
         targetValue = targetIndex.toFloat(),
-        animationSpec = spring(
+        animationSpec = if (isLowEndOptimization) tween(durationMillis = 150) else spring(
             dampingRatio = 0.82f,
             stiffness = Spring.StiffnessMediumLow
         ),
@@ -93,13 +95,13 @@ fun ExpressiveFloatingNavBar(
 
     val activePillBorderColor by animateColorAsState(
         targetValue = themePrimary.copy(alpha = 0.75f),
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        animationSpec = if (isLowEndOptimization) tween(100) else spring(stiffness = Spring.StiffnessMediumLow),
         label = "nav_pill_border_color"
     )
 
     val outerBorderColor by animateColorAsState(
         targetValue = themePrimary.copy(alpha = 0.32f),
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        animationSpec = if (isLowEndOptimization) tween(100) else spring(stiffness = Spring.StiffnessMediumLow),
         label = "nav_outer_border_color"
     )
 
@@ -107,11 +109,17 @@ fun ExpressiveFloatingNavBar(
         modifier = modifier
             .width(navBarWidth)
             .height(navBarHeight)
-            .shadow(
-                elevation = 16.dp,
-                shape = RoundedCornerShape(36.dp),
-                spotColor = themePrimary.copy(alpha = 0.25f),
-                ambientColor = Color(0x40000000)
+            .then(
+                if (isLowEndOptimization) {
+                    Modifier.shadow(elevation = 4.dp, shape = RoundedCornerShape(36.dp))
+                } else {
+                    Modifier.shadow(
+                        elevation = 16.dp,
+                        shape = RoundedCornerShape(36.dp),
+                        spotColor = themePrimary.copy(alpha = 0.25f),
+                        ambientColor = Color(0x40000000)
+                    )
+                }
             )
             .border(
                 width = 1.dp,
@@ -121,7 +129,7 @@ fun ExpressiveFloatingNavBar(
             .testTag("bottom_nav_bar"),
         shape = RoundedCornerShape(36.dp),
         color = Color(0xFF1B1E26),
-        tonalElevation = 8.dp
+        tonalElevation = if (isLowEndOptimization) 0.dp else 8.dp
     ) {
         BoxWithConstraints(
             modifier = Modifier

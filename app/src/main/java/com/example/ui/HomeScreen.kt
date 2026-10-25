@@ -27,6 +27,8 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.offset
 import com.example.ui.components.OnboardingWalkthroughDialog
+import com.example.ui.components.CategoryMultiSelectSheet
+import com.example.data.model.GameCategory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -153,6 +155,7 @@ fun HomeScreen(
     val selectedLaunchers by viewModel.selectedLaunchers.collectAsState()
     val selectedLauncher by viewModel.selectedLauncher.collectAsState()
     val selectedTypeFilter by viewModel.selectedTypeFilter.collectAsState()
+    val selectedCategories by viewModel.selectedCategories.collectAsState()
     val selectedSort by viewModel.selectedSort.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -165,6 +168,7 @@ fun HomeScreen(
     val isShowOriginalPrice by viewModel.isShowOriginalPrice.collectAsState()
     val isShowExpiration by viewModel.isShowExpiration.collectAsState()
     val isFilterSheetOpen by viewModel.isFilterSheetOpen.collectAsState()
+    val isCategorySheetOpen by viewModel.isCategorySheetOpen.collectAsState()
     val activeFilterCount by viewModel.activeFilterCount.collectAsState()
     val reopenStatusMessage by viewModel.reopenStatusMessage.collectAsState()
     val showOnboardingWalkthrough by viewModel.showOnboardingWalkthrough.collectAsState()
@@ -178,20 +182,7 @@ fun HomeScreen(
     val isUpdateDialogVisible by viewModel.isUpdateDialogVisible.collectAsState()
     val updateDownloadState by viewModel.updateDownloadState.collectAsState()
 
-    val borderBeamTransition = rememberInfiniteTransition(label = "borderBeamTransition")
-    val borderBeamAngle by if (isAnimationsEnabled && !isLowEndOptimization) {
-        borderBeamTransition.animateFloat(
-            initialValue = 0f,
-            targetValue = 360f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 3800, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart
-            ),
-            label = "borderBeamAngle"
-        )
-    } else {
-        remember { mutableFloatStateOf(0f) }
-    }
+    val borderBeamAngle = rememberAnimatedBeamAngle(enabled = isAnimationsEnabled && !isLowEndOptimization)
 
     var isSearchExpanded by remember { mutableStateOf(false) }
     var isNotificationSettingsSheetOpen by remember { mutableStateOf(false) }
@@ -261,7 +252,8 @@ fun HomeScreen(
                         viewModel.selectTab(tab)
                     },
                     claimedCount = claimedGiveaways.size,
-                    expiringSoonCount = uiStats.expiringSoon
+                    expiringSoonCount = uiStats.expiringSoon,
+                    isLowEndOptimization = isLowEndOptimization
                 )
             }
         }
@@ -394,24 +386,9 @@ fun HomeScreen(
                             }
 
                             // Notification Alert Inbox Button with playful wiggle when unread alerts arrive
-                            val bellInfinite = rememberInfiniteTransition(label = "bellWiggleTransition")
-                            val bellRotation by bellInfinite.animateFloat(
-                                initialValue = if (unreadNotificationCount > 0) -9f else 0f,
-                                targetValue = if (unreadNotificationCount > 0) 9f else 0f,
-                                animationSpec = infiniteRepeatable(
-                                    animation = tween(380, easing = FastOutSlowInEasing),
-                                    repeatMode = RepeatMode.Reverse
-                                ),
-                                label = "bellRotation"
-                            )
-                            val dotPulseScale by bellInfinite.animateFloat(
-                                initialValue = 0.85f,
-                                targetValue = 1.25f,
-                                animationSpec = infiniteRepeatable(
-                                    animation = tween(750, easing = FastOutSlowInEasing),
-                                    repeatMode = RepeatMode.Reverse
-                                ),
-                                label = "dotPulseScale"
+                            val (bellRotation, dotPulseScale) = rememberBellWiggleAndPulse(
+                                enabled = isAnimationsEnabled && !isLowEndOptimization,
+                                hasAlerts = unreadNotificationCount > 0
                             )
 
                             IconButton(
@@ -558,7 +535,7 @@ fun HomeScreen(
             // HorizontalPager allowing fluid swiping right and left between all tabs
             HorizontalPager(
                 state = pagerState,
-                beyondViewportPageCount = 1,
+                beyondViewportPageCount = if (isLowEndOptimization) 0 else 1,
                 modifier = Modifier
                     .fillMaxSize()
                     .weight(1f)
@@ -577,6 +554,7 @@ fun HomeScreen(
                             activeFilterCount = activeFilterCount,
                             selectedLaunchers = selectedLaunchers,
                             selectedTypeFilter = selectedTypeFilter,
+                            selectedCategories = selectedCategories,
                             selectedSort = selectedSort,
                             cardDensity = cardDensity,
                             isShowOriginalPrice = isShowOriginalPrice,
@@ -616,6 +594,7 @@ fun HomeScreen(
                             activeFilterCount = activeFilterCount,
                             selectedLaunchers = selectedLaunchers,
                             selectedTypeFilter = selectedTypeFilter,
+                            selectedCategories = selectedCategories,
                             selectedSort = selectedSort,
                             cardDensity = cardDensity,
                             isShowOriginalPrice = isShowOriginalPrice,
@@ -688,6 +667,9 @@ fun HomeScreen(
             onLauncherToggle = { viewModel.toggleLauncher(it) },
             selectedTypeFilter = selectedTypeFilter,
             onTypeFilterSelected = { viewModel.selectTypeFilter(it) },
+            selectedCategories = selectedCategories,
+            onCategoryToggle = { viewModel.toggleCategoryFilter(it) },
+            onOpenCategoryMenu = { viewModel.setCategorySheetOpen(true) },
             selectedSort = selectedSort,
             onSortSelected = { viewModel.selectSort(it) },
             activeFilterCount = activeFilterCount,
@@ -695,6 +677,18 @@ fun HomeScreen(
             platformCounts = uiStats.platformCounts,
             totalFilteredCount = displayedGiveaways.size,
             onDismiss = { viewModel.setFilterSheetOpen(false) }
+        )
+    }
+
+    // Secondary Multi-Category Selection Sheet
+    if (isCategorySheetOpen) {
+        CategoryMultiSelectSheet(
+            selectedCategories = selectedCategories,
+            onCategoryToggle = { viewModel.toggleCategoryFilter(it) },
+            onSelectAll = { viewModel.setCategoryFilters(GameCategory.values().toSet()) },
+            onClearAll = { viewModel.clearCategoryFilters() },
+            giveaways = discoverGiveaways,
+            onDismiss = { viewModel.setCategorySheetOpen(false) }
         )
     }
 
@@ -793,36 +787,10 @@ fun HomeScreen(
 fun ClaimedSavingsBanner(
     savingsUsd: Double,
     claimedCount: Int,
+    isAnimationsEnabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "claimedBannerAnim")
-    val borderAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 0.9f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "claimedBorderAlpha"
-    )
-    val medalBob by infiniteTransition.animateFloat(
-        initialValue = -2.5f,
-        targetValue = 2.5f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "medalBob"
-    )
-    val medalRot by infiniteTransition.animateFloat(
-        initialValue = -5f,
-        targetValue = 5f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "medalRot"
-    )
+    val (borderAlpha, medalBob, medalRot) = rememberClaimedBannerAnimations(enabled = isAnimationsEnabled)
 
     val animatedSavings by animateFloatAsState(
         targetValue = savingsUsd.toFloat(),
@@ -956,6 +924,7 @@ fun GiveawaysTabContent(
     activeFilterCount: Int,
     selectedLaunchers: Set<LauncherType>,
     selectedTypeFilter: TypeFilter,
+    selectedCategories: Set<GameCategory> = emptySet(),
     selectedSort: SortOption,
     cardDensity: CardDensity,
     isShowOriginalPrice: Boolean,
@@ -995,7 +964,8 @@ fun GiveawaysTabContent(
         if (tab == MainTab.CLAIMED) {
             ClaimedSavingsBanner(
                 savingsUsd = uiStats.claimedTotalSavedUsd,
-                claimedCount = uiStats.claimedCount
+                claimedCount = uiStats.claimedCount,
+                isAnimationsEnabled = isAnimationsEnabled && !isLowEndOptimization
             )
         }
 
@@ -1032,6 +1002,14 @@ fun GiveawaysTabContent(
                             if (selectedTypeFilter != TypeFilter.ALL && selectedTypeFilter.apiMatch != null) {
                                 if (isNotEmpty()) append(" • ")
                                 append(selectedTypeFilter.label)
+                            }
+                            if (selectedCategories.isNotEmpty()) {
+                                if (isNotEmpty()) append(" • ")
+                                if (selectedCategories.size <= 2) {
+                                    append(selectedCategories.joinToString(", ") { it.displayName })
+                                } else {
+                                    append("${selectedCategories.size} Categories")
+                                }
                             }
                             if (selectedSort != SortOption.NEWEST) {
                                 if (isNotEmpty()) append(" • ")
@@ -1125,15 +1103,7 @@ fun GiveawaysTabContent(
                         )
                     }
                 } else if (giveaways.isEmpty()) {
-                    val emptyIconBob by rememberInfiniteTransition(label = "emptyBob").animateFloat(
-                        initialValue = -4f,
-                        targetValue = 4f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(1600, easing = FastOutSlowInEasing),
-                            repeatMode = RepeatMode.Reverse
-                        ),
-                        label = "emptyIconBob"
-                    )
+                    val emptyIconBob = rememberEmptyBob(enabled = isAnimationsEnabled && !isLowEndOptimization)
 
                     val isFiltered = activeFilterCount > 0 || searchQuery.isNotBlank()
                     val hasError = errorMessage != null
@@ -1316,5 +1286,96 @@ fun GiveawaysTabContent(
         }
     }
 }
+}
+
+@Composable
+private fun rememberAnimatedBeamAngle(enabled: Boolean): Float {
+    if (!enabled) return 0f
+    val transition = rememberInfiniteTransition(label = "borderBeamTransition")
+    val angle by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3800, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "borderBeamAngle"
+    )
+    return angle
+}
+
+@Composable
+private fun rememberBellWiggleAndPulse(enabled: Boolean, hasAlerts: Boolean): Pair<Float, Float> {
+    if (!enabled || !hasAlerts) return 0f to 1f
+    val transition = rememberInfiniteTransition(label = "bellWiggleTransition")
+    val rotation by transition.animateFloat(
+        initialValue = -9f,
+        targetValue = 9f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(380, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "bellRotation"
+    )
+    val scale by transition.animateFloat(
+        initialValue = 0.85f,
+        targetValue = 1.25f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(750, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "dotPulseScale"
+    )
+    return rotation to scale
+}
+
+@Composable
+private fun rememberClaimedBannerAnimations(enabled: Boolean): Triple<Float, Float, Float> {
+    if (!enabled) return Triple(0.6f, 0f, 0f)
+    val transition = rememberInfiniteTransition(label = "claimedBannerAnim")
+    val borderAlpha by transition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 0.9f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "claimedBorderAlpha"
+    )
+    val medalBob by transition.animateFloat(
+        initialValue = -2.5f,
+        targetValue = 2.5f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "medalBob"
+    )
+    val medalRot by transition.animateFloat(
+        initialValue = -5f,
+        targetValue = 5f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "medalRot"
+    )
+    return Triple(borderAlpha, medalBob, medalRot)
+}
+
+@Composable
+private fun rememberEmptyBob(enabled: Boolean): Float {
+    if (!enabled) return 0f
+    val transition = rememberInfiniteTransition(label = "emptyBob")
+    val bob by transition.animateFloat(
+        initialValue = -4f,
+        targetValue = 4f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1600, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "emptyIconBob"
+    )
+    return bob
 }
 

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.BuildConfig
 import com.example.data.local.AppDatabase
 import com.example.data.model.AppUpdateInfo
+import com.example.data.model.GameCategory
 import com.example.data.model.GiveawayItem
 import com.example.data.model.LauncherType
 import com.example.data.model.UpdateDownloadState
@@ -119,19 +120,27 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     private val _detailItem = MutableStateFlow<GiveawayItem?>(null)
     val detailItem: StateFlow<GiveawayItem?> = _detailItem.asStateFlow()
 
+    private val _selectedCategories = MutableStateFlow<Set<GameCategory>>(emptySet())
+    val selectedCategories: StateFlow<Set<GameCategory>> = _selectedCategories.asStateFlow()
+
     private val _isFilterSheetOpen = MutableStateFlow(false)
     val isFilterSheetOpen: StateFlow<Boolean> = _isFilterSheetOpen.asStateFlow()
+
+    private val _isCategorySheetOpen = MutableStateFlow(false)
+    val isCategorySheetOpen: StateFlow<Boolean> = _isCategorySheetOpen.asStateFlow()
 
     val activeFilterCount: StateFlow<Int> = combine(
         _selectedLaunchers,
         _selectedTypeFilter,
+        _selectedCategories,
         _selectedSort
-    ) { launchers, typeFilter, sort ->
+    ) { launchers, typeFilter, categories, sort ->
         var count = 0
         if (launchers.isNotEmpty() && !launchers.contains(LauncherType.ALL)) {
             count += launchers.size
         }
         if (typeFilter != TypeFilter.ALL) count++
+        if (categories.isNotEmpty()) count += categories.size
         if (sort != SortOption.NEWEST) count++
         count
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
@@ -342,11 +351,12 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         initialValue = UiStats()
     )
    
-    // Helper method to apply launcher, type, search and sort filters to any giveaway list
+    // Helper method to apply launcher, type, category, search and sort filters to any giveaway list
     private fun filterAndSortList(
         source: List<GiveawayItem>,
         launchers: Set<LauncherType>,
         typeFilter: TypeFilter,
+        categories: Set<GameCategory>,
         sort: SortOption,
         query: String
     ): List<GiveawayItem> {
@@ -363,6 +373,13 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         if (typeFilter != TypeFilter.ALL && typeFilter.apiMatch != null) {
             val match = typeFilter.apiMatch
             filtered = filtered.filter { it.type.contains(match, ignoreCase = true) }
+        }
+
+        // Multi-Category filter
+        if (categories.isNotEmpty()) {
+            filtered = filtered.filter { item ->
+                item.categories.any { it in categories }
+            }
         }
 
         // Search query
@@ -398,10 +415,20 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         allGiveaways,
         _selectedLaunchers,
         _selectedTypeFilter,
+        _selectedCategories,
         _selectedSort,
         _searchQuery
-    ) { all, launchers, typeFilter, sort, query ->
-        filterAndSortList(all, launchers, typeFilter, sort, query)
+    ) { args: Array<Any> ->
+        @Suppress("UNCHECKED_CAST")
+        val all = args[0] as List<GiveawayItem>
+        @Suppress("UNCHECKED_CAST")
+        val launchers = args[1] as Set<LauncherType>
+        val typeFilter = args[2] as TypeFilter
+        @Suppress("UNCHECKED_CAST")
+        val categories = args[3] as Set<GameCategory>
+        val sort = args[4] as SortOption
+        val query = args[5] as String
+        filterAndSortList(all, launchers, typeFilter, categories, sort, query)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Claimed giveaways: always claimed library items filtered & sorted
@@ -409,10 +436,20 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         allGiveaways,
         _selectedLaunchers,
         _selectedTypeFilter,
+        _selectedCategories,
         _selectedSort,
         _searchQuery
-    ) { all, launchers, typeFilter, sort, query ->
-        filterAndSortList(all.filter { it.isClaimed }, launchers, typeFilter, sort, query)
+    ) { args: Array<Any> ->
+        @Suppress("UNCHECKED_CAST")
+        val all = args[0] as List<GiveawayItem>
+        @Suppress("UNCHECKED_CAST")
+        val launchers = args[1] as Set<LauncherType>
+        val typeFilter = args[2] as TypeFilter
+        @Suppress("UNCHECKED_CAST")
+        val categories = args[3] as Set<GameCategory>
+        val sort = args[4] as SortOption
+        val query = args[5] as String
+        filterAndSortList(all.filter { it.isClaimed }, launchers, typeFilter, categories, sort, query)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Filtered & sorted list matching the currently selected tab
@@ -708,6 +745,28 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         _selectedTypeFilter.value = type
     }
 
+    fun toggleCategoryFilter(category: GameCategory) {
+        val current = _selectedCategories.value.toMutableSet()
+        if (current.contains(category)) {
+            current.remove(category)
+        } else {
+            current.add(category)
+        }
+        _selectedCategories.value = current
+    }
+
+    fun setCategoryFilters(categories: Set<GameCategory>) {
+        _selectedCategories.value = categories
+    }
+
+    fun clearCategoryFilters() {
+        _selectedCategories.value = emptySet()
+    }
+
+    fun setCategorySheetOpen(open: Boolean) {
+        _isCategorySheetOpen.value = open
+    }
+
     fun selectSort(sort: SortOption) {
         _selectedSort.value = sort
     }
@@ -719,6 +778,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     fun resetFilters() {
         _selectedLaunchers.value = emptySet()
         _selectedTypeFilter.value = TypeFilter.ALL
+        _selectedCategories.value = emptySet()
         _selectedSort.value = SortOption.NEWEST
         _searchQuery.value = ""
     }

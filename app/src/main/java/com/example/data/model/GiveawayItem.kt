@@ -24,6 +24,9 @@ data class GiveawayItem(
     val isNew: Boolean = false,
     val firstSeenTimestamp: Long = System.currentTimeMillis()
 ) {
+    val categories: List<GameCategory>
+        get() = GameCategory.inferCategories(type, title, description)
+
     val isPlayStation: Boolean
         get() = platforms.lowercase().let {
             it.contains("playstation") || it.contains("ps4") || it.contains("ps5") || it.contains("ps3") || it.contains("psvr")

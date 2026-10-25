@@ -2,6 +2,8 @@ package com.example.ui.components
 
 import android.graphics.Matrix
 import android.graphics.SweepGradient
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
@@ -72,17 +74,25 @@ fun Modifier.borderBeam(
     borderColor: Color,
     beamAngleProvider: () -> Float,
     isAnimated: Boolean = true
-): Modifier = this.drawWithContent {
-    // 1. Draw card background, covers, badges & text first
-    drawContent()
+): Modifier {
+    if (!isAnimated) {
+        return this.border(
+            width = strokeWidth,
+            color = borderColor,
+            shape = RoundedCornerShape(cornerRadius)
+        )
+    }
 
-    // 2. Draw outer border with traveling bright hotspot
-    val strokePx = strokeWidth.toPx()
-    val halfStroke = strokePx / 2f
-    val cornerPx = cornerRadius.toPx()
-    val adjustedRadius = CornerRadius((cornerPx - halfStroke).coerceAtLeast(0f))
+    return this.drawWithContent {
+        // 1. Draw card background, covers, badges & text first
+        drawContent()
 
-    val brush = if (isAnimated) {
+        // 2. Draw outer border with traveling bright hotspot
+        val strokePx = strokeWidth.toPx()
+        val halfStroke = strokePx / 2f
+        val cornerPx = cornerRadius.toPx()
+        val adjustedRadius = CornerRadius((cornerPx - halfStroke).coerceAtLeast(0f))
+
         val angle = beamAngleProvider()
         val baseColor = borderColor.copy(alpha = 0.28f)
         val accentColor = borderColor.copy(alpha = 0.95f)
@@ -90,7 +100,7 @@ fun Modifier.borderBeam(
         val tailColor = borderColor.copy(alpha = 0.70f)
         val softTail = borderColor.copy(alpha = 0.40f)
 
-        RotatingBorderBeamBrush(
+        val brush = RotatingBorderBeamBrush(
             baseColorArgb = baseColor.toArgb(),
             accentColorArgb = accentColor.toArgb(),
             coreColorArgb = coreColor.toArgb(),
@@ -98,18 +108,16 @@ fun Modifier.borderBeam(
             softTailArgb = softTail.toArgb(),
             angle = angle
         )
-    } else {
-        SolidColor(borderColor)
-    }
 
-    drawRoundRect(
-        brush = brush,
-        topLeft = Offset(halfStroke, halfStroke),
-        size = Size(
-            width = (size.width - strokePx).coerceAtLeast(0f),
-            height = (size.height - strokePx).coerceAtLeast(0f)
-        ),
-        cornerRadius = adjustedRadius,
-        style = Stroke(width = strokePx)
-    )
+        drawRoundRect(
+            brush = brush,
+            topLeft = Offset(halfStroke, halfStroke),
+            size = Size(
+                width = (size.width - strokePx).coerceAtLeast(0f),
+                height = (size.height - strokePx).coerceAtLeast(0f)
+            ),
+            cornerRadius = adjustedRadius,
+            style = Stroke(width = strokePx)
+        )
+    }
 }

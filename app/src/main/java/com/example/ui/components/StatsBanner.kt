@@ -74,33 +74,7 @@ fun StatsBanner(
     isAnimationsEnabled: Boolean = true
 ) {
     // Ambient breathing shimmer on border and glow only if animations enabled
-    val borderAlpha = if (isAnimationsEnabled) {
-        val infiniteTransition = rememberInfiniteTransition(label = "statsBannerInfinite")
-        val alpha by infiniteTransition.animateFloat(
-            initialValue = 0.35f,
-            targetValue = 0.85f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(2200, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "borderGlow"
-        )
-        alpha
-    } else 0.6f
-
-    val badgeScale = if (isAnimationsEnabled) {
-        val infiniteTransition = rememberInfiniteTransition(label = "statsBannerInfiniteBadge")
-        val scale by infiniteTransition.animateFloat(
-            initialValue = 0.95f,
-            targetValue = 1.05f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(1500, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "badgePulse"
-        )
-        scale
-    } else 1.0f
+    val (borderAlpha, badgeScale) = rememberStatsBannerAnimations(enabled = isAnimationsEnabled)
 
     var localDismissed by rememberSaveable { mutableStateOf(false) }
     val effectiveDismissed = isNewTodayDismissed || localDismissed
@@ -307,4 +281,29 @@ fun StatsBanner(
             }
         }
     }
+}
+
+@Composable
+private fun rememberStatsBannerAnimations(enabled: Boolean): Pair<Float, Float> {
+    if (!enabled) return 0.6f to 1.0f
+    val transition = rememberInfiniteTransition(label = "statsBannerInfinite")
+    val alpha by transition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0.85f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "borderGlow"
+    )
+    val scale by transition.animateFloat(
+        initialValue = 0.95f,
+        targetValue = 1.05f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "badgePulse"
+    )
+    return alpha to scale
 }

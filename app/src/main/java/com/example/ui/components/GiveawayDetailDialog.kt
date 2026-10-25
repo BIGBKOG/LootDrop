@@ -67,12 +67,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.data.model.GameCategory
 import com.example.data.model.GiveawayItem
 import com.example.data.model.LauncherOption
 import com.example.data.model.LauncherType
@@ -366,6 +368,32 @@ fun GiveawayDetailDialog(
                                 fontSize = 11.sp,
                                 color = TextSecondary
                             )
+                        }
+                    }
+
+                    if (item.categories.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            item.categories.forEach { cat ->
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Color(cat.colorHex).copy(alpha = 0.15f))
+                                        .border(0.8.dp, Color(cat.colorHex).copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                                        .padding(horizontal = 7.dp, vertical = 3.dp)
+                                ) {
+                                    Text(
+                                        text = "${cat.iconEmoji} ${cat.displayName}",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(cat.colorHex)
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -697,6 +725,63 @@ fun GiveawayDetailDialog(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // Supported Categories Section
+                    if (item.categories.isNotEmpty()) {
+                        Text(
+                            text = "SUPPORTED CATEGORIES & GENRES",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = NeonCyan,
+                            letterSpacing = 1.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFF0F1522))
+                                .border(1.dp, GamingCardBorder, RoundedCornerShape(12.dp))
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            item.categories.forEach { category ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(Color(category.colorHex).copy(alpha = 0.18f))
+                                            .border(1.dp, Color(category.colorHex).copy(alpha = 0.6f), RoundedCornerShape(6.dp))
+                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = "${category.iconEmoji} ${category.displayName}",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(category.colorHex)
+                                        )
+                                    }
+
+                                    Text(
+                                        text = category.description,
+                                        fontSize = 11.sp,
+                                        color = TextSecondary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.padding(start = 8.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
                     // Details metadata box
                     Box(
                         modifier = Modifier
@@ -713,6 +798,24 @@ fun GiveawayDetailDialog(
                             ) {
                                 Text("Platforms", fontSize = 12.sp, color = TextMuted)
                                 Text(item.platforms, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
+                            }
+                            if (item.categories.isNotEmpty()) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("Categories", fontSize = 12.sp, color = TextMuted)
+                                    Text(
+                                        text = item.categories.joinToString(", ") { it.displayName },
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = TextPrimary,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.widthIn(max = 210.dp)
+                                    )
+                                }
                             }
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
