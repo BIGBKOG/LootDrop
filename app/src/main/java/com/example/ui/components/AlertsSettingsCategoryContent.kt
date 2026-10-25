@@ -99,6 +99,8 @@ fun AlertsSettingsCategoryContent(
     val isNotifySteam by viewModel.isNotifySteam.collectAsState()
     val isNotifyEpic by viewModel.isNotifyEpic.collectAsState()
     val isNotifyGog by viewModel.isNotifyGog.collectAsState()
+    val isNotifyAndroid by viewModel.isNotifyAndroid.collectAsState()
+    val isNotifyIos by viewModel.isNotifyIos.collectAsState()
     val isNotifyOthers by viewModel.isNotifyOthers.collectAsState()
     val isGamesOnly by viewModel.isGamesOnly.collectAsState()
     val isKeepForeverOnly by viewModel.isKeepForeverOnly.collectAsState()
@@ -128,6 +130,7 @@ fun AlertsSettingsCategoryContent(
 
     val monitoredStoresCount = listOf(
         isNotifyPlayStation, isNotifyXbox, isNotifyNintendo,
+        isNotifyAndroid, isNotifyIos,
         isNotifySteam, isNotifyEpic, isNotifyGog, isNotifyOthers
     ).count { it }
 
@@ -523,6 +526,24 @@ fun AlertsSettingsCategoryContent(
                         checked = isNotifyGog,
                         enabled = isNotificationsEnabled,
                         onCheckedChange = { viewModel.setNotifyGog(it) }
+                    )
+
+                    AlertsToggleRow(
+                        title = "Google Play / Android",
+                        subtitle = "Android mobile games, apps & in-game packs",
+                        color = Color(0xFF3DDC84),
+                        checked = isNotifyAndroid,
+                        enabled = isNotificationsEnabled,
+                        onCheckedChange = { viewModel.setNotifyAndroid(it) }
+                    )
+
+                    AlertsToggleRow(
+                        title = "Apple App Store / iOS",
+                        subtitle = "iOS (iPhone & iPad) free games & giveaways",
+                        color = Color(0xFF007AFF),
+                        checked = isNotifyIos,
+                        enabled = isNotificationsEnabled,
+                        onCheckedChange = { viewModel.setNotifyIos(it) }
                     )
 
                     AlertsToggleRow(

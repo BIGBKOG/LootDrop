@@ -103,6 +103,8 @@ fun NotificationSettingsSheet(
     var isNotifySteam by remember { mutableStateOf(notificationHelper.isNotifySteam) }
     var isNotifyEpic by remember { mutableStateOf(notificationHelper.isNotifyEpic) }
     var isNotifyGog by remember { mutableStateOf(notificationHelper.isNotifyGog) }
+    var isNotifyAndroid by remember { mutableStateOf(notificationHelper.isNotifyAndroid) }
+    var isNotifyIos by remember { mutableStateOf(notificationHelper.isNotifyIos) }
     var isNotifyOthers by remember { mutableStateOf(notificationHelper.isNotifyOthers) }
     var isGamesOnly by remember { mutableStateOf(notificationHelper.isGamesOnly) }
     var isKeepForeverOnly by remember { mutableStateOf(notificationHelper.isKeepForeverOnly) }
@@ -386,6 +388,34 @@ fun NotificationSettingsSheet(
                         onCheckedChange = {
                             isNotifyGog = it
                             notificationHelper.isNotifyGog = it
+                        }
+                    )
+
+                    Divider(color = GamingCardBorder, thickness = 0.5.dp)
+
+                    NotificationSettingRow(
+                        title = "Google Play / Android",
+                        subtitle = "Android mobile games, apps & in-game pack promotions",
+                        color = Color(0xFF3DDC84),
+                        checked = isNotifyAndroid,
+                        enabled = isNotificationsEnabled,
+                        onCheckedChange = {
+                            isNotifyAndroid = it
+                            notificationHelper.isNotifyAndroid = it
+                        }
+                    )
+
+                    Divider(color = GamingCardBorder, thickness = 0.5.dp)
+
+                    NotificationSettingRow(
+                        title = "Apple App Store / iOS",
+                        subtitle = "iOS (iPhone & iPad) free titles & giveaway promos",
+                        color = Color(0xFF007AFF),
+                        checked = isNotifyIos,
+                        enabled = isNotificationsEnabled,
+                        onCheckedChange = {
+                            isNotifyIos = it
+                            notificationHelper.isNotifyIos = it
                         }
                     )
 

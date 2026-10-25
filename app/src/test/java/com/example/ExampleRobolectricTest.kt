@@ -62,13 +62,27 @@ class ExampleRobolectricTest {
         assertTrue(xboxItem.isXbox)
         assertTrue(xboxItem.matchesLauncher(LauncherType.XBOX))
 
-        // Cross-platform item supporting PC and consoles
-        val crossPlatItem = steamItem.copy(platforms = "PC, Steam, Playstation 5, Xbox Series X|S")
+        val androidItem = steamItem.copy(platforms = "Android")
+        assertEquals(LauncherType.ANDROID, androidItem.launcherCategory)
+        assertTrue(androidItem.isAndroid)
+        assertTrue(androidItem.matchesLauncher(LauncherType.ANDROID))
+
+        val iosItem = steamItem.copy(platforms = "iOS, iPhone, iPad")
+        assertEquals(LauncherType.IOS, iosItem.launcherCategory)
+        assertTrue(iosItem.isIos)
+        assertTrue(iosItem.matchesLauncher(LauncherType.IOS))
+
+        // Cross-platform item supporting PC, consoles, and mobile
+        val crossPlatItem = steamItem.copy(platforms = "PC, Steam, Playstation 5, Xbox Series X|S, Android, iOS")
         assertTrue(crossPlatItem.isPlayStation)
         assertTrue(crossPlatItem.isXbox)
+        assertTrue(crossPlatItem.isAndroid)
+        assertTrue(crossPlatItem.isIos)
         assertTrue(crossPlatItem.matchesLauncher(LauncherType.PLAYSTATION))
         assertTrue(crossPlatItem.matchesLauncher(LauncherType.XBOX))
         assertTrue(crossPlatItem.matchesLauncher(LauncherType.STEAM))
+        assertTrue(crossPlatItem.matchesLauncher(LauncherType.ANDROID))
+        assertTrue(crossPlatItem.matchesLauncher(LauncherType.IOS))
     }
 
     @Test

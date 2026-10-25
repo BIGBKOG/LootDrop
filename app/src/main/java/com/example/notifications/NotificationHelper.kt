@@ -54,6 +54,8 @@ class NotificationHelper(private val context: Context) {
         private const val PREF_NOTIFY_STEAM = "pref_notify_steam"
         private const val PREF_NOTIFY_EPIC = "pref_notify_epic"
         private const val PREF_NOTIFY_GOG = "pref_notify_gog"
+        private const val PREF_NOTIFY_ANDROID = "pref_notify_android"
+        private const val PREF_NOTIFY_IOS = "pref_notify_ios"
         private const val PREF_NOTIFY_OTHERS = "pref_notify_others"
         private const val PREF_GAMES_ONLY = "pref_games_only"
     }
@@ -137,6 +139,14 @@ class NotificationHelper(private val context: Context) {
     var isNotifyGog: Boolean
         get() = prefs.getBoolean(PREF_NOTIFY_GOG, true)
         set(value) = prefs.edit().putBoolean(PREF_NOTIFY_GOG, value).apply()
+
+    var isNotifyAndroid: Boolean
+        get() = prefs.getBoolean(PREF_NOTIFY_ANDROID, true)
+        set(value) = prefs.edit().putBoolean(PREF_NOTIFY_ANDROID, value).apply()
+
+    var isNotifyIos: Boolean
+        get() = prefs.getBoolean(PREF_NOTIFY_IOS, true)
+        set(value) = prefs.edit().putBoolean(PREF_NOTIFY_IOS, value).apply()
 
     var isNotifyOthers: Boolean
         get() = prefs.getBoolean(PREF_NOTIFY_OTHERS, true)
@@ -242,6 +252,8 @@ class NotificationHelper(private val context: Context) {
         val isPs = item.isPlayStation
         val isXb = item.isXbox
         val isNin = item.isNintendo
+        val isAndroid = item.isAndroid
+        val isIos = item.isIos
         val isSteam = lowerPlat.contains("steam")
         val isEpic = lowerPlat.contains("epic")
         val isGog = lowerPlat.contains("gog")
@@ -249,10 +261,12 @@ class NotificationHelper(private val context: Context) {
         if (isPs && isNotifyPlayStation) return true
         if (isXb && isNotifyXbox) return true
         if (isNin && isNotifyNintendo) return true
+        if (isAndroid && isNotifyAndroid) return true
+        if (isIos && isNotifyIos) return true
         if (isSteam && isNotifySteam) return true
         if (isEpic && isNotifyEpic) return true
         if (isGog && isNotifyGog) return true
-        if (!isSteam && !isEpic && !isGog && !isPs && !isXb && !isNin && isNotifyOthers) return true
+        if (!isSteam && !isEpic && !isGog && !isPs && !isXb && !isNin && !isAndroid && !isIos && isNotifyOthers) return true
 
         return false
     }

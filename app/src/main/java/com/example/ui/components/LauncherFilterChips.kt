@@ -168,7 +168,7 @@ fun LauncherFilterChips(
                                 .background(if (isSelected) badgeColor else Color(0xFF1E283C))
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
-                            val isDarkBrand = launcher == LauncherType.PLAYSTATION || launcher == LauncherType.XBOX || launcher == LauncherType.EPIC
+                            val isDarkBrand = launcher == LauncherType.PLAYSTATION || launcher == LauncherType.XBOX || launcher == LauncherType.EPIC || launcher == LauncherType.IOS
                             Text(
                                 text = count.toString(),
                                 fontSize = 11.sp,

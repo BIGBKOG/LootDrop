@@ -254,6 +254,12 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isNotifyGog = MutableStateFlow(notificationHelper.isNotifyGog)
     val isNotifyGog: StateFlow<Boolean> = _isNotifyGog.asStateFlow()
 
+    private val _isNotifyAndroid = MutableStateFlow(notificationHelper.isNotifyAndroid)
+    val isNotifyAndroid: StateFlow<Boolean> = _isNotifyAndroid.asStateFlow()
+
+    private val _isNotifyIos = MutableStateFlow(notificationHelper.isNotifyIos)
+    val isNotifyIos: StateFlow<Boolean> = _isNotifyIos.asStateFlow()
+
     private val _isNotifyOthers = MutableStateFlow(notificationHelper.isNotifyOthers)
     val isNotifyOthers: StateFlow<Boolean> = _isNotifyOthers.asStateFlow()
 
@@ -395,6 +401,11 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                 (q.contains("xbox") && it.isXbox) ||
                 (q.contains("nintendo") && it.isNintendo) ||
                 (q.contains("switch") && it.isNintendo) ||
+                (q.contains("android") && it.isAndroid) ||
+                (q.contains("ios") && it.isIos) ||
+                (q.contains("iphone") && it.isIos) ||
+                (q.contains("ipad") && it.isIos) ||
+                (q.contains("mobile") && it.isMobile) ||
                 (q.contains("console") && it.isConsole)
             }
         }
@@ -948,6 +959,16 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     fun setNotifyGog(enabled: Boolean) {
         notificationHelper.isNotifyGog = enabled
         _isNotifyGog.value = enabled
+    }
+
+    fun setNotifyAndroid(enabled: Boolean) {
+        notificationHelper.isNotifyAndroid = enabled
+        _isNotifyAndroid.value = enabled
+    }
+
+    fun setNotifyIos(enabled: Boolean) {
+        notificationHelper.isNotifyIos = enabled
+        _isNotifyIos.value = enabled
     }
 
     fun setNotifyOthers(enabled: Boolean) {

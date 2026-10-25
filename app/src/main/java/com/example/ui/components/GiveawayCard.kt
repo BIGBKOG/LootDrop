@@ -645,7 +645,8 @@ fun GiveawayCard(
                         ) {
                             val isDarkBrand = item.launcherCategory == LauncherType.PLAYSTATION || 
                                               item.launcherCategory == LauncherType.XBOX || 
-                                              item.launcherCategory == LauncherType.EPIC
+                                              item.launcherCategory == LauncherType.EPIC ||
+                                              item.launcherCategory == LauncherType.IOS
                             Row(
                                 modifier = Modifier.weight(1f, fill = false),
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -693,6 +694,40 @@ fun GiveawayCard(
                                     ) {
                                         Text(
                                             text = "Xbox",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                    }
+                                }
+
+                                if (item.isAndroid && item.launcherCategory != LauncherType.ANDROID) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Color(0xFF3DDC84))
+                                            .border(1.dp, Color(0xFF0B0F19).copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                                            .padding(horizontal = 7.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = "Android",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF0B0F19)
+                                        )
+                                    }
+                                }
+
+                                if (item.isIos && item.launcherCategory != LauncherType.IOS) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Color(0xFF007AFF))
+                                            .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                            .padding(horizontal = 7.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = "iOS",
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = Color.White

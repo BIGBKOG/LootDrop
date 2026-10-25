@@ -254,10 +254,11 @@ fun GiveawayDetailDialog(
                         }
                     }
 
-                    // Launcher & Console badges on image
+                    // Launcher & Console & Mobile badges on image
                     val isDarkBrand = item.launcherCategory == LauncherType.PLAYSTATION || 
                                       item.launcherCategory == LauncherType.XBOX || 
-                                      item.launcherCategory == LauncherType.EPIC
+                                      item.launcherCategory == LauncherType.EPIC ||
+                                      item.launcherCategory == LauncherType.IOS
                     Row(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
@@ -281,9 +282,9 @@ fun GiveawayDetailDialog(
                         if (item.isPlayStation && item.launcherCategory != LauncherType.PLAYSTATION) {
                             Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(Color(0xFF0070D1))
-                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFF0070D1))
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
                             ) {
                                 Text(
                                     text = "PlayStation",
@@ -303,6 +304,38 @@ fun GiveawayDetailDialog(
                             ) {
                                 Text(
                                     text = "Xbox",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+
+                        if (item.isAndroid && item.launcherCategory != LauncherType.ANDROID) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFF3DDC84))
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = "Android",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF0B0F19)
+                                )
+                            }
+                        }
+
+                        if (item.isIos && item.launcherCategory != LauncherType.IOS) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFF007AFF))
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = "iOS",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
@@ -441,6 +474,8 @@ fun GiveawayDetailDialog(
                                 item.hasMultipleLaunchers -> "Choose Store / Launcher ▾"
                                 item.isPlayStation && !item.isPc -> "PlayStation Store"
                                 item.isXbox && !item.isPc -> "Xbox Store"
+                                item.isAndroid && !item.isPc -> "Google Play Store"
+                                item.isIos && !item.isPc -> "Apple App Store"
                                 else -> item.launcherCategory.displayName
                             }
                             Text(

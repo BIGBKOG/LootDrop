@@ -915,6 +915,8 @@ fun SettingsScreen(
                             LauncherType.PLAYSTATION,
                             LauncherType.XBOX,
                             LauncherType.NINTENDO,
+                            LauncherType.ANDROID,
+                            LauncherType.IOS,
                             LauncherType.STEAM,
                             LauncherType.EPIC,
                             LauncherType.GOG
@@ -1772,7 +1774,7 @@ fun SettingsScreen(
             )
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = "LootDrop V4.5 • PC & Console Free Games Radar",
+                text = "LootDrop V1.5.0 • PC & Console Free Games Radar",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

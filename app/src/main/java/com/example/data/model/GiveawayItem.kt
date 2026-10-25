@@ -59,6 +59,17 @@ data class GiveawayItem(
     val isConsole: Boolean
         get() = isPlayStation || isXbox || isNintendo
 
+    val isAndroid: Boolean
+        get() = platforms.lowercase().contains("android")
+
+    val isIos: Boolean
+        get() = platforms.lowercase().let {
+            it.contains("ios") || it.contains("iphone") || it.contains("ipad") || it.contains("apple")
+        }
+
+    val isMobile: Boolean
+        get() = isAndroid || isIos
+
     val launcherCategory: LauncherType
         get() {
             val lower = platforms.lowercase()
@@ -68,12 +79,17 @@ data class GiveawayItem(
                         !lower.contains("steam") && !lower.contains("epic") && !lower.contains("gog") && !lower.contains("pc") -> LauncherType.PLAYSTATION
                 lower.contains("xbox") && !lower.contains("steam") && !lower.contains("epic") && !lower.contains("gog") && !lower.contains("pc") -> LauncherType.XBOX
                 (lower.contains("nintendo") || lower.contains("switch")) && !lower.contains("steam") && !lower.contains("epic") && !lower.contains("gog") && !lower.contains("pc") -> LauncherType.NINTENDO
+                // Mobile-specific if not PC or console
+                lower.contains("android") && !lower.contains("steam") && !lower.contains("epic") && !lower.contains("gog") && !lower.contains("pc") && !lower.contains("playstation") && !lower.contains("xbox") -> LauncherType.ANDROID
+                (lower.contains("ios") || lower.contains("iphone") || lower.contains("ipad")) && !lower.contains("steam") && !lower.contains("epic") && !lower.contains("gog") && !lower.contains("pc") && !lower.contains("playstation") && !lower.contains("xbox") -> LauncherType.IOS
                 lower.contains("steam") -> LauncherType.STEAM
                 lower.contains("epic") -> LauncherType.EPIC
                 lower.contains("gog") -> LauncherType.GOG
                 lower.contains("playstation") || lower.contains("ps5") || lower.contains("ps4") -> LauncherType.PLAYSTATION
                 lower.contains("xbox") -> LauncherType.XBOX
                 lower.contains("nintendo") || lower.contains("switch") -> LauncherType.NINTENDO
+                lower.contains("android") -> LauncherType.ANDROID
+                lower.contains("ios") || lower.contains("iphone") || lower.contains("ipad") -> LauncherType.IOS
                 lower.contains("ubisoft") || lower.contains("uplay") -> LauncherType.UBISOFT
                 lower.contains("itch.io") || lower.contains("itchio") || lower.split(Regex("[,/ ]+")).any { it == "itch" } -> LauncherType.ITCH_IO
                 lower.contains("amazon") || lower.contains("prime") -> LauncherType.PRIME
@@ -247,6 +263,32 @@ data class GiveawayItem(
             )
         }
 
+        if (lower.contains("android")) {
+            val androidUrl = if (openGiveawayUrl.contains("play.google.com")) openGiveawayUrl else "https://play.google.com/store/search?q=$encodedTitle&c=apps"
+            options.add(
+                LauncherOption(
+                    launcherType = LauncherType.ANDROID,
+                    name = "Google Play / Android",
+                    subtitle = "Claim on Google Play Store (Android)",
+                    url = androidUrl,
+                    badgeColorHex = 0xFF3DDC84
+                )
+            )
+        }
+
+        if (lower.contains("ios") || lower.contains("iphone") || lower.contains("ipad")) {
+            val iosUrl = if (openGiveawayUrl.contains("apple.com")) openGiveawayUrl else "https://www.apple.com/us/search/$encodedTitle?src=serp"
+            options.add(
+                LauncherOption(
+                    launcherType = LauncherType.IOS,
+                    name = "Apple App Store / iOS",
+                    subtitle = "Claim on App Store (iPhone & iPad)",
+                    url = iosUrl,
+                    badgeColorHex = 0xFF007AFF
+                )
+            )
+        }
+
         // Always include Official Giveaway Claim page
         options.add(
             LauncherOption(
@@ -271,6 +313,8 @@ data class GiveawayItem(
             LauncherType.PLAYSTATION -> isPlayStation
             LauncherType.XBOX -> isXbox
             LauncherType.NINTENDO -> isNintendo
+            LauncherType.ANDROID -> isAndroid
+            LauncherType.IOS -> isIos
             LauncherType.STEAM -> lower.contains("steam")
             LauncherType.EPIC -> lower.contains("epic")
             LauncherType.GOG -> lower.contains("gog")
@@ -282,6 +326,7 @@ data class GiveawayItem(
             LauncherType.OTHER -> !lower.contains("steam") && !lower.contains("epic") && !lower.contains("gog") &&
                     !lower.contains("playstation") && !lower.contains("xbox") && !lower.contains("nintendo") &&
                     !lower.contains("switch") && !lower.contains("ubisoft") &&
+                    !lower.contains("android") && !lower.contains("ios") && !lower.contains("iphone") && !lower.contains("ipad") &&
                     !(lower.contains("itch.io") || lower.contains("itchio") || tokens.any { it == "itch" }) &&
                     !lower.contains("prime") && !lower.contains("origin") && !tokens.any { it == "ea" }
         }
@@ -308,6 +353,8 @@ enum class LauncherType(
     PLAYSTATION("PlayStation", "ps4+ps5", 0xFF0070D1, "playstation"),
     XBOX("Xbox", "xbox-one+xbox-series-xs", 0xFF107C10, "xbox"),
     NINTENDO("Nintendo Switch", "switch", 0xFFE60012, "nintendo"),
+    ANDROID("Android", "android", 0xFF3DDC84, "android"),
+    IOS("iOS", "ios", 0xFF007AFF, "ios"),
     STEAM("Steam", "steam", 0xFF66C0F4, "steam"),
     EPIC("Epic Games", "epic-games-store", 0xFF0078F2, "epic"),
     GOG("GOG", "gog", 0xFFBA55D3, "gog"),
