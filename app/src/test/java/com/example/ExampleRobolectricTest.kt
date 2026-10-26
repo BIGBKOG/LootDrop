@@ -505,6 +505,38 @@ class ExampleRobolectricTest {
         // Older version
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.5", "4.0"))
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.9.9", "4.0"))
+
+        // Transition from 4.5 down to 1.5.0 version scheme
+        // When running on 1.5.0, older 4.x legacy releases are ignored and NOT considered newer
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V4.5", "1.5.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V4.4", "1.5.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("4.5", "1.5.0"))
+
+        // When running on 1.5.0, exact same versions (with or without V prefix) return false
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V1.5.0", "1.5.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.0", "1.5.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5", "1.5.0"))
+
+        // When running on 1.5.0, newer 1.x releases including wildcard 1.5.X or 1.5.1 are considered newer
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.X", "1.5.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V1.5.X", "1.5.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.1", "1.5.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.6.0", "1.5.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.0.0", "1.5.0"))
+
+        // When running on 1.5.1
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V1.5.1", "1.5.1"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.1", "1.5.1"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.0", "1.5.1"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V4.5", "1.5.1"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.2", "1.5.1"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.X", "1.5.1"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.6.0", "1.5.1"))
+
+        // If a device is still on legacy 4.5, 1.5.0 / 1.5.X is recognized as the successor
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.X", "V4.5"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V1.5.0", "V4.5"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.0", "4.5"))
     }
 
     @Test

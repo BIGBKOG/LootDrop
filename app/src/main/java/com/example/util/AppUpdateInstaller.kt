@@ -9,7 +9,7 @@ import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
-import com.example.data.remote.ApiClient
+import com.example.data.remote.GithubReleaseClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -23,8 +23,19 @@ object AppUpdateInstaller {
 
     private const val TAG = "AppUpdateInstaller"
 
+    // Dedicated clean unbuffered download client (independent of GamerPower HTTP cache and network interceptors)
+    private val httpClient: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(90, TimeUnit.SECONDS)
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .build()
+    }
+
     /**
      * Downloads an APK file inside the app, updating progress via callback.
+     * Validates headers and APK binary integrity so corrupt or HTML files are not downloaded.
      */
     suspend fun downloadApk(
         context: Context,
@@ -33,22 +44,30 @@ object AppUpdateInstaller {
         onProgress: (progress: Float, downloaded: Long, total: Long) -> Unit
     ): Result<File> = withContext(Dispatchers.IO) {
         try {
-            val httpClient: OkHttpClient = ApiClient.getOkHttpClient(context).newBuilder()
-                .connectTimeout(30, TimeUnit.SECONDS)
-                .readTimeout(60, TimeUnit.SECONDS)
-                .followRedirects(true)
-                .followSslRedirects(true)
-                .build()
+            var actualUrl = downloadUrl.trim()
+            // If downloadUrl is a web release link, resolve the direct APK asset URL
+            if (!actualUrl.endsWith(".apk", ignoreCase = true)) {
+                val resolved = GithubReleaseClient(context).resolveApkUrl(
+                    GithubReleaseClient.DEFAULT_OWNER,
+                    GithubReleaseClient.DEFAULT_REPO,
+                    versionTag
+                )
+                if (!resolved.isNullOrBlank()) {
+                    actualUrl = resolved
+                }
+            }
+
+            Log.d(TAG, "Starting APK download from: $actualUrl (tag: $versionTag)")
 
             val request = Request.Builder()
-                .url(downloadUrl)
+                .url(actualUrl)
                 .header("User-Agent", "LootDrop-Android-App")
                 .header("Accept", "application/octet-stream, application/vnd.android.package-archive, */*")
                 .build()
 
             val response = httpClient.newCall(request).execute()
             if (!response.isSuccessful) {
-                return@withContext Result.failure(Exception("HTTP error ${response.code} downloading update"))
+                return@withContext Result.failure(Exception("HTTP error ${response.code} downloading update from GitHub"))
             }
 
             val body = response.body
@@ -56,7 +75,9 @@ object AppUpdateInstaller {
 
             val totalBytes = body.contentLength()
             val targetDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
-                ?: File(context.cacheDir, "updates").apply { mkdirs() }
+                ?: File(context.cacheDir, "updates")
+            targetDir.mkdirs()
+
             val cleanTag = versionTag.replace("[^a-zA-Z0-9.-]".toRegex(), "_")
             val targetFile = File(targetDir, "lootdrop_$cleanTag.apk")
 
@@ -71,17 +92,32 @@ object AppUpdateInstaller {
                 inputStream = body.byteStream()
                 outputStream = FileOutputStream(targetFile)
 
-                val buffer = ByteArray(16 * 1024)
+                val buffer = ByteArray(32 * 1024)
                 var bytesRead: Int
                 var downloadedBytes: Long = 0
                 var lastProgressUpdate = System.currentTimeMillis()
+                var verifiedHeader = false
 
                 while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                    if (!verifiedHeader && bytesRead >= 4) {
+                        // Verify that file begins with ZIP magic numbers (PK\x03\x04 or PK\x05\x06)
+                        val isZip = buffer[0] == 0x50.toByte() && buffer[1] == 0x4B.toByte()
+                        if (!isZip) {
+                            if (buffer[0] == '<'.code.toByte()) {
+                                targetFile.delete()
+                                return@withContext Result.failure(
+                                    Exception("Download URL returned an HTML web page instead of an APK file. Please check GitHub release assets.")
+                                )
+                            }
+                        }
+                        verifiedHeader = true
+                    }
+
                     outputStream.write(buffer, 0, bytesRead)
                     downloadedBytes += bytesRead
 
                     val now = System.currentTimeMillis()
-                    if (now - lastProgressUpdate >= 80 || downloadedBytes == totalBytes) {
+                    if (now - lastProgressUpdate >= 60 || downloadedBytes == totalBytes) {
                         lastProgressUpdate = now
                         val progress = if (totalBytes > 0) {
                             (downloadedBytes.toFloat() / totalBytes.toFloat()).coerceIn(0f, 1f)
@@ -92,6 +128,12 @@ object AppUpdateInstaller {
 
                 outputStream.flush()
                 onProgress(1f, downloadedBytes, totalBytes)
+
+                if (targetFile.length() < 50_000) {
+                    targetFile.delete()
+                    return@withContext Result.failure(Exception("Downloaded APK file is incomplete (${targetFile.length()} bytes)"))
+                }
+
                 Log.d(TAG, "Update APK successfully downloaded to: ${targetFile.absolutePath} ($downloadedBytes bytes)")
                 Result.success(targetFile)
             } finally {
@@ -149,8 +191,10 @@ object AppUpdateInstaller {
             context.startActivity(installIntent)
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Error launching package installer for APK", e)
-            Toast.makeText(context, "Could not open installer: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+            Log.e(TAG, "Failed to launch package installer", e)
+            try {
+                Toast.makeText(context, "Install error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+            } catch (_: Exception) {}
             false
         }
     }

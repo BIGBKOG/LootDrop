@@ -62,6 +62,10 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.filled.ErrorOutline
+import com.example.data.model.UpdateDownloadState
 import com.example.BuildConfig
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.Nightlight
@@ -149,6 +153,7 @@ fun SettingsScreen(
     val appUpdateInfo by viewModel.appUpdateInfo.collectAsState()
     val isCheckingUpdates by viewModel.isCheckingUpdates.collectAsState()
     val updateCheckStatus by viewModel.updateCheckStatus.collectAsState()
+    val updateDownloadState by viewModel.updateDownloadState.collectAsState()
     val isAnimationsEnabled by viewModel.isAnimationsEnabled.collectAsState()
     val isLowEndOptimization by viewModel.isLowEndOptimization.collectAsState()
     val storageMetrics by viewModel.storageMetrics.collectAsState()
@@ -1406,28 +1411,210 @@ fun SettingsScreen(
                     }
                 }
 
-                if (appUpdateInfo?.hasUpdate == true) {
-                    Button(
-                        onClick = { viewModel.setUpdateDialogVisible(true) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("view_update_dialog_button"),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = NeonGreen)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CloudDownload,
-                            contentDescription = null,
-                            tint = Color.Black,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Update Inside App (${appUpdateInfo?.latestVersion})",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black
-                        )
+                // In-App Download Status & Action Handlers
+                when (val downloadState = updateDownloadState) {
+                    is UpdateDownloadState.Downloading -> {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                                .padding(12.dp)
+                                .testTag("update_download_progress_card"),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CloudDownload,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text(
+                                        text = "Downloading APK...",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                val pct = if (downloadState.progress > 0f) "${(downloadState.progress * 100).toInt()}%" else "Connecting..."
+                                Text(
+                                    text = pct,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+
+                            if (downloadState.progress > 0f) {
+                                LinearProgressIndicator(
+                                    progress = { downloadState.progress },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(6.dp)
+                                        .clip(RoundedCornerShape(3.dp)),
+                                    color = NeonGreen,
+                                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                                )
+                            } else {
+                                LinearProgressIndicator(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(6.dp)
+                                        .clip(RoundedCornerShape(3.dp)),
+                                    color = NeonGreen,
+                                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                                )
+                            }
+
+                            if (downloadState.totalBytes > 0L) {
+                                val downloadedMb = String.format("%.1f", downloadState.bytesDownloaded / (1024f * 1024f))
+                                val totalMb = String.format("%.1f", downloadState.totalBytes / (1024f * 1024f))
+                                Text(
+                                    text = "$downloadedMb MB / $totalMb MB",
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    is UpdateDownloadState.ReadyToInstall -> {
+                        Button(
+                            onClick = { viewModel.installDownloadedApk(context) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("install_ready_update_button"),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = NeonGreen)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SystemUpdate,
+                                contentDescription = null,
+                                tint = Color.Black,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Install Downloaded Update (${downloadState.versionTag})",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color.Black
+                            )
+                        }
+                    }
+
+                    is UpdateDownloadState.Error -> {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color(0xFF2D1619))
+                                .border(1.dp, Color(0xFFFF5252).copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                                .padding(10.dp)
+                                .testTag("update_download_error_card"),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ErrorOutline,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFF5252),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "Download error: ${downloadState.message}",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFFFF8A80)
+                                )
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        appUpdateInfo?.let { viewModel.startInAppUpdateDownload(it, context) }
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(34.dp),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5252))
+                                ) {
+                                    Text("Retry Download", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                }
+                                OutlinedButton(
+                                    onClick = { viewModel.resetUpdateDownloadState() },
+                                    modifier = Modifier.height(34.dp),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("Dismiss", fontSize = 11.sp)
+                                }
+                            }
+                        }
+                    }
+
+                    else -> {
+                        if (appUpdateInfo?.hasUpdate == true) {
+                            Button(
+                                onClick = { viewModel.setUpdateDialogVisible(true) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("view_update_dialog_button"),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = NeonGreen)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CloudDownload,
+                                    contentDescription = null,
+                                    tint = Color.Black,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Update Inside App (${appUpdateInfo?.latestVersion})",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.Black
+                                )
+                            }
+                        } else if (appUpdateInfo != null && appUpdateInfo?.isApkAvailable == true) {
+                            Button(
+                                onClick = { viewModel.setUpdateDialogVisible(true) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("redownload_update_dialog_button"),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CloudDownload,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Download / Reinstall APK (${appUpdateInfo?.latestVersion})",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -1774,7 +1961,7 @@ fun SettingsScreen(
             )
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = "LootDrop V1.5.0 • PC & Console Free Games Radar",
+                text = "LootDrop V${BuildConfig.VERSION_NAME} • PC & Console Free Games Radar",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

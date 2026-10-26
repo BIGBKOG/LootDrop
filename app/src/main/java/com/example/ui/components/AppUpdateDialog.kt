@@ -135,7 +135,7 @@ fun AppUpdateDialog(
                                         is UpdateDownloadState.Downloading -> "DOWNLOADING IN-APP..."
                                         is UpdateDownloadState.ReadyToInstall -> "READY TO INSTALL"
                                         is UpdateDownloadState.Error -> "DOWNLOAD FAILED"
-                                        else -> "UPDATE AVAILABLE"
+                                        else -> if (updateInfo.hasUpdate) "UPDATE AVAILABLE" else "RELEASE INSTALLED"
                                     },
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Black,
@@ -481,10 +481,10 @@ fun AppUpdateDialog(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = if (downloadState is UpdateDownloadState.Error) {
-                                    "Retry In-App Download"
-                                } else {
-                                    "Download & Install Inside App"
+                                text = when {
+                                    downloadState is UpdateDownloadState.Error -> "Retry In-App Download"
+                                    !updateInfo.hasUpdate -> "Download & Reinstall APK (${updateInfo.latestVersion})"
+                                    else -> "Download & Install Inside App"
                                 },
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Black,
