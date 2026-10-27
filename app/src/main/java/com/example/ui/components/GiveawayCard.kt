@@ -270,6 +270,7 @@ fun GiveawayCard(
                                         color = launcherColor
                                     )
                                 }
+                                MetacriticScorePill(score = item.metacriticScore)
                                 if (showOriginalPrice && item.worth.isNotBlank() && item.worth != "N/A" && item.worth != "FREE") {
                                     Text(
                                         text = item.worth,
@@ -291,30 +292,13 @@ fun GiveawayCard(
                                 overflow = TextOverflow.Ellipsis
                             )
 
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = item.platforms,
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f, fill = false)
-                                )
-                                if (item.categories.isNotEmpty()) {
-                                    val primaryCat = item.categories.first()
-                                    Text(
-                                        text = "• ${primaryCat.iconEmoji} ${primaryCat.displayName}",
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = Color(primaryCat.colorHex),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                            }
+                            Text(
+                                text = item.platforms,
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                     }
 
@@ -509,6 +493,7 @@ fun GiveawayCard(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
+                                MetacriticScorePill(score = item.metacriticScore)
                                 if (showOriginalPrice && item.worth.isNotBlank() && item.worth != "N/A" && item.worth != "FREE") {
                                     Text(
                                         text = item.worth,
@@ -516,22 +501,6 @@ fun GiveawayCard(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                         textDecoration = TextDecoration.LineThrough
                                     )
-                                }
-                                item.categories.take(2).forEach { cat ->
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(4.dp))
-                                            .background(Color(cat.colorHex).copy(alpha = 0.15f))
-                                            .border(0.6.dp, Color(cat.colorHex).copy(alpha = 0.45f), RoundedCornerShape(4.dp))
-                                            .padding(horizontal = 4.dp, vertical = 1.dp)
-                                    ) {
-                                        Text(
-                                            text = "${cat.iconEmoji} ${cat.displayName}",
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = Color(cat.colorHex)
-                                        )
-                                    }
                                 }
                             }
 
@@ -766,6 +735,8 @@ fun GiveawayCard(
                                         color = Color.White
                                     )
                                 }
+
+                                MetacriticScorePill(score = item.metacriticScore, showPrefix = true)
                             }
 
                             // Quick Bookmark button with bouncy spring scale pop

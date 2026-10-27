@@ -6,4 +6,6 @@
     <string name="channel_ending_soon">Expiring Soon Alerts</string>
     <string name="channel_dlc">DLC, Add-ons &amp; Loot</string>
     <string name="channel_system">System &amp; Sync Alerts</string>
+    <string name="widget_latest_drop_desc">Shows the hottest new free game drop with one-tap claim and store details</string>
+    <string name="widget_radar_stats_desc">Live radar of available free games and total money saved in your vault</string>
 </resources>

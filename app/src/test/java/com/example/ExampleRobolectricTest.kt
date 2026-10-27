@@ -7,6 +7,7 @@ import com.example.data.model.LauncherType
 import com.example.notifications.NotificationHelper
 import com.example.preferences.AppPreferences
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -533,6 +534,39 @@ class ExampleRobolectricTest {
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.X", "1.5.1"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.6.0", "1.5.1"))
 
+        // When running on 1.5.2
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V1.5.2", "1.5.2"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.2", "1.5.2"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.1", "1.5.2"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.0", "1.5.2"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V4.5", "1.5.2"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.3", "1.5.2"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.X", "1.5.2"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.6.0", "1.5.2"))
+
+        // When running on 1.5.3
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V1.5.3", "1.5.3"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.3", "1.5.3"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.2", "1.5.3"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.1", "1.5.3"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.0", "1.5.3"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V4.5", "1.5.3"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.4", "1.5.3"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.X", "1.5.3"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.6.0", "1.5.3"))
+
+        // When running on 1.5.4
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V1.5.4", "1.5.4"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.4", "1.5.4"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.3", "1.5.4"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.2", "1.5.4"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.1", "1.5.4"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.0", "1.5.4"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V4.5", "1.5.4"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.5", "1.5.4"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.X", "1.5.4"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.6.0", "1.5.4"))
+
         // If a device is still on legacy 4.5, 1.5.0 / 1.5.X is recognized as the successor
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.X", "V4.5"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V1.5.0", "V4.5"))
@@ -575,4 +609,179 @@ class ExampleRobolectricTest {
         val error = com.example.data.model.UpdateDownloadState.Error("Network failure")
         assertEquals("Network failure", error.message)
     }
+
+    @Test
+    fun `metacritic score resolves accurately for popular titles and DLC giveaways`() {
+        // Direct title lookups
+        assertEquals(87, com.example.util.MetacriticCatalog.resolveScore("Subnautica"))
+        assertEquals(86, com.example.util.MetacriticCatalog.resolveScore("Death Stranding"))
+        assertEquals(96, com.example.util.MetacriticCatalog.resolveScore("Half-Life 2"))
+        assertEquals(88, com.example.util.MetacriticCatalog.resolveScore("Civilization VI"))
+        assertEquals(93, com.example.util.MetacriticCatalog.resolveScore("Hades"))
+
+        // Giveaway titles with platforms, DLC suffixes, and giveaway noise
+        assertEquals(
+            83,
+            com.example.util.MetacriticCatalog.resolveScore("V Rising - Haunted Nights Castle Pack (Steam) Giveaway")
+        )
+        assertEquals(
+            93,
+            com.example.util.MetacriticCatalog.resolveScore("The Witcher 3: Wild Hunt Remastered - Scarlet Crest Armor Giveaway")
+        )
+        assertEquals(
+            80,
+            com.example.util.MetacriticCatalog.resolveScore("World of Tanks: Halloween Gift Packs")
+        )
+        assertEquals(
+            85,
+            com.example.util.MetacriticCatalog.resolveScore("Warframe Igaro Syandana and Ice Colour Picker Pack Key Giveaway")
+        )
+
+        // Tier classification
+        val subnauticaInfo = com.example.util.MetacriticCatalog.getMetacriticInfo("Subnautica")
+        assertEquals(87, subnauticaInfo.score)
+        assertEquals(com.example.data.model.MetacriticRatingTier.GENERALLY_FAVORABLE, subnauticaInfo.tier)
+        assertTrue(subnauticaInfo.reviewUrl.contains("metacritic.com"))
+
+        val hl2Info = com.example.util.MetacriticCatalog.getMetacriticInfo("Half-Life 2")
+        assertEquals(96, hl2Info.score)
+        assertEquals(com.example.data.model.MetacriticRatingTier.UNIVERSAL_ACCLAIM, hl2Info.tier)
+
+        // Tiers
+        assertEquals(com.example.data.model.MetacriticRatingTier.UNIVERSAL_ACCLAIM, com.example.data.model.MetacriticRatingTier.fromScore(95))
+        assertEquals(com.example.data.model.MetacriticRatingTier.GENERALLY_FAVORABLE, com.example.data.model.MetacriticRatingTier.fromScore(80))
+        assertEquals(com.example.data.model.MetacriticRatingTier.MIXED_REVIEWS, com.example.data.model.MetacriticRatingTier.fromScore(65))
+        assertEquals(com.example.data.model.MetacriticRatingTier.UNFAVORABLE, com.example.data.model.MetacriticRatingTier.fromScore(45))
+    }
+
+    @Test
+    fun `cheapshark dto maps store ids correctly to platform names`() {
+        assertEquals("Steam", com.example.data.model.CheapSharkDto.storeIdToPlatform("1"))
+        assertEquals("Epic Games Store", com.example.data.model.CheapSharkDto.storeIdToPlatform("25"))
+        assertEquals("GOG", com.example.data.model.CheapSharkDto.storeIdToPlatform("7"))
+        assertEquals("Humble Store", com.example.data.model.CheapSharkDto.storeIdToPlatform("11"))
+        assertEquals("Uplay", com.example.data.model.CheapSharkDto.storeIdToPlatform("13"))
+        assertEquals("Amazon", com.example.data.model.CheapSharkDto.storeIdToPlatform("4"))
+        assertEquals("Origin", com.example.data.model.CheapSharkDto.storeIdToPlatform("8"))
+        assertEquals("IndieGala", com.example.data.model.CheapSharkDto.storeIdToPlatform("30"))
+        assertEquals("PC", com.example.data.model.CheapSharkDto.storeIdToPlatform("999"))
+    }
+
+    @Test
+    fun `cheapshark dto converts to giveaway entity with unique id and redirect url`() {
+        val deal = com.example.data.model.CheapSharkDto(
+            internalName = "SKERRITUAL",
+            title = "Sker Ritual",
+            metacriticLink = "/game/sker-ritual/",
+            dealID = "testDeal123ABC",
+            storeID = "25",
+            gameID = "251782",
+            salePrice = "0.00",
+            normalPrice = "24.99",
+            isOnSale = "1",
+            savings = "100.0",
+            metacriticScore = "84",
+            steamRatingText = "Very Positive",
+            steamRatingPercent = "84",
+            steamRatingCount = "3997",
+            steamAppID = "1492070",
+            releaseDate = 1713398400L,
+            thumb = "https://example.com/sker.jpg"
+        )
+
+        val entity = deal.toEntity()
+        assertTrue(entity.id >= 100000)
+        assertEquals("Sker Ritual", entity.title)
+        assertEquals("Epic Games Store", entity.platforms)
+        assertEquals("$24.99", entity.worth)
+        assertEquals(24.99, entity.numericWorth, 0.01)
+        assertEquals("https://www.cheapshark.com/redirect?dealID=testDeal123ABC", entity.openGiveawayUrl)
+        assertTrue(entity.description.contains("Steam Rating: Very Positive"))
+        assertTrue(entity.description.contains("84% positive"))
+
+        // Verify that deal's Metacritic score of 84 is registered and resolves
+        assertEquals(84, com.example.util.MetacriticCatalog.resolveScore("Sker Ritual"))
+        val domain = entity.toDomain()
+        assertEquals(84, domain.metacriticScore)
+    }
+
+    @Test
+    fun `latest drop widget builds remote views and populates active drop data`() = kotlinx.coroutines.runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val db = com.example.data.local.AppDatabase.getInstance(context)
+        db.giveawayDao().clearAll()
+
+        val sampleGame = com.example.data.local.GiveawayEntity(
+            id = 9991,
+            title = "Grand Theft Auto V",
+            worth = "$29.99",
+            numericWorth = 29.99,
+            thumbnail = "",
+            image = "",
+            description = "Hit action game",
+            instructions = "Redeem on Epic",
+            openGiveawayUrl = "https://store.epicgames.com",
+            publishedDate = "2026-10-27",
+            type = "Game",
+            platforms = "Epic Games, PC",
+            endDate = "2026-11-05",
+            users = 10000,
+            status = "Active"
+        )
+        db.giveawayDao().insertAll(listOf(sampleGame))
+
+        val views = android.widget.RemoteViews(context.packageName, R.layout.widget_latest_drop)
+        com.example.widget.WidgetUpdateHelper.populateLatestDrop(context, views, 101)
+        assertNotNull(views)
+    }
+
+    @Test
+    fun `radar stats widget builds remote views and populates active count and vault savings`() = kotlinx.coroutines.runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val db = com.example.data.local.AppDatabase.getInstance(context)
+        db.giveawayDao().clearAll()
+
+        val game1 = com.example.data.local.GiveawayEntity(
+            id = 9992,
+            title = "Subnautica",
+            worth = "$29.99",
+            numericWorth = 29.99,
+            thumbnail = "",
+            image = "",
+            description = "",
+            instructions = "",
+            openGiveawayUrl = "https://store.epicgames.com",
+            publishedDate = "2026-10-27",
+            type = "Game",
+            platforms = "Epic Games",
+            endDate = "N/A",
+            users = 5000,
+            status = "Active",
+            isClaimed = true
+        )
+        val game2 = game1.copy(id = 9993, title = "Half-Life 2", numericWorth = 19.99, isClaimed = false)
+        db.giveawayDao().insertAll(listOf(game1, game2))
+
+        val views = android.widget.RemoteViews(context.packageName, R.layout.widget_radar_stats)
+        com.example.widget.WidgetUpdateHelper.populateRadarStats(context, views, 102)
+        assertNotNull(views)
+    }
+
+    @Test
+    fun `widget creates rounded bitmap cleanly without hardware bitmap IPC issues`() {
+        val src = android.graphics.Bitmap.createBitmap(100, 100, android.graphics.Bitmap.Config.ARGB_8888)
+        val rounded = com.example.widget.WidgetUpdateHelper.createRoundedBitmap(src, cornerRadiusPx = 12f, targetWidth = 120, targetHeight = 80)
+        assertNotNull(rounded)
+        assertEquals(120, rounded.width)
+        assertEquals(80, rounded.height)
+        assertFalse(rounded.config == android.graphics.Bitmap.Config.HARDWARE)
+    }
+
+    @Test
+    fun `latest drop widget builds default remote views with image placeholder`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val views = com.example.widget.WidgetUpdateHelper.buildLatestDropRemoteViews(context, 201)
+        assertNotNull(views)
+    }
 }
+

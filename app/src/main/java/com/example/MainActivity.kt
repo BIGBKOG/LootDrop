@@ -148,5 +148,14 @@ class MainActivity : ComponentActivity() {
         if (giveawayId != -1) {
             viewModel.openItemById(giveawayId)
         }
+        val targetTab = intent.getStringExtra("EXTRA_TARGET_TAB")
+        if (targetTab != null) {
+            when (targetTab) {
+                "CLAIMED" -> viewModel.selectTab(com.example.ui.MainTab.CLAIMED)
+                "DISCOVER" -> viewModel.selectTab(com.example.ui.MainTab.DISCOVER)
+                "CALENDAR" -> viewModel.selectTab(com.example.ui.MainTab.CALENDAR)
+                "SETTINGS" -> viewModel.selectTab(com.example.ui.MainTab.SETTINGS)
+            }
+        }
     }
 }

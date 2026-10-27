@@ -51,6 +51,7 @@ enum class MainTab {
 
 enum class SortOption(val label: String) {
     NEWEST("Newest First"),
+    HIGHEST_METACRITIC("Metascore (Top Rated)"),
     HIGHEST_VALUE("Highest Value ($)"),
     MOST_POPULAR("Most Claimed"),
     ENDING_SOON("Ending Soon")
@@ -413,6 +414,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         // Sorting
         return when (sort) {
             SortOption.NEWEST -> filtered.sortedByDescending { it.id }
+            SortOption.HIGHEST_METACRITIC -> filtered.sortedByDescending { it.metacriticScore }
             SortOption.HIGHEST_VALUE -> filtered.sortedByDescending { it.numericWorth }
             SortOption.MOST_POPULAR -> filtered.sortedByDescending { it.users }
             SortOption.ENDING_SOON -> filtered.sortedBy {

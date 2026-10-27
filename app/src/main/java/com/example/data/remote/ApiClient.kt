@@ -69,6 +69,56 @@ object ApiClient {
             .build()
     }
 
+    private const val CHEAPSHARK_BASE_URL = "https://www.cheapshark.com/api/1.0/"
+    private const val CHEAPSHARK_USER_AGENT = "LootDropApp/1.5.4 (contact@lootdrop.com)"
+
+    @Volatile
+    private var cheapSharkClientInstance: OkHttpClient? = null
+
+    private fun getCheapSharkOkHttpClient(context: Context? = null): OkHttpClient {
+        return cheapSharkClientInstance ?: synchronized(this) {
+            cheapSharkClientInstance ?: run {
+                val builder = OkHttpClient.Builder()
+                    .connectTimeout(12, TimeUnit.SECONDS)
+                    .readTimeout(12, TimeUnit.SECONDS)
+                    .connectionPool(ConnectionPool(5, 5, TimeUnit.MINUTES))
+                    .addInterceptor { chain ->
+                        val request = chain.request().newBuilder()
+                            .header("User-Agent", CHEAPSHARK_USER_AGENT)
+                            .header("Accept", "application/json")
+                            .build()
+                        chain.proceed(request)
+                    }
+                if (context != null) {
+                    val cacheDir = File(context.cacheDir, "cheapshark_cache")
+                    runCatching { Cache(cacheDir, 5L * 1024L * 1024L) }.getOrNull()?.let {
+                        builder.cache(it)
+                    }
+                }
+                builder.build().also { cheapSharkClientInstance = it }
+            }
+        }
+    }
+
+    @Volatile
+    private var cheapSharkApiServiceInstance: CheapSharkApiService? = null
+
+    fun getCheapSharkApiService(context: Context? = null): CheapSharkApiService {
+        return cheapSharkApiServiceInstance ?: synchronized(this) {
+            cheapSharkApiServiceInstance ?: Retrofit.Builder()
+                .baseUrl(CHEAPSHARK_BASE_URL)
+                .client(getCheapSharkOkHttpClient(context))
+                .addConverterFactory(MoshiConverterFactory.create(moshi))
+                .build()
+                .create(CheapSharkApiService::class.java).also {
+                    cheapSharkApiServiceInstance = it
+                }
+        }
+    }
+
+    val cheapSharkApiService: CheapSharkApiService
+        get() = getCheapSharkApiService(null)
+
     @Volatile
     private var apiServiceInstance: GamerPowerApiService? = null
 

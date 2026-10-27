@@ -94,6 +94,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -131,6 +132,7 @@ import com.example.ui.calendar.CalendarTabContent
 import com.example.ui.components.AppUpdateDialog
 import com.example.ui.components.ChooseLauncherDialog
 import com.example.ui.components.ExpressiveFloatingNavBar
+import com.example.ui.components.ExpressiveTopActionBar
 import com.example.ui.components.FilterSortBottomSheet
 import com.example.ui.components.GiveawayCard
 import com.example.ui.components.GiveawayDetailDialog
@@ -264,179 +266,120 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-                    // Top App Bar
+                    // Top App Bar Header: Branding on Left + Floating Pill Bar on Right
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .statusBarsPadding()
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_app_logo),
-                            contentDescription = "LootDrop Logo",
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                        )
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "Loot",
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = TextPrimary
-                                )
-                                Text(
-                                    text = "Drop",
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
-                                        .padding(horizontal = 5.dp, vertical = 1.5.dp)
-                                ) {
-                                    Text(
-                                        text = when (currentTab) {
-                                            MainTab.SETTINGS -> "SETTINGS"
-                                            MainTab.CALENDAR -> "CALENDAR"
-                                            MainTab.CLAIMED -> "VAULT"
-                                            MainTab.DISCOVER -> "RADAR"
-                                        },
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                            Text(
-                                text = when (currentTab) {
-                                    MainTab.SETTINGS -> "APP PREFERENCES & CONTROLS"
-                                    MainTab.CALENDAR -> "EXPIRATION RADAR & TIMELINE"
-                                    MainTab.CLAIMED -> "MY CLAIMED GAME VAULT"
-                                    MainTab.DISCOVER -> "PC & CONSOLE FREE RADAR"
-                                },
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (currentTab == MainTab.SETTINGS || currentTab == MainTab.CALENDAR) MaterialTheme.colorScheme.primary else NeonGreen,
-                                letterSpacing = 1.sp
-                            )
-                        }
-                    }
-
-                    if (currentTab != MainTab.SETTINGS) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.weight(1f, fill = false)
                         ) {
-                            // Search Button
-                            IconButton(
-                                onClick = { isSearchExpanded = !isSearchExpanded },
-                                modifier = Modifier.testTag("toggle_search_button")
-                            ) {
-                                Icon(
-                                    imageVector = if (isSearchExpanded) Icons.Default.Close else Icons.Default.Search,
-                                    contentDescription = "Search Games",
-                                    tint = if (isSearchExpanded) MaterialTheme.colorScheme.primary else TextPrimary
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_app_logo),
+                                contentDescription = "LootDrop Logo",
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                            )
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "Loot",
+                                        fontSize = 19.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = TextPrimary
+                                    )
+                                    Text(
+                                        text = "Drop",
+                                        fontSize = 19.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(modifier = Modifier.width(5.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                                            .padding(horizontal = 5.dp, vertical = 1.5.dp)
+                                    ) {
+                                        Text(
+                                            text = when (currentTab) {
+                                                MainTab.SETTINGS -> "SETTINGS"
+                                                MainTab.CALENDAR -> "CALENDAR"
+                                                MainTab.CLAIMED -> "VAULT"
+                                                MainTab.DISCOVER -> "RADAR"
+                                            },
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = when (currentTab) {
+                                        MainTab.SETTINGS -> "APP PREFERENCES & CONTROLS"
+                                        MainTab.CALENDAR -> "EXPIRATION RADAR & TIMELINE"
+                                        MainTab.CLAIMED -> "MY CLAIMED GAME VAULT"
+                                        MainTab.DISCOVER -> "PC & CONSOLE FREE RADAR"
+                                    },
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (currentTab == MainTab.SETTINGS || currentTab == MainTab.CALENDAR) MaterialTheme.colorScheme.primary else NeonGreen,
+                                    letterSpacing = 0.8.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
-
-                            // Consolidated Material 3 Filter Menu Button (3 lines / tune icon)
-                            IconButton(
-                                onClick = { viewModel.setFilterSheetOpen(true) },
-                                modifier = Modifier.testTag("filter_menu_button")
-                            ) {
-                                Box {
-                                    Icon(
-                                        imageVector = Icons.Default.Tune,
-                                        contentDescription = "Filter & Sort Menu",
-                                        tint = if (activeFilterCount > 0) MaterialTheme.colorScheme.primary else TextPrimary
-                                    )
-                                    if (activeFilterCount > 0) {
-                                        val badgeScale by animateFloatAsState(
-                                            targetValue = 1f,
-                                            animationSpec = spring(
-                                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                                stiffness = Spring.StiffnessMediumLow
-                                            ),
-                                            label = "filter_badge_scale"
-                                        )
-                                        Box(
-                                            modifier = Modifier
-                                                .graphicsLayer {
-                                                    scaleX = badgeScale
-                                                    scaleY = badgeScale
-                                                }
-                                                .size(9.dp)
-                                                .clip(CircleShape)
-                                                .background(MaterialTheme.colorScheme.primary)
-                                                .align(Alignment.TopEnd)
-                                        )
-                                    }
-                                }
-                            }
-
-                            // Notification Alert Inbox Button with playful wiggle when unread alerts arrive
-                            val (bellRotation, dotPulseScale) = rememberBellWiggleAndPulse(
-                                enabled = isAnimationsEnabled && !isLowEndOptimization,
-                                hasAlerts = unreadNotificationCount > 0
-                            )
-
-                            IconButton(
-                                onClick = { viewModel.setNotificationHistorySheetOpen(true) },
-                                modifier = Modifier.testTag("notification_inbox_button")
-                            ) {
-                                Box {
-                                    Icon(
-                                        imageVector = if (unreadNotificationCount > 0) Icons.Default.NotificationsActive else Icons.Default.Notifications,
-                                        contentDescription = "Alert Inbox & History",
-                                        tint = if (unreadNotificationCount > 0) NeonCyan else TextPrimary,
-                                        modifier = Modifier.graphicsLayer {
-                                            rotationZ = bellRotation
-                                        }
-                                    )
-                                    if (unreadNotificationCount > 0) {
-                                        Box(
-                                            modifier = Modifier
-                                                .graphicsLayer {
-                                                    scaleX = dotPulseScale
-                                                    scaleY = dotPulseScale
-                                                }
-                                                .size(8.dp)
-                                                .clip(CircleShape)
-                                                .background(NeonGreen)
-                                                .align(Alignment.TopEnd)
-                                        )
-                                    }
-                                }
-                            }
                         }
-                    }
-                }
 
-                // Expandable Search Bar with fluid spring animation
-                AnimatedVisibility(
-                    visible = isSearchExpanded && currentTab != MainTab.SETTINGS,
-                    enter = fadeIn(tween(200)) + expandVertically(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioLowBouncy,
-                            stiffness = Spring.StiffnessMediumLow
+                        // Floating Pill Bar in Top Right Corner (Search, Filters, Notifications)
+                        ExpressiveTopActionBar(
+                            isSearchExpanded = isSearchExpanded && currentTab != MainTab.SETTINGS,
+                            searchQuery = searchQuery,
+                            onToggleSearch = {
+                                if (currentTab == MainTab.SETTINGS) {
+                                    viewModel.selectTab(MainTab.DISCOVER)
+                                    isSearchExpanded = true
+                                } else {
+                                    isSearchExpanded = !isSearchExpanded
+                                }
+                            },
+                            activeFilterCount = activeFilterCount,
+                            onFilterClick = {
+                                if (currentTab == MainTab.SETTINGS) {
+                                    viewModel.selectTab(MainTab.DISCOVER)
+                                }
+                                viewModel.setFilterSheetOpen(true)
+                            },
+                            unreadNotificationCount = unreadNotificationCount,
+                            onNotificationClick = {
+                                viewModel.setNotificationHistorySheetOpen(true)
+                            },
+                            isAnimationsEnabled = isAnimationsEnabled,
+                            isLowEndOptimization = isLowEndOptimization
                         )
-                    ),
-                    exit = fadeOut(tween(160)) + shrinkVertically(
-                        animationSpec = tween(180, easing = FastOutSlowInEasing)
-                    )
-                ) {
-                    Box(
+                    }
+
+                    // Expandable Search Bar with fluid spring animation
+                    AnimatedVisibility(
+                        visible = isSearchExpanded && currentTab != MainTab.SETTINGS,
+                        enter = fadeIn(tween(200)) + expandVertically(
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioLowBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            )
+                        ),
+                        exit = fadeOut(tween(160)) + shrinkVertically(
+                            animationSpec = tween(180, easing = FastOutSlowInEasing)
+                        )
+                    ) {
+                        Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 6.dp)

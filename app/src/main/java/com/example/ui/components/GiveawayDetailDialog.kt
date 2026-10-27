@@ -361,47 +361,69 @@ fun GiveawayDetailDialog(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Value and Type Row
+                    // Value and Type Row with Metascore Badge
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        if (item.worth.isNotBlank() && item.worth != "N/A" && item.worth != "FREE") {
-                            Text(
-                                text = item.worth,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TextMuted,
-                                textDecoration = TextDecoration.LineThrough
-                            )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.weight(1f, fill = false)
+                        ) {
+                            if (item.worth.isNotBlank() && item.worth != "N/A" && item.worth != "FREE") {
+                                Text(
+                                    text = item.worth,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextMuted,
+                                    textDecoration = TextDecoration.LineThrough
+                                )
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(NeonGreen)
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "100% FREE",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color(0xFF0B0F19)
+                                )
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(GamingDarkSurfaceVariant)
+                                    .padding(horizontal = 7.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = item.type,
+                                    fontSize = 11.sp,
+                                    color = TextSecondary
+                                )
+                            }
                         }
 
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(NeonGreen)
-                                .padding(horizontal = 10.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = "100% FREE TO KEEP",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = Color(0xFF0B0F19)
-                            )
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(GamingDarkSurfaceVariant)
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = item.type,
-                                fontSize = 11.sp,
-                                color = TextSecondary
-                            )
-                        }
+                        // Metacritic Score Badge (tappable to view Metacritic reviews)
+                        MetacriticDetailBadge(
+                            info = item.metacriticInfo,
+                            onClick = {
+                                try {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(item.metacriticInfo.reviewUrl)).apply {
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    }
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {
+                                    Toast.makeText(context, "Could not open browser", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        )
                     }
 
                     if (item.categories.isNotEmpty()) {
@@ -740,6 +762,15 @@ fun GiveawayDetailDialog(
                         Spacer(modifier = Modifier.height(18.dp))
                     }
 
+                    // Metacritic Critic Consensus & Review Section
+                    MetacriticDetailSection(
+                        info = item.metacriticInfo,
+                        gameTitle = item.title,
+                        context = context
+                    )
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
                     // About Description
                     Text(
                         text = "ABOUT THIS GIVEAWAY",
@@ -851,6 +882,25 @@ fun GiveawayDetailDialog(
                                         modifier = Modifier.widthIn(max = 210.dp)
                                     )
                                 }
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    MetacriticScorePill(score = item.metacriticScore)
+                                    Text("Metacritic Score", fontSize = 12.sp, color = TextMuted)
+                                }
+                                Text(
+                                    text = "${item.metacriticScore}/100 • ${item.metacriticInfo.tier.label}",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = item.metacriticInfo.tier.badgeColor
+                                )
                             }
                             Row(
                                 modifier = Modifier.fillMaxWidth(),

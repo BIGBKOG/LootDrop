@@ -1,6 +1,7 @@
 package com.example.data.model
 
 import androidx.compose.runtime.Immutable
+import com.example.util.MetacriticCatalog
 
 @Immutable
 data class GiveawayItem(
@@ -22,8 +23,11 @@ data class GiveawayItem(
     val isClaimed: Boolean = false,
     val isBookmarked: Boolean = false,
     val isNew: Boolean = false,
-    val firstSeenTimestamp: Long = System.currentTimeMillis()
+    val firstSeenTimestamp: Long = System.currentTimeMillis(),
+    val metacriticScore: Int = MetacriticCatalog.resolveScore(title, type, description)
 ) {
+    val metacriticInfo: MetacriticInfo
+        get() = MetacriticCatalog.getMetacriticInfo(title, type, description, metacriticScore)
     val categories: List<GameCategory>
         get() = GameCategory.inferCategories(type, title, description)
 

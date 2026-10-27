@@ -27,7 +27,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Calendar
 
-class NotificationHelper(private val context: Context) {
+class NotificationHelper(val context: Context) {
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences("lootdrop_notification_prefs", Context.MODE_PRIVATE)

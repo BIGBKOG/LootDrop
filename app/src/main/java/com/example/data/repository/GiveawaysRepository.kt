@@ -6,6 +6,7 @@ import com.example.data.model.GiveawayDto
 import com.example.data.model.GiveawayItem
 import com.example.data.remote.ApiClient
 import com.example.notifications.NotificationHelper
+import com.example.util.MetacriticCatalog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -37,17 +38,86 @@ class GiveawaysRepository(
         }
 
     suspend fun refreshGiveaways(): Result<SyncResult> = withContext(Dispatchers.IO) {
+        var primaryEntities: List<GiveawayEntity>? = null
+        var primaryException: Exception? = null
+
+        // 1. Primary Source: GamerPower API
         try {
-            // Fetch all giveaways across all platforms (PC, PlayStation 4/5, Xbox Series X|S / One, etc.)
             val dtoList = ApiClient.apiService.getGiveaways(platform = null)
+            if (dtoList.isNotEmpty()) {
+                primaryEntities = dtoList.map { it.toEntity() }
+            }
+        } catch (e: Exception) {
+            primaryException = e
+        }
+
+        // 2. Secondary Multi-Source & Fallback: CheapShark Free Deals Endpoint
+        var cheapSharkEntities: List<GiveawayEntity> = emptyList()
+        try {
+            val csDeals = ApiClient.cheapSharkApiService.getFreeDeals(onSale = 1, upperPrice = 0)
+            if (csDeals.isNotEmpty()) {
+                // Register verified Metacritic ratings received from CheapShark
+                for (deal in csDeals) {
+                    val score = deal.metacriticScore?.toIntOrNull() ?: 0
+                    if (score > 0) {
+                        MetacriticCatalog.registerScore(deal.title, score)
+                    }
+                }
+                cheapSharkEntities = csDeals.map { it.toEntity() }
+            }
+        } catch (_: Exception) {
+            // Non-fatal if primary is healthy
+        }
+
+        // 3. Resolve Feed: Merge & Enrich or Trigger Emergency Fallback
+        val finalEntities: List<GiveawayEntity> = when {
+            // Case A: GamerPower succeeded - enrich with CheapShark metadata and merge unlisted free deals
+            !primaryEntities.isNullOrEmpty() -> {
+                val primaryCleanTitles = primaryEntities.map { MetacriticCatalog.cleanTitle(it.title).lowercase() }.toSet()
+
+                // Enrich any GamerPower items that lacked precise details
+                val enrichedPrimary = primaryEntities.map { gpItem ->
+                    val cleanTitle = MetacriticCatalog.cleanTitle(gpItem.title).lowercase()
+                    val csMatch = cheapSharkEntities.firstOrNull {
+                        MetacriticCatalog.cleanTitle(it.title).lowercase() == cleanTitle
+                    }
+                    if (csMatch != null) {
+                        var updated = gpItem
+                        // If GamerPower lacks end date or has N/A, enrich with CheapShark's status
+                        if ((updated.endDate == "N/A" || updated.endDate.isBlank()) && csMatch.endDate != "N/A") {
+                            updated = updated.copy(endDate = csMatch.endDate)
+                        }
+                        updated
+                    } else {
+                        gpItem
+                    }
+                }
+
+                // Add any 100% off deals on CheapShark not present in GamerPower feed
+                val nonOverlappingCheapShark = cheapSharkEntities.filter { csItem ->
+                    val clean = MetacriticCatalog.cleanTitle(csItem.title).lowercase()
+                    !primaryCleanTitles.contains(clean)
+                }
+
+                enrichedPrimary + nonOverlappingCheapShark
+            }
+            // Case B: GamerPower failed/empty, but CheapShark free deals fallback is available!
+            cheapSharkEntities.isNotEmpty() -> {
+                cheapSharkEntities
+            }
+            // Case C: Both services failed
+            else -> {
+                return@withContext Result.failure(
+                    primaryException ?: Exception("Both GamerPower and CheapShark multi-source endpoints failed.")
+                )
+            }
+        }
+
+        try {
             val existingIds = giveawayDao.getAllExistingIds().toSet()
             val isInitialBootstrap = existingIds.isEmpty()
 
-            val entities = dtoList.map { dto ->
-                dto.toEntity()
-            }
-
-            val newlyDiscovered = giveawayDao.syncGiveawaysPreservingStatus(entities)
+            val newlyDiscovered = giveawayDao.syncGiveawaysPreservingStatus(finalEntities)
 
             // If we already had games cached and new ones appeared, notify user for each!
             if (!isInitialBootstrap) {
@@ -59,7 +129,8 @@ class GiveawaysRepository(
             }
 
             val newCount = if (isInitialBootstrap) 0 else newlyDiscovered.size
-            Result.success(SyncResult(totalCount = entities.size, newGamesCount = newCount))
+            com.example.widget.WidgetUpdateHelper.updateAllWidgets(notificationHelper.context)
+            Result.success(SyncResult(totalCount = finalEntities.size, newGamesCount = newCount))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -67,6 +138,7 @@ class GiveawaysRepository(
 
     suspend fun toggleClaimed(id: Int, currentlyClaimed: Boolean) = withContext(Dispatchers.IO) {
         giveawayDao.updateClaimed(id, !currentlyClaimed)
+        com.example.widget.WidgetUpdateHelper.updateAllWidgets(notificationHelper.context)
     }
 
     suspend fun toggleBookmarked(id: Int, currentlyBookmarked: Boolean) = withContext(Dispatchers.IO) {

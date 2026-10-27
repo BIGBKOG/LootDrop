@@ -47,6 +47,32 @@
         <receiver
             android:name=".notifications.NotificationSyncReceiver"
             android:exported="false" />
+
+        <!-- Latest Free Drop Home Screen Widget -->
+        <receiver
+            android:name=".widget.LatestDropWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.example.widget.ACTION_REFRESH_WIDGETS" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/latest_drop_widget_info" />
+        </receiver>
+
+        <!-- Radar & Vault Stats Home Screen Widget -->
+        <receiver
+            android:name=".widget.RadarStatsWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.example.widget.ACTION_REFRESH_WIDGETS" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/radar_stats_widget_info" />
+        </receiver>
     </application>
 
 </manifest>
