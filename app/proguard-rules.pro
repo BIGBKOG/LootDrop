@@ -1,21 +1,34 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# ProGuard & R8 Optimization Rules for LootDrop
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Preserve SourceFile and LineNumberTable for useful crash traces
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Moshi & JSON Data Models
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
+-keepclassmembers class * {
+    @com.squareup.moshi.Json <fields>;
+}
+-keepclassmembers class * {
+    @com.squareup.moshi.JsonClass *;
+}
+-keep class com.example.data.model.** { *; }
+-keep class com.example.data.remote.** { *; }
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Room Database & Entities
+-keep class * extends androidx.room.RoomDatabase
+-keep class com.example.data.local.** { *; }
+-dontwarn androidx.room.paging.**
+
+# Retrofit & OkHttp
+-dontwarn retrofit2.**
+-keep class retrofit2.** { *; }
+-dontwarn okhttp3.**
+-keep class okhttp3.** { *; }
+
+# Coil Image Loader
+-keep class coil.** { *; }
+-dontwarn coil.**
+
+# Android App Widgets (RemoteViews Providers)
+-keep class com.example.widget.** { *; }

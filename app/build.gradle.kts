@@ -15,7 +15,24 @@ android {
     versionCode = 29
     versionName = "1.5.4"
 
+    resourceConfigurations.addAll(listOf("en"))
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+  }
+
+  packaging {
+    resources {
+      excludes += listOf(
+        "/META-INF/{AL2.0,LGPL2.1}",
+        "/META-INF/INDEX.LIST",
+        "/META-INF/DEPENDENCIES",
+        "/META-INF/LICENSE",
+        "/META-INF/LICENSE.txt",
+        "/META-INF/license.txt",
+        "/META-INF/NOTICE",
+        "/META-INF/NOTICE.txt",
+        "/META-INF/notice.txt"
+      )
+    }
   }
 
   signingConfigs {
@@ -36,12 +53,15 @@ android {
 
   buildTypes {
     release {
-      isCrunchPngs = false
-      isMinifyEnabled = false
+      isCrunchPngs = true
+      isMinifyEnabled = true
+      isShrinkResources = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       val releaseKeystore = file(System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks")
       if (releaseKeystore.exists()) {
         signingConfig = signingConfigs.getByName("release")
+      } else {
+        signingConfig = signingConfigs.getByName("debugConfig")
       }
     }
     debug {
