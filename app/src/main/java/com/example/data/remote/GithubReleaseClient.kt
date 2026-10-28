@@ -346,8 +346,8 @@ class GithubReleaseClient(private val context: Context) {
 
             // Any older 4.x/3.x releases on GitHub are legacy releases from before the reset
             // and should NOT be treated as newer when running on 1.x.
-            val isCurrentOneSeries = cleanCurrent.startsWith("1.")
-            if (isCurrentOneSeries) {
+            val isCurrentModernSeries = cleanCurrent.startsWith("1.") || cleanCurrent.startsWith("2.")
+            if (isCurrentModernSeries) {
                 if (cleanRemote.startsWith("4.") || cleanRemote.startsWith("3.") ||
                     cleanRemote.contains("V4.") || cleanRemote.contains("V3.") ||
                     cleanRemote.contains("Loot-Drop-V3.")) {

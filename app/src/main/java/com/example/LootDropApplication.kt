@@ -39,6 +39,8 @@ class LootDropApplication : Application(), ImageLoaderFactory {
         super.onCreate()
         // Pre-warm the shared network client with disk cache
         ApiClient.getOkHttpClient(this)
+        // Initialize Android Dynamic Shortcuts
+        com.example.shortcuts.AppShortcutHelper.updateDynamicShortcuts(this)
     }
 
     override fun newImageLoader(): ImageLoader {

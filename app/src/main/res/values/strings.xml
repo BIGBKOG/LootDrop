@@ -8,4 +8,12 @@
     <string name="channel_system">System &amp; Sync Alerts</string>
     <string name="widget_latest_drop_desc">Shows the hottest new free game drop with one-tap claim and store details</string>
     <string name="widget_radar_stats_desc">Live radar of available free games and total money saved in your vault</string>
+    <string name="shortcut_expiring_soon_short">Expiring Soon</string>
+    <string name="shortcut_expiring_soon_long">Expiring Soon Deals</string>
+    <string name="shortcut_todays_drops_short">Today\'s Drops</string>
+    <string name="shortcut_todays_drops_long">Today\'s Free Drops</string>
+    <string name="shortcut_my_vault_short">My Vault</string>
+    <string name="shortcut_my_vault_long">My Vault (Claimed Games)</string>
+    <string name="tile_free_games_label">Free Games</string>
+    <string name="tile_free_games_subtitle">Check Drops</string>
 </resources>

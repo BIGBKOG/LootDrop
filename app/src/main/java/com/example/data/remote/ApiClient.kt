@@ -70,7 +70,7 @@ object ApiClient {
     }
 
     private const val CHEAPSHARK_BASE_URL = "https://www.cheapshark.com/api/1.0/"
-    private const val CHEAPSHARK_USER_AGENT = "LootDropApp/1.5.5 (contact@lootdrop.com)"
+    private const val CHEAPSHARK_USER_AGENT = "LootDropApp/2.0.0 (contact@lootdrop.com)"
 
     @Volatile
     private var cheapSharkClientInstance: OkHttpClient? = null

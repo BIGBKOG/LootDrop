@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="shortcut_expiring_soon"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_calendar"
+        android:shortcutShortLabel="@string/shortcut_expiring_soon_short"
+        android:shortcutLongLabel="@string/shortcut_expiring_soon_long">
+        <intent
+            android:action="com.example.action.EXPIRING_SOON"
+            android:targetPackage="com.aistudio.lootdrop.fkgxwm"
+            android:targetClass="com.example.MainActivity">
+            <extra android:name="EXTRA_TARGET_TAB" android:value="CALENDAR" />
+        </intent>
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="shortcut_todays_drops"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_drops"
+        android:shortcutShortLabel="@string/shortcut_todays_drops_short"
+        android:shortcutLongLabel="@string/shortcut_todays_drops_long">
+        <intent
+            android:action="com.example.action.TODAYS_DROPS"
+            android:targetPackage="com.aistudio.lootdrop.fkgxwm"
+            android:targetClass="com.example.MainActivity">
+            <extra android:name="EXTRA_TARGET_TAB" android:value="DISCOVER" />
+            <extra android:name="EXTRA_SORT_OPTION" android:value="NEWEST" />
+        </intent>
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="shortcut_my_vault"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_vault"
+        android:shortcutShortLabel="@string/shortcut_my_vault_short"
+        android:shortcutLongLabel="@string/shortcut_my_vault_long">
+        <intent
+            android:action="com.example.action.MY_VAULT"
+            android:targetPackage="com.aistudio.lootdrop.fkgxwm"
+            android:targetClass="com.example.MainActivity">
+            <extra android:name="EXTRA_TARGET_TAB" android:value="CLAIMED" />
+        </intent>
+    </shortcut>
+</shortcuts>

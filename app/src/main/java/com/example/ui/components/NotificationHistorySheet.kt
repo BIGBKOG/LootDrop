@@ -62,7 +62,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -115,6 +117,7 @@ fun NotificationHistorySheet(
     val history by viewModel.notificationHistory.collectAsState()
     val unreadCount by viewModel.unreadNotificationCount.collectAsState()
     var selectedFilter by remember { mutableStateOf(AlertFilter.ALL) }
+    val coroutineScope = rememberCoroutineScope()
 
     val filteredHistory = remember(history, selectedFilter) {
         when (selectedFilter) {
@@ -396,14 +399,32 @@ fun NotificationHistorySheet(
                                 Toast.makeText(context, "★ Saved to Bookmarks!", Toast.LENGTH_SHORT).show()
                             },
                             onShareClick = {
-                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                    type = "text/plain"
-                                    putExtra(
-                                        Intent.EXTRA_TEXT,
-                                        "🔥 Free Game Alert: ${item.title} (${item.worth})!\nClaim here: ${item.openGiveawayUrl}"
-                                    )
+                                coroutineScope.launch {
+                                    val giveaway = viewModel.allGiveaways.value.find { it.id == item.giveawayId }
+                                    if (giveaway != null) {
+                                        try {
+                                            com.example.util.ShareGraphicGenerator.shareGraphicCard(context, giveaway, includeTextLink = true)
+                                        } catch (_: Exception) {
+                                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                                type = "text/plain"
+                                                putExtra(
+                                                    Intent.EXTRA_TEXT,
+                                                    "🔥 Free Game Alert: ${item.title} (${item.worth})!\nClaim here: ${item.openGiveawayUrl}\nTracked with LootDrop"
+                                                )
+                                            }
+                                            context.startActivity(Intent.createChooser(shareIntent, "Share Free Game Deal"))
+                                        }
+                                    } else {
+                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(
+                                                Intent.EXTRA_TEXT,
+                                                "🔥 Free Game Alert: ${item.title} (${item.worth})!\nClaim here: ${item.openGiveawayUrl}\nTracked with LootDrop"
+                                            )
+                                        }
+                                        context.startActivity(Intent.createChooser(shareIntent, "Share Free Game Deal"))
+                                    }
                                 }
-                                context.startActivity(Intent.createChooser(shareIntent, "Share Free Game Deal"))
                             },
                             onDismissNotification = {
                                 viewModel.deleteNotification(item.id)

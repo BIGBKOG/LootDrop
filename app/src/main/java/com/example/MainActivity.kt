@@ -35,6 +35,7 @@ class MainActivity : ComponentActivity() {
         viewModel.setDetectedScreenDpi(dm.densityDpi)
 
         handleIntent(intent)
+        com.example.shortcuts.AppShortcutHelper.updateDynamicShortcuts(this)
 
         setContent {
             val themeMode by viewModel.themeMode.collectAsState()
@@ -44,6 +45,16 @@ class MainActivity : ComponentActivity() {
             val targetFrameRate by viewModel.targetFrameRate.collectAsState()
             val isDpiOptimizationEnabled by viewModel.isDpiOptimizationEnabled.collectAsState()
             val dpiScaleMode by viewModel.dpiScaleMode.collectAsState()
+            val uiStats by viewModel.uiStats.collectAsState()
+
+            LaunchedEffect(uiStats) {
+                com.example.shortcuts.AppShortcutHelper.updateDynamicShortcuts(
+                    context = this@MainActivity,
+                    expiringCount = uiStats.expiringSoon,
+                    newDropsCount = uiStats.newFreebiesCount,
+                    vaultCount = uiStats.claimedCount
+                )
+            }
 
             val screenDensityInfo = rememberScreenDensityInfo(
                 dpiScaleMode = dpiScaleMode,
@@ -148,12 +159,46 @@ class MainActivity : ComponentActivity() {
         if (giveawayId != -1) {
             viewModel.openItemById(giveawayId)
         }
-        val targetTab = intent.getStringExtra("EXTRA_TARGET_TAB")
+
+        // Action-based shortcut handling
+        when (intent.action) {
+            com.example.shortcuts.AppShortcutHelper.ACTION_EXPIRING_SOON -> {
+                viewModel.selectTab(com.example.ui.MainTab.CALENDAR)
+                com.example.shortcuts.AppShortcutHelper.reportShortcutUsed(this, com.example.shortcuts.AppShortcutHelper.ID_EXPIRING_SOON)
+            }
+            com.example.shortcuts.AppShortcutHelper.ACTION_TODAYS_DROPS -> {
+                viewModel.selectTab(com.example.ui.MainTab.DISCOVER)
+                viewModel.selectSort(com.example.ui.SortOption.NEWEST)
+                com.example.shortcuts.AppShortcutHelper.reportShortcutUsed(this, com.example.shortcuts.AppShortcutHelper.ID_TODAYS_DROPS)
+            }
+            com.example.shortcuts.AppShortcutHelper.ACTION_MY_VAULT -> {
+                viewModel.selectTab(com.example.ui.MainTab.CLAIMED)
+                com.example.shortcuts.AppShortcutHelper.reportShortcutUsed(this, com.example.shortcuts.AppShortcutHelper.ID_MY_VAULT)
+            }
+        }
+
+        // Extra-based target tab handling
+        val targetTab = intent.getStringExtra(com.example.shortcuts.AppShortcutHelper.EXTRA_TARGET_TAB)
+            ?: intent.getStringExtra("EXTRA_TARGET_TAB")
         if (targetTab != null) {
             when (targetTab) {
-                "CLAIMED" -> viewModel.selectTab(com.example.ui.MainTab.CLAIMED)
-                "DISCOVER" -> viewModel.selectTab(com.example.ui.MainTab.DISCOVER)
-                "CALENDAR" -> viewModel.selectTab(com.example.ui.MainTab.CALENDAR)
+                "CLAIMED" -> {
+                    viewModel.selectTab(com.example.ui.MainTab.CLAIMED)
+                    com.example.shortcuts.AppShortcutHelper.reportShortcutUsed(this, com.example.shortcuts.AppShortcutHelper.ID_MY_VAULT)
+                }
+                "DISCOVER" -> {
+                    viewModel.selectTab(com.example.ui.MainTab.DISCOVER)
+                    val sortOption = intent.getStringExtra(com.example.shortcuts.AppShortcutHelper.EXTRA_SORT_OPTION)
+                        ?: intent.getStringExtra("EXTRA_SORT_OPTION")
+                    if (sortOption == "NEWEST") {
+                        viewModel.selectSort(com.example.ui.SortOption.NEWEST)
+                    }
+                    com.example.shortcuts.AppShortcutHelper.reportShortcutUsed(this, com.example.shortcuts.AppShortcutHelper.ID_TODAYS_DROPS)
+                }
+                "CALENDAR" -> {
+                    viewModel.selectTab(com.example.ui.MainTab.CALENDAR)
+                    com.example.shortcuts.AppShortcutHelper.reportShortcutUsed(this, com.example.shortcuts.AppShortcutHelper.ID_EXPIRING_SOON)
+                }
                 "SETTINGS" -> viewModel.selectTab(com.example.ui.MainTab.SETTINGS)
             }
         }

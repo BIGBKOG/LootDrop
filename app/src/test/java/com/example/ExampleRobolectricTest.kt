@@ -579,6 +579,16 @@ class ExampleRobolectricTest {
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.6", "1.5.5"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.X", "1.5.5"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.6.0", "1.5.5"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.0.0", "1.5.5"))
+
+        // When running on 2.0.0
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V2.0.0", "2.0.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.0.0", "2.0.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.5", "2.0.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.0", "2.0.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V4.5", "2.0.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.0.1", "2.0.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.1.0", "2.0.0"))
 
         // If a device is still on legacy 4.5, 1.5.0 / 1.5.X is recognized as the successor
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.X", "V4.5"))
@@ -796,5 +806,112 @@ class ExampleRobolectricTest {
         val views = com.example.widget.WidgetUpdateHelper.buildLatestDropRemoteViews(context, 201)
         assertNotNull(views)
     }
+
+    @Test
+    fun `share graphic card generator creates 1200x675 bitmap card with required branding and badges`() = kotlinx.coroutines.runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val item = com.example.data.model.GiveawayItem(
+            id = 101,
+            title = "Cyberpunk 2077: Phantom Liberty",
+            worth = "$29.99",
+            numericWorth = 29.99,
+            thumbnail = "",
+            image = "",
+            description = "A gripping spy-thriller expansion for Cyberpunk 2077.",
+            instructions = "Claim on Steam / Epic Games / GOG",
+            openGiveawayUrl = "https://store.steampowered.com/app/101",
+            publishedDate = "2026-10-27 10:00:00",
+            type = "Game",
+            platforms = "PC, Steam, Epic Games, GOG, PlayStation 5, Xbox Series X|S",
+            endDate = "2026-11-15 23:59:00",
+            users = 4210,
+            status = "Active"
+        )
+
+        val bitmap = com.example.util.ShareGraphicGenerator.generateCardBitmap(context, item)
+        assertNotNull(bitmap)
+        assertEquals(com.example.util.ShareGraphicGenerator.CARD_WIDTH, bitmap.width)
+        assertEquals(com.example.util.ShareGraphicGenerator.CARD_HEIGHT, bitmap.height)
+        assertEquals(1200, bitmap.width)
+        assertEquals(675, bitmap.height)
+        assertEquals(android.graphics.Bitmap.Config.ARGB_8888, bitmap.config)
+
+        // Verify Compose ImageBitmap conversion helper functions
+        val composeImage = com.example.util.ShareGraphicGenerator.toComposeImageBitmap(bitmap)
+        assertNotNull(composeImage)
+        val backToAndroid = com.example.util.ShareGraphicGenerator.toAndroidBitmap(composeImage)
+        assertNotNull(backToAndroid)
+        assertEquals(1200, backToAndroid.width)
+    }
+
+    @Test
+    fun `share graphic card saves to cache and creates valid fileprovider uri`() = kotlinx.coroutines.runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val item = com.example.data.model.GiveawayItem(
+            id = 202,
+            title = "Death Stranding Director's Cut",
+            worth = "$39.99",
+            numericWorth = 39.99,
+            thumbnail = "",
+            image = "",
+            description = "Epic action adventure.",
+            instructions = "Redeem code",
+            openGiveawayUrl = "https://store.epicgames.com/p/death-stranding",
+            publishedDate = "2026-10-27",
+            type = "Game",
+            platforms = "Epic Games, PC",
+            endDate = "2026-11-05",
+            users = 1500,
+            status = "Active"
+        )
+
+        val bitmap = com.example.util.ShareGraphicGenerator.generateCardBitmap(context, item)
+        val cachedFile = com.example.util.ShareGraphicGenerator.saveBitmapToCache(context, bitmap, item.id)
+        assertTrue(cachedFile.exists())
+        assertTrue(cachedFile.length() > 0)
+
+        val shareUri = com.example.util.ShareGraphicGenerator.getShareableUri(context, cachedFile)
+        assertNotNull(shareUri)
+        assertTrue(shareUri.toString().startsWith("content://"))
+        assertTrue(shareUri.toString().contains("fileprovider"))
+    }
+
+    @Test
+    fun `dynamic shortcuts are registered with correct IDs, labels, and target tabs`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        com.example.shortcuts.AppShortcutHelper.updateDynamicShortcuts(
+            context = context,
+            expiringCount = 5,
+            newDropsCount = 3,
+            vaultCount = 12
+        )
+
+        val shortcuts = androidx.core.content.pm.ShortcutManagerCompat.getDynamicShortcuts(context)
+        assertEquals(3, shortcuts.size)
+
+        val expiring = shortcuts.find { it.id == com.example.shortcuts.AppShortcutHelper.ID_EXPIRING_SOON }
+        assertNotNull(expiring)
+        assertEquals("Expiring Soon", expiring?.shortLabel)
+        assertTrue(expiring?.longLabel.toString().contains("5 Deals"))
+        assertEquals(com.example.shortcuts.AppShortcutHelper.ACTION_EXPIRING_SOON, expiring?.intent?.action)
+        assertEquals("CALENDAR", expiring?.intent?.getStringExtra("EXTRA_TARGET_TAB"))
+
+        val drops = shortcuts.find { it.id == com.example.shortcuts.AppShortcutHelper.ID_TODAYS_DROPS }
+        assertNotNull(drops)
+        assertEquals("Today's Drops", drops?.shortLabel)
+        assertTrue(drops?.longLabel.toString().contains("3 New"))
+        assertEquals(com.example.shortcuts.AppShortcutHelper.ACTION_TODAYS_DROPS, drops?.intent?.action)
+        assertEquals("DISCOVER", drops?.intent?.getStringExtra("EXTRA_TARGET_TAB"))
+        assertEquals("NEWEST", drops?.intent?.getStringExtra("EXTRA_SORT_OPTION"))
+
+        val vault = shortcuts.find { it.id == com.example.shortcuts.AppShortcutHelper.ID_MY_VAULT }
+        assertNotNull(vault)
+        assertEquals("My Vault", vault?.shortLabel)
+        assertTrue(vault?.longLabel.toString().contains("12 Claimed"))
+        assertEquals(com.example.shortcuts.AppShortcutHelper.ACTION_MY_VAULT, vault?.intent?.action)
+        assertEquals("CLAIMED", vault?.intent?.getStringExtra("EXTRA_TARGET_TAB"))
+    }
 }
+
+
 

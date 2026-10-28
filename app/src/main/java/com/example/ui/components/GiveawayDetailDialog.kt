@@ -36,6 +36,9 @@ import androidx.compose.material.icons.filled.HowToReg
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.Visibility
+import com.example.util.ShareGraphicGenerator
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.outlined.CheckCircleOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -115,6 +118,10 @@ fun GiveawayDetailDialog(
     }
 
     var dialogVisible by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var showShareCardPreview by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var isSharingCard by remember { androidx.compose.runtime.mutableStateOf(false) }
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+
     androidx.compose.runtime.LaunchedEffect(Unit) {
         dialogVisible = true
     }
@@ -615,33 +622,72 @@ fun GiveawayDetailDialog(
                             Text("Copy Link", fontSize = 12.sp)
                         }
 
-                        OutlinedButton(
+                        // 1-Tap Instant Graphic Card Share
+                        Button(
                             onClick = {
-                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                    type = "text/plain"
-                                    putExtra(Intent.EXTRA_SUBJECT, "Free Game: ${item.title}")
-                                    putExtra(Intent.EXTRA_TEXT, "Grab '${item.title}' 100% free on ${item.platforms}!\n${item.openGiveawayUrl}")
+                                if (!isSharingCard) {
+                                    isSharingCard = true
+                                    coroutineScope.launch {
+                                        try {
+                                            ShareGraphicGenerator.shareGraphicCard(context, item, includeTextLink = true)
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Share error: ${e.message}", Toast.LENGTH_SHORT).show()
+                                        } finally {
+                                            isSharingCard = false
+                                        }
+                                    }
                                 }
-                                context.startActivity(Intent.createChooser(shareIntent, "Share free game"))
                             },
                             interactionSource = shareInteraction,
                             modifier = Modifier
-                                .weight(1f)
+                                .weight(1.2f)
                                 .graphicsLayer {
                                     scaleX = shareScale
                                     scaleY = shareScale
-                                },
+                                }
+                                .testTag("dialog_share_card_button"),
                             shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, themePrimary.copy(alpha = 0.4f))
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = themePrimary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            ),
+                            enabled = !isSharingCard
+                        ) {
+                            if (isSharingCard) {
+                                androidx.compose.material3.CircularProgressIndicator(
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    strokeWidth = 2.dp,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Rendering...", fontSize = 12.sp)
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Share,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Share Card", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        // Preview Card Button
+                        OutlinedButton(
+                            onClick = { showShareCardPreview = true },
+                            modifier = Modifier
+                                .size(40.dp)
+                                .testTag("dialog_preview_card_button"),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = themePrimary),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, themePrimary.copy(alpha = 0.5f))
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Share,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
+                                imageVector = Icons.Default.Visibility,
+                                contentDescription = "Preview Share Card",
+                                modifier = Modifier.size(18.dp)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Share", fontSize = 12.sp)
                         }
                     }
 
@@ -925,6 +971,13 @@ fun GiveawayDetailDialog(
                 }
             }
         }
+    }
+
+    if (showShareCardPreview) {
+        ShareCardPreviewDialog(
+            item = item,
+            onDismiss = { showShareCardPreview = false }
+        )
     }
 }
 }
