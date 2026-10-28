@@ -567,6 +567,19 @@ class ExampleRobolectricTest {
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.X", "1.5.4"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.6.0", "1.5.4"))
 
+        // When running on 1.5.5
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V1.5.5", "1.5.5"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.5", "1.5.5"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.4", "1.5.5"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.3", "1.5.5"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.2", "1.5.5"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.1", "1.5.5"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.0", "1.5.5"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V4.5", "1.5.5"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.6", "1.5.5"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.X", "1.5.5"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.6.0", "1.5.5"))
+
         // If a device is still on legacy 4.5, 1.5.0 / 1.5.X is recognized as the successor
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.X", "V4.5"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V1.5.0", "V4.5"))
