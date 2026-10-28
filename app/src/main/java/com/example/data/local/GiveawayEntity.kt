@@ -39,7 +39,8 @@ data class GiveawayEntity(
     val steamPlaytimeMinutes: Int = 0,
     val steamAchievementsUnlocked: Int = 0,
     val steamAchievementsTotal: Int = 0,
-    val steamLastPlayedTimestamp: Long = 0L
+    val steamLastPlayedTimestamp: Long = 0L,
+    val isWishlisted: Boolean = false
 ) {
     fun toDomain(): GiveawayItem {
         // Flag as "NEW" if seen within the last 48 hours
@@ -69,7 +70,8 @@ data class GiveawayEntity(
             steamPlaytimeMinutes = steamPlaytimeMinutes,
             steamAchievementsUnlocked = steamAchievementsUnlocked,
             steamAchievementsTotal = steamAchievementsTotal,
-            steamLastPlayedTimestamp = steamLastPlayedTimestamp
+            steamLastPlayedTimestamp = steamLastPlayedTimestamp,
+            isWishlisted = isWishlisted
         )
     }
 }

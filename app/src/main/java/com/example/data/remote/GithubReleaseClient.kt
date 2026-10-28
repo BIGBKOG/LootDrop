@@ -105,7 +105,8 @@ class GithubReleaseClient(private val context: Context) {
         var selectedUpdated: String? = null
         var selectedNotes: String? = null
 
-        val isCurrentOnOneStream = currentVersionName.trim().removePrefix("v").removePrefix("V").startsWith("1.")
+        val cleanCurrentVersion = currentVersionName.trim().removePrefix("v").removePrefix("V")
+        val isCurrentModernStream = cleanCurrentVersion.startsWith("1.") || cleanCurrentVersion.startsWith("2.")
 
         while (matcher.find()) {
             val entryText = matcher.group(1) ?: continue
@@ -114,8 +115,8 @@ class GithubReleaseClient(private val context: Context) {
             val tag = rawTag ?: continue
 
             val cleanTag = tag.removePrefix("v").removePrefix("V")
-            // If current version is on the 1.x stream, filter out legacy 4.x and 3.x tags from before reset
-            if (isCurrentOnOneStream && (cleanTag.startsWith("4.") || cleanTag.startsWith("3.") ||
+            // If current version is on modern stream (1.x / 2.x), filter out legacy 4.x and 3.x tags from before reset
+            if (isCurrentModernStream && (cleanTag.startsWith("4.") || cleanTag.startsWith("3.") ||
                         tag.contains("V4.") || tag.contains("V3.") || tag.contains("Loot-Drop-V3."))) {
                 continue
             }

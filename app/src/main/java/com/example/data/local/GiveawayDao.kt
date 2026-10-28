@@ -71,6 +71,15 @@ interface GiveawayDao {
     @Query("UPDATE giveaways SET playStatus = :status, steamAppId = :steamAppId, steamPlaytimeMinutes = :playtimeMinutes, steamAchievementsUnlocked = :achievementsUnlocked, steamAchievementsTotal = :achievementsTotal, steamLastPlayedTimestamp = :lastPlayed WHERE id = :id")
     suspend fun updateSteamTelemetry(id: Int, status: com.example.data.model.PlayStatus, steamAppId: Int?, playtimeMinutes: Int, achievementsUnlocked: Int, achievementsTotal: Int, lastPlayed: Long)
 
+    @Query("UPDATE giveaways SET isWishlisted = :wishlisted WHERE id = :id")
+    suspend fun updateWishlisted(id: Int, wishlisted: Boolean)
+
+    @Query("UPDATE giveaways SET isWishlisted = 1 WHERE steamAppId IN (:appIds)")
+    suspend fun markWishlistedBySteamAppIds(appIds: List<Int>)
+
+    @Query("UPDATE giveaways SET isWishlisted = 0")
+    suspend fun clearAllWishlisted()
+
     @Transaction
     suspend fun syncGiveawaysPreservingStatus(newItems: List<GiveawayEntity>): List<GiveawayEntity> {
         val freshlyDiscovered = mutableListOf<GiveawayEntity>()
@@ -85,7 +94,7 @@ interface GiveawayDao {
                 freshlyDiscovered.add(item)
                 toInsert.add(item)
             } else {
-                // Preserve user bookmarks, claimed status, playStatus, and Steam telemetry
+                // Preserve user bookmarks, claimed status, playStatus, Steam telemetry, and Wishlist
                 val updated = item.copy(
                     isClaimed = existing.isClaimed,
                     isBookmarked = existing.isBookmarked,
@@ -96,7 +105,8 @@ interface GiveawayDao {
                     steamPlaytimeMinutes = existing.steamPlaytimeMinutes,
                     steamAchievementsUnlocked = existing.steamAchievementsUnlocked,
                     steamAchievementsTotal = existing.steamAchievementsTotal,
-                    steamLastPlayedTimestamp = existing.steamLastPlayedTimestamp
+                    steamLastPlayedTimestamp = existing.steamLastPlayedTimestamp,
+                    isWishlisted = existing.isWishlisted
                 )
                 toInsert.add(updated)
             }

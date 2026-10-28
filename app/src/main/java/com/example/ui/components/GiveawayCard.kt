@@ -161,6 +161,7 @@ fun GiveawayCard(
 
     // Expressive M3 popping outlines: dynamically synced to the user's chosen theme!
     val expressiveBorderColor = when {
+        item.isWishlisted -> Color(0xFFFF2D87) // Wishlist gets prominent magenta/pink outline!
         item.isClaimed -> NeonGreen
         item.isNew -> Color(0xFFFF9100)
         item.isBookmarked -> themePrimary
@@ -176,7 +177,7 @@ fun GiveawayCard(
         anim
     } else expressiveBorderColor
 
-    val cardBorderWidth = if (item.isClaimed || item.isNew || item.isBookmarked || isPressed) 2.2.dp else 1.8.dp
+    val cardBorderWidth = if (item.isWishlisted || item.isClaimed || item.isNew || item.isBookmarked || isPressed) 2.2.dp else 1.8.dp
 
     when (cardDensity) {
         CardDensity.MINIMAL_LIST -> {
@@ -277,6 +278,22 @@ fun GiveawayCard(
                                     )
                                 }
                                 MetacriticScorePill(score = item.metacriticScore)
+                                if (item.isWishlisted) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(Color(0xFFFF2D87).copy(alpha = 0.25f))
+                                            .border(1.dp, Color(0xFFFF2D87), RoundedCornerShape(4.dp))
+                                            .padding(horizontal = 5.dp, vertical = 1.dp)
+                                    ) {
+                                        Text(
+                                            text = "❤️ WISHLIST",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = Color(0xFFFF2D87)
+                                        )
+                                    }
+                                }
                                 if (item.isClaimed) {
                                     PlayStatusBadge(status = item.playStatus, onStatusSelected = onPlayStatusChange)
                                 }
@@ -508,6 +525,22 @@ fun GiveawayCard(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 MetacriticScorePill(score = item.metacriticScore)
+                                if (item.isWishlisted) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(Color(0xFFFF2D87).copy(alpha = 0.25f))
+                                            .border(1.dp, Color(0xFFFF2D87), RoundedCornerShape(4.dp))
+                                            .padding(horizontal = 5.dp, vertical = 1.dp)
+                                    ) {
+                                        Text(
+                                            text = "❤️ WISHLIST",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = Color(0xFFFF2D87)
+                                        )
+                                    }
+                                }
                                 if (item.isClaimed) {
                                     PlayStatusBadge(status = item.playStatus, onStatusSelected = onPlayStatusChange)
                                 }
@@ -848,6 +881,24 @@ fun GiveawayCard(
                                         fontWeight = FontWeight.SemiBold,
                                         color = Color(0xFFCBD5E1),
                                         textDecoration = TextDecoration.LineThrough
+                                    )
+                                }
+                            }
+
+                            if (item.isWishlisted) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Color(0xFFFF2D87).copy(alpha = 0.35f))
+                                        .border(1.2.dp, Color(0xFFFF2D87), RoundedCornerShape(6.dp))
+                                        .padding(horizontal = 7.dp, vertical = 3.dp)
+                                ) {
+                                    Text(
+                                        text = "❤️ ON YOUR WISHLIST",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color(0xFFFF2D87),
+                                        letterSpacing = 0.4.sp
                                     )
                                 }
                             }

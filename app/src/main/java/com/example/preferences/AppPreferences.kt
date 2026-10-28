@@ -557,4 +557,11 @@ class AppPreferences(context: Context) {
             return runCatching { com.example.data.model.LibraryPlayFilter.valueOf(name) }.getOrDefault(com.example.data.model.LibraryPlayFilter.ALL)
         }
         set(value) = prefs.edit().putString("KEY_LIBRARY_PLAY_FILTER", value.name).apply()
+
+    var libraryViewMode: com.example.data.model.LibraryViewMode
+        get() {
+            val name = prefs.getString("KEY_LIBRARY_VIEW_MODE", "VAULT") ?: "VAULT"
+            return runCatching { com.example.data.model.LibraryViewMode.valueOf(name) }.getOrDefault(com.example.data.model.LibraryViewMode.VAULT)
+        }
+        set(value) = prefs.edit().putString("KEY_LIBRARY_VIEW_MODE", value.name).apply()
 }

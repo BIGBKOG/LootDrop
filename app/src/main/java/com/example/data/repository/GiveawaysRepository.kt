@@ -1,9 +1,13 @@
 package com.example.data.repository
 
+import com.example.data.local.AppDatabase
 import com.example.data.local.GiveawayDao
 import com.example.data.local.GiveawayEntity
+import com.example.data.local.SteamGameDao
+import com.example.data.local.SteamGameEntity
 import com.example.data.model.GiveawayDto
 import com.example.data.model.GiveawayItem
+import com.example.data.model.PlayStatus
 import com.example.data.remote.ApiClient
 import com.example.notifications.NotificationHelper
 import com.example.util.MetacriticCatalog
@@ -19,8 +23,12 @@ data class SyncResult(
 
 class GiveawaysRepository(
     private val giveawayDao: GiveawayDao,
-    private val notificationHelper: NotificationHelper
+    private val notificationHelper: NotificationHelper,
+    steamGameDao: SteamGameDao? = null
 ) {
+    private val steamDao: SteamGameDao by lazy {
+        steamGameDao ?: AppDatabase.getInstance(notificationHelper.context).steamGameDao()
+    }
 
     val allGiveawaysFlow: Flow<List<GiveawayItem>> =
         giveawayDao.getAllGiveawaysFlow().map { list ->
@@ -36,6 +44,10 @@ class GiveawaysRepository(
         giveawayDao.getClaimedGiveawaysFlow().map { list ->
             list.map { it.toDomain() }
         }
+
+    val allSteamGamesFlow: Flow<List<SteamGameEntity>>
+        get() = steamDao.getAllSteamGamesFlow()
+
 
     suspend fun refreshGiveaways(): Result<SyncResult> = withContext(Dispatchers.IO) {
         var primaryEntities: List<GiveawayEntity>? = null
@@ -167,6 +179,30 @@ class GiveawaysRepository(
 
     suspend fun toggleBookmarked(id: Int, currentlyBookmarked: Boolean) = withContext(Dispatchers.IO) {
         giveawayDao.updateBookmarked(id, !currentlyBookmarked)
+    }
+
+    suspend fun toggleWishlisted(id: Int, currentlyWishlisted: Boolean) = withContext(Dispatchers.IO) {
+        giveawayDao.updateWishlisted(id, !currentlyWishlisted)
+    }
+
+    suspend fun markWishlistedBySteamAppIds(steamAppIds: List<Int>) = withContext(Dispatchers.IO) {
+        giveawayDao.markWishlistedBySteamAppIds(steamAppIds)
+    }
+
+    suspend fun clearAllWishlisted() = withContext(Dispatchers.IO) {
+        giveawayDao.clearAllWishlisted()
+    }
+
+    suspend fun insertSteamGames(games: List<SteamGameEntity>) = withContext(Dispatchers.IO) {
+        steamDao.insertAll(games)
+    }
+
+    suspend fun updateSteamGamePlayStatus(appId: Int, status: PlayStatus) = withContext(Dispatchers.IO) {
+        steamDao.updatePlayStatus(appId, status)
+    }
+
+    suspend fun clearAllSteamGames() = withContext(Dispatchers.IO) {
+        steamDao.clearAll()
     }
 
     suspend fun getGiveawayById(id: Int): GiveawayItem? = withContext(Dispatchers.IO) {

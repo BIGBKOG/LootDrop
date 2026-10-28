@@ -92,6 +92,8 @@ import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import com.example.ui.theme.TextSecondary
 
 @Composable
@@ -101,6 +103,7 @@ fun GiveawayDetailDialog(
     onClaimClick: () -> Unit,
     onToggleBookmark: () -> Unit,
     onToggleClaimed: () -> Unit,
+    onToggleWishlist: () -> Unit = {},
     onPlayStatusChange: ((PlayStatus) -> Unit)? = null,
     onLauncherOptionClick: ((url: String, launcherName: String) -> Unit)? = null
 ) {
@@ -222,6 +225,28 @@ fun GiveawayDetailDialog(
                             ),
                             label = "detail_bookmark_scale"
                         )
+                        // Wishlist toggle button
+                        IconButton(
+                            onClick = onToggleWishlist,
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(if (item.isWishlisted) Color(0xFFFF2D87).copy(alpha = 0.25f) else Color(0xCC0B0F19))
+                                .border(
+                                    1.2.dp,
+                                    if (item.isWishlisted) Color(0xFFFF2D87) else Color.White.copy(alpha = 0.25f),
+                                    CircleShape
+                                )
+                                .testTag("detail_wishlist_button")
+                        ) {
+                            Icon(
+                                imageVector = if (item.isWishlisted) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = if (item.isWishlisted) "On Wishlist" else "Add to Wishlist",
+                                tint = if (item.isWishlisted) Color(0xFFFF2D87) else TextPrimary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
                         IconButton(
                             onClick = onToggleBookmark,
                             modifier = Modifier
@@ -404,6 +429,23 @@ fun GiveawayDetailDialog(
                                     fontWeight = FontWeight.ExtraBold,
                                     color = Color(0xFF0B0F19)
                                 )
+                            }
+
+                            if (item.isWishlisted) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Color(0xFFFF2D87).copy(alpha = 0.25f))
+                                        .border(1.dp, Color(0xFFFF2D87), RoundedCornerShape(6.dp))
+                                        .padding(horizontal = 7.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = "❤️ ON WISHLIST",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color(0xFFFF2D87)
+                                    )
+                                }
                             }
 
                             Box(

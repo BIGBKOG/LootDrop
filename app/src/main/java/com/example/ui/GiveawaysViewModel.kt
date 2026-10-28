@@ -44,6 +44,8 @@ import kotlinx.coroutines.Dispatchers
 import androidx.compose.runtime.Immutable
 import com.example.LootDropApplication
 import com.example.StorageMetrics
+import com.example.data.local.SteamGameEntity
+import com.example.data.model.LibraryViewMode
 
 enum class MainTab {
     DISCOVER,
@@ -74,6 +76,7 @@ data class FilterCriteria(
     val sort: SortOption = SortOption.NEWEST,
     val query: String = ""
 )
+
 @Immutable
 data class UiStats(
     val totalFreeWorthUsd: Double = 0.0,
@@ -86,7 +89,12 @@ data class UiStats(
     val unplayedCount: Int = 0,
     val playingCount: Int = 0,
     val finishedCount: Int = 0,
-    val droppedCount: Int = 0
+    val droppedCount: Int = 0,
+    val steamTotalCount: Int = 0,
+    val steamUnplayedCount: Int = 0,
+    val steamPlayingCount: Int = 0,
+    val steamFinishedCount: Int = 0,
+    val steamDroppedCount: Int = 0
 )
 
 class GiveawaysViewModel(application: Application) : AndroidViewModel(application) {
@@ -342,6 +350,9 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
             0
         )
 
+    private val _libraryViewMode = MutableStateFlow(preferences.libraryViewMode)
+    val libraryViewMode: StateFlow<LibraryViewMode> = _libraryViewMode.asStateFlow()
+
     // Base flow from repository
     val allGiveaways: StateFlow<List<GiveawayItem>> = repository.allGiveawaysFlow.stateIn(
         viewModelScope,
@@ -349,8 +360,33 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         emptyList()
     )
 
+    val allSteamGames: StateFlow<List<SteamGameEntity>> = repository.allSteamGamesFlow.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        emptyList()
+    )
+
+    val filteredSteamGames: StateFlow<List<SteamGameEntity>> = combine(
+        allSteamGames,
+        _selectedLibraryPlayFilter,
+        _searchQuery
+    ) { steamGames, playFilter, query ->
+        var list = steamGames
+        if (playFilter.status != null) {
+            list = list.filter { it.playStatus == playFilter.status }
+        }
+        if (query.isNotBlank()) {
+            val q = query.trim().lowercase()
+            list = list.filter { it.name.lowercase().contains(q) }
+        }
+        list
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
    // Compute live UI stats
-    val uiStats: StateFlow<UiStats> = allGiveaways.map { all ->
+    val uiStats: StateFlow<UiStats> = combine(
+        allGiveaways,
+        allSteamGames
+    ) { all, steamGames ->
         val totalWorth = all.sumOf { it.numericWorth }
         val newCount = all.count { it.isNew }
         val claimedGames = all.filter { it.isClaimed }
@@ -361,6 +397,12 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         val playing = claimedGames.count { it.playStatus == PlayStatus.PLAYING }
         val finished = claimedGames.count { it.playStatus == PlayStatus.BEATEN }
         val dropped = claimedGames.count { it.playStatus == PlayStatus.DROPPED }
+
+        val steamTotal = steamGames.size
+        val steamUnplayed = steamGames.count { it.playStatus == PlayStatus.NOT_STARTED }
+        val steamPlaying = steamGames.count { it.playStatus == PlayStatus.PLAYING }
+        val steamFinished = steamGames.count { it.playStatus == PlayStatus.BEATEN }
+        val steamDropped = steamGames.count { it.playStatus == PlayStatus.DROPPED }
 
         val platformMap = mutableMapOf<LauncherType, Int>()
         for (launcher in LauncherType.values()) {
@@ -381,7 +423,12 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
             unplayedCount = unplayed,
             playingCount = playing,
             finishedCount = finished,
-            droppedCount = dropped
+            droppedCount = dropped,
+            steamTotalCount = steamTotal,
+            steamUnplayedCount = steamUnplayed,
+            steamPlayingCount = steamPlaying,
+            steamFinishedCount = steamFinished,
+            steamDroppedCount = steamDropped
         )
     }.stateIn(
         scope = viewModelScope,
@@ -1203,19 +1250,61 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                 preferences.steamUserId = rawUserId
                 _steamUserId.value = rawUserId
 
-                _steamSyncStatus.value = "Fetching owned games from Steam..."
+                _steamSyncStatus.value = "Fetching owned games & wishlist from Steam..."
                 val ownedGames = SteamApiClient.getOwnedGames(resolvedSteamId, apiKey)
-                if (ownedGames.isEmpty()) {
+                val wishlistMap = SteamApiClient.getWishlist(resolvedSteamId, apiKey)
+
+                if (ownedGames.isEmpty() && wishlistMap.isEmpty()) {
                     _steamSyncStatus.value = "No games found. Please ensure 'Game details' is set to Public in your Steam Privacy Settings."
                     return@launch
                 }
 
+                // 1. Process and save ALL Steam library games (All+Paid feature)
                 val claimedItems = allGiveaways.value.filter { it.isClaimed }
-                if (claimedItems.isEmpty()) {
-                    _steamSyncStatus.value = "Found ${ownedGames.size} Steam games. Claim games in LootDrop first to categorize them!"
-                    return@launch
+                val steamEntities = ownedGames.map { g ->
+                    val matchedClaimed = claimedItems.firstOrNull { claimed ->
+                        SteamApiClient.matchSteamGame(claimed, listOf(g)) != null
+                    }
+                    val isClaimed = matchedClaimed != null
+                    val classifiedStatus = SteamApiClient.classifyPlayStatus(
+                        playtimeMinutes = g.playtimeForeverMinutes,
+                        unlockedAchievements = 0,
+                        totalAchievements = 0
+                    )
+                    SteamGameEntity(
+                        appId = g.appId,
+                        name = g.name,
+                        playtimeMinutes = g.playtimeForeverMinutes,
+                        playtime2WeeksMinutes = g.playtime2WeeksMinutes,
+                        lastPlayedTimestamp = g.rtimeLastPlayed,
+                        playStatus = classifiedStatus,
+                        achievementsUnlocked = 0,
+                        achievementsTotal = 0,
+                        matchedGiveawayId = matchedClaimed?.id,
+                        isLootDropClaimed = isClaimed
+                    )
                 }
 
+                if (steamEntities.isNotEmpty()) {
+                    repository.insertSteamGames(steamEntities)
+                }
+
+                // 2. Mark Wishlisted giveaways
+                var wishlistMatchCount = 0
+                val wishlistAppIds = wishlistMap.keys.toList()
+                if (wishlistAppIds.isNotEmpty()) {
+                    repository.markWishlistedBySteamAppIds(wishlistAppIds)
+                }
+                for (giveaway in allGiveaways.value) {
+                    if (SteamApiClient.isItemOnWishlist(giveaway, wishlistMap)) {
+                        wishlistMatchCount++
+                        if (!giveaway.isWishlisted) {
+                            repository.toggleWishlisted(giveaway.id, false)
+                        }
+                    }
+                }
+
+                // 3. Match claimed LootDrop freebies with Steam telemetry
                 var matchedCount = 0
                 var unplayed = 0
                 var playing = 0
@@ -1254,13 +1343,16 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                             achievementsTotal = total,
                             lastPlayed = steamGame.rtimeLastPlayed
                         )
+
+                        repository.updateSteamGamePlayStatus(steamGame.appId, classifiedStatus)
                     }
                 }
 
-                _steamSyncStatus.value = if (matchedCount > 0) {
-                    "Synced $matchedCount games with Steam: $unplayed Unplayed, $playing Playing, $finished Finished!"
+                val wishlistMsg = if (wishlistMap.isNotEmpty()) " • ${wishlistMap.size} wishlisted ($wishlistMatchCount free in app)" else ""
+                _steamSyncStatus.value = if (ownedGames.isNotEmpty()) {
+                    "Synced ${ownedGames.size} Steam games into All+Paid ($matchedCount claimed in vault)$wishlistMsg!"
                 } else {
-                    "Found ${ownedGames.size} Steam games, but none matched your ${claimedItems.size} claimed library titles."
+                    "Synced wishlist ($wishlistMatchCount matches found)!"
                 }
             } catch (e: Exception) {
                 _steamSyncStatus.value = "Steam sync failed: ${e.message}"
@@ -1269,6 +1361,30 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
             }
         }
     }
+
+    fun setLibraryViewMode(mode: LibraryViewMode) {
+        preferences.libraryViewMode = mode
+        _libraryViewMode.value = mode
+    }
+
+    fun updateSteamGamePlayStatus(game: SteamGameEntity, status: PlayStatus) {
+        viewModelScope.launch {
+            repository.updateSteamGamePlayStatus(game.appId, status)
+            game.matchedGiveawayId?.let { id ->
+                repository.updatePlayStatus(id, status)
+            }
+        }
+    }
+
+    fun toggleWishlist(item: GiveawayItem) {
+        viewModelScope.launch {
+            repository.toggleWishlisted(item.id, item.isWishlisted)
+            if (_detailItem.value?.id == item.id) {
+                _detailItem.value = _detailItem.value?.copy(isWishlisted = !item.isWishlisted)
+            }
+        }
+    }
+
 
     fun toggleBookmark(item: GiveawayItem) {
         viewModelScope.launch {

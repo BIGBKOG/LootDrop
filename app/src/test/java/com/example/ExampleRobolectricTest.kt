@@ -606,6 +606,16 @@ class ExampleRobolectricTest {
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.1.1", "2.1.0"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.2.0", "2.1.0"))
 
+        // When running on 2.1.1
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V2.1.1", "2.1.1"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.1.1", "2.1.1"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.1.0", "2.1.1"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.0.0", "2.1.1"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.5", "2.1.1"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V4.5", "2.1.1"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.1.2", "2.1.1"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.2.0", "2.1.1"))
+
         // If a device is still on legacy 4.5, 1.5.0 / 1.5.X is recognized as the successor
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.X", "V4.5"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V1.5.0", "V4.5"))
@@ -1104,6 +1114,155 @@ class ExampleRobolectricTest {
         assertEquals(49, preserved?.steamAchievementsTotal)
 
         db.close()
+    }
+
+    @Test
+    fun `wishlist matching helper and wishlist recognition work accurately`() {
+        val steamGiveaway = GiveawayItem(
+            id = 101,
+            title = "Cyberpunk 2077",
+            worth = "$59.99",
+            numericWorth = 59.99,
+            thumbnail = "",
+            image = "",
+            description = "RPG",
+            instructions = "",
+            openGiveawayUrl = "https://store.steampowered.com/app/1091500/Cyberpunk_2077/",
+            publishedDate = "",
+            type = "Game",
+            platforms = "PC, Steam",
+            endDate = "N/A",
+            users = 1000,
+            status = "Active"
+        )
+
+        val wishlistMap = mapOf(1091500 to "Cyberpunk 2077", 220 to "Half-Life 2", 1145360 to "Hades")
+        assertTrue(SteamApiClient.isItemOnWishlist(steamGiveaway, wishlistMap))
+
+        val nonWishlisted = steamGiveaway.copy(
+            title = "Dota 2",
+            openGiveawayUrl = "https://store.steampowered.com/app/570/Dota_2/"
+        )
+        assertFalse(SteamApiClient.isItemOnWishlist(nonWishlisted, wishlistMap))
+
+        // Title fallback matching
+        val epicGiveaway = steamGiveaway.copy(
+            openGiveawayUrl = "https://store.epicgames.com/p/cyberpunk-2077",
+            platforms = "Epic Games Store"
+        )
+        assertTrue(SteamApiClient.isItemOnWishlist(epicGiveaway, wishlistMap))
+    }
+
+    @Test
+    fun `notification helper prioritizes wishlisted giveaways regardless of thresholds`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val helper = NotificationHelper(context)
+        helper.isNotificationsEnabled = true
+        // Set an extremely high threshold ($100.00) that would normally block standard giveaways
+        helper.minWorthAlertThreshold = 100f
+
+        val normalCheapGiveaway = GiveawayItem(
+            id = 201,
+            title = "Indie Gem",
+            worth = "$9.99",
+            numericWorth = 9.99,
+            thumbnail = "",
+            image = "",
+            description = "Fun platformer",
+            instructions = "",
+            openGiveawayUrl = "https://store.steampowered.com/app/999/",
+            publishedDate = "",
+            type = "Game",
+            platforms = "Steam",
+            endDate = "N/A",
+            users = 100,
+            status = "Active",
+            isWishlisted = false
+        )
+
+        // Normal giveaway is suppressed by threshold
+        assertFalse(helper.shouldNotifyForGiveaway(normalCheapGiveaway))
+
+        // Wishlisted giveaway BYPASSES threshold and is always allowed
+        val wishlistedGiveaway = normalCheapGiveaway.copy(id = 202, isWishlisted = true)
+        assertTrue(helper.shouldNotifyForGiveaway(wishlistedGiveaway))
+    }
+
+    @Test
+    fun `steam game entity room dao supports insert, queries, and play status updates`() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
+            .allowMainThreadQueries()
+            .build()
+        val dao = db.steamGameDao()
+
+        val game1 = com.example.data.local.SteamGameEntity(
+            appId = 1091500,
+            name = "Cyberpunk 2077",
+            playtimeMinutes = 7200,
+            playtime2WeeksMinutes = 120,
+            imgIconUrl = "icon_hash_1",
+            lastPlayedTimestamp = 1720000000L,
+            playStatus = PlayStatus.BEATEN,
+            achievementsUnlocked = 45,
+            achievementsTotal = 45
+        )
+
+        val game2 = com.example.data.local.SteamGameEntity(
+            appId = 400,
+            name = "Portal",
+            playtimeMinutes = 0,
+            playtime2WeeksMinutes = 0,
+            imgIconUrl = "icon_hash_2",
+            lastPlayedTimestamp = 0L,
+            playStatus = PlayStatus.NOT_STARTED,
+            achievementsUnlocked = 0,
+            achievementsTotal = 15
+        )
+
+        dao.insertAll(listOf(game1, game2))
+        assertEquals(2, dao.getCount())
+
+        val portal = dao.getSteamGameById(400)
+        assertNotNull(portal)
+        assertEquals("Portal", portal?.name)
+        assertEquals(PlayStatus.NOT_STARTED, portal?.playStatus)
+
+        // Update play status from Backlog (NOT_STARTED) to PLAYING
+        dao.updatePlayStatus(400, PlayStatus.PLAYING)
+        val updatedPortal = dao.getSteamGameById(400)
+        assertEquals(PlayStatus.PLAYING, updatedPortal?.playStatus)
+
+        // Update to BEATEN (Finished)
+        dao.updatePlayStatus(400, PlayStatus.BEATEN)
+        assertEquals(PlayStatus.BEATEN, dao.getSteamGameById(400)?.playStatus)
+
+        // Update to DROPPED
+        dao.updatePlayStatus(400, PlayStatus.DROPPED)
+        assertEquals(PlayStatus.DROPPED, dao.getSteamGameById(400)?.playStatus)
+
+        // Clear all
+        dao.clearAll()
+        assertEquals(0, dao.getCount())
+
+        db.close()
+    }
+
+    @Test
+    fun `library view mode preference persists between claimed vault and all plus paid`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val prefs = AppPreferences(context)
+
+        // Defaults to VAULT
+        assertEquals(com.example.data.model.LibraryViewMode.VAULT, prefs.libraryViewMode)
+
+        // Switch to ALL_PAID
+        prefs.libraryViewMode = com.example.data.model.LibraryViewMode.ALL_PAID
+        assertEquals(com.example.data.model.LibraryViewMode.ALL_PAID, prefs.libraryViewMode)
+
+        // Switch back to VAULT
+        prefs.libraryViewMode = com.example.data.model.LibraryViewMode.VAULT
+        assertEquals(com.example.data.model.LibraryViewMode.VAULT, prefs.libraryViewMode)
     }
 }
 

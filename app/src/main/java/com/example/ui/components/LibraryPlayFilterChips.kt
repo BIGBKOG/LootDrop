@@ -72,6 +72,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.LibraryPlayFilter
+import com.example.data.model.LibraryViewMode
 import com.example.data.model.PlayStatus
 import com.example.ui.UiStats
 import com.example.ui.theme.NeonCyan
@@ -91,6 +92,8 @@ fun LibraryPlayFilterChips(
     onOpenSteamDialog: () -> Unit,
     onQuickSteamSync: () -> Unit,
     onDismissStatus: () -> Unit,
+    viewMode: LibraryViewMode = LibraryViewMode.VAULT,
+    onViewModeChange: (LibraryViewMode) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -99,6 +102,91 @@ fun LibraryPlayFilterChips(
             .padding(horizontal = 16.dp, vertical = 6.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        // Sub-Tab Segmented Selector: Claimed Vault vs All+Paid (Steam Library)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            val isVaultSelected = viewMode == LibraryViewMode.VAULT
+            val isAllPaidSelected = viewMode == LibraryViewMode.ALL_PAID
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(if (isVaultSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
+                    .clickable { onViewModeChange(LibraryViewMode.VAULT) }
+                    .padding(vertical = 8.dp)
+                    .testTag("tab_claimed_vault"),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "🎁 Claimed Vault",
+                        fontSize = 12.sp,
+                        fontWeight = if (isVaultSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isVaultSelected) MaterialTheme.colorScheme.onPrimary else TextSecondary
+                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(if (isVaultSelected) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface)
+                            .padding(horizontal = 5.dp, vertical = 1.dp)
+                    ) {
+                        Text(
+                            text = "${uiStats.claimedCount}",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isVaultSelected) MaterialTheme.colorScheme.onPrimary else TextSecondary
+                        )
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(if (isAllPaidSelected) Color(0xFF66C0F4) else Color.Transparent)
+                    .clickable { onViewModeChange(LibraryViewMode.ALL_PAID) }
+                    .padding(vertical = 8.dp)
+                    .testTag("tab_all_paid"),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "🎮 All + Paid",
+                        fontSize = 12.sp,
+                        fontWeight = if (isAllPaidSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isAllPaidSelected) Color(0xFF0B0F19) else TextSecondary
+                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(if (isAllPaidSelected) Color(0xFF0B0F19).copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface)
+                            .padding(horizontal = 5.dp, vertical = 1.dp)
+                    ) {
+                        Text(
+                            text = "${uiStats.steamTotalCount}",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isAllPaidSelected) Color(0xFF0B0F19) else Color(0xFF66C0F4)
+                        )
+                    }
+                }
+            }
+        }
+
         // Steam Game Tracker banner
         SteamTrackerBanner(
             isSyncing = isSyncingSteam,
@@ -106,6 +194,7 @@ fun LibraryPlayFilterChips(
             onOpenDialog = onOpenSteamDialog,
             onQuickSync = onQuickSteamSync
         )
+
 
         // Sync feedback toast/banner if message is present
         AnimatedVisibility(
@@ -196,12 +285,22 @@ fun LibraryPlayFilterChips(
         ) {
             LibraryPlayFilter.values().forEach { filter ->
                 val isSelected = filter == selectedFilter
-                val count = when (filter) {
-                    LibraryPlayFilter.ALL -> uiStats.claimedCount
-                    LibraryPlayFilter.UNPLAYED -> uiStats.unplayedCount
-                    LibraryPlayFilter.PLAYING -> uiStats.playingCount
-                    LibraryPlayFilter.FINISHED -> uiStats.finishedCount
-                    LibraryPlayFilter.DROPPED -> uiStats.droppedCount
+                val count = if (viewMode == LibraryViewMode.ALL_PAID) {
+                    when (filter) {
+                        LibraryPlayFilter.ALL -> uiStats.steamTotalCount
+                        LibraryPlayFilter.UNPLAYED -> uiStats.steamUnplayedCount
+                        LibraryPlayFilter.PLAYING -> uiStats.steamPlayingCount
+                        LibraryPlayFilter.FINISHED -> uiStats.steamFinishedCount
+                        LibraryPlayFilter.DROPPED -> uiStats.steamDroppedCount
+                    }
+                } else {
+                    when (filter) {
+                        LibraryPlayFilter.ALL -> uiStats.claimedCount
+                        LibraryPlayFilter.UNPLAYED -> uiStats.unplayedCount
+                        LibraryPlayFilter.PLAYING -> uiStats.playingCount
+                        LibraryPlayFilter.FINISHED -> uiStats.finishedCount
+                        LibraryPlayFilter.DROPPED -> uiStats.droppedCount
+                    }
                 }
 
                 val filterColor = when (filter) {

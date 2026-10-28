@@ -125,9 +125,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import com.example.data.local.SteamGameEntity
 import com.example.data.model.GiveawayItem
 import com.example.data.model.LauncherType
 import com.example.data.model.LibraryPlayFilter
+import com.example.data.model.LibraryViewMode
 import com.example.data.model.PlayStatus
 import com.example.preferences.CardDensity
 import com.example.ui.calendar.CalendarTabContent
@@ -139,6 +141,7 @@ import com.example.ui.components.FilterSortBottomSheet
 import com.example.ui.components.GiveawayCard
 import com.example.ui.components.GiveawayDetailDialog
 import com.example.ui.components.LibraryPlayFilterChips
+import com.example.ui.components.SteamGameCard
 import com.example.ui.components.SteamSyncDialog
 import com.example.ui.components.StatsBanner
 import com.example.ui.components.NotificationHistorySheet
@@ -192,6 +195,8 @@ fun HomeScreen(
     val steamApiKey by viewModel.steamApiKey.collectAsState()
     val steamSyncStatus by viewModel.steamSyncStatus.collectAsState()
     val isSyncingSteam by viewModel.isSyncingSteam.collectAsState()
+    val libraryViewMode by viewModel.libraryViewMode.collectAsState()
+    val filteredSteamGames by viewModel.filteredSteamGames.collectAsState()
 
     val borderBeamAngle = rememberAnimatedBeamAngle(enabled = isAnimationsEnabled && !isLowEndOptimization)
 
@@ -581,7 +586,11 @@ fun HomeScreen(
                             },
                             onToggleBookmark = { viewModel.toggleBookmark(it) },
                             onToggleClaimed = { viewModel.toggleClaimed(it) },
-                            onPlayStatusChange = { item, status -> viewModel.updatePlayStatus(item, status) }
+                            onPlayStatusChange = { item, status -> viewModel.updatePlayStatus(item, status) },
+                            libraryViewMode = libraryViewMode,
+                            steamGames = filteredSteamGames,
+                            onViewModeChange = { viewModel.setLibraryViewMode(it) },
+                            onSteamPlayStatusChange = { game, status -> viewModel.updateSteamGamePlayStatus(game, status) }
                         )
                     }
                     MainTab.CALENDAR -> {
@@ -671,6 +680,7 @@ fun HomeScreen(
             },
             onToggleBookmark = { viewModel.toggleBookmark(item) },
             onToggleClaimed = { viewModel.toggleClaimed(item) },
+            onToggleWishlist = { viewModel.toggleWishlist(item) },
             onPlayStatusChange = { status -> viewModel.updatePlayStatus(item, status) }
         )
     }
@@ -933,6 +943,10 @@ fun GiveawaysTabContent(
     onQuickSteamSync: () -> Unit = {},
     onDismissSteamStatus: () -> Unit = {},
     onPlayStatusChange: ((GiveawayItem, PlayStatus) -> Unit)? = null,
+    libraryViewMode: LibraryViewMode = LibraryViewMode.VAULT,
+    steamGames: List<SteamGameEntity> = emptyList(),
+    onViewModeChange: (LibraryViewMode) -> Unit = {},
+    onSteamPlayStatusChange: ((SteamGameEntity, PlayStatus) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxSize()) {
@@ -967,7 +981,9 @@ fun GiveawaysTabContent(
                 steamSyncStatus = steamSyncStatus,
                 onOpenSteamDialog = onOpenSteamDialog,
                 onQuickSteamSync = onQuickSteamSync,
-                onDismissStatus = onDismissSteamStatus
+                onDismissStatus = onDismissSteamStatus,
+                viewMode = libraryViewMode,
+                onViewModeChange = onViewModeChange
             )
         }
 
@@ -1090,7 +1106,10 @@ fun GiveawaysTabContent(
                     }
                 }
 
-                if (isLoading && giveaways.isEmpty()) {
+                val isAllPaidMode = tab == MainTab.CLAIMED && libraryViewMode == LibraryViewMode.ALL_PAID
+                val isListEmpty = if (isAllPaidMode) steamGames.isEmpty() else giveaways.isEmpty()
+
+                if (isLoading && isListEmpty) {
                     Column(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.Center,
@@ -1099,12 +1118,12 @@ fun GiveawaysTabContent(
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "Scanning PC & Console for Free Loot...",
+                            text = if (isAllPaidMode) "Loading Steam library games..." else "Scanning PC & Console for Free Loot...",
                             fontSize = 14.sp,
                             color = TextSecondary
                         )
                     }
-                } else if (giveaways.isEmpty()) {
+                } else if (isListEmpty) {
                     val emptyIconBob = rememberEmptyBob(enabled = isAnimationsEnabled && !isLowEndOptimization)
 
                     val isFiltered = activeFilterCount > 0 || searchQuery.isNotBlank()
@@ -1129,6 +1148,7 @@ fun GiveawaysTabContent(
                         ) {
                             Icon(
                                 imageVector = when {
+                                    isAllPaidMode -> Icons.Default.SportsEsports
                                     tab == MainTab.CLAIMED -> Icons.Default.CheckCircle
                                     hasError -> Icons.Default.CloudOff
                                     isFiltered -> Icons.Default.FilterAltOff
@@ -1144,6 +1164,7 @@ fun GiveawaysTabContent(
 
                         Text(
                             text = when {
+                                isAllPaidMode -> if (searchQuery.isNotBlank()) "No Matching Steam Games" else "No Steam Games Synced"
                                 tab == MainTab.CLAIMED -> "No Claimed Games Yet"
                                 hasError -> "Unable to Fetch Giveaways"
                                 isFiltered -> "No Matches Found"
@@ -1158,6 +1179,7 @@ fun GiveawaysTabContent(
 
                         Text(
                             text = when {
+                                isAllPaidMode -> if (searchQuery.isNotBlank()) "No games match \"${searchQuery.take(20)}\" in your Steam library." else "Enter your Steam ID or vanity name in the tracker banner above and tap 'Sync Library' to import all your games and track play status!"
                                 tab == MainTab.CLAIMED -> "Tap 'Claim Free' on any game to automatically add it to your library and track total dollars saved!"
                                 hasError -> errorMessage ?: "Network issue or server unavailable. Tap retry to check again."
                                 isFiltered -> if (searchQuery.isNotBlank()) "No games match \"${searchQuery.take(20)}\" or your active launcher filters." else "No free games match your active filters in the top menu."
@@ -1197,6 +1219,20 @@ fun GiveawaysTabContent(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Reset All Filters")
                             }
+                        } else if (isAllPaidMode) {
+                            Button(
+                                onClick = onOpenSteamDialog,
+                                modifier = Modifier.testTag("sync_steam_all_paid_button"),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF66C0F4), contentColor = Color(0xFF0B0F19))
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SportsEsports,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Sync Steam Library", fontWeight = FontWeight.Bold)
+                            }
                         } else if (tab == MainTab.DISCOVER) {
                             Button(
                                 onClick = onRefresh,
@@ -1209,6 +1245,54 @@ fun GiveawaysTabContent(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Refresh Feed")
+                            }
+                        }
+                    }
+                } else if (isAllPaidMode) {
+                    if (screenDensityInfo.gridColumns > 1) {
+                        LazyVerticalGrid(
+                            state = gridState,
+                            columns = GridCells.Fixed(screenDensityInfo.gridColumns),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .testTag("steam_games_grid"),
+                            contentPadding = PaddingValues(
+                                start = screenDensityInfo.adaptiveHorizontalPadding,
+                                end = screenDensityInfo.adaptiveHorizontalPadding,
+                                top = 6.dp,
+                                bottom = 24.dp
+                            ),
+                            horizontalArrangement = Arrangement.spacedBy(screenDensityInfo.adaptiveCardSpacing),
+                            verticalArrangement = Arrangement.spacedBy(screenDensityInfo.adaptiveCardSpacing)
+                        ) {
+                            items(steamGames, key = { it.appId }) { game ->
+                                SteamGameCard(
+                                    game = game,
+                                    onStatusChange = { newStatus -> onSteamPlayStatusChange?.invoke(game, newStatus) },
+                                    modifier = if (isAnimationsEnabled && !isLowEndOptimization) Modifier.animateItem() else Modifier
+                                )
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .testTag("steam_games_list"),
+                            contentPadding = PaddingValues(
+                                start = screenDensityInfo.adaptiveHorizontalPadding,
+                                end = screenDensityInfo.adaptiveHorizontalPadding,
+                                top = 6.dp,
+                                bottom = 24.dp
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(screenDensityInfo.adaptiveCardSpacing)
+                        ) {
+                            items(steamGames, key = { it.appId }) { game ->
+                                SteamGameCard(
+                                    game = game,
+                                    onStatusChange = { newStatus -> onSteamPlayStatusChange?.invoke(game, newStatus) },
+                                    modifier = if (isAnimationsEnabled && !isLowEndOptimization) Modifier.animateItem() else Modifier
+                                )
                             }
                         }
                     }

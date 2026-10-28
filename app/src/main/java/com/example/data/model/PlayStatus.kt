@@ -48,3 +48,15 @@ enum class LibraryPlayFilter(val label: String, val status: PlayStatus?) {
 
     val displayName: String get() = label
 }
+
+/**
+ * In Library View Mode: Claimed Free Vault vs All + Paid Steam Games
+ */
+@Immutable
+enum class LibraryViewMode(val label: String, val subtitle: String) {
+    VAULT("Claimed Vault", "Freebies claimed in LootDrop"),
+    ALL_PAID("All + Paid", "All Steam games (Paid + Free)");
+
+    val displayName: String get() = label
+}
+

@@ -223,6 +223,9 @@ class NotificationHelper(val context: Context) {
         if (!isNotificationsEnabled) return false
         if (isQuietHoursActive()) return false
 
+        // Wishlisted games ALWAYS notify with top priority!
+        if (item.isWishlisted) return true
+
         // Filter games only
         val isGame = item.type.contains("Game", ignoreCase = true)
         if (isGamesOnly && !isGame) return false
@@ -275,12 +278,20 @@ class NotificationHelper(val context: Context) {
         if (!shouldNotifyForGiveaway(item)) return
 
         val isGame = item.type.contains("Game", ignoreCase = true)
-        val channelId = if (isGame) CHANNEL_MAJOR_GAMES else CHANNEL_DLC
+        val channelId = if (item.isWishlisted || isGame) CHANNEL_MAJOR_GAMES else CHANNEL_DLC
 
         val storeName = item.launcherCategory.displayName
         val worthText = if (item.worth.isNotBlank() && item.worth != "N/A") "Worth ${item.worth}" else "100% OFF"
-        val title = "🎮 FREE NOW on $storeName: ${item.title}"
-        val content = "$worthText • Claim it to keep forever! Tap to view details."
+        val title = if (item.isWishlisted) {
+            "🎯 ON YOUR WISHLIST: ${item.title} is 100% FREE!"
+        } else {
+            "🎮 FREE NOW on $storeName: ${item.title}"
+        }
+        val content = if (item.isWishlisted) {
+            "A game from your Steam wishlist is currently 100% free ($worthText)! Claim to keep forever."
+        } else {
+            "$worthText • Claim it to keep forever! Tap to view details."
+        }
 
         CoroutineScope(Dispatchers.IO).launch {
             val bitmap = if (isNotificationRichArtwork) {
@@ -339,9 +350,9 @@ class NotificationHelper(val context: Context) {
                 .setSmallIcon(R.drawable.ic_stat_gamepad)
                 .setContentTitle(title)
                 .setContentText(content)
-                .setSubText("$storeName • $worthText")
-                .setColor(0xFF6C5CE7.toInt())
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setSubText(if (item.isWishlisted) "❤️ ON YOUR WISHLIST • $storeName • $worthText" else "$storeName • $worthText")
+                .setColor(if (item.isWishlisted) 0xFFFF2D87.toInt() else 0xFF6C5CE7.toInt())
+                .setPriority(if (item.isWishlisted) NotificationCompat.PRIORITY_MAX else NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
                 .setContentIntent(appPendingIntent)
 
@@ -349,7 +360,11 @@ class NotificationHelper(val context: Context) {
                 builder.setSilent(true)
             }
             if (isNotificationVibrateEnabled) {
-                builder.setVibrate(longArrayOf(0, 250, 150, 250))
+                if (item.isWishlisted) {
+                    builder.setVibrate(longArrayOf(0, 350, 150, 350, 150, 350))
+                } else {
+                    builder.setVibrate(longArrayOf(0, 250, 150, 250))
+                }
             } else {
                 builder.setVibrate(longArrayOf(0))
             }
@@ -365,13 +380,13 @@ class NotificationHelper(val context: Context) {
                 builder.setStyle(
                     NotificationCompat.BigPictureStyle()
                         .bigPicture(bitmap)
-                        .setBigContentTitle("🎮 ${item.title} is Free!")
+                        .setBigContentTitle(if (item.isWishlisted) "🎯 ON YOUR WISHLIST: ${item.title}" else "🎮 ${item.title} is Free!")
                         .setSummaryText("${item.description.take(120)}... • Platform: ${item.platforms}")
                 )
             } else {
                 builder.setStyle(
                     NotificationCompat.BigTextStyle()
-                        .bigText("${item.description}\n\nPlatform: ${item.platforms}\nValue: $worthText")
+                        .bigText("${if (item.isWishlisted) "❤️ [ON YOUR WISHLIST]\n\n" else ""}${item.description}\n\nPlatform: ${item.platforms}\nValue: $worthText")
                 )
             }
 
@@ -379,7 +394,7 @@ class NotificationHelper(val context: Context) {
                 NotificationManagerCompat.from(context).notify(item.id, builder.build())
                 recordNotificationHistory(
                     item = item,
-                    channelType = if (isGame) "MAJOR_GAME" else "DLC"
+                    channelType = if (item.isWishlisted) "WISHLIST" else if (isGame) "MAJOR_GAME" else "DLC"
                 )
             } catch (_: SecurityException) {
                 // Permission not granted

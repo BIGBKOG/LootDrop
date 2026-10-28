@@ -242,6 +242,95 @@ object SteamApiClient {
     }
 
     /**
+     * Fetches the user's Steam Wishlist App IDs and game titles.
+     * Uses Steam Web API IWishlistService with fallback to store wishlist_data JSON.
+     */
+    suspend fun getWishlist(steamId: String, apiKey: String): Map<Int, String> = withContext(Dispatchers.IO) {
+        val resultMap = mutableMapOf<Int, String>()
+
+        // 1. Try store endpoint first to get both appId and game names
+        try {
+            val storeUrl = "https://store.steampowered.com/wishlist/profiles/$steamId/wishlist_data/"
+            val request = Request.Builder().url(storeUrl).build()
+            val response = getClient().newCall(request).execute()
+            if (response.isSuccessful) {
+                val body = response.body?.string()
+                if (!body.isNullOrBlank() && body.trim().startsWith("{")) {
+                    val json = JSONObject(body)
+                    val keys = json.keys()
+                    while (keys.hasNext()) {
+                        val key = keys.next()
+                        val appId = key.toIntOrNull() ?: continue
+                        val itemObj = json.optJSONObject(key)
+                        val name = itemObj?.optString("name", "") ?: ""
+                        resultMap[appId] = name
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.d(TAG, "Store wishlist endpoint unavailable, falling back: ${e.message}")
+        }
+
+        // 2. Fallback to IWishlistService/GetWishlist/v1 if store returned empty
+        if (resultMap.isEmpty() && apiKey.isNotBlank()) {
+            try {
+                val serviceUrl = "https://api.steampowered.com/IWishlistService/GetWishlist/v1/?key=$apiKey&steamid=$steamId"
+                val request = Request.Builder().url(serviceUrl).build()
+                val response = getClient().newCall(request).execute()
+                if (response.isSuccessful) {
+                    val body = response.body?.string()
+                    if (!body.isNullOrBlank()) {
+                        val json = JSONObject(body)
+                        val resp = json.optJSONObject("response")
+                        val items = resp?.optJSONArray("items")
+                        if (items != null) {
+                            for (i in 0 until items.length()) {
+                                val item = items.optJSONObject(i) ?: continue
+                                val appId = item.optInt("appid", 0)
+                                if (appId > 0) {
+                                    resultMap[appId] = ""
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "IWishlistService request failed: ${e.message}")
+            }
+        }
+
+        resultMap
+    }
+
+    /**
+     * Checks if a giveaway item is on the user's Steam wishlist by App ID or title.
+     */
+    fun isItemOnWishlist(item: GiveawayItem, wishlistMap: Map<Int, String>): Boolean {
+        if (wishlistMap.isEmpty()) return false
+
+        // 1. Check Steam App ID from URL
+        val appIdFromUrl = extractSteamAppId(item.openGiveawayUrl)
+        if (appIdFromUrl != null && wishlistMap.containsKey(appIdFromUrl)) {
+            return true
+        }
+
+        // 2. Check title matching against wishlist names
+        val targetClean = MetacriticCatalog.cleanTitle(item.title).lowercase(Locale.ROOT)
+        for ((_, name) in wishlistMap) {
+            if (name.isBlank()) continue
+            val wishClean = MetacriticCatalog.cleanTitle(name).lowercase(Locale.ROOT)
+            if (wishClean == targetClean ||
+                (targetClean.length > 5 && wishClean.contains(targetClean)) ||
+                (wishClean.length > 5 && targetClean.contains(wishClean))
+            ) {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    /**
      * Classifies a game into its playStatus based on playtime & achievements:
      * - NOT_STARTED (Backlog): 0 playtime
      * - PLAYING: > 0 playtime, game not yet completed
