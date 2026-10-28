@@ -2,10 +2,18 @@ package com.example
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import androidx.room.Room
+import com.example.data.local.AppDatabase
+import com.example.data.local.GiveawayEntity
 import com.example.data.model.GiveawayItem
 import com.example.data.model.LauncherType
+import com.example.data.model.LibraryPlayFilter
+import com.example.data.model.PlayStatus
+import com.example.data.remote.SteamApiClient
+import com.example.data.remote.SteamOwnedGame
 import com.example.notifications.NotificationHelper
 import com.example.preferences.AppPreferences
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -590,6 +598,14 @@ class ExampleRobolectricTest {
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.0.1", "2.0.0"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.1.0", "2.0.0"))
 
+        // When running on 2.1.0
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V2.1.0", "2.1.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.1.0", "2.1.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.0.0", "2.1.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.5", "2.1.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.1.1", "2.1.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.2.0", "2.1.0"))
+
         // If a device is still on legacy 4.5, 1.5.0 / 1.5.X is recognized as the successor
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.X", "V4.5"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V1.5.0", "V4.5"))
@@ -910,6 +926,184 @@ class ExampleRobolectricTest {
         assertTrue(vault?.longLabel.toString().contains("12 Claimed"))
         assertEquals(com.example.shortcuts.AppShortcutHelper.ACTION_MY_VAULT, vault?.intent?.action)
         assertEquals("CLAIMED", vault?.intent?.getStringExtra("EXTRA_TARGET_TAB"))
+    }
+
+    @Test
+    fun `play status enum and library filter mapping operate correctly`() {
+        assertEquals("Backlog", PlayStatus.NOT_STARTED.label)
+        assertEquals("Playing", PlayStatus.PLAYING.label)
+        assertEquals("Finished", PlayStatus.BEATEN.label)
+        assertEquals("Dropped", PlayStatus.DROPPED.label)
+
+        assertEquals(PlayStatus.NOT_STARTED, PlayStatus.fromString("NOT_STARTED"))
+        assertEquals(PlayStatus.PLAYING, PlayStatus.fromString("PLAYING"))
+        assertEquals(PlayStatus.BEATEN, PlayStatus.fromString("BEATEN"))
+        assertEquals(PlayStatus.BEATEN, PlayStatus.fromString("FINISHED"))
+        assertEquals(PlayStatus.DROPPED, PlayStatus.fromString("DROPPED"))
+        assertEquals(PlayStatus.NOT_STARTED, PlayStatus.fromString("UNKNOWN"))
+
+        assertEquals(null, LibraryPlayFilter.ALL.status)
+        assertEquals(PlayStatus.NOT_STARTED, LibraryPlayFilter.UNPLAYED.status)
+        assertEquals(PlayStatus.PLAYING, LibraryPlayFilter.PLAYING.status)
+        assertEquals(PlayStatus.BEATEN, LibraryPlayFilter.FINISHED.status)
+        assertEquals(PlayStatus.DROPPED, LibraryPlayFilter.DROPPED.status)
+    }
+
+    @Test
+    fun `steam api classification categorizes unplayed playing finished games based on playtime and achievements`() {
+        // 0 minutes playtime -> NOT_STARTED (Backlog)
+        val unplayedStatus = SteamApiClient.classifyPlayStatus(
+            playtimeMinutes = 0,
+            unlockedAchievements = 0,
+            totalAchievements = 20
+        )
+        assertEquals(PlayStatus.NOT_STARTED, unplayedStatus)
+
+        // Some playtime (e.g. 120 min) with incomplete achievements -> PLAYING
+        val playingStatus = SteamApiClient.classifyPlayStatus(
+            playtimeMinutes = 120,
+            unlockedAchievements = 5,
+            totalAchievements = 20
+        )
+        assertEquals(PlayStatus.PLAYING, playingStatus)
+
+        // 100% achievements unlocked -> BEATEN (Finished)
+        val finishedAchievementsStatus = SteamApiClient.classifyPlayStatus(
+            playtimeMinutes = 300,
+            unlockedAchievements = 20,
+            totalAchievements = 20
+        )
+        assertEquals(PlayStatus.BEATEN, finishedAchievementsStatus)
+
+        // 30+ hours playtime (1800+ min) -> BEATEN (Finished)
+        val finishedPlaytimeStatus = SteamApiClient.classifyPlayStatus(
+            playtimeMinutes = 2400,
+            unlockedAchievements = 0,
+            totalAchievements = 0
+        )
+        assertEquals(PlayStatus.BEATEN, finishedPlaytimeStatus)
+    }
+
+    @Test
+    fun `steam app id extraction and matching matches giveaways with steam games`() {
+        assertEquals(105600, SteamApiClient.extractSteamAppId("https://store.steampowered.com/app/105600/Terraria/"))
+        assertEquals(220, SteamApiClient.extractSteamAppId("https://store.steampowered.com/app/220/"))
+        assertEquals(null, SteamApiClient.extractSteamAppId("https://epicgames.com/store/product/something"))
+
+        val giveaway = GiveawayItem(
+            id = 55,
+            title = "Half-Life 2",
+            worth = "$9.99",
+            numericWorth = 9.99,
+            thumbnail = "",
+            image = "",
+            description = "Iconic FPS",
+            instructions = "",
+            openGiveawayUrl = "https://store.steampowered.com/app/220/HalfLife_2/",
+            publishedDate = "",
+            type = "Game",
+            platforms = "PC, Steam",
+            endDate = "N/A",
+            users = 500,
+            status = "Active"
+        )
+
+        val ownedGames = listOf(
+            SteamOwnedGame(appId = 400, name = "Portal", playtimeForeverMinutes = 100, rtimeLastPlayed = 0L),
+            SteamOwnedGame(appId = 220, name = "Half-Life 2", playtimeForeverMinutes = 750, rtimeLastPlayed = 1700000000L)
+        )
+
+        val matched = SteamApiClient.matchSteamGame(giveaway, ownedGames)
+        assertNotNull(matched)
+        assertEquals(220, matched?.appId)
+        assertEquals("Half-Life 2", matched?.name)
+        assertEquals(750, matched?.playtimeForeverMinutes)
+    }
+
+    @Test
+    fun `room database preserves play status and steam telemetry`() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
+            .allowMainThreadQueries()
+            .build()
+        val dao = db.giveawayDao()
+
+        val initialEntity = GiveawayEntity(
+            id = 999,
+            title = "Hades",
+            worth = "$24.99",
+            numericWorth = 24.99,
+            thumbnail = "",
+            image = "",
+            description = "Rogue-like action",
+            instructions = "",
+            openGiveawayUrl = "https://store.steampowered.com/app/1145360/Hades/",
+            publishedDate = "",
+            type = "Game",
+            platforms = "PC, Steam",
+            endDate = "N/A",
+            users = 1000,
+            status = "Active",
+            isClaimed = true,
+            isBookmarked = false,
+            playStatus = PlayStatus.NOT_STARTED,
+            steamAppId = null,
+            steamPlaytimeMinutes = 0,
+            steamAchievementsUnlocked = 0,
+            steamAchievementsTotal = 0,
+            steamLastPlayedTimestamp = 0L
+        )
+
+        dao.insertAll(listOf(initialEntity))
+
+        val loadedInitial = dao.getGiveawayById(999)
+        assertNotNull(loadedInitial)
+        assertEquals(PlayStatus.NOT_STARTED, loadedInitial?.playStatus)
+        assertEquals(null, loadedInitial?.steamAppId)
+
+        // Update status manually
+        dao.updatePlayStatus(999, PlayStatus.PLAYING)
+        val loadedPlaying = dao.getGiveawayById(999)
+        assertEquals(PlayStatus.PLAYING, loadedPlaying?.playStatus)
+
+        // Update telemetry via Steam Sync
+        dao.updateSteamTelemetry(
+            id = 999,
+            status = PlayStatus.BEATEN,
+            steamAppId = 1145360,
+            playtimeMinutes = 3200,
+            achievementsUnlocked = 49,
+            achievementsTotal = 49,
+            lastPlayed = 1720000000L
+        )
+
+        val loadedBeaten = dao.getGiveawayById(999)
+        assertEquals(PlayStatus.BEATEN, loadedBeaten?.playStatus)
+        assertEquals(1145360, loadedBeaten?.steamAppId)
+        assertEquals(3200, loadedBeaten?.steamPlaytimeMinutes)
+        assertEquals(49, loadedBeaten?.steamAchievementsUnlocked)
+        assertEquals(49, loadedBeaten?.steamAchievementsTotal)
+        assertEquals(1720000000L, loadedBeaten?.steamLastPlayedTimestamp)
+
+        // Sync with API update: status and telemetry MUST be preserved
+        val refreshedEntity = initialEntity.copy(
+            users = 1500,
+            playStatus = PlayStatus.NOT_STARTED,
+            steamAppId = null
+        )
+        dao.syncGiveawaysPreservingStatus(listOf(refreshedEntity))
+
+        val preserved = dao.getGiveawayById(999)
+        assertNotNull(preserved)
+        assertEquals(1500, preserved?.users)
+        assertEquals(true, preserved?.isClaimed)
+        assertEquals(PlayStatus.BEATEN, preserved?.playStatus)
+        assertEquals(1145360, preserved?.steamAppId)
+        assertEquals(3200, preserved?.steamPlaytimeMinutes)
+        assertEquals(49, preserved?.steamAchievementsUnlocked)
+        assertEquals(49, preserved?.steamAchievementsTotal)
+
+        db.close()
     }
 }
 

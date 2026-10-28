@@ -141,6 +141,30 @@ class GiveawaysRepository(
         com.example.widget.WidgetUpdateHelper.updateAllWidgets(notificationHelper.context)
     }
 
+    suspend fun updatePlayStatus(id: Int, status: com.example.data.model.PlayStatus) = withContext(Dispatchers.IO) {
+        giveawayDao.updatePlayStatus(id, status)
+    }
+
+    suspend fun updateSteamTelemetry(
+        id: Int,
+        status: com.example.data.model.PlayStatus,
+        steamAppId: Int?,
+        playtimeMinutes: Int,
+        achievementsUnlocked: Int,
+        achievementsTotal: Int,
+        lastPlayed: Long = System.currentTimeMillis()
+    ) = withContext(Dispatchers.IO) {
+        giveawayDao.updateSteamTelemetry(
+            id = id,
+            status = status,
+            steamAppId = steamAppId,
+            playtimeMinutes = playtimeMinutes,
+            achievementsUnlocked = achievementsUnlocked,
+            achievementsTotal = achievementsTotal,
+            lastPlayed = lastPlayed
+        )
+    }
+
     suspend fun toggleBookmarked(id: Int, currentlyBookmarked: Boolean) = withContext(Dispatchers.IO) {
         giveawayDao.updateBookmarked(id, !currentlyBookmarked)
     }

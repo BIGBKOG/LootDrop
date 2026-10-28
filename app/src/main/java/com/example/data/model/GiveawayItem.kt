@@ -24,8 +24,23 @@ data class GiveawayItem(
     val isBookmarked: Boolean = false,
     val isNew: Boolean = false,
     val firstSeenTimestamp: Long = System.currentTimeMillis(),
-    val metacriticScore: Int = MetacriticCatalog.resolveScore(title, type, description)
+    val metacriticScore: Int = MetacriticCatalog.resolveScore(title, type, description),
+    val playStatus: PlayStatus = PlayStatus.NOT_STARTED,
+    val steamAppId: Int? = null,
+    val steamPlaytimeMinutes: Int = 0,
+    val steamAchievementsUnlocked: Int = 0,
+    val steamAchievementsTotal: Int = 0,
+    val steamLastPlayedTimestamp: Long = 0L
 ) {
+    val steamPlaytimeHours: Float
+        get() = steamPlaytimeMinutes / 60f
+
+    val steamAchievementsPercentage: Int
+        get() = if (steamAchievementsTotal > 0) ((steamAchievementsUnlocked * 100) / steamAchievementsTotal) else 0
+
+    val hasSteamTelemetry: Boolean
+        get() = steamPlaytimeMinutes > 0 || steamAchievementsTotal > 0
+
     val metacriticInfo: MetacriticInfo
         get() = MetacriticCatalog.getMetacriticInfo(title, type, description, metacriticScore)
     val categories: List<GameCategory>

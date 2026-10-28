@@ -127,6 +127,8 @@ import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.data.model.GiveawayItem
 import com.example.data.model.LauncherType
+import com.example.data.model.LibraryPlayFilter
+import com.example.data.model.PlayStatus
 import com.example.preferences.CardDensity
 import com.example.ui.calendar.CalendarTabContent
 import com.example.ui.components.AppUpdateDialog
@@ -136,6 +138,8 @@ import com.example.ui.components.ExpressiveTopActionBar
 import com.example.ui.components.FilterSortBottomSheet
 import com.example.ui.components.GiveawayCard
 import com.example.ui.components.GiveawayDetailDialog
+import com.example.ui.components.LibraryPlayFilterChips
+import com.example.ui.components.SteamSyncDialog
 import com.example.ui.components.StatsBanner
 import com.example.ui.components.NotificationHistorySheet
 import com.example.ui.components.NotificationSettingsSheet
@@ -183,12 +187,18 @@ fun HomeScreen(
     val appUpdateInfo by viewModel.appUpdateInfo.collectAsState()
     val isUpdateDialogVisible by viewModel.isUpdateDialogVisible.collectAsState()
     val updateDownloadState by viewModel.updateDownloadState.collectAsState()
+    val selectedLibraryPlayFilter by viewModel.selectedLibraryPlayFilter.collectAsState()
+    val steamUserId by viewModel.steamUserId.collectAsState()
+    val steamApiKey by viewModel.steamApiKey.collectAsState()
+    val steamSyncStatus by viewModel.steamSyncStatus.collectAsState()
+    val isSyncingSteam by viewModel.isSyncingSteam.collectAsState()
 
     val borderBeamAngle = rememberAnimatedBeamAngle(enabled = isAnimationsEnabled && !isLowEndOptimization)
 
     var isSearchExpanded by remember { mutableStateOf(false) }
     var isNotificationSettingsSheetOpen by remember { mutableStateOf(false) }
     var launcherChooserItem by remember { mutableStateOf<GiveawayItem?>(null) }
+    var showSteamDialog by remember { mutableStateOf(false) }
 
     val tabs = remember { listOf(MainTab.DISCOVER, MainTab.CALENDAR, MainTab.CLAIMED, MainTab.SETTINGS) }
     val pagerState = rememberPagerState(
@@ -548,6 +558,14 @@ fun HomeScreen(
                             screenDensityInfo = screenDensityInfo,
                             listState = claimedListState,
                             gridState = claimedGridState,
+                            selectedLibraryPlayFilter = selectedLibraryPlayFilter,
+                            isSyncingSteam = isSyncingSteam,
+                            steamUserId = steamUserId,
+                            steamSyncStatus = steamSyncStatus,
+                            onFilterSelect = { viewModel.setLibraryPlayFilter(it) },
+                            onOpenSteamDialog = { showSteamDialog = true },
+                            onQuickSteamSync = { viewModel.syncSteamLibrary() },
+                            onDismissSteamStatus = { viewModel.clearSteamSyncStatus() },
                             onRefresh = { viewModel.refreshGiveaways() },
                             onDismissNewToday = { viewModel.dismissNewToday() },
                             onNewTodayClick = { viewModel.selectSort(SortOption.NEWEST) },
@@ -562,7 +580,8 @@ fun HomeScreen(
                                 }
                             },
                             onToggleBookmark = { viewModel.toggleBookmark(it) },
-                            onToggleClaimed = { viewModel.toggleClaimed(it) }
+                            onToggleClaimed = { viewModel.toggleClaimed(it) },
+                            onPlayStatusChange = { item, status -> viewModel.updatePlayStatus(item, status) }
                         )
                     }
                     MainTab.CALENDAR -> {
@@ -651,7 +670,8 @@ fun HomeScreen(
                 viewModel.claimAndLaunch(context, item, targetUrl = url, launcherName = launcherName)
             },
             onToggleBookmark = { viewModel.toggleBookmark(item) },
-            onToggleClaimed = { viewModel.toggleClaimed(item) }
+            onToggleClaimed = { viewModel.toggleClaimed(item) },
+            onPlayStatusChange = { status -> viewModel.updatePlayStatus(item, status) }
         )
     }
 
@@ -664,6 +684,23 @@ fun HomeScreen(
             onLauncherClaimed = { targetUrl, launcherName ->
                 viewModel.claimAndLaunch(context, item, targetUrl = targetUrl, launcherName = launcherName)
                 launcherChooserItem = null
+            }
+        )
+    }
+
+    // Steam Game Tracker Dialog
+    if (showSteamDialog) {
+        SteamSyncDialog(
+            currentUserId = steamUserId,
+            currentApiKey = steamApiKey,
+            isSyncing = isSyncingSteam,
+            statusMessage = steamSyncStatus,
+            onDismiss = { showSteamDialog = false },
+            onSync = { uid, key ->
+                viewModel.syncSteamLibrary(
+                    customSteamId = uid,
+                    customApiKey = if (key.isBlank()) null else key
+                )
             }
         )
     }
@@ -887,6 +924,15 @@ fun GiveawaysTabContent(
     onClaimClick: (GiveawayItem) -> Unit,
     onToggleBookmark: (GiveawayItem) -> Unit,
     onToggleClaimed: (GiveawayItem) -> Unit,
+    selectedLibraryPlayFilter: LibraryPlayFilter = LibraryPlayFilter.ALL,
+    isSyncingSteam: Boolean = false,
+    steamUserId: String = "",
+    steamSyncStatus: String? = null,
+    onFilterSelect: (LibraryPlayFilter) -> Unit = {},
+    onOpenSteamDialog: () -> Unit = {},
+    onQuickSteamSync: () -> Unit = {},
+    onDismissSteamStatus: () -> Unit = {},
+    onPlayStatusChange: ((GiveawayItem, PlayStatus) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxSize()) {
@@ -909,6 +955,19 @@ fun GiveawaysTabContent(
                 savingsUsd = uiStats.claimedTotalSavedUsd,
                 claimedCount = uiStats.claimedCount,
                 isAnimationsEnabled = isAnimationsEnabled && !isLowEndOptimization
+            )
+
+            // Interactive Library Play Filter Chips & Steam Game Tracker
+            LibraryPlayFilterChips(
+                selectedFilter = selectedLibraryPlayFilter,
+                uiStats = uiStats,
+                onFilterSelect = onFilterSelect,
+                isSyncingSteam = isSyncingSteam,
+                steamUserId = steamUserId,
+                steamSyncStatus = steamSyncStatus,
+                onOpenSteamDialog = onOpenSteamDialog,
+                onQuickSteamSync = onQuickSteamSync,
+                onDismissStatus = onDismissSteamStatus
             )
         }
 
@@ -1180,6 +1239,7 @@ fun GiveawaysTabContent(
                                     onClaimClick = { onClaimClick(item) },
                                     onToggleBookmark = { onToggleBookmark(item) },
                                     onToggleClaimed = { onToggleClaimed(item) },
+                                    onPlayStatusChange = { status -> onPlayStatusChange?.invoke(item, status) },
                                     isAnimationsEnabled = isAnimationsEnabled,
                                     isLowEndOptimization = isLowEndOptimization,
                                     beamAngle = beamAngle,
@@ -1217,6 +1277,7 @@ fun GiveawaysTabContent(
                                     onClaimClick = { onClaimClick(item) },
                                     onToggleBookmark = { onToggleBookmark(item) },
                                     onToggleClaimed = { onToggleClaimed(item) },
+                                    onPlayStatusChange = { status -> onPlayStatusChange?.invoke(item, status) },
                                     isAnimationsEnabled = isAnimationsEnabled,
                                     isLowEndOptimization = isLowEndOptimization,
                                     beamAngle = beamAngle,

@@ -33,7 +33,13 @@ data class GiveawayEntity(
     val isClaimed: Boolean = false,
     val isBookmarked: Boolean = false,
     val firstSeenTimestamp: Long = System.currentTimeMillis(),
-    val notified: Boolean = false
+    val notified: Boolean = false,
+    val playStatus: com.example.data.model.PlayStatus = com.example.data.model.PlayStatus.NOT_STARTED,
+    val steamAppId: Int? = null,
+    val steamPlaytimeMinutes: Int = 0,
+    val steamAchievementsUnlocked: Int = 0,
+    val steamAchievementsTotal: Int = 0,
+    val steamLastPlayedTimestamp: Long = 0L
 ) {
     fun toDomain(): GiveawayItem {
         // Flag as "NEW" if seen within the last 48 hours
@@ -57,7 +63,13 @@ data class GiveawayEntity(
             isClaimed = isClaimed,
             isBookmarked = isBookmarked,
             isNew = isNew,
-            firstSeenTimestamp = firstSeenTimestamp
+            firstSeenTimestamp = firstSeenTimestamp,
+            playStatus = playStatus,
+            steamAppId = steamAppId,
+            steamPlaytimeMinutes = steamPlaytimeMinutes,
+            steamAchievementsUnlocked = steamAchievementsUnlocked,
+            steamAchievementsTotal = steamAchievementsTotal,
+            steamLastPlayedTimestamp = steamLastPlayedTimestamp
         )
     }
 }

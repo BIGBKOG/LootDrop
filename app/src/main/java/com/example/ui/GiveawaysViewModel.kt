@@ -28,6 +28,9 @@ import com.example.preferences.DpiScaleMode
 import com.example.preferences.TargetFrameRate
 import com.example.preferences.ThemeMode
 import com.example.data.model.LauncherOption
+import com.example.data.model.PlayStatus
+import com.example.data.model.LibraryPlayFilter
+import com.example.data.remote.SteamApiClient
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -79,7 +82,11 @@ data class UiStats(
     val platformCounts: Map<LauncherType, Int> = emptyMap(),
     val claimedTotalSavedUsd: Double = 0.0,
     val claimedCount: Int = 0,
-    val expiringSoon: Int = 0
+    val expiringSoon: Int = 0,
+    val unplayedCount: Int = 0,
+    val playingCount: Int = 0,
+    val finishedCount: Int = 0,
+    val droppedCount: Int = 0
 )
 
 class GiveawaysViewModel(application: Application) : AndroidViewModel(application) {
@@ -108,6 +115,21 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _selectedSort = MutableStateFlow(SortOption.NEWEST)
     val selectedSort: StateFlow<SortOption> = _selectedSort.asStateFlow()
+
+    private val _selectedLibraryPlayFilter = MutableStateFlow(preferences.libraryPlayFilter)
+    val selectedLibraryPlayFilter: StateFlow<LibraryPlayFilter> = _selectedLibraryPlayFilter.asStateFlow()
+
+    private val _steamUserId = MutableStateFlow(preferences.steamUserId)
+    val steamUserId: StateFlow<String> = _steamUserId.asStateFlow()
+
+    private val _steamApiKey = MutableStateFlow(preferences.steamApiKey)
+    val steamApiKey: StateFlow<String> = _steamApiKey.asStateFlow()
+
+    private val _steamSyncStatus = MutableStateFlow<String?>(null)
+    val steamSyncStatus: StateFlow<String?> = _steamSyncStatus.asStateFlow()
+
+    private val _isSyncingSteam = MutableStateFlow(false)
+    val isSyncingSteam: StateFlow<Boolean> = _isSyncingSteam.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -335,6 +357,11 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         val claimedTotalSaved = claimedGames.sumOf { it.numericWorth }
         val claimedCount = claimedGames.size
         val expiringCount = all.count { it.endDate != "N/A" && it.endDate.isNotBlank() }
+        val unplayed = claimedGames.count { it.playStatus == PlayStatus.NOT_STARTED }
+        val playing = claimedGames.count { it.playStatus == PlayStatus.PLAYING }
+        val finished = claimedGames.count { it.playStatus == PlayStatus.BEATEN }
+        val dropped = claimedGames.count { it.playStatus == PlayStatus.DROPPED }
+
         val platformMap = mutableMapOf<LauncherType, Int>()
         for (launcher in LauncherType.values()) {
             if (launcher == LauncherType.ALL) {
@@ -350,7 +377,11 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
             platformCounts = platformMap,
             claimedTotalSavedUsd = claimedTotalSaved,
             claimedCount = claimedCount,
-            expiringSoon = expiringCount
+            expiringSoon = expiringCount,
+            unplayedCount = unplayed,
+            playingCount = playing,
+            finishedCount = finished,
+            droppedCount = dropped
         )
     }.stateIn(
         scope = viewModelScope,
@@ -451,7 +482,8 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         _selectedTypeFilter,
         _selectedCategories,
         _selectedSort,
-        _searchQuery
+        _searchQuery,
+        _selectedLibraryPlayFilter
     ) { args: Array<Any> ->
         @Suppress("UNCHECKED_CAST")
         val all = args[0] as List<GiveawayItem>
@@ -462,7 +494,11 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         val categories = args[3] as Set<GameCategory>
         val sort = args[4] as SortOption
         val query = args[5] as String
-        filterAndSortList(all.filter { it.isClaimed }, launchers, typeFilter, categories, sort, query)
+        val playFilter = args[6] as LibraryPlayFilter
+
+        val claimed = all.filter { it.isClaimed }
+        val statusFiltered = if (playFilter.status == null) claimed else claimed.filter { it.playStatus == playFilter.status }
+        filterAndSortList(statusFiltered, launchers, typeFilter, categories, sort, query)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Filtered & sorted list matching the currently selected tab
@@ -1104,6 +1140,132 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
             repository.toggleClaimed(item.id, item.isClaimed)
             if (_detailItem.value?.id == item.id) {
                 _detailItem.value = _detailItem.value?.copy(isClaimed = !item.isClaimed)
+            }
+        }
+    }
+
+    fun updatePlayStatus(item: GiveawayItem, status: PlayStatus) {
+        viewModelScope.launch {
+            repository.updatePlayStatus(item.id, status)
+            if (_detailItem.value?.id == item.id) {
+                _detailItem.value = _detailItem.value?.copy(playStatus = status)
+            }
+        }
+    }
+
+    fun updatePlayStatusById(id: Int, status: PlayStatus) {
+        viewModelScope.launch {
+            repository.updatePlayStatus(id, status)
+            if (_detailItem.value?.id == id) {
+                _detailItem.value = _detailItem.value?.copy(playStatus = status)
+            }
+        }
+    }
+
+    fun setLibraryPlayFilter(filter: LibraryPlayFilter) {
+        preferences.libraryPlayFilter = filter
+        _selectedLibraryPlayFilter.value = filter
+    }
+
+    fun setSteamUserId(userId: String) {
+        preferences.steamUserId = userId
+        _steamUserId.value = userId
+    }
+
+    fun setSteamApiKey(key: String) {
+        preferences.steamApiKey = key
+        _steamApiKey.value = key
+    }
+
+    fun clearSteamSyncStatus() {
+        _steamSyncStatus.value = null
+    }
+
+    fun syncSteamLibrary(customSteamId: String? = null, customApiKey: String? = null) {
+        viewModelScope.launch {
+            _isSyncingSteam.value = true
+            _steamSyncStatus.value = "Connecting to Steam Web API..."
+            try {
+                val apiKey = SteamApiClient.resolveApiKey(customApiKey ?: _steamApiKey.value)
+                val rawUserId = (customSteamId ?: _steamUserId.value).trim()
+
+                if (rawUserId.isBlank()) {
+                    _steamSyncStatus.value = "Please enter your Steam ID or profile URL."
+                    return@launch
+                }
+
+                _steamSyncStatus.value = "Resolving Steam profile: $rawUserId..."
+                val resolvedSteamId = SteamApiClient.resolveSteamId(rawUserId, apiKey)
+                if (resolvedSteamId == null) {
+                    _steamSyncStatus.value = "Could not resolve Steam ID. Check your custom URL or Steam ID64."
+                    return@launch
+                }
+                preferences.steamUserId = rawUserId
+                _steamUserId.value = rawUserId
+
+                _steamSyncStatus.value = "Fetching owned games from Steam..."
+                val ownedGames = SteamApiClient.getOwnedGames(resolvedSteamId, apiKey)
+                if (ownedGames.isEmpty()) {
+                    _steamSyncStatus.value = "No games found. Please ensure 'Game details' is set to Public in your Steam Privacy Settings."
+                    return@launch
+                }
+
+                val claimedItems = allGiveaways.value.filter { it.isClaimed }
+                if (claimedItems.isEmpty()) {
+                    _steamSyncStatus.value = "Found ${ownedGames.size} Steam games. Claim games in LootDrop first to categorize them!"
+                    return@launch
+                }
+
+                var matchedCount = 0
+                var unplayed = 0
+                var playing = 0
+                var finished = 0
+
+                for (claimed in claimedItems) {
+                    val steamGame = SteamApiClient.matchSteamGame(claimed, ownedGames)
+                    if (steamGame != null) {
+                        matchedCount++
+                        val achievements = if (steamGame.playtimeForeverMinutes > 0) {
+                            SteamApiClient.getPlayerAchievements(steamGame.appId, resolvedSteamId, apiKey)
+                        } else null
+
+                        val unlocked = achievements?.unlockedCount ?: 0
+                        val total = achievements?.totalCount ?: 0
+
+                        val classifiedStatus = SteamApiClient.classifyPlayStatus(
+                            playtimeMinutes = steamGame.playtimeForeverMinutes,
+                            unlockedAchievements = unlocked,
+                            totalAchievements = total
+                        )
+
+                        when (classifiedStatus) {
+                            PlayStatus.NOT_STARTED -> unplayed++
+                            PlayStatus.PLAYING -> playing++
+                            PlayStatus.BEATEN -> finished++
+                            PlayStatus.DROPPED -> {}
+                        }
+
+                        repository.updateSteamTelemetry(
+                            id = claimed.id,
+                            status = classifiedStatus,
+                            steamAppId = steamGame.appId,
+                            playtimeMinutes = steamGame.playtimeForeverMinutes,
+                            achievementsUnlocked = unlocked,
+                            achievementsTotal = total,
+                            lastPlayed = steamGame.rtimeLastPlayed
+                        )
+                    }
+                }
+
+                _steamSyncStatus.value = if (matchedCount > 0) {
+                    "Synced $matchedCount games with Steam: $unplayed Unplayed, $playing Playing, $finished Finished!"
+                } else {
+                    "Found ${ownedGames.size} Steam games, but none matched your ${claimedItems.size} claimed library titles."
+                }
+            } catch (e: Exception) {
+                _steamSyncStatus.value = "Steam sync failed: ${e.message}"
+            } finally {
+                _isSyncingSteam.value = false
             }
         }
     }

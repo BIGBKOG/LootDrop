@@ -52,6 +52,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -81,6 +82,7 @@ import com.example.data.model.GameCategory
 import com.example.data.model.GiveawayItem
 import com.example.data.model.LauncherOption
 import com.example.data.model.LauncherType
+import com.example.data.model.PlayStatus
 import com.example.ui.density.LocalScreenDensityInfo
 import com.example.ui.theme.GamingCardBorder
 import com.example.ui.theme.GamingDarkBackground
@@ -99,6 +101,7 @@ fun GiveawayDetailDialog(
     onClaimClick: () -> Unit,
     onToggleBookmark: () -> Unit,
     onToggleClaimed: () -> Unit,
+    onPlayStatusChange: ((PlayStatus) -> Unit)? = null,
     onLauncherOptionClick: ((url: String, launcherName: String) -> Unit)? = null
 ) {
     val context = LocalContext.current
@@ -722,6 +725,175 @@ fun GiveawayDetailDialog(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(if (item.isClaimed) "In Library (Claimed)" else "Add to 'In Library'", fontSize = 13.sp)
+                    }
+
+                    // Interactive Game Tracker Section (When Claimed)
+                    if (item.isClaimed) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFF161F30))
+                                .border(1.dp, Color(0xFF2A3D59), RoundedCornerShape(12.dp))
+                                .padding(12.dp)
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "GAME TRACKER STATUS",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = NeonCyan,
+                                        letterSpacing = 0.8.sp
+                                    )
+                                    Text(
+                                        text = item.playStatus.label,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(item.playStatus.badgeColorHex)
+                                    )
+                                }
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    PlayStatus.values().forEach { status ->
+                                        val isCurrent = item.playStatus == status
+                                        val statusColor = Color(status.badgeColorHex)
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(if (isCurrent) statusColor.copy(alpha = 0.2f) else Color(0xFF0F172A))
+                                                .border(
+                                                    width = if (isCurrent) 1.5.dp else 1.dp,
+                                                    color = if (isCurrent) statusColor else Color(0xFF334155),
+                                                    shape = RoundedCornerShape(8.dp)
+                                                )
+                                                .clickable { onPlayStatusChange?.invoke(status) }
+                                                .padding(vertical = 7.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = when (status) {
+                                                    PlayStatus.NOT_STARTED -> "⏳ Backlog"
+                                                    PlayStatus.PLAYING -> "🎮 Playing"
+                                                    PlayStatus.BEATEN -> "🏆 Finished"
+                                                    PlayStatus.DROPPED -> "⏸️ Dropped"
+                                                },
+                                                fontSize = 10.sp,
+                                                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (isCurrent) statusColor else TextSecondary,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Steam Telemetry & Achievements Card
+                    if (item.hasSteamTelemetry) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFF171A21)) // Steam Dark Slate
+                                .border(1.dp, Color(0xFF2A475E), RoundedCornerShape(12.dp))
+                                .padding(12.dp)
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.SportsEsports,
+                                            contentDescription = "Steam",
+                                            tint = Color(0xFF66C0F4),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Text(
+                                            text = "Steam Activity & Progress",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                    }
+
+                                    if (item.steamAppId != null) {
+                                        Text(
+                                            text = "App #${item.steamAppId}",
+                                            fontSize = 10.sp,
+                                            color = Color(0xFF66C0F4),
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(Color(0xFF1B2838))
+                                                .clickable {
+                                                    val url = "https://store.steampowered.com/app/${item.steamAppId}"
+                                                    try {
+                                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                                                    } catch (_: Exception) {}
+                                                }
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column {
+                                        Text("Playtime Logged", fontSize = 10.sp, color = Color(0xFF8F98A0))
+                                        Text(
+                                            text = "${item.steamPlaytimeHours} (${item.steamPlaytimeMinutes} mins)",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                    }
+
+                                    if (item.steamAchievementsTotal > 0) {
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            Text("Achievements", fontSize = 10.sp, color = Color(0xFF8F98A0))
+                                            Text(
+                                                text = "${item.steamAchievementsUnlocked} / ${item.steamAchievementsTotal} (${item.steamAchievementsPercentage}%)",
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (item.steamAchievementsPercentage == 100) NeonGreen else Color.White
+                                            )
+                                        }
+                                    }
+                                }
+
+                                if (item.steamAchievementsTotal > 0) {
+                                    LinearProgressIndicator(
+                                        progress = { (item.steamAchievementsUnlocked.toFloat() / item.steamAchievementsTotal.toFloat()).coerceIn(0f, 1f) },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(6.dp)
+                                            .clip(RoundedCornerShape(3.dp)),
+                                        color = if (item.steamAchievementsPercentage == 100) NeonGreen else Color(0xFF66C0F4),
+                                        trackColor = Color(0xFF1B2838)
+                                    )
+                                }
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))

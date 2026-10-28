@@ -47,11 +47,15 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -73,6 +77,7 @@ import coil.size.Precision
 import com.example.data.model.GameCategory
 import com.example.data.model.GiveawayItem
 import com.example.data.model.LauncherType
+import com.example.data.model.PlayStatus
 import com.example.preferences.CardDensity
 import com.example.ui.density.LocalScreenDensityInfo
 import com.example.ui.theme.NeonCyan
@@ -88,6 +93,7 @@ fun GiveawayCard(
     onClaimClick: () -> Unit,
     onToggleBookmark: () -> Unit = {},
     onToggleClaimed: () -> Unit,
+    onPlayStatusChange: ((PlayStatus) -> Unit)? = null,
     isAnimationsEnabled: Boolean = true,
     isLowEndOptimization: Boolean = false,
     beamAngle: Float = 0f,
@@ -271,6 +277,9 @@ fun GiveawayCard(
                                     )
                                 }
                                 MetacriticScorePill(score = item.metacriticScore)
+                                if (item.isClaimed) {
+                                    PlayStatusBadge(status = item.playStatus, onStatusSelected = onPlayStatusChange)
+                                }
                                 if (showOriginalPrice && item.worth.isNotBlank() && item.worth != "N/A" && item.worth != "FREE") {
                                     Text(
                                         text = item.worth,
@@ -279,6 +288,11 @@ fun GiveawayCard(
                                         textDecoration = TextDecoration.LineThrough
                                     )
                                 }
+                            }
+
+                            if (item.hasSteamTelemetry) {
+                                Spacer(modifier = Modifier.height(2.dp))
+                                SteamTelemetryBadge(item = item)
                             }
 
                             Spacer(modifier = Modifier.height(2.dp))
@@ -494,6 +508,9 @@ fun GiveawayCard(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 MetacriticScorePill(score = item.metacriticScore)
+                                if (item.isClaimed) {
+                                    PlayStatusBadge(status = item.playStatus, onStatusSelected = onPlayStatusChange)
+                                }
                                 if (showOriginalPrice && item.worth.isNotBlank() && item.worth != "N/A" && item.worth != "FREE") {
                                     Text(
                                         text = item.worth,
@@ -972,6 +989,40 @@ fun GiveawayCard(
                             }
                         }
 
+                        // Interactive Play Status & Steam Telemetry (Claimed / Vault Mode)
+                        if (item.isClaimed || item.hasSteamTelemetry) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (item.isClaimed) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = "STATUS:",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        PlayStatusBadge(
+                                            status = item.playStatus,
+                                            onStatusSelected = onPlayStatusChange
+                                        )
+                                    }
+                                } else {
+                                    Spacer(modifier = Modifier.width(1.dp))
+                                }
+
+                                if (item.hasSteamTelemetry) {
+                                    SteamTelemetryBadge(item = item)
+                                }
+                            }
+                        }
+
                         Spacer(modifier = Modifier.height(12.dp))
 
                         // Action Bar
@@ -1104,4 +1155,140 @@ private fun rememberCardPulse(enabled: Boolean): Pair<Float, Float> {
         label = "pulse_scale"
     )
     return glow to scale
+}
+
+@Composable
+fun PlayStatusBadge(
+    status: PlayStatus,
+    onStatusSelected: ((PlayStatus) -> Unit)?,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val statusColor = Color(status.badgeColorHex)
+    val statusIcon = when (status) {
+        PlayStatus.NOT_STARTED -> "⏳"
+        PlayStatus.PLAYING -> "🎮"
+        PlayStatus.BEATEN -> "🏆"
+        PlayStatus.DROPPED -> "⏸️"
+    }
+
+    Box(modifier = modifier) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier
+                .clip(RoundedCornerShape(6.dp))
+                .background(statusColor.copy(alpha = 0.15f))
+                .border(1.dp, statusColor.copy(alpha = 0.6f), RoundedCornerShape(6.dp))
+                .then(if (onStatusSelected != null) Modifier.clickable { expanded = true } else Modifier)
+                .padding(horizontal = 7.dp, vertical = 3.dp)
+        ) {
+            Text(text = statusIcon, fontSize = 10.sp)
+            Text(
+                text = status.label,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = statusColor
+            )
+            if (onStatusSelected != null) {
+                Text(
+                    text = "▾",
+                    fontSize = 10.sp,
+                    color = statusColor.copy(alpha = 0.8f)
+                )
+            }
+        }
+
+        if (onStatusSelected != null) {
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier
+                    .background(Color(0xFF1E293B))
+                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+            ) {
+                PlayStatus.values().forEach { option ->
+                    val isCurrent = option == status
+                    val optColor = Color(option.badgeColorHex)
+                    DropdownMenuItem(
+                        text = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = when (option) {
+                                        PlayStatus.NOT_STARTED -> "⏳"
+                                        PlayStatus.PLAYING -> "🎮"
+                                        PlayStatus.BEATEN -> "🏆"
+                                        PlayStatus.DROPPED -> "⏸️"
+                                    },
+                                    fontSize = 14.sp
+                                )
+                                Text(
+                                    text = option.label,
+                                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isCurrent) optColor else Color.White,
+                                    fontSize = 13.sp
+                                )
+                            }
+                        },
+                        onClick = {
+                            expanded = false
+                            onStatusSelected(option)
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SteamTelemetryBadge(
+    item: GiveawayItem,
+    modifier: Modifier = Modifier
+) {
+    if (!item.hasSteamTelemetry) return
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        modifier = modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(Color(0xFF1B2838))
+            .border(1.dp, Color(0xFF66C0F4).copy(alpha = 0.45f), RoundedCornerShape(6.dp))
+            .padding(horizontal = 7.dp, vertical = 3.dp)
+    ) {
+        Text(
+            text = "🎮 Steam",
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF66C0F4)
+        )
+        Text(
+            text = "•",
+            fontSize = 9.sp,
+            color = Color(0xFF8F98A0)
+        )
+        Text(
+            text = "⏱ ${item.steamPlaytimeHours}",
+            fontSize = 10.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color(0xFFC7D5E0)
+        )
+        if (item.steamAchievementsTotal > 0) {
+            Text(
+                text = "•",
+                fontSize = 9.sp,
+                color = Color(0xFF8F98A0)
+            )
+            Text(
+                text = "🏆 ${item.steamAchievementsUnlocked}/${item.steamAchievementsTotal} (${item.steamAchievementsPercentage}%)",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = if (item.steamAchievementsPercentage == 100) NeonGreen else Color(0xFFC7D5E0)
+            )
+        }
+    }
 }

@@ -542,4 +542,19 @@ class AppPreferences(context: Context) {
     var cachedLatestGithubVersion: String
         get() = prefs.getString(KEY_CACHED_LATEST_VERSION, "") ?: ""
         set(value) = prefs.edit().putString(KEY_CACHED_LATEST_VERSION, value).apply()
+
+    var steamApiKey: String
+        get() = prefs.getString("KEY_STEAM_API_KEY", "") ?: ""
+        set(value) = prefs.edit().putString("KEY_STEAM_API_KEY", value).apply()
+
+    var steamUserId: String
+        get() = prefs.getString("KEY_STEAM_USER_ID", "") ?: ""
+        set(value) = prefs.edit().putString("KEY_STEAM_USER_ID", value).apply()
+
+    var libraryPlayFilter: com.example.data.model.LibraryPlayFilter
+        get() {
+            val name = prefs.getString("KEY_LIBRARY_PLAY_FILTER", "ALL") ?: "ALL"
+            return runCatching { com.example.data.model.LibraryPlayFilter.valueOf(name) }.getOrDefault(com.example.data.model.LibraryPlayFilter.ALL)
+        }
+        set(value) = prefs.edit().putString("KEY_LIBRARY_PLAY_FILTER", value.name).apply()
 }

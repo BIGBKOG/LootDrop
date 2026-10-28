@@ -65,6 +65,12 @@ interface GiveawayDao {
     @Query("SELECT COUNT(*) FROM giveaways")
     suspend fun getGiveawaysCount(): Int
 
+    @Query("UPDATE giveaways SET playStatus = :status WHERE id = :id")
+    suspend fun updatePlayStatus(id: Int, status: com.example.data.model.PlayStatus)
+
+    @Query("UPDATE giveaways SET playStatus = :status, steamAppId = :steamAppId, steamPlaytimeMinutes = :playtimeMinutes, steamAchievementsUnlocked = :achievementsUnlocked, steamAchievementsTotal = :achievementsTotal, steamLastPlayedTimestamp = :lastPlayed WHERE id = :id")
+    suspend fun updateSteamTelemetry(id: Int, status: com.example.data.model.PlayStatus, steamAppId: Int?, playtimeMinutes: Int, achievementsUnlocked: Int, achievementsTotal: Int, lastPlayed: Long)
+
     @Transaction
     suspend fun syncGiveawaysPreservingStatus(newItems: List<GiveawayEntity>): List<GiveawayEntity> {
         val freshlyDiscovered = mutableListOf<GiveawayEntity>()
@@ -79,12 +85,18 @@ interface GiveawayDao {
                 freshlyDiscovered.add(item)
                 toInsert.add(item)
             } else {
-                // Preserve user bookmarks, claimed status, and original discovery timestamp
+                // Preserve user bookmarks, claimed status, playStatus, and Steam telemetry
                 val updated = item.copy(
                     isClaimed = existing.isClaimed,
                     isBookmarked = existing.isBookmarked,
                     firstSeenTimestamp = existing.firstSeenTimestamp,
-                    notified = existing.notified
+                    notified = existing.notified,
+                    playStatus = existing.playStatus,
+                    steamAppId = existing.steamAppId,
+                    steamPlaytimeMinutes = existing.steamPlaytimeMinutes,
+                    steamAchievementsUnlocked = existing.steamAchievementsUnlocked,
+                    steamAchievementsTotal = existing.steamAchievementsTotal,
+                    steamLastPlayedTimestamp = existing.steamLastPlayedTimestamp
                 )
                 toInsert.add(updated)
             }
