@@ -69,11 +69,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.GameCategory
 import com.example.data.model.LauncherType
+import com.example.data.model.PlayabilityFilter
+import com.example.data.model.StorageFilter
 import com.example.ui.SortOption
 import com.example.ui.TypeFilter
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
+import androidx.compose.material.icons.filled.Gamepad
+import androidx.compose.material.icons.filled.SdStorage
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -91,6 +95,10 @@ fun FilterSortBottomSheet(
     onResetFilters: () -> Unit,
     platformCounts: Map<LauncherType, Int>,
     totalFilteredCount: Int,
+    selectedPlayability: PlayabilityFilter = PlayabilityFilter.ALL,
+    onPlayabilitySelect: (PlayabilityFilter) -> Unit = {},
+    selectedStorage: StorageFilter = StorageFilter.ALL,
+    onStorageSelect: (StorageFilter) -> Unit = {},
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -574,6 +582,129 @@ fun FilterSortBottomSheet(
                             }
                         }
                     }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+            Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // SECTION 5: Steam Deck & Hardware Readiness Tags
+            FilterSectionHeader(title = "STEAM DECK & HARDWARE READINESS", icon = Icons.Default.Gamepad)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                PlayabilityFilter.values().forEach { playTag ->
+                    val isSelected = playTag == selectedPlayability
+                    val tagColor = when (playTag) {
+                        PlayabilityFilter.ALL -> MaterialTheme.colorScheme.primary
+                        PlayabilityFilter.DECK_VERIFIED -> Color(0xFF10B981)
+                        PlayabilityFilter.CONTROLLER_FRIENDLY -> Color(0xFF00E5FF)
+                        PlayabilityFilter.QUICK_SESSION -> Color(0xFFFFD700)
+                    }
+
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { onPlayabilitySelect(playTag) },
+                        label = {
+                            Text(
+                                text = "${playTag.iconEmoji} ${playTag.label}",
+                                fontSize = 12.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                            )
+                        },
+                        leadingIcon = if (isSelected) {
+                            {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        } else null,
+                        colors = FilterChipDefaults.filterChipColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            labelColor = TextSecondary,
+                            selectedContainerColor = tagColor.copy(alpha = 0.2f),
+                            selectedLabelColor = tagColor,
+                            selectedLeadingIconColor = tagColor
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = isSelected,
+                            borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                            selectedBorderColor = tagColor
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.testTag("filter_playability_${playTag.name.lowercase()}")
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+            Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // SECTION 6: Storage Footprint Tracker
+            FilterSectionHeader(title = "STORAGE FOOTPRINT TRACKER", icon = Icons.Default.SdStorage)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                StorageFilter.values().forEach { storageTag ->
+                    val isSelected = storageTag == selectedStorage
+                    val storageColor = when (storageTag) {
+                        StorageFilter.ALL -> MaterialTheme.colorScheme.secondary
+                        StorageFilter.UNDER_2GB -> Color(0xFF10B981)
+                        StorageFilter.FROM_2_TO_10GB -> Color(0xFF00E5FF)
+                        StorageFilter.FROM_10_TO_40GB -> Color(0xFFFFB300)
+                        StorageFilter.OVER_40GB -> Color(0xFFFF5722)
+                    }
+
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { onStorageSelect(storageTag) },
+                        label = {
+                            Text(
+                                text = "💾 ${storageTag.label}",
+                                fontSize = 12.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                            )
+                        },
+                        leadingIcon = if (isSelected) {
+                            {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        } else null,
+                        colors = FilterChipDefaults.filterChipColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            labelColor = TextSecondary,
+                            selectedContainerColor = storageColor.copy(alpha = 0.2f),
+                            selectedLabelColor = storageColor,
+                            selectedLeadingIconColor = storageColor
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = isSelected,
+                            borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                            selectedBorderColor = storageColor
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.testTag("filter_storage_${storageTag.name.lowercase()}")
+                    )
                 }
             }
 

@@ -78,6 +78,12 @@ import com.example.data.model.GameCategory
 import com.example.data.model.GiveawayItem
 import com.example.data.model.LauncherType
 import com.example.data.model.PlayStatus
+import com.example.data.model.SteamDeckStatus
+import com.example.data.model.ControllerSupport
+import com.example.data.model.SessionStyle
+import com.example.data.model.StorageTier
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import com.example.preferences.CardDensity
 import com.example.ui.density.LocalScreenDensityInfo
 import com.example.ui.theme.NeonCyan
@@ -323,13 +329,48 @@ fun GiveawayCard(
                                 overflow = TextOverflow.Ellipsis
                             )
 
-                            Text(
-                                text = item.platforms,
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = item.platforms,
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+                                val hardware = item.hardwareProfile
+                                if (hardware.deckStatus == SteamDeckStatus.VERIFIED || hardware.deckStatus == SteamDeckStatus.PLAYABLE) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(3.dp))
+                                            .background(if (hardware.deckStatus == SteamDeckStatus.VERIFIED) Color(0x2210B981) else Color(0x22F59E0B))
+                                            .padding(horizontal = 4.dp, vertical = 0.5.dp)
+                                    ) {
+                                        Text(
+                                            text = if (hardware.deckStatus == SteamDeckStatus.VERIFIED) "🟢 Deck" else "🟡 Deck",
+                                            fontSize = 8.5.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (hardware.deckStatus == SteamDeckStatus.VERIFIED) Color(0xFF10B981) else Color(0xFFF59E0B)
+                                        )
+                                    }
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(3.dp))
+                                        .background(Color(0x228B5CF6))
+                                        .padding(horizontal = 4.dp, vertical = 0.5.dp)
+                                ) {
+                                    Text(
+                                        text = "💾 ${hardware.formattedSize}",
+                                        fontSize = 8.5.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = Color(0xFFA78BFA)
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -512,6 +553,54 @@ fun GiveawayCard(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 2.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                val hardware = item.hardwareProfile
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(
+                                            when (hardware.deckStatus) {
+                                                SteamDeckStatus.VERIFIED -> Color(0x2210B981)
+                                                SteamDeckStatus.PLAYABLE -> Color(0x22F59E0B)
+                                                SteamDeckStatus.UNSUPPORTED -> Color(0x22EF4444)
+                                                SteamDeckStatus.UNKNOWN -> Color(0x2264748B)
+                                            }
+                                        )
+                                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                                ) {
+                                    Text(
+                                        text = hardware.deckStatus.pillLabel,
+                                        fontSize = 8.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = when (hardware.deckStatus) {
+                                            SteamDeckStatus.VERIFIED -> Color(0xFF10B981)
+                                            SteamDeckStatus.PLAYABLE -> Color(0xFFF59E0B)
+                                            SteamDeckStatus.UNSUPPORTED -> Color(0xFFEF4444)
+                                            SteamDeckStatus.UNKNOWN -> Color(0xFF94A3B8)
+                                        }
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(Color(0x228B5CF6))
+                                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                                ) {
+                                    Text(
+                                        text = "💾 ${hardware.formattedSize}",
+                                        fontSize = 8.5.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = Color(0xFFA78BFA)
+                                    )
+                                }
+                            }
                         }
 
                         Row(
@@ -1071,6 +1160,104 @@ fun GiveawayCard(
                                 if (item.hasSteamTelemetry) {
                                     SteamTelemetryBadge(item = item)
                                 }
+                            }
+                        }
+
+                        // Hardware Readiness & Storage Footprint Tags Row
+                        val hardware = item.hardwareProfile
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Steam Deck Status Pill
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(
+                                        when (hardware.deckStatus) {
+                                            SteamDeckStatus.VERIFIED -> Color(0x2210B981)
+                                            SteamDeckStatus.PLAYABLE -> Color(0x22F59E0B)
+                                            SteamDeckStatus.UNSUPPORTED -> Color(0x22EF4444)
+                                            SteamDeckStatus.UNKNOWN -> Color(0x2264748B)
+                                        }
+                                    )
+                                    .border(
+                                        1.dp,
+                                        when (hardware.deckStatus) {
+                                            SteamDeckStatus.VERIFIED -> Color(0xFF10B981)
+                                            SteamDeckStatus.PLAYABLE -> Color(0xFFF59E0B)
+                                            SteamDeckStatus.UNSUPPORTED -> Color(0xFFEF4444)
+                                            SteamDeckStatus.UNKNOWN -> Color(0xFF64748B)
+                                        },
+                                        RoundedCornerShape(6.dp)
+                                    )
+                                    .padding(horizontal = 6.dp, vertical = 2.5.dp)
+                            ) {
+                                Text(
+                                    text = hardware.deckStatus.pillLabel,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = when (hardware.deckStatus) {
+                                        SteamDeckStatus.VERIFIED -> Color(0xFF10B981)
+                                        SteamDeckStatus.PLAYABLE -> Color(0xFFF59E0B)
+                                        SteamDeckStatus.UNSUPPORTED -> Color(0xFFEF4444)
+                                        SteamDeckStatus.UNKNOWN -> Color(0xFF94A3B8)
+                                    }
+                                )
+                            }
+
+                            // Controller Support Tag
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color(0x2266C0F4))
+                                    .border(1.dp, Color(0xFF66C0F4).copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 6.dp, vertical = 2.5.dp)
+                            ) {
+                                Text(
+                                    text = hardware.controllerSupport.label,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFF66C0F4)
+                                )
+                            }
+
+                            // Quick Session Tag
+                            if (hardware.sessionStyle == SessionStyle.QUICK_SESSION) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Color(0x22F59E0B))
+                                        .border(1.dp, Color(0xFFF59E0B).copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                                        .padding(horizontal = 6.dp, vertical = 2.5.dp)
+                                ) {
+                                    Text(
+                                        text = "⚡ Quick Session",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = Color(0xFFF59E0B)
+                                    )
+                                }
+                            }
+
+                            // Storage Footprint Tracker Tag
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color(0x228B5CF6))
+                                    .border(1.dp, Color(0xFF8B5CF6).copy(alpha = 0.6f), RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 6.dp, vertical = 2.5.dp)
+                            ) {
+                                Text(
+                                    text = "💾 ${hardware.formattedSize}${if (hardware.isManualOverride) " (custom)" else ""}",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFFA78BFA)
+                                )
                             }
                         }
 

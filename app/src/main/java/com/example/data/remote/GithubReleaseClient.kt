@@ -324,6 +324,11 @@ class GithubReleaseClient(private val context: Context) {
         const val REPO_URL = "https://github.com/$DEFAULT_OWNER/$DEFAULT_REPO"
         const val RELEASES_URL = "https://github.com/$DEFAULT_OWNER/$DEFAULT_REPO/releases"
 
+        fun isCurrentModernStream(version: String): Boolean {
+            val clean = version.trim().removePrefix("v").removePrefix("V")
+            return clean.startsWith("1.") || clean.startsWith("2.")
+        }
+
         /**
          * Compares semantic versions (e.g. "1.5.X" vs "1.5.0", "V4.1" vs "4.0").
          * Returns true if remote is strictly newer than current.
@@ -346,9 +351,8 @@ class GithubReleaseClient(private val context: Context) {
             }
 
             // Any older 4.x/3.x releases on GitHub are legacy releases from before the reset
-            // and should NOT be treated as newer when running on 1.x.
-            val isCurrentModernSeries = cleanCurrent.startsWith("1.") || cleanCurrent.startsWith("2.")
-            if (isCurrentModernSeries) {
+            // and should NOT be treated as newer when running on modern streams (1.x, 2.x).
+            if (isCurrentModernStream(cleanCurrent)) {
                 if (cleanRemote.startsWith("4.") || cleanRemote.startsWith("3.") ||
                     cleanRemote.contains("V4.") || cleanRemote.contains("V3.") ||
                     cleanRemote.contains("Loot-Drop-V3.")) {

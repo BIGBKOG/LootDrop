@@ -46,6 +46,9 @@ import com.example.LootDropApplication
 import com.example.StorageMetrics
 import com.example.data.local.SteamGameEntity
 import com.example.data.model.LibraryViewMode
+import com.example.data.model.PlayabilityFilter
+import com.example.data.model.StorageFilter
+import com.example.data.model.StorageTier
 
 enum class MainTab {
     DISCOVER,
@@ -94,8 +97,21 @@ data class UiStats(
     val steamUnplayedCount: Int = 0,
     val steamPlayingCount: Int = 0,
     val steamFinishedCount: Int = 0,
-    val steamDroppedCount: Int = 0
-)
+    val steamDroppedCount: Int = 0,
+    // Hardware Readiness & Storage Footprint
+    val deckVerifiedCount: Int = 0,
+    val controllerFriendlyCount: Int = 0,
+    val quickSessionCount: Int = 0,
+    val storageUnder2GbCount: Int = 0,
+    val storage2To10GbCount: Int = 0,
+    val storage10To40GbCount: Int = 0,
+    val storageOver40GbCount: Int = 0,
+    val claimedTotalStorageGb: Float = 0f,
+    val steamTotalStorageGb: Float = 0f
+) {
+    val claimedStorageFormatted: String get() = com.example.data.model.formatStorageGb(claimedTotalStorageGb)
+    val steamStorageFormatted: String get() = com.example.data.model.formatStorageGb(steamTotalStorageGb)
+}
 
 class GiveawaysViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -160,12 +176,36 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isCategorySheetOpen = MutableStateFlow(false)
     val isCategorySheetOpen: StateFlow<Boolean> = _isCategorySheetOpen.asStateFlow()
 
+    private val _selectedPlayabilityFilter = MutableStateFlow(PlayabilityFilter.ALL)
+    val selectedPlayabilityFilter: StateFlow<PlayabilityFilter> = _selectedPlayabilityFilter.asStateFlow()
+
+    fun setPlayabilityFilter(filter: PlayabilityFilter) {
+        _selectedPlayabilityFilter.value = filter
+    }
+
+    private val _selectedStorageFilter = MutableStateFlow(StorageFilter.ALL)
+    val selectedStorageFilter: StateFlow<StorageFilter> = _selectedStorageFilter.asStateFlow()
+
+    fun setStorageFilter(filter: StorageFilter) {
+        _selectedStorageFilter.value = filter
+    }
+
     val activeFilterCount: StateFlow<Int> = combine(
         _selectedLaunchers,
         _selectedTypeFilter,
         _selectedCategories,
-        _selectedSort
-    ) { launchers, typeFilter, categories, sort ->
+        _selectedSort,
+        _selectedPlayabilityFilter,
+        _selectedStorageFilter
+    ) { args: Array<Any> ->
+        @Suppress("UNCHECKED_CAST")
+        val launchers = args[0] as Set<LauncherType>
+        val typeFilter = args[1] as TypeFilter
+        @Suppress("UNCHECKED_CAST")
+        val categories = args[2] as Set<GameCategory>
+        val sort = args[3] as SortOption
+        val playability = args[4] as PlayabilityFilter
+        val storage = args[5] as StorageFilter
         var count = 0
         if (launchers.isNotEmpty() && !launchers.contains(LauncherType.ALL)) {
             count += launchers.size
@@ -173,6 +213,8 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         if (typeFilter != TypeFilter.ALL) count++
         if (categories.isNotEmpty()) count += categories.size
         if (sort != SortOption.NEWEST) count++
+        if (playability != PlayabilityFilter.ALL) count++
+        if (storage != StorageFilter.ALL) count++
         count
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
@@ -369,8 +411,17 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     val filteredSteamGames: StateFlow<List<SteamGameEntity>> = combine(
         allSteamGames,
         _selectedLibraryPlayFilter,
-        _searchQuery
-    ) { steamGames, playFilter, query ->
+        _searchQuery,
+        _selectedPlayabilityFilter,
+        _selectedStorageFilter
+    ) { args: Array<Any> ->
+        @Suppress("UNCHECKED_CAST")
+        val steamGames = args[0] as List<SteamGameEntity>
+        val playFilter = args[1] as LibraryPlayFilter
+        val query = args[2] as String
+        val playability = args[3] as PlayabilityFilter
+        val storage = args[4] as StorageFilter
+
         var list = steamGames
         if (playFilter.status != null) {
             list = list.filter { it.playStatus == playFilter.status }
@@ -378,6 +429,17 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         if (query.isNotBlank()) {
             val q = query.trim().lowercase()
             list = list.filter { it.name.lowercase().contains(q) }
+        }
+        when (playability) {
+            PlayabilityFilter.ALL -> {}
+            PlayabilityFilter.DECK_VERIFIED -> list = list.filter { it.hardwareProfile.isDeckVerified }
+            PlayabilityFilter.CONTROLLER_FRIENDLY -> list = list.filter { it.hardwareProfile.isControllerFriendly }
+            PlayabilityFilter.QUICK_SESSION -> list = list.filter { it.hardwareProfile.isQuickSession }
+        }
+        if (storage != StorageFilter.ALL && storage.tier != null) {
+            list = list.filter { game ->
+                storage.tier.matches(game.hardwareProfile.effectiveStorageGb)
+            }
         }
         list
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -404,6 +466,18 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         val steamFinished = steamGames.count { it.playStatus == PlayStatus.BEATEN }
         val steamDropped = steamGames.count { it.playStatus == PlayStatus.DROPPED }
 
+        // Combined library hardware readiness counts
+        val activeOrClaimed = if (claimedGames.isNotEmpty()) claimedGames else all
+        val deckVerified = activeOrClaimed.count { it.hardwareProfile.isDeckVerified }
+        val controllerFriendly = activeOrClaimed.count { it.hardwareProfile.isControllerFriendly }
+        val quickSession = activeOrClaimed.count { it.hardwareProfile.isQuickSession }
+        val under2Gb = activeOrClaimed.count { it.hardwareProfile.storageTier == StorageTier.FEATHERWEIGHT }
+        val from2To10Gb = activeOrClaimed.count { it.hardwareProfile.storageTier == StorageTier.COMPACT }
+        val from10To40Gb = activeOrClaimed.count { it.hardwareProfile.storageTier == StorageTier.MEDIUM }
+        val over40Gb = activeOrClaimed.count { it.hardwareProfile.storageTier == StorageTier.HEAVYWEIGHT }
+        val claimedTotalStorage = claimedGames.sumOf { it.hardwareProfile.effectiveSizeGb.toDouble() }.toFloat()
+        val steamTotalStorage = steamGames.sumOf { it.hardwareProfile.effectiveSizeGb.toDouble() }.toFloat()
+
         val platformMap = mutableMapOf<LauncherType, Int>()
         for (launcher in LauncherType.values()) {
             if (launcher == LauncherType.ALL) {
@@ -428,7 +502,16 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
             steamUnplayedCount = steamUnplayed,
             steamPlayingCount = steamPlaying,
             steamFinishedCount = steamFinished,
-            steamDroppedCount = steamDropped
+            steamDroppedCount = steamDropped,
+            deckVerifiedCount = deckVerified,
+            controllerFriendlyCount = controllerFriendly,
+            quickSessionCount = quickSession,
+            storageUnder2GbCount = under2Gb,
+            storage2To10GbCount = from2To10Gb,
+            storage10To40GbCount = from10To40Gb,
+            storageOver40GbCount = over40Gb,
+            claimedTotalStorageGb = claimedTotalStorage,
+            steamTotalStorageGb = steamTotalStorage
         )
     }.stateIn(
         scope = viewModelScope,
@@ -436,14 +519,16 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         initialValue = UiStats()
     )
    
-    // Helper method to apply launcher, type, category, search and sort filters to any giveaway list
+    // Helper method to apply launcher, type, category, search, playability, storage and sort filters to any giveaway list
     private fun filterAndSortList(
         source: List<GiveawayItem>,
         launchers: Set<LauncherType>,
         typeFilter: TypeFilter,
         categories: Set<GameCategory>,
         sort: SortOption,
-        query: String
+        query: String,
+        playability: PlayabilityFilter = PlayabilityFilter.ALL,
+        storage: StorageFilter = StorageFilter.ALL
     ): List<GiveawayItem> {
         var filtered = source
 
@@ -464,6 +549,27 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         if (categories.isNotEmpty()) {
             filtered = filtered.filter { item ->
                 item.categories.any { it in categories }
+            }
+        }
+
+        // Playability filter (Steam Deck Verified, Controller Friendly, Quick Session)
+        when (playability) {
+            PlayabilityFilter.ALL -> {}
+            PlayabilityFilter.DECK_VERIFIED -> {
+                filtered = filtered.filter { it.hardwareProfile.isDeckVerified }
+            }
+            PlayabilityFilter.CONTROLLER_FRIENDLY -> {
+                filtered = filtered.filter { it.hardwareProfile.isControllerFriendly }
+            }
+            PlayabilityFilter.QUICK_SESSION -> {
+                filtered = filtered.filter { it.hardwareProfile.isQuickSession }
+            }
+        }
+
+        // Storage Footprint filter
+        if (storage != StorageFilter.ALL && storage.tier != null) {
+            filtered = filtered.filter { item ->
+                storage.tier.matches(item.hardwareProfile.effectiveStorageGb)
             }
         }
 
@@ -508,7 +614,9 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         _selectedTypeFilter,
         _selectedCategories,
         _selectedSort,
-        _searchQuery
+        _searchQuery,
+        _selectedPlayabilityFilter,
+        _selectedStorageFilter
     ) { args: Array<Any> ->
         @Suppress("UNCHECKED_CAST")
         val all = args[0] as List<GiveawayItem>
@@ -519,7 +627,9 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         val categories = args[3] as Set<GameCategory>
         val sort = args[4] as SortOption
         val query = args[5] as String
-        filterAndSortList(all, launchers, typeFilter, categories, sort, query)
+        val playability = args[6] as PlayabilityFilter
+        val storage = args[7] as StorageFilter
+        filterAndSortList(all, launchers, typeFilter, categories, sort, query, playability, storage)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Claimed giveaways: always claimed library items filtered & sorted
@@ -530,7 +640,9 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         _selectedCategories,
         _selectedSort,
         _searchQuery,
-        _selectedLibraryPlayFilter
+        _selectedLibraryPlayFilter,
+        _selectedPlayabilityFilter,
+        _selectedStorageFilter
     ) { args: Array<Any> ->
         @Suppress("UNCHECKED_CAST")
         val all = args[0] as List<GiveawayItem>
@@ -542,10 +654,12 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         val sort = args[4] as SortOption
         val query = args[5] as String
         val playFilter = args[6] as LibraryPlayFilter
+        val playability = args[7] as PlayabilityFilter
+        val storage = args[8] as StorageFilter
 
         val claimed = all.filter { it.isClaimed }
         val statusFiltered = if (playFilter.status == null) claimed else claimed.filter { it.playStatus == playFilter.status }
-        filterAndSortList(statusFiltered, launchers, typeFilter, categories, sort, query)
+        filterAndSortList(statusFiltered, launchers, typeFilter, categories, sort, query, playability, storage)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Filtered & sorted list matching the currently selected tab
@@ -876,7 +990,26 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         _selectedTypeFilter.value = TypeFilter.ALL
         _selectedCategories.value = emptySet()
         _selectedSort.value = SortOption.NEWEST
+        _selectedPlayabilityFilter.value = PlayabilityFilter.ALL
+        _selectedStorageFilter.value = StorageFilter.ALL
         _searchQuery.value = ""
+    }
+
+    fun setGiveawayManualStorage(id: Int, sizeGb: Float?) {
+        viewModelScope.launch {
+            repository.updateGiveawayManualStorage(id, sizeGb)
+            _detailItem.value?.let { current ->
+                if (current.id == id) {
+                    _detailItem.value = current.copy(manualInstallSizeGb = sizeGb)
+                }
+            }
+        }
+    }
+
+    fun setSteamGameManualStorage(appId: Int, sizeGb: Float?) {
+        viewModelScope.launch {
+            repository.updateSteamGameManualStorage(appId, sizeGb)
+        }
     }
 
     fun updateSearchQuery(query: String) {

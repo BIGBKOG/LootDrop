@@ -80,6 +80,9 @@ interface GiveawayDao {
     @Query("UPDATE giveaways SET isWishlisted = 0")
     suspend fun clearAllWishlisted()
 
+    @Query("UPDATE giveaways SET manualInstallSizeGb = :sizeGb WHERE id = :id")
+    suspend fun updateManualInstallSize(id: Int, sizeGb: Float?)
+
     @Transaction
     suspend fun syncGiveawaysPreservingStatus(newItems: List<GiveawayEntity>): List<GiveawayEntity> {
         val freshlyDiscovered = mutableListOf<GiveawayEntity>()
@@ -94,7 +97,7 @@ interface GiveawayDao {
                 freshlyDiscovered.add(item)
                 toInsert.add(item)
             } else {
-                // Preserve user bookmarks, claimed status, playStatus, Steam telemetry, and Wishlist
+                // Preserve user bookmarks, claimed status, playStatus, Steam telemetry, Wishlist, and manual storage
                 val updated = item.copy(
                     isClaimed = existing.isClaimed,
                     isBookmarked = existing.isBookmarked,
@@ -106,7 +109,8 @@ interface GiveawayDao {
                     steamAchievementsUnlocked = existing.steamAchievementsUnlocked,
                     steamAchievementsTotal = existing.steamAchievementsTotal,
                     steamLastPlayedTimestamp = existing.steamLastPlayedTimestamp,
-                    isWishlisted = existing.isWishlisted
+                    isWishlisted = existing.isWishlisted,
+                    manualInstallSizeGb = existing.manualInstallSizeGb
                 )
                 toInsert.add(updated)
             }

@@ -131,6 +131,8 @@ import com.example.data.model.LauncherType
 import com.example.data.model.LibraryPlayFilter
 import com.example.data.model.LibraryViewMode
 import com.example.data.model.PlayStatus
+import com.example.data.model.PlayabilityFilter
+import com.example.data.model.StorageFilter
 import com.example.preferences.CardDensity
 import com.example.ui.calendar.CalendarTabContent
 import com.example.ui.components.AppUpdateDialog
@@ -197,6 +199,8 @@ fun HomeScreen(
     val isSyncingSteam by viewModel.isSyncingSteam.collectAsState()
     val libraryViewMode by viewModel.libraryViewMode.collectAsState()
     val filteredSteamGames by viewModel.filteredSteamGames.collectAsState()
+    val selectedPlayabilityFilter by viewModel.selectedPlayabilityFilter.collectAsState()
+    val selectedStorageFilter by viewModel.selectedStorageFilter.collectAsState()
 
     val borderBeamAngle = rememberAnimatedBeamAngle(enabled = isAnimationsEnabled && !isLowEndOptimization)
 
@@ -537,7 +541,11 @@ fun HomeScreen(
                                 }
                             },
                             onToggleBookmark = { viewModel.toggleBookmark(it) },
-                            onToggleClaimed = { viewModel.toggleClaimed(it) }
+                            onToggleClaimed = { viewModel.toggleClaimed(it) },
+                            selectedPlayabilityFilter = selectedPlayabilityFilter,
+                            onPlayabilityFilterSelect = { viewModel.setPlayabilityFilter(it) },
+                            selectedStorageFilter = selectedStorageFilter,
+                            onStorageFilterSelect = { viewModel.setStorageFilter(it) }
                         )
                     }
                     MainTab.CLAIMED -> {
@@ -590,7 +598,12 @@ fun HomeScreen(
                             libraryViewMode = libraryViewMode,
                             steamGames = filteredSteamGames,
                             onViewModeChange = { viewModel.setLibraryViewMode(it) },
-                            onSteamPlayStatusChange = { game, status -> viewModel.updateSteamGamePlayStatus(game, status) }
+                            onSteamPlayStatusChange = { game, status -> viewModel.updateSteamGamePlayStatus(game, status) },
+                            selectedPlayabilityFilter = selectedPlayabilityFilter,
+                            onPlayabilityFilterSelect = { viewModel.setPlayabilityFilter(it) },
+                            selectedStorageFilter = selectedStorageFilter,
+                            onStorageFilterSelect = { viewModel.setStorageFilter(it) },
+                            onSteamManualStorageChange = { game, sizeGb -> viewModel.setSteamGameManualStorage(game.appId, sizeGb) }
                         )
                     }
                     MainTab.CALENDAR -> {
@@ -647,6 +660,10 @@ fun HomeScreen(
             onResetFilters = { viewModel.resetFilters() },
             platformCounts = uiStats.platformCounts,
             totalFilteredCount = displayedGiveaways.size,
+            selectedPlayability = selectedPlayabilityFilter,
+            onPlayabilitySelect = { viewModel.setPlayabilityFilter(it) },
+            selectedStorage = selectedStorageFilter,
+            onStorageSelect = { viewModel.setStorageFilter(it) },
             onDismiss = { viewModel.setFilterSheetOpen(false) }
         )
     }
@@ -681,7 +698,8 @@ fun HomeScreen(
             onToggleBookmark = { viewModel.toggleBookmark(item) },
             onToggleClaimed = { viewModel.toggleClaimed(item) },
             onToggleWishlist = { viewModel.toggleWishlist(item) },
-            onPlayStatusChange = { status -> viewModel.updatePlayStatus(item, status) }
+            onPlayStatusChange = { status -> viewModel.updatePlayStatus(item, status) },
+            onUpdateManualStorage = { sizeGb -> viewModel.setGiveawayManualStorage(item.id, sizeGb) }
         )
     }
 
@@ -777,6 +795,7 @@ fun HomeScreen(
 fun ClaimedSavingsBanner(
     savingsUsd: Double,
     claimedCount: Int,
+    totalStorageGb: Float = 0f,
     isAnimationsEnabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
@@ -876,6 +895,27 @@ fun ClaimedSavingsBanner(
                     fontSize = 12.sp,
                     color = TextSecondary
                 )
+
+                if (totalStorageGb > 0f) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFF00E5FF).copy(alpha = 0.12f))
+                            .border(1.dp, Color(0xFF00E5FF).copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(text = "💾", fontSize = 11.sp)
+                        Text(
+                            text = "Storage Footprint: ${com.example.data.model.formatStorageGb(totalStorageGb)} total planned drive space",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF00E5FF)
+                        )
+                    }
+                }
             }
 
             Box(
@@ -947,6 +987,11 @@ fun GiveawaysTabContent(
     steamGames: List<SteamGameEntity> = emptyList(),
     onViewModeChange: (LibraryViewMode) -> Unit = {},
     onSteamPlayStatusChange: ((SteamGameEntity, PlayStatus) -> Unit)? = null,
+    selectedPlayabilityFilter: PlayabilityFilter = PlayabilityFilter.ALL,
+    onPlayabilityFilterSelect: (PlayabilityFilter) -> Unit = {},
+    selectedStorageFilter: StorageFilter = StorageFilter.ALL,
+    onStorageFilterSelect: (StorageFilter) -> Unit = {},
+    onSteamManualStorageChange: ((SteamGameEntity, Float?) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxSize()) {
@@ -965,9 +1010,20 @@ fun GiveawaysTabContent(
 
         // Total Money Saved Banner on In Library
         if (tab == MainTab.CLAIMED) {
+            val totalStorage = if (libraryViewMode == LibraryViewMode.ALL_PAID) {
+                uiStats.steamTotalStorageGb
+            } else {
+                uiStats.claimedTotalStorageGb
+            }
+            val totalCount = if (libraryViewMode == LibraryViewMode.ALL_PAID) {
+                uiStats.steamTotalCount
+            } else {
+                uiStats.claimedCount
+            }
             ClaimedSavingsBanner(
                 savingsUsd = uiStats.claimedTotalSavedUsd,
-                claimedCount = uiStats.claimedCount,
+                claimedCount = totalCount,
+                totalStorageGb = totalStorage,
                 isAnimationsEnabled = isAnimationsEnabled && !isLowEndOptimization
             )
 
@@ -983,7 +1039,11 @@ fun GiveawaysTabContent(
                 onQuickSteamSync = onQuickSteamSync,
                 onDismissStatus = onDismissSteamStatus,
                 viewMode = libraryViewMode,
-                onViewModeChange = onViewModeChange
+                onViewModeChange = onViewModeChange,
+                selectedPlayability = selectedPlayabilityFilter,
+                onPlayabilitySelect = onPlayabilityFilterSelect,
+                selectedStorage = selectedStorageFilter,
+                onStorageSelect = onStorageFilterSelect
             )
         }
 
@@ -1269,6 +1329,7 @@ fun GiveawaysTabContent(
                                 SteamGameCard(
                                     game = game,
                                     onStatusChange = { newStatus -> onSteamPlayStatusChange?.invoke(game, newStatus) },
+                                    onUpdateManualStorage = { sizeGb -> onSteamManualStorageChange?.invoke(game, sizeGb) },
                                     modifier = if (isAnimationsEnabled && !isLowEndOptimization) Modifier.animateItem() else Modifier
                                 )
                             }
@@ -1291,6 +1352,7 @@ fun GiveawaysTabContent(
                                 SteamGameCard(
                                     game = game,
                                     onStatusChange = { newStatus -> onSteamPlayStatusChange?.invoke(game, newStatus) },
+                                    onUpdateManualStorage = { sizeGb -> onSteamManualStorageChange?.invoke(game, sizeGb) },
                                     modifier = if (isAnimationsEnabled && !isLowEndOptimization) Modifier.animateItem() else Modifier
                                 )
                             }

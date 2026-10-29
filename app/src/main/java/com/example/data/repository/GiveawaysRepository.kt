@@ -209,6 +209,14 @@ class GiveawaysRepository(
         giveawayDao.getGiveawayById(id)?.toDomain()
     }
 
+    suspend fun updateGiveawayManualStorage(id: Int, sizeGb: Float?): Unit = withContext(Dispatchers.IO) {
+        giveawayDao.updateManualInstallSize(id, sizeGb)
+    }
+
+    suspend fun updateSteamGameManualStorage(appId: Int, sizeGb: Float?): Unit = withContext(Dispatchers.IO) {
+        steamDao.updateManualInstallSize(appId, sizeGb)
+    }
+
     suspend fun clearAllClaimed() = withContext(Dispatchers.IO) {
         giveawayDao.clearAllClaimed()
     }

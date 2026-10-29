@@ -83,6 +83,10 @@ import com.example.data.model.GiveawayItem
 import com.example.data.model.LauncherOption
 import com.example.data.model.LauncherType
 import com.example.data.model.PlayStatus
+import com.example.data.model.SteamDeckStatus
+import com.example.data.model.ControllerSupport
+import com.example.data.model.SessionStyle
+import com.example.data.model.StorageTier
 import com.example.ui.density.LocalScreenDensityInfo
 import com.example.ui.theme.GamingCardBorder
 import com.example.ui.theme.GamingDarkBackground
@@ -94,6 +98,11 @@ import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.SdStorage
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.TextButton
 import com.example.ui.theme.TextSecondary
 
 @Composable
@@ -105,6 +114,7 @@ fun GiveawayDetailDialog(
     onToggleClaimed: () -> Unit,
     onToggleWishlist: () -> Unit = {},
     onPlayStatusChange: ((PlayStatus) -> Unit)? = null,
+    onUpdateManualStorage: ((Float?) -> Unit)? = null,
     onLauncherOptionClick: ((url: String, launcherName: String) -> Unit)? = null
 ) {
     val context = LocalContext.current
@@ -126,6 +136,10 @@ fun GiveawayDetailDialog(
     var dialogVisible by remember { androidx.compose.runtime.mutableStateOf(false) }
     var showShareCardPreview by remember { androidx.compose.runtime.mutableStateOf(false) }
     var isSharingCard by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var isStorageDialogOpen by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var storageInputText by remember(item.manualInstallSizeGb) {
+        androidx.compose.runtime.mutableStateOf(item.manualInstallSizeGb?.toString() ?: "")
+    }
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
 
     androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -1108,6 +1122,177 @@ fun GiveawayDetailDialog(
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
+                    // HARDWARE & HANDHELD READINESS SECTION
+                    val hardware = item.hardwareProfile
+                    Text(
+                        text = "HARDWARE & HANDHELD READINESS",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = NeonCyan,
+                        letterSpacing = 1.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFF0F1522))
+                            .border(1.dp, GamingCardBorder, RoundedCornerShape(12.dp))
+                            .padding(14.dp)
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            // Steam Deck Status Row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.SportsEsports,
+                                        contentDescription = null,
+                                        tint = Color(0xFF66C0F4),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text("Steam Deck", fontSize = 12.sp, color = TextMuted)
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(
+                                            when (hardware.deckStatus) {
+                                                SteamDeckStatus.VERIFIED -> Color(0x2210B981)
+                                                SteamDeckStatus.PLAYABLE -> Color(0x22F59E0B)
+                                                SteamDeckStatus.UNSUPPORTED -> Color(0x22EF4444)
+                                                SteamDeckStatus.UNKNOWN -> Color(0x2264748B)
+                                            }
+                                        )
+                                        .border(
+                                            1.dp,
+                                            when (hardware.deckStatus) {
+                                                SteamDeckStatus.VERIFIED -> Color(0xFF10B981)
+                                                SteamDeckStatus.PLAYABLE -> Color(0xFFF59E0B)
+                                                SteamDeckStatus.UNSUPPORTED -> Color(0xFFEF4444)
+                                                SteamDeckStatus.UNKNOWN -> Color(0xFF64748B)
+                                            },
+                                            RoundedCornerShape(6.dp)
+                                        )
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                ) {
+                                    Text(
+                                        text = hardware.deckStatus.pillLabel,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = when (hardware.deckStatus) {
+                                            SteamDeckStatus.VERIFIED -> Color(0xFF10B981)
+                                            SteamDeckStatus.PLAYABLE -> Color(0xFFF59E0B)
+                                            SteamDeckStatus.UNSUPPORTED -> Color(0xFFEF4444)
+                                            SteamDeckStatus.UNKNOWN -> Color(0xFF94A3B8)
+                                        }
+                                    )
+                                }
+                            }
+
+                            // Controller Support Row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Controller Support", fontSize = 12.sp, color = TextMuted)
+                                Text(
+                                    text = hardware.controllerSupport.label,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFF66C0F4)
+                                )
+                            }
+
+                            // Session Style Row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Session Style", fontSize = 12.sp, color = TextMuted)
+                                Text(
+                                    text = hardware.sessionStyle.label,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (hardware.sessionStyle == SessionStyle.QUICK_SESSION) Color(0xFFF59E0B) else TextPrimary
+                                )
+                            }
+
+                            // Storage Footprint Tracker Row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.SdStorage,
+                                        contentDescription = null,
+                                        tint = Color(0xFFA78BFA),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text("Install Footprint", fontSize = 12.sp, color = TextMuted)
+                                }
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text(
+                                            text = "${hardware.formattedSize} (${hardware.storageTier.label})",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFFA78BFA)
+                                        )
+                                        Text(
+                                            text = if (hardware.isManualOverride) "Manual override" else "Catalog estimate",
+                                            fontSize = 10.sp,
+                                            color = TextSecondary
+                                        )
+                                    }
+
+                                    OutlinedButton(
+                                        onClick = {
+                                            storageInputText = item.manualInstallSizeGb?.toString() ?: ""
+                                            isStorageDialogOpen = true
+                                        },
+                                        modifier = Modifier
+                                            .height(30.dp)
+                                            .testTag("detail_edit_storage_btn"),
+                                        shape = RoundedCornerShape(6.dp),
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF8B5CF6).copy(alpha = 0.5f))
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "Edit size",
+                                            tint = Color(0xFFA78BFA),
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Edit", fontSize = 11.sp, color = Color(0xFFA78BFA))
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
                     // Details metadata box
                     Box(
                         modifier = Modifier
@@ -1186,6 +1371,7 @@ fun GiveawayDetailDialog(
             }
         }
     }
+    }
 
     if (showShareCardPreview) {
         ShareCardPreviewDialog(
@@ -1193,7 +1379,113 @@ fun GiveawayDetailDialog(
             onDismiss = { showShareCardPreview = false }
         )
     }
-}
+
+    if (isStorageDialogOpen) {
+        Dialog(
+            onDismissRequest = { isStorageDialogOpen = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth(0.92f)
+                    .padding(16.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SdStorage,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = "Storage Footprint Tracker",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = item.title,
+                                fontSize = 12.sp,
+                                color = TextSecondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = "Track the exact install size on your Steam Deck, ROG Ally, or PC drive. Enter manual gigabytes (GB) or reset to restore estimated size (${item.hardwareProfile.estimatedSizeGb} GB).",
+                        fontSize = 13.sp,
+                        color = TextSecondary,
+                        lineHeight = 18.sp
+                    )
+
+                    OutlinedTextField(
+                        value = storageInputText,
+                        onValueChange = { storageInputText = it },
+                        label = { Text("Install Size (GB)") },
+                        placeholder = { Text("e.g. 15.5") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (item.manualInstallSizeGb != null) {
+                            TextButton(
+                                onClick = {
+                                    onUpdateManualStorage?.invoke(null)
+                                    isStorageDialogOpen = false
+                                }
+                            ) {
+                                Text("Reset to Auto", color = Color(0xFFEF4444))
+                            }
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                        TextButton(onClick = { isStorageDialogOpen = false }) {
+                            Text("Cancel")
+                        }
+                        Button(
+                            onClick = {
+                                val parsed = storageInputText.trim().toFloatOrNull()
+                                onUpdateManualStorage?.invoke(parsed)
+                                isStorageDialogOpen = false
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                        ) {
+                            Text("Save Size")
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable

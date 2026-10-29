@@ -9,6 +9,13 @@ import com.example.data.model.GiveawayItem
 import com.example.data.model.LauncherType
 import com.example.data.model.LibraryPlayFilter
 import com.example.data.model.PlayStatus
+import com.example.data.model.SteamDeckStatus
+import com.example.data.model.ControllerSupport
+import com.example.data.model.SessionStyle
+import com.example.data.model.StorageTier
+import com.example.data.model.PlayabilityFilter
+import com.example.data.model.StorageFilter
+import com.example.util.HardwareReadinessCatalog
 import com.example.data.remote.SteamApiClient
 import com.example.data.remote.SteamOwnedGame
 import com.example.notifications.NotificationHelper
@@ -1263,6 +1270,178 @@ class ExampleRobolectricTest {
         // Switch back to VAULT
         prefs.libraryViewMode = com.example.data.model.LibraryViewMode.VAULT
         assertEquals(com.example.data.model.LibraryViewMode.VAULT, prefs.libraryViewMode)
+    }
+
+    @Test
+    fun `version 2 1 1 is configured and recognized as modern release stream`() {
+        assertEquals("2.1.1", BuildConfig.VERSION_NAME)
+        assertEquals(33, BuildConfig.VERSION_CODE)
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("2.1.1"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v2.1.1"))
+    }
+
+    @Test
+    fun `hardware readiness catalog correctly resolves popular games and heuristics`() {
+        // Cyberpunk 2077 (1091500)
+        val cpProfile = HardwareReadinessCatalog.getProfile(
+            steamAppId = 1091500,
+            title = "Cyberpunk 2077",
+            platforms = "PC, Steam",
+            description = "Night City open world RPG. Requires 70 GB SSD space.",
+            manualInstallSizeGb = null
+        )
+        assertEquals(SteamDeckStatus.VERIFIED, cpProfile.deckStatus)
+        assertEquals(ControllerSupport.FULL, cpProfile.controllerSupport)
+        assertEquals(SessionStyle.DEEP_DIVE, cpProfile.sessionStyle)
+        assertEquals(70.0f, cpProfile.estimatedSizeGb)
+        assertEquals(StorageTier.HEAVYWEIGHT, cpProfile.storageTier)
+
+        // Half-Life 2 (220)
+        val hlProfile = HardwareReadinessCatalog.getProfile(
+            steamAppId = 220,
+            title = "Half-Life 2",
+            platforms = "PC, Steam",
+            description = "Gordon Freeman classic. Requires 6.5 GB available space.",
+            manualInstallSizeGb = null
+        )
+        assertEquals(SteamDeckStatus.VERIFIED, hlProfile.deckStatus)
+        assertEquals(StorageTier.COMPACT, hlProfile.storageTier)
+
+        // Hades (1145360) - Quick session
+        val hadesProfile = HardwareReadinessCatalog.getProfile(
+            steamAppId = 1145360,
+            title = "Hades",
+            platforms = "PC, Steam",
+            description = "Rogue-like dungeon crawler. 15 GB install.",
+            manualInstallSizeGb = null
+        )
+        assertEquals(SteamDeckStatus.VERIFIED, hadesProfile.deckStatus)
+        assertEquals(SessionStyle.QUICK_SESSION, hadesProfile.sessionStyle)
+        assertEquals(StorageTier.MEDIUM, hadesProfile.storageTier)
+
+        // Portal (400) - Compact / Quick session (4.0 GB)
+        val portalProfile = HardwareReadinessCatalog.getProfile(
+            steamAppId = 400,
+            title = "Portal",
+            platforms = "PC, Steam",
+            description = "Aperture Science puzzle testing.",
+            manualInstallSizeGb = null
+        )
+        assertEquals(SteamDeckStatus.VERIFIED, portalProfile.deckStatus)
+        assertEquals(SessionStyle.QUICK_SESSION, portalProfile.sessionStyle)
+        assertEquals(StorageTier.COMPACT, portalProfile.storageTier)
+
+        // Stardew Valley (413150) - Featherweight (< 2 GB, 0.6 GB)
+        val stardewProfile = HardwareReadinessCatalog.getProfile(
+            steamAppId = 413150,
+            title = "Stardew Valley",
+            platforms = "PC, Steam",
+            description = "Farming RPG.",
+            manualInstallSizeGb = null
+        )
+        assertEquals(SteamDeckStatus.VERIFIED, stardewProfile.deckStatus)
+        assertEquals(SessionStyle.QUICK_SESSION, stardewProfile.sessionStyle)
+        assertEquals(StorageTier.FEATHERWEIGHT, stardewProfile.storageTier)
+    }
+
+    @Test
+    fun `manual install size override is reflected in hardware profile`() {
+        val autoProfile = HardwareReadinessCatalog.getProfile(
+            steamAppId = 1091500,
+            title = "Cyberpunk 2077",
+            platforms = "PC, Steam",
+            description = "Requires 70 GB",
+            manualInstallSizeGb = null
+        )
+        assertFalse(autoProfile.isManualOverride)
+        assertEquals("70 GB", autoProfile.formattedSize)
+
+        val manualProfile = HardwareReadinessCatalog.getProfile(
+            steamAppId = 1091500,
+            title = "Cyberpunk 2077",
+            platforms = "PC, Steam",
+            description = "Requires 70 GB",
+            manualInstallSizeGb = 86.4f
+        )
+        assertTrue(manualProfile.isManualOverride)
+        assertEquals(86.4f, manualProfile.effectiveSizeGb)
+        assertEquals("86.4 GB", manualProfile.formattedSize)
+        assertEquals(StorageTier.HEAVYWEIGHT, manualProfile.storageTier)
+    }
+
+    @Test
+    fun `room database preserves and updates manual install size for giveaways and steam games`() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
+        val giveawayDao = db.giveawayDao()
+        val steamDao = db.steamGameDao()
+
+        // Insert giveaway with null manual size
+        val entity = GiveawayEntity(
+            id = 99,
+            title = "Subnautica",
+            worth = "$29.99",
+            numericWorth = 29.99,
+            thumbnail = "",
+            image = "",
+            description = "Requires 20 GB",
+            instructions = "",
+            openGiveawayUrl = "https://epicgames.com",
+            publishedDate = "",
+            type = "Game",
+            platforms = "PC",
+            endDate = "N/A",
+            users = 100,
+            status = "Active",
+            isClaimed = true,
+            manualInstallSizeGb = null
+        )
+        giveawayDao.insertAll(listOf(entity))
+        assertEquals(null, giveawayDao.getGiveawayById(99)?.manualInstallSizeGb)
+
+        // Update manual install size to 18.5 GB
+        giveawayDao.updateManualInstallSize(99, 18.5f)
+        val updatedGiveaway = giveawayDao.getGiveawayById(99)
+        assertEquals(18.5f, updatedGiveaway?.manualInstallSizeGb)
+
+        // Syncing giveaways preserving status also preserves manualInstallSizeGb
+        val incomingUpdate = entity.copy(worth = "$19.99", numericWorth = 19.99)
+        giveawayDao.syncGiveawaysPreservingStatus(listOf(incomingUpdate))
+        val postSyncGiveaway = giveawayDao.getGiveawayById(99)
+        assertEquals(18.5f, postSyncGiveaway?.manualInstallSizeGb)
+
+        // Test Steam Game entity manual size
+        val steamGame = com.example.data.local.SteamGameEntity(
+            appId = 264710,
+            name = "Subnautica",
+            playtimeMinutes = 120,
+            imgIconUrl = "",
+            headerImageUrl = "",
+            manualInstallSizeGb = null
+        )
+        steamDao.insertAll(listOf(steamGame))
+        assertEquals(null, steamDao.getSteamGameById(264710)?.manualInstallSizeGb)
+
+        steamDao.updateManualInstallSize(264710, 19.2f)
+        assertEquals(19.2f, steamDao.getSteamGameById(264710)?.manualInstallSizeGb)
+
+        db.close()
+    }
+
+    @Test
+    fun `formatStorageGb formats MB, GB and TB correctly`() {
+        assertEquals("0 GB", com.example.data.model.formatStorageGb(0f))
+        assertEquals("512 MB", com.example.data.model.formatStorageGb(0.5f))
+        assertEquals("4 GB", com.example.data.model.formatStorageGb(4.0f))
+        assertEquals("18.5 GB", com.example.data.model.formatStorageGb(18.5f))
+        assertEquals("1.0 TB", com.example.data.model.formatStorageGb(1024f))
+
+        val stats = com.example.ui.UiStats(
+            claimedTotalStorageGb = 64f,
+            steamTotalStorageGb = 1500f
+        )
+        assertEquals("64 GB", stats.claimedStorageFormatted)
+        assertEquals("1.5 TB", stats.steamStorageFormatted)
     }
 }
 

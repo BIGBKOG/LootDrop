@@ -24,8 +24,12 @@ data class SteamGameEntity(
     val imgIconUrl: String = "",
     val headerImageUrl: String = "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/$appId/header.jpg",
     val matchedGiveawayId: Int? = null,
-    val isLootDropClaimed: Boolean = false
+    val isLootDropClaimed: Boolean = false,
+    val manualInstallSizeGb: Float? = null
 ) {
+    val hardwareProfile: com.example.data.model.GameHardwareProfile
+        get() = com.example.util.HardwareReadinessCatalog.resolveProfile(this)
+
     val playtimeHours: String
         get() {
             val hours = playtimeMinutes / 60.0
@@ -59,6 +63,9 @@ interface SteamGameDao {
 
     @Query("UPDATE steam_games SET playStatus = :status WHERE appId = :appId")
     suspend fun updatePlayStatus(appId: Int, status: PlayStatus)
+
+    @Query("UPDATE steam_games SET manualInstallSizeGb = :sizeGb WHERE appId = :appId")
+    suspend fun updateManualInstallSize(appId: Int, sizeGb: Float?)
 
     @Query("UPDATE steam_games SET playStatus = :status, playtimeMinutes = :playtime, achievementsUnlocked = :unlocked, achievementsTotal = :total, lastPlayedTimestamp = :lastPlayed WHERE appId = :appId")
     suspend fun updateTelemetry(appId: Int, status: PlayStatus, playtime: Int, unlocked: Int, total: Int, lastPlayed: Long)

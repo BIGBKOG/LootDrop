@@ -31,8 +31,12 @@ data class GiveawayItem(
     val steamAchievementsUnlocked: Int = 0,
     val steamAchievementsTotal: Int = 0,
     val steamLastPlayedTimestamp: Long = 0L,
-    val isWishlisted: Boolean = false
+    val isWishlisted: Boolean = false,
+    val manualInstallSizeGb: Float? = null
 ) {
+    val hardwareProfile: GameHardwareProfile
+        get() = com.example.util.HardwareReadinessCatalog.resolveProfile(this)
+
     val steamPlaytimeHours: Float
         get() = steamPlaytimeMinutes / 60f
 

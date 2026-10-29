@@ -74,6 +74,8 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.LibraryPlayFilter
 import com.example.data.model.LibraryViewMode
 import com.example.data.model.PlayStatus
+import com.example.data.model.PlayabilityFilter
+import com.example.data.model.StorageFilter
 import com.example.ui.UiStats
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGreen
@@ -94,6 +96,10 @@ fun LibraryPlayFilterChips(
     onDismissStatus: () -> Unit,
     viewMode: LibraryViewMode = LibraryViewMode.VAULT,
     onViewModeChange: (LibraryViewMode) -> Unit = {},
+    selectedPlayability: PlayabilityFilter = PlayabilityFilter.ALL,
+    onPlayabilitySelect: (PlayabilityFilter) -> Unit = {},
+    selectedStorage: StorageFilter = StorageFilter.ALL,
+    onStorageSelect: (StorageFilter) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -359,6 +365,136 @@ fun LibraryPlayFilterChips(
                     ),
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.testTag("library_filter_chip_${filter.name.lowercase()}")
+                )
+            }
+        }
+
+        // Secondary Row: Playability & Category Tags (Steam Deck Verified, Controller, Quick Session)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            PlayabilityFilter.values().forEach { playTag ->
+                val isSelected = playTag == selectedPlayability
+                val tagColor = when (playTag) {
+                    PlayabilityFilter.ALL -> MaterialTheme.colorScheme.primary
+                    PlayabilityFilter.DECK_VERIFIED -> Color(0xFF10B981)
+                    PlayabilityFilter.CONTROLLER_FRIENDLY -> Color(0xFF00E5FF)
+                    PlayabilityFilter.QUICK_SESSION -> Color(0xFFFFD700)
+                }
+                val count = when (playTag) {
+                    PlayabilityFilter.ALL -> null
+                    PlayabilityFilter.DECK_VERIFIED -> uiStats.deckVerifiedCount
+                    PlayabilityFilter.CONTROLLER_FRIENDLY -> uiStats.controllerFriendlyCount
+                    PlayabilityFilter.QUICK_SESSION -> uiStats.quickSessionCount
+                }
+
+                FilterChip(
+                    selected = isSelected,
+                    onClick = { onPlayabilitySelect(playTag) },
+                    label = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(text = "${playTag.iconEmoji} ${playTag.label}", fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium)
+                            if (count != null && count > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(CircleShape)
+                                        .background(if (isSelected) tagColor.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surfaceVariant)
+                                        .padding(horizontal = 5.dp, vertical = 0.5.dp)
+                                ) {
+                                    Text(text = "$count", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = if (isSelected) tagColor else TextSecondary)
+                                }
+                            }
+                        }
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = tagColor.copy(alpha = 0.15f),
+                        selectedLabelColor = tagColor,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                        labelColor = TextSecondary
+                    ),
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = isSelected,
+                        borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                        selectedBorderColor = tagColor,
+                        borderWidth = 0.9.dp,
+                        selectedBorderWidth = 1.3.dp
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.testTag("library_playability_${playTag.name.lowercase()}")
+                )
+            }
+        }
+
+        // Tertiary Row: Storage Footprint Tracker Filter Chips (<2GB, 2-10GB, 10-40GB, 40+GB)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            StorageFilter.values().forEach { storageTag ->
+                val isSelected = storageTag == selectedStorage
+                val storageColor = when (storageTag) {
+                    StorageFilter.ALL -> MaterialTheme.colorScheme.secondary
+                    StorageFilter.UNDER_2GB -> Color(0xFF10B981) // Green / Featherweight
+                    StorageFilter.FROM_2_TO_10GB -> Color(0xFF00E5FF) // Cyan
+                    StorageFilter.FROM_10_TO_40GB -> Color(0xFFFFB300) // Amber
+                    StorageFilter.OVER_40GB -> Color(0xFFFF5722) // Orange / Heavy
+                }
+                val count = when (storageTag) {
+                    StorageFilter.ALL -> null
+                    StorageFilter.UNDER_2GB -> uiStats.storageUnder2GbCount
+                    StorageFilter.FROM_2_TO_10GB -> uiStats.storage2To10GbCount
+                    StorageFilter.FROM_10_TO_40GB -> uiStats.storage10To40GbCount
+                    StorageFilter.OVER_40GB -> uiStats.storageOver40GbCount
+                }
+
+                FilterChip(
+                    selected = isSelected,
+                    onClick = { onStorageSelect(storageTag) },
+                    label = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(text = "💾 ${storageTag.label}", fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium)
+                            if (count != null && count > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(CircleShape)
+                                        .background(if (isSelected) storageColor.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surfaceVariant)
+                                        .padding(horizontal = 5.dp, vertical = 0.5.dp)
+                                ) {
+                                    Text(text = "$count", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = if (isSelected) storageColor else TextSecondary)
+                                }
+                            }
+                        }
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = storageColor.copy(alpha = 0.15f),
+                        selectedLabelColor = storageColor,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                        labelColor = TextSecondary
+                    ),
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = isSelected,
+                        borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                        selectedBorderColor = storageColor,
+                        borderWidth = 0.9.dp,
+                        selectedBorderWidth = 1.3.dp
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.testTag("library_storage_${storageTag.name.lowercase()}")
                 )
             }
         }

@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [GiveawayEntity::class, NotificationHistoryEntity::class, SteamGameEntity::class], version = 5, exportSchema = false)
+@Database(entities = [GiveawayEntity::class, NotificationHistoryEntity::class, SteamGameEntity::class], version = 6, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun giveawayDao(): GiveawayDao
