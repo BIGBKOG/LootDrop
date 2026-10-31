@@ -40,8 +40,9 @@ data class CheapSharkDto(
         val dealRedirectUrl = "https://www.cheapshark.com/redirect?dealID=$dealID"
 
         val metaScoreNum = metacriticScore?.toIntOrNull() ?: 0
+        val steamId = steamAppID?.toIntOrNull()
         if (metaScoreNum > 0) {
-            MetacriticCatalog.registerScore(title, metaScoreNum)
+            MetacriticCatalog.registerScore(title, metaScoreNum, metacriticLink, steamId)
         }
 
         val desc = buildString {
@@ -78,7 +79,8 @@ data class CheapSharkDto(
             endDate = "Limited Time",
             users = userCount,
             status = "Active",
-            firstSeenTimestamp = System.currentTimeMillis()
+            firstSeenTimestamp = System.currentTimeMillis(),
+            steamAppId = steamId
         )
     }
 

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.OpenInNew
@@ -87,6 +88,40 @@ fun MetacriticScorePill(
                 color = if (isLightColor) Color(0xFF0B0F19) else Color.White
             )
         }
+    }
+}
+
+/**
+ * Circular Metacritic score badge for game cards placed next to the launcher type.
+ */
+@Composable
+fun MetacriticScoreCircle(
+    score: Int,
+    modifier: Modifier = Modifier,
+    size: Dp = 20.dp
+) {
+    if (score <= 0) return
+    val tier = MetacriticRatingTier.fromScore(score)
+    val isLightColor = tier == MetacriticRatingTier.MIXED_REVIEWS ||
+            tier == MetacriticRatingTier.GENERALLY_FAVORABLE ||
+            tier == MetacriticRatingTier.UNIVERSAL_ACCLAIM
+
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(tier.badgeColor)
+            .border(0.8.dp, Color.White.copy(alpha = 0.45f), CircleShape)
+            .testTag("metacritic_score_circle_$score"),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = score.toString(),
+            fontSize = if (score >= 100) 8.sp else 9.5.sp,
+            fontWeight = FontWeight.Black,
+            color = if (isLightColor) Color(0xFF0B0F19) else Color.White,
+            letterSpacing = (-0.3).sp
+        )
     }
 }
 
@@ -245,7 +280,7 @@ fun MetacriticDetailSection(
         Spacer(modifier = Modifier.height(10.dp))
 
         Text(
-            text = "Aggregated from verified video game critics and editorial review publications worldwide.",
+            text = "Accurate critic consensus verified through CheapShark & GamerPower APIs from top editorial review publications worldwide.",
             fontSize = 11.sp,
             color = TextSecondary,
             lineHeight = 16.sp

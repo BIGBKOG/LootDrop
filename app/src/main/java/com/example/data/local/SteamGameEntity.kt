@@ -73,6 +73,9 @@ interface SteamGameDao {
     @Query("DELETE FROM steam_games")
     suspend fun clearAll()
 
+    @Query("DELETE FROM steam_games WHERE appId IN (:appIds)")
+    suspend fun deleteByAppIds(appIds: List<Int>)
+
     @Query("SELECT COUNT(*) FROM steam_games")
     suspend fun getCount(): Int
 

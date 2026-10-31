@@ -13,8 +13,8 @@ android {
     applicationId = "com.aistudio.lootdrop.fkgxwm"
     minSdk = 26
     targetSdk = 36
-    versionCode = 33
-    versionName = "2.1.1"
+    versionCode = 37
+    versionName = "2.3.5"
 
     resourceConfigurations.addAll(listOf("en"))
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

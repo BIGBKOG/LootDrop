@@ -326,7 +326,8 @@ class GithubReleaseClient(private val context: Context) {
 
         fun isCurrentModernStream(version: String): Boolean {
             val clean = version.trim().removePrefix("v").removePrefix("V")
-            return clean.startsWith("1.") || clean.startsWith("2.")
+            val major = clean.substringBefore(".").toIntOrNull() ?: 0
+            return clean.startsWith("1.") || clean.startsWith("2.") || major >= 5
         }
 
         /**

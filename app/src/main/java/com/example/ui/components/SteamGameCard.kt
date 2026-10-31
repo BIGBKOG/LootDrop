@@ -90,6 +90,7 @@ fun SteamGameCard(
     game: SteamGameEntity,
     onStatusChange: (PlayStatus) -> Unit,
     onUpdateManualStorage: ((Float?) -> Unit)? = null,
+    onOpenAchievements: ((SteamGameEntity) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -317,17 +318,37 @@ fun SteamGameCard(
 
                 // Achievements bar (if available)
                 if (game.achievementsTotal > 0) {
-                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(6.dp))
+                            .then(if (onOpenAchievements != null) Modifier.clickable { onOpenAchievements(game) } else Modifier)
+                            .padding(vertical = 2.dp),
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = "Achievements: ${game.achievementsUnlocked}/${game.achievementsTotal}",
-                                fontSize = 11.sp,
-                                color = TextSecondary
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = "Achievements: ${game.achievementsUnlocked}/${game.achievementsTotal}",
+                                    fontSize = 11.sp,
+                                    color = TextSecondary
+                                )
+                                if (onOpenAchievements != null) {
+                                    Text(
+                                        text = "• Walkthroughs ➔",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = NeonCyan
+                                    )
+                                }
+                            }
                             Text(
                                 text = "${game.achievementsPercentage}%",
                                 fontSize = 11.sp,

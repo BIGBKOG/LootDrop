@@ -213,6 +213,101 @@ object SteamApiClient {
     }
 
     /**
+     * Valve's official API to fetch global achievement unlock percentages for a game:
+     * ISteamUserStats/GetGlobalAchievementPercentagesForApp/v0002/
+     *
+     * Returns a map of achievement apiName to its global unlock percentage (0.0% to 100.0%).
+     */
+    suspend fun getGlobalAchievementPercentagesForApp(appId: Int): Map<String, Float> = withContext(Dispatchers.IO) {
+        val url = "https://api.steampowered.com/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v0002/?gameid=$appId&format=json"
+        val resultMap = mutableMapOf<String, Float>()
+
+        try {
+            val request = Request.Builder().url(url).build()
+            val response = getClient().newCall(request).execute()
+            if (!response.isSuccessful) return@withContext emptyMap()
+
+            val body = response.body?.string() ?: return@withContext emptyMap()
+            val json = JSONObject(body)
+            val percentagesObj = json.optJSONObject("achievementpercentages") ?: return@withContext emptyMap()
+            val achievementsArray = percentagesObj.optJSONArray("achievements") ?: return@withContext emptyMap()
+
+            for (i in 0 until achievementsArray.length()) {
+                val ach = achievementsArray.optJSONObject(i) ?: continue
+                val name = ach.optString("name", "")
+                val percent = ach.optDouble("percent", 0.0).toFloat()
+                if (name.isNotBlank()) {
+                    resultMap[name] = percent
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to fetch global achievement percentages for appId $appId: ${e.message}")
+        }
+        resultMap
+    }
+
+    /**
+     * Fetches detailed player achievements for a game, merging localized titles,
+     * descriptions, unlock times, and global rarity percentages.
+     */
+    suspend fun getDetailedPlayerAchievements(
+        appId: Int,
+        steamId: String,
+        apiKey: String,
+        gameName: String = ""
+    ): List<com.example.data.local.SteamAchievementEntity> = withContext(Dispatchers.IO) {
+        val url = "https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/" +
+                "?appid=$appId&key=$apiKey&steamid=$steamId&l=en"
+
+        try {
+            val request = Request.Builder().url(url).build()
+            val response = getClient().newCall(request).execute()
+            if (!response.isSuccessful) return@withContext emptyList()
+
+            val body = response.body?.string() ?: return@withContext emptyList()
+            val json = JSONObject(body)
+            val playerStats = json.optJSONObject("playerstats") ?: return@withContext emptyList()
+            if (!playerStats.optBoolean("success", true)) return@withContext emptyList()
+
+            val resolvedGameName = playerStats.optString("gameName", gameName).ifBlank { gameName }
+            val achievementsArray = playerStats.optJSONArray("achievements") ?: return@withContext emptyList()
+
+            // Fetch global rarity percentages via GetGlobalAchievementPercentagesForApp
+            val globalPercentages = getGlobalAchievementPercentagesForApp(appId)
+
+            val list = mutableListOf<com.example.data.local.SteamAchievementEntity>()
+            for (i in 0 until achievementsArray.length()) {
+                val ach = achievementsArray.optJSONObject(i) ?: continue
+                val apiName = ach.optString("apiname", "")
+                if (apiName.isBlank()) continue
+
+                val isAchieved = ach.optInt("achieved", 0) == 1
+                val unlockTime = ach.optLong("unlocktime", 0L)
+                val displayName = ach.optString("name", apiName).ifBlank { apiName }
+                val description = ach.optString("description", "")
+                val globalPercent = globalPercentages[apiName] ?: 0f
+
+                list.add(
+                    com.example.data.local.SteamAchievementEntity(
+                        appId = appId,
+                        apiName = apiName,
+                        displayName = displayName,
+                        description = description,
+                        isAchieved = isAchieved,
+                        unlockTimestamp = unlockTime,
+                        globalPercentage = globalPercent,
+                        gameName = resolvedGameName
+                    )
+                )
+            }
+            list
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to fetch detailed player achievements for appId $appId: ${e.message}")
+            emptyList()
+        }
+    }
+
+    /**
      * Extracts Steam App ID from a store or giveaway URL.
      */
     fun extractSteamAppId(url: String): Int? {

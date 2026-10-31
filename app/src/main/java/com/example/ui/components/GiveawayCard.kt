@@ -283,7 +283,7 @@ fun GiveawayCard(
                                         color = launcherColor
                                     )
                                 }
-                                MetacriticScorePill(score = item.metacriticScore)
+                                MetacriticScoreCircle(score = item.metacriticScore, size = 18.dp)
                                 if (item.isWishlisted) {
                                     Box(
                                         modifier = Modifier
@@ -338,38 +338,8 @@ fun GiveawayCard(
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f, fill = false)
+                                    overflow = TextOverflow.Ellipsis
                                 )
-                                val hardware = item.hardwareProfile
-                                if (hardware.deckStatus == SteamDeckStatus.VERIFIED || hardware.deckStatus == SteamDeckStatus.PLAYABLE) {
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(3.dp))
-                                            .background(if (hardware.deckStatus == SteamDeckStatus.VERIFIED) Color(0x2210B981) else Color(0x22F59E0B))
-                                            .padding(horizontal = 4.dp, vertical = 0.5.dp)
-                                    ) {
-                                        Text(
-                                            text = if (hardware.deckStatus == SteamDeckStatus.VERIFIED) "🟢 Deck" else "🟡 Deck",
-                                            fontSize = 8.5.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (hardware.deckStatus == SteamDeckStatus.VERIFIED) Color(0xFF10B981) else Color(0xFFF59E0B)
-                                        )
-                                    }
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(3.dp))
-                                        .background(Color(0x228B5CF6))
-                                        .padding(horizontal = 4.dp, vertical = 0.5.dp)
-                                ) {
-                                    Text(
-                                        text = "💾 ${hardware.formattedSize}",
-                                        fontSize = 8.5.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = Color(0xFFA78BFA)
-                                    )
-                                }
                             }
                         }
                     }
@@ -477,25 +447,32 @@ fun GiveawayCard(
                             modifier = Modifier.fillMaxSize()
                         )
 
-                        // Launcher Tag with popping outline
-                        Box(
+                        // Launcher Tag and Meta Score Circle in top left
+                        Row(
                             modifier = Modifier
                                 .align(Alignment.TopStart)
-                                .padding(6.dp)
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(launcherColor.copy(alpha = 0.95f))
-                                .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .padding(5.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            val isDarkBrand = item.launcherCategory == LauncherType.PLAYSTATION || 
-                                              item.launcherCategory == LauncherType.XBOX || 
-                                              item.launcherCategory == LauncherType.EPIC
-                            Text(
-                                text = item.launcherCategory.displayName,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isDarkBrand) Color.White else Color(0xFF0B0F19)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(launcherColor.copy(alpha = 0.95f))
+                                    .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                val isDarkBrand = item.launcherCategory == LauncherType.PLAYSTATION || 
+                                                  item.launcherCategory == LauncherType.XBOX || 
+                                                  item.launcherCategory == LauncherType.EPIC
+                                Text(
+                                    text = item.launcherCategory.displayName,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isDarkBrand) Color.White else Color(0xFF0B0F19)
+                                )
+                            }
+                            MetacriticScoreCircle(score = item.metacriticScore, size = 18.dp)
                         }
 
                         // Info Symbol Button (brings you to the info page)
@@ -550,57 +527,9 @@ fun GiveawayCard(
                                 text = item.description,
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
+                                maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
-
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 2.dp),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                val hardware = item.hardwareProfile
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .background(
-                                            when (hardware.deckStatus) {
-                                                SteamDeckStatus.VERIFIED -> Color(0x2210B981)
-                                                SteamDeckStatus.PLAYABLE -> Color(0x22F59E0B)
-                                                SteamDeckStatus.UNSUPPORTED -> Color(0x22EF4444)
-                                                SteamDeckStatus.UNKNOWN -> Color(0x2264748B)
-                                            }
-                                        )
-                                        .padding(horizontal = 4.dp, vertical = 1.dp)
-                                ) {
-                                    Text(
-                                        text = hardware.deckStatus.pillLabel,
-                                        fontSize = 8.5.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = when (hardware.deckStatus) {
-                                            SteamDeckStatus.VERIFIED -> Color(0xFF10B981)
-                                            SteamDeckStatus.PLAYABLE -> Color(0xFFF59E0B)
-                                            SteamDeckStatus.UNSUPPORTED -> Color(0xFFEF4444)
-                                            SteamDeckStatus.UNKNOWN -> Color(0xFF94A3B8)
-                                        }
-                                    )
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .background(Color(0x228B5CF6))
-                                        .padding(horizontal = 4.dp, vertical = 1.dp)
-                                ) {
-                                    Text(
-                                        text = "💾 ${hardware.formattedSize}",
-                                        fontSize = 8.5.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = Color(0xFFA78BFA)
-                                    )
-                                }
-                            }
                         }
 
                         Row(
@@ -613,7 +542,6 @@ fun GiveawayCard(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                MetacriticScorePill(score = item.metacriticScore)
                                 if (item.isWishlisted) {
                                     Box(
                                         modifier = Modifier
@@ -775,6 +703,8 @@ fun GiveawayCard(
                                     )
                                 }
 
+                                MetacriticScoreCircle(score = item.metacriticScore, size = 22.dp)
+
                                 if (item.isPlayStation && item.launcherCategory != LauncherType.PLAYSTATION) {
                                     Box(
                                         modifier = Modifier
@@ -874,8 +804,6 @@ fun GiveawayCard(
                                         color = Color.White
                                     )
                                 }
-
-                                MetacriticScorePill(score = item.metacriticScore, showPrefix = true)
                             }
 
                             // Quick Bookmark button with bouncy spring scale pop

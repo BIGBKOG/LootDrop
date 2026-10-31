@@ -53,6 +53,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -148,11 +149,18 @@ import com.example.ui.components.SteamSyncDialog
 import com.example.ui.components.StatsBanner
 import com.example.ui.components.NotificationHistorySheet
 import com.example.ui.components.NotificationSettingsSheet
+import com.example.ui.components.TrophyShowcaseContent
+import com.example.ui.components.GameAchievementsDialog
+import com.example.ui.AchievementOverviewStats
+import com.example.data.local.SteamAchievementEntity
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
+import com.example.data.model.UnifiedLibraryItem
+import com.example.ui.components.BacklogRouletteDialog
+import android.widget.Toast
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -201,6 +209,12 @@ fun HomeScreen(
     val filteredSteamGames by viewModel.filteredSteamGames.collectAsState()
     val selectedPlayabilityFilter by viewModel.selectedPlayabilityFilter.collectAsState()
     val selectedStorageFilter by viewModel.selectedStorageFilter.collectAsState()
+    val rarestAchievements by viewModel.rarestAchievements.collectAsState()
+    val closestToHundredGames by viewModel.closestToHundredGames.collectAsState()
+    val achievementOverviewStats by viewModel.achievementOverviewStats.collectAsState()
+    val selectedGameForAchievements by viewModel.selectedGameForAchievements.collectAsState()
+    val selectedGameAchievements by viewModel.selectedGameAchievements.collectAsState()
+    val isLoadingGameAchievements by viewModel.isLoadingGameAchievements.collectAsState()
 
     val borderBeamAngle = rememberAnimatedBeamAngle(enabled = isAnimationsEnabled && !isLowEndOptimization)
 
@@ -603,7 +617,11 @@ fun HomeScreen(
                             onPlayabilityFilterSelect = { viewModel.setPlayabilityFilter(it) },
                             selectedStorageFilter = selectedStorageFilter,
                             onStorageFilterSelect = { viewModel.setStorageFilter(it) },
-                            onSteamManualStorageChange = { game, sizeGb -> viewModel.setSteamGameManualStorage(game.appId, sizeGb) }
+                            onSteamManualStorageChange = { game, sizeGb -> viewModel.setSteamGameManualStorage(game.appId, sizeGb) },
+                            achievementOverviewStats = achievementOverviewStats,
+                            rarestAchievements = rarestAchievements,
+                            closestToHundredGames = closestToHundredGames,
+                            onOpenAchievements = { viewModel.openGameAchievements(it) }
                         )
                     }
                     MainTab.CALENDAR -> {
@@ -787,6 +805,16 @@ fun HomeScreen(
                 context.startActivity(browserIntent)
                 viewModel.dismissUpdateDialog()
             }
+        )
+    }
+
+    // Game Achievements & Trophy Walkthrough Dialog
+    selectedGameForAchievements?.let { game ->
+        GameAchievementsDialog(
+            game = game,
+            achievements = selectedGameAchievements,
+            isLoading = isLoadingGameAchievements,
+            onDismiss = { viewModel.closeGameAchievements() }
         )
     }
 }
@@ -992,8 +1020,84 @@ fun GiveawaysTabContent(
     selectedStorageFilter: StorageFilter = StorageFilter.ALL,
     onStorageFilterSelect: (StorageFilter) -> Unit = {},
     onSteamManualStorageChange: ((SteamGameEntity, Float?) -> Unit)? = null,
+    achievementOverviewStats: AchievementOverviewStats = AchievementOverviewStats(),
+    rarestAchievements: List<SteamAchievementEntity> = emptyList(),
+    closestToHundredGames: List<SteamGameEntity> = emptyList(),
+    onOpenAchievements: ((SteamGameEntity) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val isAllPaidMode = tab == MainTab.CLAIMED && libraryViewMode == LibraryViewMode.ALL_PAID
+
+    // In All+Paid mode: unified collection of Vault games + Steam games
+    val allPaidCombinedItems: List<UnifiedLibraryItem> = remember(giveaways, steamGames, selectedSort, isAllPaidMode) {
+        if (!isAllPaidMode) emptyList()
+        else {
+            val steamAppIds = steamGames.map { it.appId }.toSet()
+            val steamTitles = steamGames.map { it.name.trim().lowercase() }.toSet()
+
+            // Include claimed Vault games, avoiding duplicate entries if already present in Steam library
+            val nonDuplicateVault = giveaways.filter { g ->
+                val matchesAppId = g.steamAppId != null && steamAppIds.contains(g.steamAppId)
+                val matchesTitle = steamTitles.contains(g.title.trim().lowercase())
+                !matchesAppId && !matchesTitle
+            }.map { UnifiedLibraryItem.Vault(it) }
+
+            val steamItems = steamGames.map { UnifiedLibraryItem.Steam(it) }
+
+            (steamItems + nonDuplicateVault).sortedWith(
+                compareByDescending<UnifiedLibraryItem> {
+                    when (it) {
+                        is UnifiedLibraryItem.Steam -> it.game.lastPlayedTimestamp
+                        is UnifiedLibraryItem.Vault -> it.giveaway.firstSeenTimestamp
+                    }
+                }.thenBy { it.name.lowercase() }
+            )
+        }
+    }
+
+    val context = LocalContext.current
+    var showBacklogRoulette by remember { mutableStateOf(false) }
+
+    val backlogCandidates = remember(allPaidCombinedItems) {
+        allPaidCombinedItems.filter {
+            it.playStatus == PlayStatus.NOT_STARTED || it.playStatus == PlayStatus.PLAYING
+        }
+    }
+
+    val isListEmpty = if (isAllPaidMode) allPaidCombinedItems.isEmpty() else giveaways.isEmpty()
+    val showLibraryTopMenusInline = tab == MainTab.CLAIMED && !isListEmpty
+
+    val libraryTopMenusContent: @Composable () -> Unit = {
+        InLibraryTopMenus(
+            libraryViewMode = libraryViewMode,
+            uiStats = uiStats,
+            isAnimationsEnabled = isAnimationsEnabled,
+            isLowEndOptimization = isLowEndOptimization,
+            selectedLibraryPlayFilter = selectedLibraryPlayFilter,
+            onFilterSelect = onFilterSelect,
+            isSyncingSteam = isSyncingSteam,
+            steamUserId = steamUserId,
+            steamSyncStatus = steamSyncStatus,
+            onOpenSteamDialog = onOpenSteamDialog,
+            onQuickSteamSync = onQuickSteamSync,
+            onDismissSteamStatus = onDismissSteamStatus,
+            onViewModeChange = onViewModeChange,
+            selectedPlayabilityFilter = selectedPlayabilityFilter,
+            onPlayabilityFilterSelect = onPlayabilityFilterSelect,
+            selectedStorageFilter = selectedStorageFilter,
+            onStorageFilterSelect = onStorageFilterSelect,
+            trophyCount = achievementOverviewStats.totalUnlockedTrophies,
+            activeFilterCount = activeFilterCount,
+            selectedLaunchers = selectedLaunchers,
+            selectedTypeFilter = selectedTypeFilter,
+            selectedCategories = selectedCategories,
+            selectedSort = selectedSort,
+            onOpenFilterSheet = onOpenFilterSheet,
+            onResetFilters = onResetFilters,
+            onRollRandomBacklog = { showBacklogRoulette = true }
+        )
+    }
+
     Column(modifier = modifier.fillMaxSize()) {
         // Stats Banner on Discover
         if (tab == MainTab.DISCOVER) {
@@ -1006,112 +1110,40 @@ fun GiveawaysTabContent(
                 onNewTodayClick = onNewTodayClick,
                 isAnimationsEnabled = isAnimationsEnabled && !isLowEndOptimization
             )
-        }
-
-        // Total Money Saved Banner on In Library
-        if (tab == MainTab.CLAIMED) {
-            val totalStorage = if (libraryViewMode == LibraryViewMode.ALL_PAID) {
-                uiStats.steamTotalStorageGb
-            } else {
-                uiStats.claimedTotalStorageGb
-            }
-            val totalCount = if (libraryViewMode == LibraryViewMode.ALL_PAID) {
-                uiStats.steamTotalCount
-            } else {
-                uiStats.claimedCount
-            }
-            ClaimedSavingsBanner(
-                savingsUsd = uiStats.claimedTotalSavedUsd,
-                claimedCount = totalCount,
-                totalStorageGb = totalStorage,
-                isAnimationsEnabled = isAnimationsEnabled && !isLowEndOptimization
-            )
-
-            // Interactive Library Play Filter Chips & Steam Game Tracker
-            LibraryPlayFilterChips(
-                selectedFilter = selectedLibraryPlayFilter,
-                uiStats = uiStats,
-                onFilterSelect = onFilterSelect,
-                isSyncingSteam = isSyncingSteam,
-                steamUserId = steamUserId,
-                steamSyncStatus = steamSyncStatus,
-                onOpenSteamDialog = onOpenSteamDialog,
-                onQuickSteamSync = onQuickSteamSync,
-                onDismissStatus = onDismissSteamStatus,
-                viewMode = libraryViewMode,
-                onViewModeChange = onViewModeChange,
-                selectedPlayability = selectedPlayabilityFilter,
-                onPlayabilitySelect = onPlayabilityFilterSelect,
-                selectedStorage = selectedStorageFilter,
-                onStorageSelect = onStorageFilterSelect
-            )
-        }
-
-        // Active Filters Summary Pill (if any non-defaults are selected)
-        if (activeFilterCount > 0) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
-                        .clickable { onOpenFilterSheet() }
-                        .padding(horizontal = 10.dp, vertical = 5.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Tune,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Text(
-                        text = buildString {
-                            if (selectedLaunchers.isNotEmpty() && !selectedLaunchers.contains(LauncherType.ALL)) {
-                                append(selectedLaunchers.joinToString(", ") { it.displayName })
-                            }
-                            if (selectedTypeFilter != TypeFilter.ALL && selectedTypeFilter.apiMatch != null) {
-                                if (isNotEmpty()) append(" • ")
-                                append(selectedTypeFilter.label)
-                            }
-                            if (selectedCategories.isNotEmpty()) {
-                                if (isNotEmpty()) append(" • ")
-                                if (selectedCategories.size <= 2) {
-                                    append(selectedCategories.joinToString(", ") { it.displayName })
-                                } else {
-                                    append("${selectedCategories.size} Categories")
-                                }
-                            }
-                            if (selectedSort != SortOption.NEWEST) {
-                                if (isNotEmpty()) append(" • ")
-                                append(selectedSort.label)
-                            }
-                        },
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary
-                    )
-                }
-
-                Text(
-                    text = "Reset",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .clickable { onResetFilters() }
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+            // Active Filters Summary Pill on Discover (if any non-defaults are selected)
+            if (activeFilterCount > 0) {
+                ActiveFiltersSummaryPill(
+                    selectedLaunchers = selectedLaunchers,
+                    selectedTypeFilter = selectedTypeFilter,
+                    selectedCategories = selectedCategories,
+                    selectedSort = selectedSort,
+                    onOpenFilterSheet = onOpenFilterSheet,
+                    onResetFilters = onResetFilters
                 )
             }
         }
+
+        // On In Library: When list is empty, display the top menus statically so the user can interact with filters/sync
+        if (tab == MainTab.CLAIMED && !showLibraryTopMenusInline) {
+            libraryTopMenusContent()
+        }
+
+        if (tab == MainTab.CLAIMED && libraryViewMode == LibraryViewMode.ACHIEVEMENTS) {
+            TrophyShowcaseContent(
+                overviewStats = achievementOverviewStats,
+                rarestTrophies = rarestAchievements,
+                closestGames = closestToHundredGames,
+                isSyncing = isSyncingSteam,
+                steamUserId = steamUserId,
+                onSyncClick = onQuickSteamSync,
+                onOpenSteamSettings = onOpenSteamDialog,
+                onSelectGameForAchievements = { game -> onOpenAchievements?.invoke(game) },
+                topHeader = if (showLibraryTopMenusInline) {
+                    { libraryTopMenusContent() }
+                } else null,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
 
         // Main List with Pull-to-Refresh
         PullToRefreshBox(
@@ -1165,9 +1197,6 @@ fun GiveawaysTabContent(
                         }
                     }
                 }
-
-                val isAllPaidMode = tab == MainTab.CLAIMED && libraryViewMode == LibraryViewMode.ALL_PAID
-                val isListEmpty = if (isAllPaidMode) steamGames.isEmpty() else giveaways.isEmpty()
 
                 if (isLoading && isListEmpty) {
                     Column(
@@ -1224,7 +1253,7 @@ fun GiveawaysTabContent(
 
                         Text(
                             text = when {
-                                isAllPaidMode -> if (searchQuery.isNotBlank()) "No Matching Steam Games" else "No Steam Games Synced"
+                                isAllPaidMode -> if (searchQuery.isNotBlank()) "No Matching Games" else "No Games in Library"
                                 tab == MainTab.CLAIMED -> "No Claimed Games Yet"
                                 hasError -> "Unable to Fetch Giveaways"
                                 isFiltered -> "No Matches Found"
@@ -1239,7 +1268,7 @@ fun GiveawaysTabContent(
 
                         Text(
                             text = when {
-                                isAllPaidMode -> if (searchQuery.isNotBlank()) "No games match \"${searchQuery.take(20)}\" in your Steam library." else "Enter your Steam ID or vanity name in the tracker banner above and tap 'Sync Library' to import all your games and track play status!"
+                                isAllPaidMode -> if (searchQuery.isNotBlank()) "No games match \"${searchQuery.take(20)}\" in your collection." else "Claim free games from the Discover feed or sync your Steam library in the tracker above to view all your games here!"
                                 tab == MainTab.CLAIMED -> "Tap 'Claim Free' on any game to automatically add it to your library and track total dollars saved!"
                                 hasError -> errorMessage ?: "Network issue or server unavailable. Tap retry to check again."
                                 isFiltered -> if (searchQuery.isNotBlank()) "No games match \"${searchQuery.take(20)}\" or your active launcher filters." else "No free games match your active filters in the top menu."
@@ -1325,13 +1354,40 @@ fun GiveawaysTabContent(
                             horizontalArrangement = Arrangement.spacedBy(screenDensityInfo.adaptiveCardSpacing),
                             verticalArrangement = Arrangement.spacedBy(screenDensityInfo.adaptiveCardSpacing)
                         ) {
-                            items(steamGames, key = { it.appId }) { game ->
-                                SteamGameCard(
-                                    game = game,
-                                    onStatusChange = { newStatus -> onSteamPlayStatusChange?.invoke(game, newStatus) },
-                                    onUpdateManualStorage = { sizeGb -> onSteamManualStorageChange?.invoke(game, sizeGb) },
-                                    modifier = if (isAnimationsEnabled && !isLowEndOptimization) Modifier.animateItem() else Modifier
-                                )
+                            if (showLibraryTopMenusInline) {
+                                item(key = "in_library_top_menus", span = { GridItemSpan(maxLineSpan) }) {
+                                    libraryTopMenusContent()
+                                }
+                            }
+                            items(allPaidCombinedItems, key = { it.key }) { item ->
+                                when (item) {
+                                    is UnifiedLibraryItem.Steam -> {
+                                        SteamGameCard(
+                                            game = item.game,
+                                            onStatusChange = { newStatus -> onSteamPlayStatusChange?.invoke(item.game, newStatus) },
+                                            onUpdateManualStorage = { sizeGb -> onSteamManualStorageChange?.invoke(item.game, sizeGb) },
+                                            onOpenAchievements = { onOpenAchievements?.invoke(item.game) },
+                                            modifier = if (isAnimationsEnabled && !isLowEndOptimization) Modifier.animateItem() else Modifier
+                                        )
+                                    }
+                                    is UnifiedLibraryItem.Vault -> {
+                                        GiveawayCard(
+                                            item = item.giveaway,
+                                            cardDensity = cardDensity,
+                                            showOriginalPrice = isShowOriginalPrice,
+                                            showExpiration = isShowExpiration,
+                                            onClick = { onItemClick(item.giveaway) },
+                                            onClaimClick = { onClaimClick(item.giveaway) },
+                                            onToggleBookmark = { onToggleBookmark(item.giveaway) },
+                                            onToggleClaimed = { onToggleClaimed(item.giveaway) },
+                                            onPlayStatusChange = { status -> onPlayStatusChange?.invoke(item.giveaway, status) },
+                                            isAnimationsEnabled = isAnimationsEnabled,
+                                            isLowEndOptimization = isLowEndOptimization,
+                                            beamAngle = beamAngle,
+                                            modifier = if (isAnimationsEnabled && !isLowEndOptimization) Modifier.animateItem() else Modifier
+                                        )
+                                    }
+                                }
                             }
                         }
                     } else {
@@ -1348,13 +1404,40 @@ fun GiveawaysTabContent(
                             ),
                             verticalArrangement = Arrangement.spacedBy(screenDensityInfo.adaptiveCardSpacing)
                         ) {
-                            items(steamGames, key = { it.appId }) { game ->
-                                SteamGameCard(
-                                    game = game,
-                                    onStatusChange = { newStatus -> onSteamPlayStatusChange?.invoke(game, newStatus) },
-                                    onUpdateManualStorage = { sizeGb -> onSteamManualStorageChange?.invoke(game, sizeGb) },
-                                    modifier = if (isAnimationsEnabled && !isLowEndOptimization) Modifier.animateItem() else Modifier
-                                )
+                            if (showLibraryTopMenusInline) {
+                                item(key = "in_library_top_menus") {
+                                    libraryTopMenusContent()
+                                }
+                            }
+                            items(allPaidCombinedItems, key = { it.key }) { item ->
+                                when (item) {
+                                    is UnifiedLibraryItem.Steam -> {
+                                        SteamGameCard(
+                                            game = item.game,
+                                            onStatusChange = { newStatus -> onSteamPlayStatusChange?.invoke(item.game, newStatus) },
+                                            onUpdateManualStorage = { sizeGb -> onSteamManualStorageChange?.invoke(item.game, sizeGb) },
+                                            onOpenAchievements = { onOpenAchievements?.invoke(item.game) },
+                                            modifier = if (isAnimationsEnabled && !isLowEndOptimization) Modifier.animateItem() else Modifier
+                                        )
+                                    }
+                                    is UnifiedLibraryItem.Vault -> {
+                                        GiveawayCard(
+                                            item = item.giveaway,
+                                            cardDensity = cardDensity,
+                                            showOriginalPrice = isShowOriginalPrice,
+                                            showExpiration = isShowExpiration,
+                                            onClick = { onItemClick(item.giveaway) },
+                                            onClaimClick = { onClaimClick(item.giveaway) },
+                                            onToggleBookmark = { onToggleBookmark(item.giveaway) },
+                                            onToggleClaimed = { onToggleClaimed(item.giveaway) },
+                                            onPlayStatusChange = { status -> onPlayStatusChange?.invoke(item.giveaway, status) },
+                                            isAnimationsEnabled = isAnimationsEnabled,
+                                            isLowEndOptimization = isLowEndOptimization,
+                                            beamAngle = beamAngle,
+                                            modifier = if (isAnimationsEnabled && !isLowEndOptimization) Modifier.animateItem() else Modifier
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -1375,6 +1458,11 @@ fun GiveawaysTabContent(
                             horizontalArrangement = Arrangement.spacedBy(screenDensityInfo.adaptiveCardSpacing),
                             verticalArrangement = Arrangement.spacedBy(screenDensityInfo.adaptiveCardSpacing)
                         ) {
+                            if (showLibraryTopMenusInline) {
+                                item(key = "in_library_top_menus", span = { GridItemSpan(maxLineSpan) }) {
+                                    libraryTopMenusContent()
+                                }
+                            }
                             items(giveaways, key = { it.id }, contentType = { cardDensity.name }) { item ->
                                 GiveawayCard(
                                     item = item,
@@ -1413,6 +1501,11 @@ fun GiveawaysTabContent(
                                 }
                             )
                         ) {
+                            if (showLibraryTopMenusInline) {
+                                item(key = "in_library_top_menus") {
+                                    libraryTopMenusContent()
+                                }
+                            }
                             items(giveaways, key = { it.id }, contentType = { cardDensity.name }) { item ->
                                 GiveawayCard(
                                     item = item,
@@ -1432,10 +1525,39 @@ fun GiveawaysTabContent(
                             }
                         }
                     }
+                }
             }
         }
     }
 }
+
+    if (showBacklogRoulette) {
+        BacklogRouletteDialog(
+            candidates = backlogCandidates,
+            onDismiss = { showBacklogRoulette = false },
+            onLaunchGame = { item ->
+                try {
+                    val launchIntent = Intent(Intent.ACTION_VIEW, Uri.parse(item.launchUri)).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    context.startActivity(launchIntent)
+                } catch (e: Exception) {
+                    val fallbackUri = when (item) {
+                        is UnifiedLibraryItem.Steam -> Uri.parse(item.game.storeUrl)
+                        is UnifiedLibraryItem.Vault -> Uri.parse(item.giveaway.openGiveawayUrl)
+                    }
+                    try {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, fallbackUri).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        })
+                    } catch (_: Exception) {
+                        Toast.makeText(context, "Could not open ${item.name}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                showBacklogRoulette = false
+            }
+        )
+    }
 }
 
 @Composable
@@ -1528,4 +1650,166 @@ private fun rememberEmptyBob(enabled: Boolean): Float {
     )
     return bob
 }
+
+@Composable
+private fun ActiveFiltersSummaryPill(
+    selectedLaunchers: Set<LauncherType>,
+    selectedTypeFilter: TypeFilter,
+    selectedCategories: Set<GameCategory>,
+    selectedSort: SortOption,
+    onOpenFilterSheet: () -> Unit,
+    onResetFilters: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                .clickable { onOpenFilterSheet() }
+                .padding(horizontal = 10.dp, vertical = 5.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Tune,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(13.dp)
+            )
+            Text(
+                text = buildString {
+                    if (selectedLaunchers.isNotEmpty() && !selectedLaunchers.contains(LauncherType.ALL)) {
+                        append(selectedLaunchers.joinToString(", ") { it.displayName })
+                    }
+                    if (selectedTypeFilter != TypeFilter.ALL && selectedTypeFilter.apiMatch != null) {
+                        if (isNotEmpty()) append(" • ")
+                        append(selectedTypeFilter.label)
+                    }
+                    if (selectedCategories.isNotEmpty()) {
+                        if (isNotEmpty()) append(" • ")
+                        if (selectedCategories.size <= 2) {
+                            append(selectedCategories.joinToString(", ") { it.displayName })
+                        } else {
+                            append("${selectedCategories.size} Categories")
+                        }
+                    }
+                    if (selectedSort != SortOption.NEWEST) {
+                        if (isNotEmpty()) append(" • ")
+                        append(selectedSort.label)
+                    }
+                },
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary
+            )
+        }
+
+        Text(
+            text = "Reset",
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .clip(RoundedCornerShape(6.dp))
+                .clickable { onResetFilters() }
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+        )
+    }
+}
+
+@Composable
+private fun InLibraryTopMenus(
+    libraryViewMode: LibraryViewMode,
+    uiStats: UiStats,
+    isAnimationsEnabled: Boolean,
+    isLowEndOptimization: Boolean,
+    selectedLibraryPlayFilter: LibraryPlayFilter,
+    onFilterSelect: (LibraryPlayFilter) -> Unit,
+    isSyncingSteam: Boolean,
+    steamUserId: String,
+    steamSyncStatus: String?,
+    onOpenSteamDialog: () -> Unit,
+    onQuickSteamSync: () -> Unit,
+    onDismissSteamStatus: () -> Unit,
+    onViewModeChange: (LibraryViewMode) -> Unit,
+    selectedPlayabilityFilter: PlayabilityFilter,
+    onPlayabilityFilterSelect: (PlayabilityFilter) -> Unit,
+    selectedStorageFilter: StorageFilter,
+    onStorageFilterSelect: (StorageFilter) -> Unit,
+    trophyCount: Int,
+    activeFilterCount: Int,
+    selectedLaunchers: Set<LauncherType>,
+    selectedTypeFilter: TypeFilter,
+    selectedCategories: Set<GameCategory>,
+    selectedSort: SortOption,
+    onOpenFilterSheet: () -> Unit,
+    onResetFilters: () -> Unit,
+    onRollRandomBacklog: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        // Total Money Saved Banner on In Library
+        if (libraryViewMode != LibraryViewMode.ACHIEVEMENTS) {
+            val totalStorage = if (libraryViewMode == LibraryViewMode.ALL_PAID) {
+                uiStats.steamTotalStorageGb + uiStats.claimedTotalStorageGb
+            } else {
+                uiStats.claimedTotalStorageGb
+            }
+            val totalCount = if (libraryViewMode == LibraryViewMode.ALL_PAID) {
+                uiStats.steamTotalCount + uiStats.claimedCount
+            } else {
+                uiStats.claimedCount
+            }
+            ClaimedSavingsBanner(
+                savingsUsd = uiStats.claimedTotalSavedUsd,
+                claimedCount = totalCount,
+                totalStorageGb = totalStorage,
+                isAnimationsEnabled = isAnimationsEnabled && !isLowEndOptimization
+            )
+        }
+
+        // Interactive Library Play Filter Chips & Steam Game Tracker
+        LibraryPlayFilterChips(
+            selectedFilter = selectedLibraryPlayFilter,
+            uiStats = uiStats,
+            onFilterSelect = onFilterSelect,
+            isSyncingSteam = isSyncingSteam,
+            steamUserId = steamUserId,
+            steamSyncStatus = steamSyncStatus,
+            onOpenSteamDialog = onOpenSteamDialog,
+            onQuickSteamSync = onQuickSteamSync,
+            onDismissStatus = onDismissSteamStatus,
+            viewMode = libraryViewMode,
+            onViewModeChange = onViewModeChange,
+            selectedPlayability = selectedPlayabilityFilter,
+            onPlayabilitySelect = onPlayabilityFilterSelect,
+            selectedStorage = selectedStorageFilter,
+            onStorageSelect = onStorageFilterSelect,
+            trophyCount = trophyCount,
+            onRollRandomBacklog = onRollRandomBacklog
+        )
+
+        // Active Filters Summary Pill (if any non-defaults are selected in Vault / All Paid)
+        if (libraryViewMode != LibraryViewMode.ACHIEVEMENTS && activeFilterCount > 0) {
+            ActiveFiltersSummaryPill(
+                selectedLaunchers = selectedLaunchers,
+                selectedTypeFilter = selectedTypeFilter,
+                selectedCategories = selectedCategories,
+                selectedSort = selectedSort,
+                onOpenFilterSheet = onOpenFilterSheet,
+                onResetFilters = onResetFilters
+            )
+        }
+    }
+}
+
+
 

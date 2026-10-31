@@ -24,7 +24,6 @@ data class GiveawayItem(
     val isBookmarked: Boolean = false,
     val isNew: Boolean = false,
     val firstSeenTimestamp: Long = System.currentTimeMillis(),
-    val metacriticScore: Int = MetacriticCatalog.resolveScore(title, type, description),
     val playStatus: PlayStatus = PlayStatus.NOT_STARTED,
     val steamAppId: Int? = null,
     val steamPlaytimeMinutes: Int = 0,
@@ -32,7 +31,8 @@ data class GiveawayItem(
     val steamAchievementsTotal: Int = 0,
     val steamLastPlayedTimestamp: Long = 0L,
     val isWishlisted: Boolean = false,
-    val manualInstallSizeGb: Float? = null
+    val manualInstallSizeGb: Float? = null,
+    val metacriticScore: Int = MetacriticCatalog.resolveScore(title, type, description, steamAppId)
 ) {
     val hardwareProfile: GameHardwareProfile
         get() = com.example.util.HardwareReadinessCatalog.resolveProfile(this)
@@ -47,7 +47,7 @@ data class GiveawayItem(
         get() = steamPlaytimeMinutes > 0 || steamAchievementsTotal > 0
 
     val metacriticInfo: MetacriticInfo
-        get() = MetacriticCatalog.getMetacriticInfo(title, type, description, metacriticScore)
+        get() = MetacriticCatalog.getMetacriticInfo(title, type, description, metacriticScore, steamAppId)
     val categories: List<GameCategory>
         get() = GameCategory.inferCategories(type, title, description)
 

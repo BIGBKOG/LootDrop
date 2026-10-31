@@ -13,17 +13,70 @@ import kotlin.math.absoluteValue
 object MetacriticCatalog {
 
     /**
-     * Dynamically registered Metacritic scores received from external feeds like CheapShark.
+     * Dynamically registered Metacritic scores received from external feeds like CheapShark and GamerPower.
      */
     private val DYNAMIC_SCORES = java.util.concurrent.ConcurrentHashMap<String, Int>()
 
-    fun registerScore(rawTitle: String, score: Int) {
+    /**
+     * Direct official Metacritic review URLs (e.g. https://www.metacritic.com/game/cyberpunk-2077/)
+     * obtained from CheapShark API.
+     */
+    private val DYNAMIC_LINKS = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /**
+     * Exact Steam AppID to Metacritic score mapping for 100% verified accuracy.
+     */
+    private val DYNAMIC_APPID_SCORES = java.util.concurrent.ConcurrentHashMap<Int, Int>()
+
+    /**
+     * Exact Steam AppID to direct Metacritic review URL mapping.
+     */
+    private val DYNAMIC_APPID_LINKS = java.util.concurrent.ConcurrentHashMap<Int, String>()
+
+    fun registerScore(
+        rawTitle: String,
+        score: Int,
+        metacriticPath: String? = null,
+        steamAppId: Int? = null
+    ) {
         if (score in 1..100) {
             val clean = cleanTitle(rawTitle).lowercase(Locale.ROOT)
             DYNAMIC_SCORES[clean] = score
             val rawLower = rawTitle.lowercase(Locale.ROOT).trim()
             DYNAMIC_SCORES[rawLower] = score
+
+            val fullUrl = if (!metacriticPath.isNullOrBlank()) {
+                if (metacriticPath.startsWith("http")) metacriticPath
+                else "https://www.metacritic.com${if (metacriticPath.startsWith("/")) "" else "/"}$metacriticPath"
+            } else null
+
+            if (fullUrl != null) {
+                DYNAMIC_LINKS[clean] = fullUrl
+                DYNAMIC_LINKS[rawLower] = fullUrl
+            }
+
+            if (steamAppId != null && steamAppId > 0) {
+                DYNAMIC_APPID_SCORES[steamAppId] = score
+                if (fullUrl != null) {
+                    DYNAMIC_APPID_LINKS[steamAppId] = fullUrl
+                }
+            }
         }
+    }
+
+    /**
+     * Checks if a verified score has already been registered from CheapShark or known catalog.
+     */
+    fun hasVerifiedScore(rawTitle: String, steamAppId: Int? = null): Boolean {
+        if (steamAppId != null && steamAppId > 0 && DYNAMIC_APPID_SCORES.containsKey(steamAppId)) {
+            return true
+        }
+        val clean = cleanTitle(rawTitle).lowercase(Locale.ROOT)
+        if (DYNAMIC_SCORES.containsKey(clean)) return true
+        if (KNOWN_METACRITIC_SCORES.containsKey(clean)) return true
+        val rawLower = rawTitle.lowercase(Locale.ROOT).trim()
+        if (DYNAMIC_SCORES.containsKey(rawLower)) return true
+        return false
     }
 
     /**
@@ -343,20 +396,30 @@ object MetacriticCatalog {
 
     /**
      * Resolves the Metacritic score for a giveaway item.
-     * Uses title cleaning, base-game matching, and fallback heuristics for unlisted games.
+     * Uses title cleaning, Steam AppID matching from CheapShark, base-game matching, and fallback heuristics.
      */
-    fun resolveScore(title: String, type: String = "Game", description: String = ""): Int {
+    fun resolveScore(
+        title: String,
+        type: String = "Game",
+        description: String = "",
+        steamAppId: Int? = null
+    ): Int {
+        // 1. Direct match on exact Steam AppID verified via CheapShark
+        if (steamAppId != null && steamAppId > 0) {
+            DYNAMIC_APPID_SCORES[steamAppId]?.let { return it }
+        }
+
         val clean = cleanTitle(title)
         val normalized = clean.lowercase(Locale.ROOT)
 
-        // 1. Check dynamically registered scores from secondary feeds (CheapShark)
+        // 2. Check dynamically registered scores from secondary feeds (CheapShark / GamerPower)
         DYNAMIC_SCORES[normalized]?.let { return it }
         DYNAMIC_SCORES[title.lowercase(Locale.ROOT).trim()]?.let { return it }
 
-        // 2. Direct match on normalized core title in verified catalog
+        // 3. Direct match on normalized core title in verified catalog
         KNOWN_METACRITIC_SCORES[normalized]?.let { return it }
 
-        // 3. Substring & Prefix match against dynamic scores
+        // 4. Substring & Prefix match against dynamic scores
         for ((dynKey, score) in DYNAMIC_SCORES) {
             if (normalized == dynKey) return score
             if (normalized.startsWith("$dynKey ") || normalized.startsWith("$dynKey:") || normalized.startsWith("$dynKey-")) {
@@ -364,7 +427,7 @@ object MetacriticCatalog {
             }
         }
 
-        // 4. Substring & Prefix match against known catalog
+        // 5. Substring & Prefix match against known catalog
         for ((knownKey, score) in KNOWN_METACRITIC_SCORES) {
             if (normalized == knownKey) return score
             if (normalized.startsWith("$knownKey ") || normalized.startsWith("$knownKey:") || normalized.startsWith("$knownKey-")) {
@@ -375,7 +438,7 @@ object MetacriticCatalog {
             }
         }
 
-        // 5. Check original raw title for notable franchise keywords
+        // 6. Check original raw title for notable franchise keywords
         val lowerRaw = title.lowercase(Locale.ROOT)
         for ((knownKey, score) in KNOWN_METACRITIC_SCORES) {
             if (knownKey.length >= 6 && lowerRaw.contains(knownKey)) {
@@ -383,30 +446,45 @@ object MetacriticCatalog {
             }
         }
 
-        // 6. Deterministic fallback for unlisted indie/custom titles
+        // 7. Deterministic fallback for unlisted indie/custom titles
         return computeDeterministicScore(clean, type, description)
     }
 
     /**
-     * Complete MetacriticInfo package with score, official tier, and direct search link.
+     * Complete MetacriticInfo package with score, official tier, and direct review link.
      */
     fun getMetacriticInfo(
         title: String,
         type: String = "Game",
         description: String = "",
-        explicitScore: Int? = null
+        explicitScore: Int? = null,
+        steamAppId: Int? = null
     ): MetacriticInfo {
-        val score = explicitScore ?: resolveScore(title, type, description)
+        val score = explicitScore ?: resolveScore(title, type, description, steamAppId)
         val tier = MetacriticRatingTier.fromScore(score)
         val cleaned = cleanTitle(title)
-        val encoded = try {
-            URLEncoder.encode(cleaned, "UTF-8")
-        } catch (_: Exception) {
-            cleaned.replace(" ", "+")
+
+        // Check if a direct official Metacritic link was registered via CheapShark
+        val directUrl = if (steamAppId != null && steamAppId > 0 && DYNAMIC_APPID_LINKS.containsKey(steamAppId)) {
+            DYNAMIC_APPID_LINKS[steamAppId]
+        } else {
+            DYNAMIC_LINKS[cleaned.lowercase(Locale.ROOT)]
+                ?: DYNAMIC_LINKS[title.lowercase(Locale.ROOT).trim()]
         }
-        val reviewUrl = "https://www.metacritic.com/search/$encoded/?page=1&category=13"
-        val isVerified = DYNAMIC_SCORES.containsKey(cleaned.lowercase()) ||
-            KNOWN_METACRITIC_SCORES.keys.any { cleaned.lowercase().contains(it) || it.contains(cleaned.lowercase()) }
+
+        val reviewUrl = directUrl ?: run {
+            val encoded = try {
+                URLEncoder.encode(cleaned, "UTF-8")
+            } catch (_: Exception) {
+                cleaned.replace(" ", "+")
+            }
+            "https://www.metacritic.com/search/$encoded/?page=1&category=13"
+        }
+
+        val isVerified = directUrl != null ||
+            (steamAppId != null && DYNAMIC_APPID_SCORES.containsKey(steamAppId)) ||
+            DYNAMIC_SCORES.containsKey(cleaned.lowercase(Locale.ROOT)) ||
+            KNOWN_METACRITIC_SCORES.keys.any { cleaned.lowercase(Locale.ROOT).contains(it) || it.contains(cleaned.lowercase(Locale.ROOT)) }
 
         return MetacriticInfo(
             score = score,

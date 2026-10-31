@@ -81,6 +81,16 @@ data class FilterCriteria(
 )
 
 @Immutable
+data class AchievementOverviewStats(
+    val totalUnlockedTrophies: Int = 0,
+    val mythicTrophiesCount: Int = 0,
+    val goldTrophiesCount: Int = 0,
+    val masteredGamesCount: Int = 0,
+    val closestToHundredCount: Int = 0,
+    val averageCompletionPercentage: Int = 0
+)
+
+@Immutable
 data class UiStats(
     val totalFreeWorthUsd: Double = 0.0,
     val activeGiveawaysCount: Int = 0,
@@ -118,7 +128,12 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     val notificationHelper = NotificationHelper(application)
     val preferences = AppPreferences(application)
     private val database = AppDatabase.getInstance(application)
-    private val repository = GiveawaysRepository(database.giveawayDao(), notificationHelper)
+    private val repository = GiveawaysRepository(
+        giveawayDao = database.giveawayDao(),
+        notificationHelper = notificationHelper,
+        steamGameDao = database.steamGameDao(),
+        steamAchievementDao = database.steamAchievementDao()
+    )
     private val githubReleaseClient = GithubReleaseClient(application)
 
     private val _selectedTab = MutableStateFlow(MainTab.DISCOVER)
@@ -444,6 +459,83 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         list
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val rarestAchievements: StateFlow<List<com.example.data.local.SteamAchievementEntity>> = repository.rarestAchievementsFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val closestToHundredGames: StateFlow<List<SteamGameEntity>> = allSteamGames.map { games ->
+        games.filter { it.achievementsTotal > 0 }
+            .sortedWith(
+                compareByDescending<SteamGameEntity> { it.achievementsPercentage }
+                    .thenBy { it.achievementsTotal - it.achievementsUnlocked }
+                    .thenByDescending { it.playtimeMinutes }
+            )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val achievementOverviewStats: StateFlow<AchievementOverviewStats> = combine(
+        rarestAchievements,
+        allSteamGames
+    ) { trophies, games ->
+        val totalUnlocked = trophies.size
+        val mythic = trophies.count { it.globalPercentage in 0.001f..5.0f }
+        val gold = trophies.count { it.globalPercentage in 5.0f..15.0f }
+        val gamesWithAch = games.filter { it.achievementsTotal > 0 }
+        val mastered = gamesWithAch.count { it.achievementsUnlocked >= it.achievementsTotal }
+        val closest = gamesWithAch.count { it.achievementsPercentage in 80..99 }
+        val avgCompletion = if (gamesWithAch.isNotEmpty()) {
+            gamesWithAch.map { it.achievementsPercentage }.average().toInt()
+        } else 0
+
+        AchievementOverviewStats(
+            totalUnlockedTrophies = totalUnlocked,
+            mythicTrophiesCount = mythic,
+            goldTrophiesCount = gold,
+            masteredGamesCount = mastered,
+            closestToHundredCount = closest,
+            averageCompletionPercentage = avgCompletion
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AchievementOverviewStats())
+
+    private val _selectedGameForAchievements = MutableStateFlow<SteamGameEntity?>(null)
+    val selectedGameForAchievements: StateFlow<SteamGameEntity?> = _selectedGameForAchievements.asStateFlow()
+
+    private val _selectedGameAchievements = MutableStateFlow<List<com.example.data.local.SteamAchievementEntity>>(emptyList())
+    val selectedGameAchievements: StateFlow<List<com.example.data.local.SteamAchievementEntity>> = _selectedGameAchievements.asStateFlow()
+
+    private val _isLoadingGameAchievements = MutableStateFlow(false)
+    val isLoadingGameAchievements: StateFlow<Boolean> = _isLoadingGameAchievements.asStateFlow()
+
+    fun openGameAchievements(game: SteamGameEntity) {
+        _selectedGameForAchievements.value = game
+        loadAchievementsForGame(game)
+    }
+
+    fun closeGameAchievements() {
+        _selectedGameForAchievements.value = null
+        _selectedGameAchievements.value = emptyList()
+    }
+
+    fun loadAchievementsForGame(game: SteamGameEntity) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoadingGameAchievements.value = true
+            val local = repository.getAchievementsForApp(game.appId, game.name)
+            _selectedGameAchievements.value = local
+
+            val userId = _steamUserId.value.trim()
+            if (userId.isNotBlank()) {
+                val apiKey = SteamApiClient.resolveApiKey(_steamApiKey.value)
+                val resolvedId = SteamApiClient.resolveSteamId(userId, apiKey)
+                if (resolvedId != null) {
+                    val remote = SteamApiClient.getDetailedPlayerAchievements(game.appId, resolvedId, apiKey, game.name)
+                    if (remote.isNotEmpty()) {
+                        repository.insertAchievements(remote)
+                        _selectedGameAchievements.value = remote
+                    }
+                }
+            }
+            _isLoadingGameAchievements.value = false
+        }
+    }
+
    // Compute live UI stats
     val uiStats: StateFlow<UiStats> = combine(
         allGiveaways,
@@ -689,6 +781,15 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         updateStorageFootprint()
         NotificationScheduler.schedulePeriodicSync(application)
         checkGithubReleases(isManual = false)
+        viewModelScope.launch(Dispatchers.IO) {
+            val curatedAppIds = listOf(1091500, 620, 367520, 1145360, 264710, 1794680, 413150)
+            database.steamGameDao().deleteByAppIds(curatedAppIds)
+            database.steamAchievementDao().deleteByAppIds(curatedAppIds)
+            if (_steamUserId.value.isBlank()) {
+                database.steamGameDao().clearAll()
+                database.steamAchievementDao().clearAll()
+            }
+        }
     }
 
     fun updateStorageFootprint() {
@@ -1481,9 +1582,41 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                     }
                 }
 
+                // 4. Scan trophies & global achievement percentages for top played games
+                _steamSyncStatus.value = "Scanning trophies & global achievement rarities..."
+                val gamesWithPlaytime = ownedGames.filter { it.playtimeForeverMinutes > 0 }
+                    .sortedByDescending { it.playtimeForeverMinutes }
+                    .take(12)
+
+                var syncedTrophiesCount = 0
+                for (sg in gamesWithPlaytime) {
+                    val detailedAchievements = SteamApiClient.getDetailedPlayerAchievements(
+                        appId = sg.appId,
+                        steamId = resolvedSteamId,
+                        apiKey = apiKey,
+                        gameName = sg.name
+                    )
+                    if (detailedAchievements.isNotEmpty()) {
+                        repository.insertAchievements(detailedAchievements)
+                        val unlocked = detailedAchievements.count { it.isAchieved }
+                        val total = detailedAchievements.size
+                        syncedTrophiesCount += unlocked
+                        val classified = SteamApiClient.classifyPlayStatus(sg.playtimeForeverMinutes, unlocked, total)
+                        database.steamGameDao().updateTelemetry(
+                            appId = sg.appId,
+                            status = classified,
+                            playtime = sg.playtimeForeverMinutes,
+                            unlocked = unlocked,
+                            total = total,
+                            lastPlayed = sg.rtimeLastPlayed
+                        )
+                    }
+                }
+
+                val trophyMsg = if (syncedTrophiesCount > 0) " • $syncedTrophiesCount trophies tracked" else ""
                 val wishlistMsg = if (wishlistMap.isNotEmpty()) " • ${wishlistMap.size} wishlisted ($wishlistMatchCount free in app)" else ""
                 _steamSyncStatus.value = if (ownedGames.isNotEmpty()) {
-                    "Synced ${ownedGames.size} Steam games into All+Paid ($matchedCount claimed in vault)$wishlistMsg!"
+                    "Synced ${ownedGames.size} Steam games into All+Paid ($matchedCount claimed)$trophyMsg$wishlistMsg!"
                 } else {
                     "Synced wishlist ($wishlistMatchCount matches found)!"
                 }

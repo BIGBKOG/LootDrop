@@ -12,6 +12,9 @@ import com.example.data.remote.ApiClient
 import com.example.notifications.NotificationHelper
 import com.example.util.MetacriticCatalog
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -24,10 +27,15 @@ data class SyncResult(
 class GiveawaysRepository(
     private val giveawayDao: GiveawayDao,
     private val notificationHelper: NotificationHelper,
-    steamGameDao: SteamGameDao? = null
+    steamGameDao: SteamGameDao? = null,
+    steamAchievementDao: com.example.data.local.SteamAchievementDao? = null
 ) {
     private val steamDao: SteamGameDao by lazy {
         steamGameDao ?: AppDatabase.getInstance(notificationHelper.context).steamGameDao()
+    }
+
+    private val achievementDao: com.example.data.local.SteamAchievementDao by lazy {
+        steamAchievementDao ?: AppDatabase.getInstance(notificationHelper.context).steamAchievementDao()
     }
 
     val allGiveawaysFlow: Flow<List<GiveawayItem>> =
@@ -48,6 +56,24 @@ class GiveawaysRepository(
     val allSteamGamesFlow: Flow<List<SteamGameEntity>>
         get() = steamDao.getAllSteamGamesFlow()
 
+    val rarestAchievementsFlow: Flow<List<com.example.data.local.SteamAchievementEntity>>
+        get() = achievementDao.getUnlockedRarestFlow()
+
+    fun getAchievementsForAppFlow(appId: Int): Flow<List<com.example.data.local.SteamAchievementEntity>> =
+        achievementDao.getAchievementsForAppFlow(appId)
+
+    suspend fun getAchievementsForApp(appId: Int, fallbackGameName: String = ""): List<com.example.data.local.SteamAchievementEntity> = withContext(Dispatchers.IO) {
+        achievementDao.getAchievementsForApp(appId)
+    }
+
+    suspend fun insertAchievements(achievements: List<com.example.data.local.SteamAchievementEntity>) = withContext(Dispatchers.IO) {
+        achievementDao.insertAll(achievements)
+    }
+
+    suspend fun getSteamAchievementsCount(): Int = withContext(Dispatchers.IO) {
+        achievementDao.getTotalCount()
+    }
+
 
     suspend fun refreshGiveaways(): Result<SyncResult> = withContext(Dispatchers.IO) {
         var primaryEntities: List<GiveawayEntity>? = null
@@ -63,25 +89,79 @@ class GiveawaysRepository(
             primaryException = e
         }
 
-        // 2. Secondary Multi-Source & Fallback: CheapShark Free Deals Endpoint
+        // 2. Secondary Multi-Source & Metacritic Rating Preload: CheapShark API
         var cheapSharkEntities: List<GiveawayEntity> = emptyList()
         try {
+            // A. Fetch 100% discount free deals from CheapShark
             val csDeals = ApiClient.cheapSharkApiService.getFreeDeals(onSale = 1, upperPrice = 0)
             if (csDeals.isNotEmpty()) {
-                // Register verified Metacritic ratings received from CheapShark
                 for (deal in csDeals) {
                     val score = deal.metacriticScore?.toIntOrNull() ?: 0
+                    val steamId = deal.steamAppID?.toIntOrNull()
                     if (score > 0) {
-                        MetacriticCatalog.registerScore(deal.title, score)
+                        MetacriticCatalog.registerScore(deal.title, score, deal.metacriticLink, steamId)
                     }
                 }
                 cheapSharkEntities = csDeals.map { it.toEntity() }
             }
+
+            // B. Preload top 60 verified Metacritic ratings from CheapShark
+            val topDeals = ApiClient.cheapSharkApiService.getTopMetacriticDeals(metacritic = 1, sortBy = "Metacritic", pageSize = 60)
+            for (deal in topDeals) {
+                val score = deal.metacriticScore?.toIntOrNull() ?: 0
+                val steamId = deal.steamAppID?.toIntOrNull()
+                if (score > 0) {
+                    MetacriticCatalog.registerScore(deal.title, score, deal.metacriticLink, steamId)
+                }
+            }
         } catch (_: Exception) {
-            // Non-fatal if primary is healthy
+            // Non-fatal if CheapShark bulk preload fails
         }
 
-        // 3. Resolve Feed: Merge & Enrich or Trigger Emergency Fallback
+        // 3. Synergize GamerPower + CheapShark: Targeted Metacritic ratings for all unverified giveaways
+        primaryEntities?.let { gpList ->
+            val unverifiedItems = gpList.filter { gpItem ->
+                !MetacriticCatalog.hasVerifiedScore(gpItem.title, gpItem.steamAppId)
+            }.take(15)
+
+            if (unverifiedItems.isNotEmpty()) {
+                coroutineScope {
+                    unverifiedItems.map { gpItem ->
+                        async {
+                            try {
+                                val deals = if (gpItem.steamAppId != null && gpItem.steamAppId > 0) {
+                                    ApiClient.cheapSharkApiService.getDealsBySteamAppId(gpItem.steamAppId)
+                                } else {
+                                    val clean = MetacriticCatalog.cleanTitle(gpItem.title)
+                                    ApiClient.cheapSharkApiService.getDealsByTitle(clean)
+                                }
+                                for (deal in deals) {
+                                    val score = deal.metacriticScore?.toIntOrNull() ?: 0
+                                    val dealSteamId = deal.steamAppID?.toIntOrNull() ?: gpItem.steamAppId
+                                    if (score > 0) {
+                                        MetacriticCatalog.registerScore(gpItem.title, score, deal.metacriticLink, dealSteamId)
+                                        MetacriticCatalog.registerScore(deal.title, score, deal.metacriticLink, dealSteamId)
+                                        break
+                                    } else {
+                                        val percent = deal.steamRatingPercent?.toIntOrNull() ?: 0
+                                        val count = deal.steamRatingCount?.toIntOrNull() ?: 0
+                                        if (percent > 0 && count >= 100) {
+                                            val calibrated = ((percent * 0.9f) + 5f).toInt().coerceIn(50, 95)
+                                            MetacriticCatalog.registerScore(gpItem.title, calibrated, deal.metacriticLink, dealSteamId)
+                                            break
+                                        }
+                                    }
+                                }
+                            } catch (_: Exception) {
+                                // Non-fatal per-game lookup
+                            }
+                        }
+                    }.awaitAll()
+                }
+            }
+        }
+
+        // 4. Resolve Feed: Merge & Enrich or Trigger Emergency Fallback
         val finalEntities: List<GiveawayEntity> = when {
             // Case A: GamerPower succeeded - enrich with CheapShark metadata and merge unlisted free deals
             !primaryEntities.isNullOrEmpty() -> {
@@ -98,6 +178,9 @@ class GiveawaysRepository(
                         // If GamerPower lacks end date or has N/A, enrich with CheapShark's status
                         if ((updated.endDate == "N/A" || updated.endDate.isBlank()) && csMatch.endDate != "N/A") {
                             updated = updated.copy(endDate = csMatch.endDate)
+                        }
+                        if (updated.steamAppId == null && csMatch.steamAppId != null) {
+                            updated = updated.copy(steamAppId = csMatch.steamAppId)
                         }
                         updated
                     } else {

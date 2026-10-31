@@ -546,8 +546,8 @@ private fun CalendarHeroBanner(
     val bannerBrush = remember(primaryColor, secondaryColor) {
         Brush.horizontalGradient(
             listOf(
-                primaryColor.copy(alpha = 0.22f),
-                secondaryColor.copy(alpha = 0.12f),
+                primaryColor.copy(alpha = 0.20f),
+                secondaryColor.copy(alpha = 0.10f),
                 Color(0xFF1E2538)
             )
         )
@@ -556,9 +556,9 @@ private fun CalendarHeroBanner(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .padding(horizontal = 16.dp, vertical = 4.dp)
             .testTag("calendar_hero_banner"),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF161A24)),
         border = BorderStroke(1.dp, primaryColor.copy(alpha = 0.35f))
     ) {
@@ -566,148 +566,88 @@ private fun CalendarHeroBanner(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(bannerBrush)
-                .padding(16.dp)
+                .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
-            Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.weight(1f, fill = false),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(primaryColor.copy(alpha = 0.22f)),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(primaryColor.copy(alpha = 0.25f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CalendarMonth,
-                                contentDescription = null,
-                                tint = primaryColor,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.CalendarMonth,
+                            contentDescription = null,
+                            tint = primaryColor,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
 
-                        Column {
+                    Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
                             Text(
                                 text = "EXPIRING GAMES RADAR",
-                                fontSize = 14.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Black,
                                 color = TextPrimary,
                                 letterSpacing = 0.5.sp
                             )
-                            Text(
-                                text = "Next week or two of upcoming game drops & giveaways",
-                                fontSize = 11.sp,
-                                color = TextSecondary
-                            )
+                            if (urgentCount > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(NeonAmber.copy(alpha = 0.2f))
+                                        .border(0.8.dp, NeonAmber.copy(alpha = 0.4f), RoundedCornerShape(4.dp))
+                                        .padding(horizontal = 5.dp, vertical = 1.dp)
+                                ) {
+                                    Text(
+                                        text = "⚠️ $urgentCount Ending Soon",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = NeonAmber
+                                    )
+                                }
+                            }
                         }
-                    }
-
-                    // Total Value Expiring Pill
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(NeonGreen.copy(alpha = 0.15f))
-                            .border(1.dp, NeonGreen.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
                         Text(
-                            text = String.format(Locale.US, "$%.2f FREE", totalValueUsd),
+                            text = "$totalExpiringCount game${if (totalExpiringCount != 1) "s" else ""} expiring in next 14 days",
                             fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = NeonGreen
+                            color = TextSecondary
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.width(8.dp))
 
-                // Stats row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                // Total Value Expiring Pill
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(NeonGreen.copy(alpha = 0.15f))
+                        .border(0.8.dp, NeonGreen.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
-                    StatPill(
-                        label = "Expiring in 14 Days",
-                        value = "$totalExpiringCount Games",
-                        color = primaryColor,
-                        modifier = Modifier.weight(1f)
+                    Text(
+                        text = String.format(Locale.US, "$%.2f FREE", totalValueUsd),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = NeonGreen
                     )
-
-                    StatPill(
-                        label = "Urgent (≤ 48h)",
-                        value = if (urgentCount > 0) "$urgentCount Ending" else "None",
-                        color = if (urgentCount > 0) NeonAmber else TextMuted,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                if (urgentCount > 0) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(NeonAmber.copy(alpha = 0.12f))
-                            .border(1.dp, NeonAmber.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.WarningAmber,
-                            contentDescription = null,
-                            tint = NeonAmber,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Text(
-                            text = "$urgentCount game${if (urgentCount > 1) "s" else ""} ending in under 48 hours! Claim now before keys run out.",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = NeonAmber
-                        )
-                    }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun StatPill(
-    label: String,
-    value: String,
-    color: Color,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        shape = RoundedCornerShape(10.dp),
-        color = Color(0xFF1E2330),
-        border = BorderStroke(1.dp, Color(0xFF2E384D)),
-        modifier = modifier
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
-        ) {
-            Text(
-                text = label,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Medium,
-                color = TextMuted
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = value,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = color
-            )
         }
     }
 }

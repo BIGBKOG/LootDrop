@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -100,6 +101,8 @@ fun LibraryPlayFilterChips(
     onPlayabilitySelect: (PlayabilityFilter) -> Unit = {},
     selectedStorage: StorageFilter = StorageFilter.ALL,
     onStorageSelect: (StorageFilter) -> Unit = {},
+    trophyCount: Int = 0,
+    onRollRandomBacklog: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -119,6 +122,7 @@ fun LibraryPlayFilterChips(
         ) {
             val isVaultSelected = viewMode == LibraryViewMode.VAULT
             val isAllPaidSelected = viewMode == LibraryViewMode.ALL_PAID
+            val isAchievementsSelected = viewMode == LibraryViewMode.ACHIEVEMENTS
 
             Box(
                 modifier = Modifier
@@ -132,11 +136,11 @@ fun LibraryPlayFilterChips(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        text = "🎁 Claimed Vault",
-                        fontSize = 12.sp,
+                        text = "🎁 Vault",
+                        fontSize = 11.sp,
                         fontWeight = if (isVaultSelected) FontWeight.Bold else FontWeight.Medium,
                         color = if (isVaultSelected) MaterialTheme.colorScheme.onPrimary else TextSecondary
                     )
@@ -144,11 +148,11 @@ fun LibraryPlayFilterChips(
                         modifier = Modifier
                             .clip(CircleShape)
                             .background(if (isVaultSelected) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface)
-                            .padding(horizontal = 5.dp, vertical = 1.dp)
+                            .padding(horizontal = 4.dp, vertical = 1.dp)
                     ) {
                         Text(
                             text = "${uiStats.claimedCount}",
-                            fontSize = 10.sp,
+                            fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (isVaultSelected) MaterialTheme.colorScheme.onPrimary else TextSecondary
                         )
@@ -168,11 +172,11 @@ fun LibraryPlayFilterChips(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        text = "🎮 All + Paid",
-                        fontSize = 12.sp,
+                        text = "🎮 All+Paid",
+                        fontSize = 11.sp,
                         fontWeight = if (isAllPaidSelected) FontWeight.Bold else FontWeight.Medium,
                         color = if (isAllPaidSelected) Color(0xFF0B0F19) else TextSecondary
                     )
@@ -180,14 +184,52 @@ fun LibraryPlayFilterChips(
                         modifier = Modifier
                             .clip(CircleShape)
                             .background(if (isAllPaidSelected) Color(0xFF0B0F19).copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface)
-                            .padding(horizontal = 5.dp, vertical = 1.dp)
+                            .padding(horizontal = 4.dp, vertical = 1.dp)
                     ) {
                         Text(
-                            text = "${uiStats.steamTotalCount}",
-                            fontSize = 10.sp,
+                            text = "${uiStats.steamTotalCount + uiStats.claimedCount}",
+                            fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (isAllPaidSelected) Color(0xFF0B0F19) else Color(0xFF66C0F4)
                         )
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(if (isAchievementsSelected) Color(0xFFE040FB) else Color.Transparent)
+                    .clickable { onViewModeChange(LibraryViewMode.ACHIEVEMENTS) }
+                    .padding(vertical = 8.dp)
+                    .testTag("tab_trophies_showcase"),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "🏆 Trophies",
+                        fontSize = 11.sp,
+                        fontWeight = if (isAchievementsSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isAchievementsSelected) Color(0xFF0F1420) else TextSecondary
+                    )
+                    if (trophyCount > 0) {
+                        Box(
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(if (isAchievementsSelected) Color(0xFF0F1420).copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface)
+                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                        ) {
+                            Text(
+                                text = "$trophyCount",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isAchievementsSelected) Color(0xFF0F1420) else Color(0xFFE040FB)
+                            )
+                        }
                     }
                 }
             }
@@ -281,223 +323,201 @@ fun LibraryPlayFilterChips(
             }
         }
 
-        // Horizontal filter chips: All, Unplayed, Playing, Finished, Dropped
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            LibraryPlayFilter.values().forEach { filter ->
-                val isSelected = filter == selectedFilter
-                val count = if (viewMode == LibraryViewMode.ALL_PAID) {
-                    when (filter) {
-                        LibraryPlayFilter.ALL -> uiStats.steamTotalCount
-                        LibraryPlayFilter.UNPLAYED -> uiStats.steamUnplayedCount
-                        LibraryPlayFilter.PLAYING -> uiStats.steamPlayingCount
-                        LibraryPlayFilter.FINISHED -> uiStats.steamFinishedCount
-                        LibraryPlayFilter.DROPPED -> uiStats.steamDroppedCount
-                    }
-                } else {
-                    when (filter) {
-                        LibraryPlayFilter.ALL -> uiStats.claimedCount
-                        LibraryPlayFilter.UNPLAYED -> uiStats.unplayedCount
-                        LibraryPlayFilter.PLAYING -> uiStats.playingCount
-                        LibraryPlayFilter.FINISHED -> uiStats.finishedCount
-                        LibraryPlayFilter.DROPPED -> uiStats.droppedCount
-                    }
-                }
+        if (viewMode != LibraryViewMode.ACHIEVEMENTS) {
+            var showFilterMenuDialog by remember { mutableStateOf(false) }
 
-                val filterColor = when (filter) {
-                    LibraryPlayFilter.ALL -> MaterialTheme.colorScheme.primary
-                    LibraryPlayFilter.UNPLAYED -> Color(0xFF94A3B8)
-                    LibraryPlayFilter.PLAYING -> NeonCyan
-                    LibraryPlayFilter.FINISHED -> NeonGreen
-                    LibraryPlayFilter.DROPPED -> Color(0xFFF97316)
-                }
+            val isFilterActive = selectedFilter != LibraryPlayFilter.ALL ||
+                    selectedPlayability != PlayabilityFilter.ALL ||
+                    selectedStorage != StorageFilter.ALL
 
-                FilterChip(
-                    selected = isSelected,
-                    onClick = { onFilterSelect(filter) },
-                    label = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text(
-                                text = filter.displayName,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                fontSize = 12.sp
-                            )
-                            // Count badge pill
+            val activeFilterCount = (if (selectedFilter != LibraryPlayFilter.ALL) 1 else 0) +
+                    (if (selectedPlayability != PlayabilityFilter.ALL) 1 else 0) +
+                    (if (selectedStorage != StorageFilter.ALL) 1 else 0)
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Integrated Filter Button
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(
+                            if (isFilterActive) NeonCyan.copy(alpha = 0.2f)
+                            else MaterialTheme.colorScheme.surfaceVariant
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = if (isFilterActive) NeonCyan else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                        .clickable { showFilterMenuDialog = true }
+                        .padding(horizontal = 12.dp, vertical = 7.dp)
+                        .testTag("vault_filter_menu_button"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Tune,
+                            contentDescription = "Filters",
+                            tint = if (isFilterActive) NeonCyan else TextPrimary,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Text(
+                            text = if (viewMode == LibraryViewMode.ALL_PAID) "Steam Filters" else "Vault Filters",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isFilterActive) NeonCyan else TextPrimary
+                        )
+                        if (activeFilterCount > 0) {
                             Box(
                                 modifier = Modifier
                                     .clip(CircleShape)
-                                    .background(
-                                        if (isSelected) filterColor.copy(alpha = 0.25f)
-                                        else MaterialTheme.colorScheme.surfaceVariant
-                                    )
-                                    .padding(horizontal = 6.dp, vertical = 1.dp)
+                                    .background(NeonCyan)
+                                    .padding(horizontal = 5.dp, vertical = 1.dp)
                             ) {
                                 Text(
-                                    text = "$count",
+                                    text = "$activeFilterCount",
                                     fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isSelected) filterColor else TextSecondary
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color(0xFF0F1420)
                                 )
                             }
                         }
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = filterColor.copy(alpha = 0.15f),
-                        selectedLabelColor = filterColor,
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                        labelColor = TextSecondary
-                    ),
-                    border = FilterChipDefaults.filterChipBorder(
-                        enabled = true,
-                        selected = isSelected,
-                        borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
-                        selectedBorderColor = filterColor,
-                        borderWidth = 1.dp,
-                        selectedBorderWidth = 1.5.dp
-                    ),
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.testTag("library_filter_chip_${filter.name.lowercase()}")
-                )
-            }
-        }
-
-        // Secondary Row: Playability & Category Tags (Steam Deck Verified, Controller, Quick Session)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            PlayabilityFilter.values().forEach { playTag ->
-                val isSelected = playTag == selectedPlayability
-                val tagColor = when (playTag) {
-                    PlayabilityFilter.ALL -> MaterialTheme.colorScheme.primary
-                    PlayabilityFilter.DECK_VERIFIED -> Color(0xFF10B981)
-                    PlayabilityFilter.CONTROLLER_FRIENDLY -> Color(0xFF00E5FF)
-                    PlayabilityFilter.QUICK_SESSION -> Color(0xFFFFD700)
-                }
-                val count = when (playTag) {
-                    PlayabilityFilter.ALL -> null
-                    PlayabilityFilter.DECK_VERIFIED -> uiStats.deckVerifiedCount
-                    PlayabilityFilter.CONTROLLER_FRIENDLY -> uiStats.controllerFriendlyCount
-                    PlayabilityFilter.QUICK_SESSION -> uiStats.quickSessionCount
+                    }
                 }
 
-                FilterChip(
-                    selected = isSelected,
-                    onClick = { onPlayabilitySelect(playTag) },
-                    label = {
+                // Roll Random Backlog Button in All+Paid mode to beat analysis paralysis
+                if (viewMode == LibraryViewMode.ALL_PAID && onRollRandomBacklog != null) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFF261E38))
+                            .border(
+                                width = 1.dp,
+                                color = Color(0xFFA855F7).copy(alpha = 0.6f),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .clickable { onRollRandomBacklog() }
+                            .padding(horizontal = 10.dp, vertical = 7.dp)
+                            .testTag("roll_random_backlog_button"),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Text(text = "${playTag.iconEmoji} ${playTag.label}", fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium)
-                            if (count != null && count > 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(CircleShape)
-                                        .background(if (isSelected) tagColor.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surfaceVariant)
-                                        .padding(horizontal = 5.dp, vertical = 0.5.dp)
-                                ) {
-                                    Text(text = "$count", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = if (isSelected) tagColor else TextSecondary)
-                                }
-                            }
+                            Text("🎲", fontSize = 12.sp)
+                            Text(
+                                text = "Roll Backlog",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFD8B4FE)
+                            )
                         }
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = tagColor.copy(alpha = 0.15f),
-                        selectedLabelColor = tagColor,
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                        labelColor = TextSecondary
-                    ),
-                    border = FilterChipDefaults.filterChipBorder(
-                        enabled = true,
-                        selected = isSelected,
-                        borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                        selectedBorderColor = tagColor,
-                        borderWidth = 0.9.dp,
-                        selectedBorderWidth = 1.3.dp
-                    ),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.testTag("library_playability_${playTag.name.lowercase()}")
+                    }
+                }
+
+                // Active filter tags horizontally scrollable with tap-to-remove
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (selectedFilter != LibraryPlayFilter.ALL) {
+                        ActiveFilterPill(
+                            label = selectedFilter.displayName,
+                            onRemove = { onFilterSelect(LibraryPlayFilter.ALL) }
+                        )
+                    }
+                    if (selectedPlayability != PlayabilityFilter.ALL) {
+                        ActiveFilterPill(
+                            label = "${selectedPlayability.iconEmoji} ${selectedPlayability.label}",
+                            onRemove = { onPlayabilitySelect(PlayabilityFilter.ALL) }
+                        )
+                    }
+                    if (selectedStorage != StorageFilter.ALL) {
+                        ActiveFilterPill(
+                            label = "💾 ${selectedStorage.label}",
+                            onRemove = { onStorageSelect(StorageFilter.ALL) }
+                        )
+                    }
+
+                    if (isFilterActive) {
+                        Text(
+                            text = "Reset",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = NeonCyan,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .clickable {
+                                    onFilterSelect(LibraryPlayFilter.ALL)
+                                    onPlayabilitySelect(PlayabilityFilter.ALL)
+                                    onStorageSelect(StorageFilter.ALL)
+                                }
+                                .padding(horizontal = 6.dp, vertical = 4.dp)
+                                .testTag("vault_filter_quick_reset")
+                        )
+                    } else {
+                        Text(
+                            text = if (viewMode == LibraryViewMode.ALL_PAID) "All ${uiStats.steamTotalCount + uiStats.claimedCount} games • Vault & Steam • Tap filters" else "All ${uiStats.claimedCount} claimed games • Tap filters",
+                            fontSize = 11.sp,
+                            color = TextSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+
+            if (showFilterMenuDialog) {
+                VaultFilterMenuDialog(
+                    selectedFilter = selectedFilter,
+                    onFilterSelect = onFilterSelect,
+                    selectedPlayability = selectedPlayability,
+                    onPlayabilitySelect = onPlayabilitySelect,
+                    selectedStorage = selectedStorage,
+                    onStorageSelect = onStorageSelect,
+                    uiStats = uiStats,
+                    viewMode = viewMode,
+                    onDismiss = { showFilterMenuDialog = false }
                 )
             }
         }
+    }
+}
 
-        // Tertiary Row: Storage Footprint Tracker Filter Chips (<2GB, 2-10GB, 10-40GB, 40+GB)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            StorageFilter.values().forEach { storageTag ->
-                val isSelected = storageTag == selectedStorage
-                val storageColor = when (storageTag) {
-                    StorageFilter.ALL -> MaterialTheme.colorScheme.secondary
-                    StorageFilter.UNDER_2GB -> Color(0xFF10B981) // Green / Featherweight
-                    StorageFilter.FROM_2_TO_10GB -> Color(0xFF00E5FF) // Cyan
-                    StorageFilter.FROM_10_TO_40GB -> Color(0xFFFFB300) // Amber
-                    StorageFilter.OVER_40GB -> Color(0xFFFF5722) // Orange / Heavy
-                }
-                val count = when (storageTag) {
-                    StorageFilter.ALL -> null
-                    StorageFilter.UNDER_2GB -> uiStats.storageUnder2GbCount
-                    StorageFilter.FROM_2_TO_10GB -> uiStats.storage2To10GbCount
-                    StorageFilter.FROM_10_TO_40GB -> uiStats.storage10To40GbCount
-                    StorageFilter.OVER_40GB -> uiStats.storageOver40GbCount
-                }
-
-                FilterChip(
-                    selected = isSelected,
-                    onClick = { onStorageSelect(storageTag) },
-                    label = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(text = "💾 ${storageTag.label}", fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium)
-                            if (count != null && count > 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(CircleShape)
-                                        .background(if (isSelected) storageColor.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surfaceVariant)
-                                        .padding(horizontal = 5.dp, vertical = 0.5.dp)
-                                ) {
-                                    Text(text = "$count", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = if (isSelected) storageColor else TextSecondary)
-                                }
-                            }
-                        }
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = storageColor.copy(alpha = 0.15f),
-                        selectedLabelColor = storageColor,
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                        labelColor = TextSecondary
-                    ),
-                    border = FilterChipDefaults.filterChipBorder(
-                        enabled = true,
-                        selected = isSelected,
-                        borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                        selectedBorderColor = storageColor,
-                        borderWidth = 0.9.dp,
-                        selectedBorderWidth = 1.3.dp
-                    ),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.testTag("library_storage_${storageTag.name.lowercase()}")
-                )
-            }
-        }
+@Composable
+private fun ActiveFilterPill(
+    label: String,
+    onRemove: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color(0xFF1B2436))
+            .border(1.dp, NeonCyan.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+            .clickable { onRemove() }
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(text = label, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+        Icon(
+            imageVector = Icons.Default.Close,
+            contentDescription = "Remove filter",
+            tint = NeonCyan,
+            modifier = Modifier.size(12.dp)
+        )
     }
 }
 
@@ -779,7 +799,7 @@ fun SteamSyncDialog(
                 )
 
                 Text(
-                    text = "Tip: Found in your profile URL (steamcommunity.com/id/YOUR_NAME or /profiles/YOUR_ID64). Make sure 'Game details' is Public in Steam Privacy Settings.",
+                    text = "Tip: Found in your profile URL (steamcommunity.com/id/YOUR_NAME or /profiles/YOUR_ID64) or lookup at steamid64.net. Make sure 'Game details' is Public in Steam Privacy Settings.",
                     fontSize = 10.sp,
                     lineHeight = 14.sp,
                     color = Color(0xFF8F98A0)

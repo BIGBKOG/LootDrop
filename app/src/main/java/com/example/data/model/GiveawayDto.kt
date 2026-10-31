@@ -25,6 +25,8 @@ data class GiveawayDto(
 fun GiveawayDto.toEntity(): com.example.data.local.GiveawayEntity {
     val cleanWorth = worth?.trim() ?: "FREE"
     val numeric = cleanWorth.replace("$", "").replace("€", "").trim().toDoubleOrNull() ?: 0.0
+    val targetUrl = openGiveawayUrl ?: gamerpowerUrl ?: "https://www.gamerpower.com"
+    val extractedSteamId = com.example.data.remote.SteamApiClient.extractSteamAppId(targetUrl)
 
     return com.example.data.local.GiveawayEntity(
         id = id,
@@ -35,14 +37,15 @@ fun GiveawayDto.toEntity(): com.example.data.local.GiveawayEntity {
         image = image ?: thumbnail ?: "",
         description = description ?: "Free PC giveaway available to claim.",
         instructions = instructions ?: "Click Claim to visit the official giveaway page.",
-        openGiveawayUrl = openGiveawayUrl ?: gamerpowerUrl ?: "https://www.gamerpower.com",
+        openGiveawayUrl = targetUrl,
         publishedDate = publishedDate ?: "",
         type = type ?: "Game",
         platforms = platforms ?: "PC",
         endDate = endDate ?: "N/A",
         users = users ?: 0,
         status = status ?: "Active",
-        firstSeenTimestamp = System.currentTimeMillis()
+        firstSeenTimestamp = System.currentTimeMillis(),
+        steamAppId = extractedSteamId
     )
 }
 

@@ -6,6 +6,7 @@ import androidx.room.Room
 import com.example.data.local.AppDatabase
 import com.example.data.local.GiveawayEntity
 import com.example.data.model.GiveawayItem
+import com.example.data.model.toEntity
 import com.example.data.model.LauncherType
 import com.example.data.model.LibraryPlayFilter
 import com.example.data.model.PlayStatus
@@ -613,15 +614,46 @@ class ExampleRobolectricTest {
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.1.1", "2.1.0"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.2.0", "2.1.0"))
 
-        // When running on 2.1.1
-        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V2.1.1", "2.1.1"))
-        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.1.1", "2.1.1"))
-        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.1.0", "2.1.1"))
-        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.0.0", "2.1.1"))
-        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.5", "2.1.1"))
-        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V4.5", "2.1.1"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.1.2", "2.1.1"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.2.0", "2.1.1"))
+        // When running on 2.2.0
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V2.2.0", "2.2.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.2.0", "2.2.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.1.1", "2.2.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.1.0", "2.2.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.0.0", "2.2.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.5", "2.2.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V4.5", "2.2.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.2.1", "2.2.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.3.0", "2.2.0"))
+
+        // When running on 2.3.0
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V2.3.0", "2.3.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.3.0", "2.3.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.2.0", "2.3.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.1.1", "2.3.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.0.0", "2.3.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.5", "2.3.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.3.1", "2.3.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.0", "2.3.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("36.0", "2.3.0"))
+
+        // When running on 2.3.5
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V2.3.5", "2.3.5"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.3.5", "2.3.5"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.3.0", "2.3.5"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.2.0", "2.3.5"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.0.0", "2.3.5"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.5", "2.3.5"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.3.6", "2.3.5"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.0", "2.3.5"))
+
+        // When running on 36.0
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V36.0", "36.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("36.0", "36.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("35.0", "36.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.3.0", "36.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V4.5", "36.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("36.1", "36.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("37.0", "36.0"))
 
         // If a device is still on legacy 4.5, 1.5.0 / 1.5.X is recognized as the successor
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.X", "V4.5"))
@@ -752,13 +784,55 @@ class ExampleRobolectricTest {
         assertEquals("$24.99", entity.worth)
         assertEquals(24.99, entity.numericWorth, 0.01)
         assertEquals("https://www.cheapshark.com/redirect?dealID=testDeal123ABC", entity.openGiveawayUrl)
+        assertEquals(1492070, entity.steamAppId)
         assertTrue(entity.description.contains("Steam Rating: Very Positive"))
         assertTrue(entity.description.contains("84% positive"))
 
         // Verify that deal's Metacritic score of 84 is registered and resolves
         assertEquals(84, com.example.util.MetacriticCatalog.resolveScore("Sker Ritual"))
+        assertEquals(84, com.example.util.MetacriticCatalog.resolveScore("Unknown Title", steamAppId = 1492070))
         val domain = entity.toDomain()
         assertEquals(84, domain.metacriticScore)
+        assertEquals("https://www.metacritic.com/game/sker-ritual/", domain.metacriticInfo.reviewUrl)
+    }
+
+    @Test
+    fun `gamerpower giveaways synergize with cheapshark to resolve verified metacritic ratings and direct links`() {
+        // Given a GamerPower giveaway with a Steam giveaway URL
+        val gamerPowerDto = com.example.data.model.GiveawayDto(
+            id = 1546,
+            title = "Dead by Daylight 100k Bloodpoints Key Giveaway",
+            worth = "N/A",
+            thumbnail = "https://example.com/dbd.jpg",
+            image = "https://example.com/dbd_large.jpg",
+            description = "Grab your free Dead by Daylight bloodpoints key.",
+            instructions = "Redeem code",
+            openGiveawayUrl = "https://store.steampowered.com/app/381210/Dead_by_Daylight/",
+            publishedDate = "2026-10-30",
+            type = "DLC",
+            platforms = "PC, Steam",
+            endDate = "N/A",
+            users = 5000,
+            status = "Active",
+            gamerpowerUrl = "https://www.gamerpower.com/open/dead-by-daylight"
+        )
+
+        val entity = gamerPowerDto.toEntity()
+        assertEquals(381210, entity.steamAppId)
+
+        // Register verified CheapShark rating matching Dead by Daylight's AppID and title
+        com.example.util.MetacriticCatalog.registerScore(
+            rawTitle = "Dead by Daylight",
+            score = 71,
+            metacriticPath = "/game/dead-by-daylight/",
+            steamAppId = 381210
+        )
+
+        assertTrue(com.example.util.MetacriticCatalog.hasVerifiedScore("Dead by Daylight", 381210))
+        val item = entity.toDomain()
+        assertEquals(71, item.metacriticScore)
+        assertEquals("https://www.metacritic.com/game/dead-by-daylight/", item.metacriticInfo.reviewUrl)
+        assertTrue(item.metacriticInfo.isVerifiedCatalog)
     }
 
     @Test
@@ -1273,11 +1347,11 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `version 2 1 1 is configured and recognized as modern release stream`() {
-        assertEquals("2.1.1", BuildConfig.VERSION_NAME)
-        assertEquals(33, BuildConfig.VERSION_CODE)
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("2.1.1"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v2.1.1"))
+    fun `version 2 3 5 is configured and recognized as modern release stream`() {
+        assertEquals("2.3.5", BuildConfig.VERSION_NAME)
+        assertEquals(37, BuildConfig.VERSION_CODE)
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("2.3.5"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v2.3.5"))
     }
 
     @Test
@@ -1442,6 +1516,200 @@ class ExampleRobolectricTest {
         )
         assertEquals("64 GB", stats.claimedStorageFormatted)
         assertEquals("1.5 TB", stats.steamStorageFormatted)
+    }
+
+    @Test
+    fun `trophy rarity tiers classify global percentages accurately`() {
+        fun makeAch(percent: Float) = com.example.data.local.SteamAchievementEntity(
+            appId = 1,
+            apiName = "ACH",
+            displayName = "Test",
+            description = "",
+            isAchieved = true,
+            globalPercentage = percent
+        ).rarityTier
+
+        assertEquals(com.example.data.model.TrophyRarityTier.MYTHIC, makeAch(0.4f))
+        assertEquals(com.example.data.model.TrophyRarityTier.MYTHIC, makeAch(4.99f))
+        assertEquals(com.example.data.model.TrophyRarityTier.GOLD, makeAch(5.0f))
+        assertEquals(com.example.data.model.TrophyRarityTier.GOLD, makeAch(14.9f))
+        assertEquals(com.example.data.model.TrophyRarityTier.SILVER, makeAch(15.0f))
+        assertEquals(com.example.data.model.TrophyRarityTier.SILVER, makeAch(34.9f))
+        assertEquals(com.example.data.model.TrophyRarityTier.BRONZE, makeAch(35.0f))
+        assertEquals(com.example.data.model.TrophyRarityTier.BRONZE, makeAch(64.9f))
+    }
+
+    @Test
+    fun `curated achievements catalog provides rich initial showcase data`() {
+        val showcaseGames = com.example.util.CuratedAchievementsCatalog.getInitialShowcaseGames()
+        assertTrue(showcaseGames.isNotEmpty())
+        assertTrue(showcaseGames.any { it.name == "Portal 2" })
+        assertTrue(showcaseGames.any { it.name == "Hollow Knight" })
+        assertTrue(showcaseGames.any { it.name == "Cyberpunk 2077" })
+
+        val portalAchievements = com.example.util.CuratedAchievementsCatalog.getAchievementsForApp(620, "Portal 2")
+        assertTrue(portalAchievements.isNotEmpty())
+        assertTrue(portalAchievements.any { it.displayName == "Smash TV" })
+        assertTrue(portalAchievements.all { it.globalPercentage > 0f })
+
+        val allSeedAchievements = com.example.util.CuratedAchievementsCatalog.getInitialAchievements()
+        assertTrue(allSeedAchievements.size >= 20)
+        assertTrue(allSeedAchievements.any { it.isAchieved })
+    }
+
+    @Test
+    fun `achievement walkthrough helper generates valid community and video guide urls`() {
+        val steamUrl = com.example.util.AchievementWalkthroughHelper.buildSteamCommunityGuidesUrl(620)
+        assertEquals("https://steamcommunity.com/app/620/guides/", steamUrl)
+
+        val ytUrl = com.example.util.AchievementWalkthroughHelper.buildYouTubeWalkthroughUrl("Portal 2", "Smash TV")
+        assertTrue(ytUrl.startsWith("https://www.youtube.com/results?search_query="))
+        assertTrue(ytUrl.contains("Portal"))
+        assertTrue(ytUrl.contains("Smash"))
+
+        val webUrl = com.example.util.AchievementWalkthroughHelper.buildWebGuideUrl("Hollow Knight", "Voidheart")
+        assertTrue(webUrl.startsWith("https://www.google.com/search?q="))
+        assertTrue(webUrl.contains("Hollow"))
+    }
+
+    @Test
+    fun `steam achievement dao persists achievements and queries rarest correctly`() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
+            .allowMainThreadQueries()
+            .build()
+        val achievementDao = db.steamAchievementDao()
+
+        val ach1 = com.example.data.local.SteamAchievementEntity(
+            apiName = "ACH_01",
+            appId = 100,
+            gameName = "Game A",
+            displayName = "Ultra Mythic",
+            description = "Beat on hardest difficulty",
+            iconUrl = "",
+            isAchieved = true,
+            unlockTimestamp = 1600000000L,
+            globalPercentage = 1.2f
+        )
+        val ach2 = com.example.data.local.SteamAchievementEntity(
+            apiName = "ACH_02",
+            appId = 100,
+            gameName = "Game A",
+            displayName = "Common Task",
+            description = "Start the game",
+            iconUrl = "",
+            isAchieved = true,
+            unlockTimestamp = 1500000000L,
+            globalPercentage = 85.0f
+        )
+        val achLocked = com.example.data.local.SteamAchievementEntity(
+            apiName = "ACH_03",
+            appId = 100,
+            gameName = "Game A",
+            displayName = "Locked Secret",
+            description = "Find hidden egg",
+            iconUrl = "",
+            isAchieved = false,
+            unlockTimestamp = 0L,
+            globalPercentage = 0.5f
+        )
+
+        achievementDao.insertAll(listOf(ach1, ach2, achLocked))
+
+        // Check getAchievementsForApp
+        val appAchievements = achievementDao.getAchievementsForApp(100)
+        assertEquals(3, appAchievements.size)
+
+        // Check getRarestTrophies - only unlocked, sorted ascending by globalPercentage
+        val rarest = achievementDao.getRarestTrophies(limit = 10)
+        assertEquals(2, rarest.size)
+        assertEquals("Ultra Mythic", rarest[0].displayName)
+        assertEquals(1.2f, rarest[0].globalPercentage, 0.01f)
+        assertEquals("Common Task", rarest[1].displayName)
+
+        db.close()
+    }
+
+    @Test
+    fun `backlog roulette candidate filtering and UnifiedLibraryItem modeling`() {
+        val steamUnplayed = com.example.data.local.SteamGameEntity(
+            appId = 10,
+            name = "Counter-Strike",
+            playtimeMinutes = 0,
+            playStatus = PlayStatus.NOT_STARTED
+        )
+        val steamPlaying = com.example.data.local.SteamGameEntity(
+            appId = 730,
+            name = "CS:GO",
+            playtimeMinutes = 120,
+            playStatus = PlayStatus.PLAYING
+        )
+        val steamBeaten = com.example.data.local.SteamGameEntity(
+            appId = 400,
+            name = "Portal",
+            playtimeMinutes = 300,
+            playStatus = PlayStatus.BEATEN
+        )
+
+        val vaultUnplayed = GiveawayItem(
+            id = 501,
+            title = "Death Stranding",
+            worth = "$29.99",
+            numericWorth = 29.99,
+            thumbnail = "https://thumb.url",
+            image = "https://image.url",
+            description = "Strand game",
+            instructions = "Claim on Epic",
+            openGiveawayUrl = "https://epicgames.com/claim/501",
+            publishedDate = "2024-01-01",
+            type = "Game",
+            platforms = "Epic Games, PC",
+            endDate = "2024-01-10",
+            users = 5000,
+            status = "Active",
+            playStatus = PlayStatus.NOT_STARTED
+        )
+        val vaultDropped = vaultUnplayed.copy(id = 502, title = "Unwanted Game", playStatus = PlayStatus.DROPPED)
+
+        val unifiedSteamUnplayed = com.example.data.model.UnifiedLibraryItem.Steam(steamUnplayed)
+        val unifiedSteamPlaying = com.example.data.model.UnifiedLibraryItem.Steam(steamPlaying)
+        val unifiedSteamBeaten = com.example.data.model.UnifiedLibraryItem.Steam(steamBeaten)
+        val unifiedVaultUnplayed = com.example.data.model.UnifiedLibraryItem.Vault(vaultUnplayed)
+        val unifiedVaultDropped = com.example.data.model.UnifiedLibraryItem.Vault(vaultDropped)
+
+        // Verify Unified properties
+        assertEquals("steam_10", unifiedSteamUnplayed.key)
+        assertEquals("Counter-Strike", unifiedSteamUnplayed.name)
+        assertEquals(PlayStatus.NOT_STARTED, unifiedSteamUnplayed.playStatus)
+        assertEquals("Steam", unifiedSteamUnplayed.launcherLabel)
+        assertEquals("steam://run/10", unifiedSteamUnplayed.launchUri)
+
+        assertEquals("vault_501", unifiedVaultUnplayed.key)
+        assertEquals("Death Stranding", unifiedVaultUnplayed.name)
+        assertEquals(PlayStatus.NOT_STARTED, unifiedVaultUnplayed.playStatus)
+        assertEquals("Epic Games", unifiedVaultUnplayed.launcherLabel)
+        assertEquals("https://epicgames.com/claim/501", unifiedVaultUnplayed.launchUri)
+
+        // All+Paid collection
+        val allItems = listOf(
+            unifiedSteamUnplayed,
+            unifiedSteamPlaying,
+            unifiedSteamBeaten,
+            unifiedVaultUnplayed,
+            unifiedVaultDropped
+        )
+
+        // Filter unplayed or partially completed backlog candidates
+        val backlogCandidates = allItems.filter {
+            it.playStatus == PlayStatus.NOT_STARTED || it.playStatus == PlayStatus.PLAYING
+        }
+
+        assertEquals(3, backlogCandidates.size)
+        assertTrue(backlogCandidates.any { it.name == "Counter-Strike" })
+        assertTrue(backlogCandidates.any { it.name == "CS:GO" })
+        assertTrue(backlogCandidates.any { it.name == "Death Stranding" })
+        assertFalse(backlogCandidates.any { it.name == "Portal" })
+        assertFalse(backlogCandidates.any { it.name == "Unwanted Game" })
     }
 }
 
