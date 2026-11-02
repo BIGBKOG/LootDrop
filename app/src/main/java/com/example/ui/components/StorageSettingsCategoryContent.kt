@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
@@ -322,6 +323,15 @@ fun StorageSettingsCategoryContent(
             )
         }
     }
+
+    Spacer(modifier = Modifier.height(20.dp))
+
+    // SECTION: Library Backup & Restore
+    SectionHeader(title = "LIBRARY BACKUP & RESTORE", icon = Icons.Default.Sync)
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    BackupRestoreCard(viewModel = viewModel)
 
     Spacer(modifier = Modifier.height(20.dp))
 

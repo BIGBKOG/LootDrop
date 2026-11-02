@@ -137,6 +137,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         viewModel.checkNewGamesOnAppReopen()
+        viewModel.checkAndTriggerAutoBackupIfNeeded(this)
     }
 
     override fun onStop() {

@@ -15,6 +15,7 @@ import com.example.data.repository.GiveawaysRepository
 import com.example.util.AppUpdateInstaller
 import com.example.notifications.NotificationHelper
 import com.example.notifications.NotificationScheduler
+import com.example.notifications.AutoBackupScheduler
 import com.example.data.local.NotificationHistoryEntity
 import android.content.Context
 import android.content.Intent
@@ -49,6 +50,9 @@ import com.example.data.model.LibraryViewMode
 import com.example.data.model.PlayabilityFilter
 import com.example.data.model.StorageFilter
 import com.example.data.model.StorageTier
+import com.example.util.BackupRestoreManager
+import com.example.util.BackupSummary
+import com.example.util.RestoreSummary
 
 enum class MainTab {
     DISCOVER,
@@ -780,6 +784,8 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         refreshGiveaways()
         updateStorageFootprint()
         NotificationScheduler.schedulePeriodicSync(application)
+        AutoBackupScheduler.schedulePeriodicAutoBackup(application)
+        checkAndTriggerAutoBackupIfNeeded(application)
         checkGithubReleases(isManual = false)
         viewModelScope.launch(Dispatchers.IO) {
             val curatedAppIds = listOf(1091500, 620, 367520, 1145360, 264710, 1794680, 413150)
@@ -1734,6 +1740,158 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                 "No browser found. Link copied to clipboard!",
                 Toast.LENGTH_LONG
             ).show()
+        }
+    }
+
+    // --- Library Backup & Restore Suite ---
+
+    private val _backupRestoreStatus = MutableStateFlow<String?>(null)
+    val backupRestoreStatus: StateFlow<String?> = _backupRestoreStatus.asStateFlow()
+
+    private val _isBackingUpOrRestoring = MutableStateFlow(false)
+    val isBackingUpOrRestoring: StateFlow<Boolean> = _isBackingUpOrRestoring.asStateFlow()
+
+    fun dismissBackupRestoreStatus() {
+        _backupRestoreStatus.value = null
+    }
+
+    fun exportBackup(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            _isBackingUpOrRestoring.value = true
+            val result = BackupRestoreManager.exportBackup(context, uri, database, preferences)
+            _isBackingUpOrRestoring.value = false
+            result.onSuccess { summary ->
+                _backupRestoreStatus.value = "✅ Backup exported successfully! (${summary.totalGamesCount} games backed up, ${summary.fileSizeFormatted})"
+                Toast.makeText(context, "Backup exported successfully! (${summary.totalGamesCount} games)", Toast.LENGTH_LONG).show()
+                updateStorageFootprint()
+            }.onFailure { e ->
+                _backupRestoreStatus.value = "❌ Export failed: ${e.message}"
+                Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    fun restoreBackup(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            _isBackingUpOrRestoring.value = true
+            val result = BackupRestoreManager.restoreBackup(context, uri, database, preferences)
+            _isBackingUpOrRestoring.value = false
+            result.onSuccess { summary ->
+                _backupRestoreStatus.value = "🎉 ${summary.message}"
+                Toast.makeText(context, summary.message, Toast.LENGTH_LONG).show()
+                updateStorageFootprint()
+            }.onFailure { e ->
+                _backupRestoreStatus.value = "❌ Restore failed: ${e.message}"
+                Toast.makeText(context, "Restore failed: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    // --- Automatic Scheduled Cloud / Drive Backup Suite ---
+
+    private val _isAutoBackupEnabled = MutableStateFlow(preferences.isAutoBackupEnabled)
+    val isAutoBackupEnabled: StateFlow<Boolean> = _isAutoBackupEnabled.asStateFlow()
+
+    private val _autoBackupFolderUri = MutableStateFlow(preferences.autoBackupFolderUri)
+    val autoBackupFolderUri: StateFlow<String> = _autoBackupFolderUri.asStateFlow()
+
+    private val _autoBackupFolderDisplayName = MutableStateFlow(preferences.autoBackupFolderDisplayName)
+    val autoBackupFolderDisplayName: StateFlow<String> = _autoBackupFolderDisplayName.asStateFlow()
+
+    private val _autoBackupIntervalDays = MutableStateFlow(preferences.autoBackupIntervalDays)
+    val autoBackupIntervalDays: StateFlow<Int> = _autoBackupIntervalDays.asStateFlow()
+
+    private val _lastAutoBackupTimestamp = MutableStateFlow(preferences.lastAutoBackupTimestamp)
+    val lastAutoBackupTimestamp: StateFlow<Long> = _lastAutoBackupTimestamp.asStateFlow()
+
+    private val _lastAutoBackupStatus = MutableStateFlow(preferences.lastAutoBackupStatus)
+    val lastAutoBackupStatus: StateFlow<String> = _lastAutoBackupStatus.asStateFlow()
+
+    private val _isAutoBackingUp = MutableStateFlow(false)
+    val isAutoBackingUp: StateFlow<Boolean> = _isAutoBackingUp.asStateFlow()
+
+    fun setAutoBackupEnabled(enabled: Boolean, context: Context) {
+        preferences.isAutoBackupEnabled = enabled
+        _isAutoBackupEnabled.value = enabled
+        if (enabled) {
+            AutoBackupScheduler.schedulePeriodicAutoBackup(context)
+            if (preferences.autoBackupFolderUri.isNotBlank()) {
+                triggerManualAutoBackup(context)
+            }
+        } else {
+            AutoBackupScheduler.cancelPeriodicAutoBackup(context)
+        }
+    }
+
+    fun setAutoBackupFolder(uri: Uri, context: Context) {
+        val folderName = BackupRestoreManager.getFolderDisplayName(context, uri)
+        preferences.autoBackupFolderUri = uri.toString()
+        preferences.autoBackupFolderDisplayName = folderName
+        _autoBackupFolderUri.value = uri.toString()
+        _autoBackupFolderDisplayName.value = folderName
+        AutoBackupScheduler.schedulePeriodicAutoBackup(context)
+        triggerManualAutoBackup(context)
+    }
+
+    fun clearAutoBackupFolder(context: Context) {
+        preferences.autoBackupFolderUri = ""
+        preferences.autoBackupFolderDisplayName = ""
+        _autoBackupFolderUri.value = ""
+        _autoBackupFolderDisplayName.value = ""
+        AutoBackupScheduler.cancelPeriodicAutoBackup(context)
+    }
+
+    fun setAutoBackupIntervalDays(days: Int, context: Context) {
+        preferences.autoBackupIntervalDays = days
+        _autoBackupIntervalDays.value = days
+        AutoBackupScheduler.schedulePeriodicAutoBackup(context)
+    }
+
+    fun triggerManualAutoBackup(context: Context) {
+        val folderUriStr = preferences.autoBackupFolderUri
+        if (folderUriStr.isBlank()) {
+            Toast.makeText(context, "Please select a backup folder first", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val folderUri = runCatching { Uri.parse(folderUriStr) }.getOrNull()
+        if (folderUri == null) {
+            Toast.makeText(context, "Invalid folder configuration", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        viewModelScope.launch {
+            _isAutoBackingUp.value = true
+            val result = BackupRestoreManager.exportToFolderUri(context, folderUri, database, preferences, "lootdrop_backup_latest.json")
+            _isAutoBackingUp.value = false
+            _lastAutoBackupTimestamp.value = preferences.lastAutoBackupTimestamp
+            _lastAutoBackupStatus.value = preferences.lastAutoBackupStatus
+            result.onSuccess { summary ->
+                val folderName = preferences.autoBackupFolderDisplayName.ifBlank { "Cloud Folder" }
+                val msg = "Auto-backup updated in $folderName! (${summary.totalGamesCount} games)"
+                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                updateStorageFootprint()
+            }.onFailure { e ->
+                val errorMsg = "Auto-backup failed: ${e.message}"
+                _lastAutoBackupStatus.value = "❌ $errorMsg"
+                Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    fun checkAndTriggerAutoBackupIfNeeded(context: Context) {
+        if (!preferences.isAutoBackupEnabled || preferences.autoBackupFolderUri.isBlank()) return
+        val days = preferences.autoBackupIntervalDays.coerceAtLeast(1)
+        val intervalMillis = days.toLong() * 24L * 60L * 60L * 1000L
+        val elapsed = System.currentTimeMillis() - preferences.lastAutoBackupTimestamp
+        if (preferences.lastAutoBackupTimestamp <= 0L || elapsed >= intervalMillis) {
+            viewModelScope.launch {
+                val result = BackupRestoreManager.performScheduledAutoBackup(context)
+                _lastAutoBackupTimestamp.value = preferences.lastAutoBackupTimestamp
+                _lastAutoBackupStatus.value = preferences.lastAutoBackupStatus
+                if (result?.isSuccess == true) {
+                    updateStorageFootprint()
+                }
+            }
         }
     }
 }

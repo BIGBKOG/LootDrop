@@ -802,6 +802,15 @@ fun GeneralSettingsCategoryContent(
             }
         }
     }
+
+    Spacer(modifier = Modifier.height(20.dp))
+
+    // SECTION: Library Backup & Restore
+    SectionHeader(title = "LIBRARY BACKUP & RESTORE", icon = Icons.Default.Sync)
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    BackupRestoreCard(viewModel = viewModel)
 }
 
 @Composable

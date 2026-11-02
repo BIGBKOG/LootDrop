@@ -646,6 +646,17 @@ class ExampleRobolectricTest {
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.3.6", "2.3.5"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.0", "2.3.5"))
 
+        // When running on 2.4.0
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V2.4.0", "2.4.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.0", "2.4.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.3.5", "2.4.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.3.0", "2.4.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.2.0", "2.4.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.0.0", "2.4.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.5", "2.4.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.1", "2.4.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.5.0", "2.4.0"))
+
         // When running on 36.0
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V36.0", "36.0"))
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("36.0", "36.0"))
@@ -1347,11 +1358,11 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `version 2 3 5 is configured and recognized as modern release stream`() {
-        assertEquals("2.3.5", BuildConfig.VERSION_NAME)
-        assertEquals(37, BuildConfig.VERSION_CODE)
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("2.3.5"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v2.3.5"))
+    fun `version 2 4 0 is configured and recognized as modern release stream`() {
+        assertEquals("2.4.0", BuildConfig.VERSION_NAME)
+        assertEquals(39, BuildConfig.VERSION_CODE)
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("2.4.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v2.4.0"))
     }
 
     @Test
@@ -1710,6 +1721,136 @@ class ExampleRobolectricTest {
         assertTrue(backlogCandidates.any { it.name == "Death Stranding" })
         assertFalse(backlogCandidates.any { it.name == "Portal" })
         assertFalse(backlogCandidates.any { it.name == "Unwanted Game" })
+    }
+
+    @Test
+    fun `backup and restore manager exports and restores library across devices`() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
+        val prefs = AppPreferences(context)
+        prefs.steamUserId = "76561198000123456"
+
+        val giveawayDao = db.giveawayDao()
+        val steamDao = db.steamGameDao()
+
+        // Seed 1 claimed game and 1 non-claimed game
+        val claimedGame = GiveawayEntity(
+            id = 101,
+            title = "Subnautica",
+            worth = "$29.99",
+            numericWorth = 29.99,
+            thumbnail = "https://thumb.url",
+            image = "https://image.url",
+            description = "Underwater survival",
+            instructions = "Claim on Epic",
+            openGiveawayUrl = "https://epicgames.com/subnautica",
+            publishedDate = "2024-01-01",
+            type = "Game",
+            platforms = "Epic Games, PC",
+            endDate = "2024-01-10",
+            users = 10000,
+            status = "Active",
+            isClaimed = true,
+            isBookmarked = true,
+            playStatus = PlayStatus.PLAYING,
+            manualInstallSizeGb = 8.5f
+        )
+        val unclaimedGame = claimedGame.copy(id = 102, title = "Unclaimed Demo", isClaimed = false, isBookmarked = false, playStatus = PlayStatus.NOT_STARTED, manualInstallSizeGb = null)
+
+        val steamGame = com.example.data.local.SteamGameEntity(
+            appId = 220,
+            name = "Half-Life 2",
+            playtimeMinutes = 540,
+            playStatus = PlayStatus.BEATEN,
+            achievementsUnlocked = 33,
+            achievementsTotal = 33,
+            manualInstallSizeGb = 6.0f
+        )
+
+        giveawayDao.insertAll(listOf(claimedGame, unclaimedGame))
+        steamDao.insertAll(listOf(steamGame))
+
+        // 1. Export Backup to JSON
+        val allGiveaways = giveawayDao.getAllGiveawaysList()
+        val allSteam = steamDao.getAllSteamGamesList()
+        val jsonOutput = com.example.util.BackupRestoreManager.createBackupJson(
+            allGiveaways = allGiveaways,
+            steamGames = allSteam,
+            steamUserId = prefs.steamUserId
+        )
+
+        assertNotNull(jsonOutput)
+        assertTrue(jsonOutput.contains("LootDrop"))
+        assertTrue(jsonOutput.contains("Subnautica"))
+        assertTrue(jsonOutput.contains("Half-Life 2"))
+        assertTrue(jsonOutput.contains("76561198000123456"))
+
+        // 2. Simulate restoring on a brand new, empty device
+        val newDb = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
+        val newPrefs = AppPreferences(context)
+        newPrefs.steamUserId = "" // empty on fresh device
+
+        val restoreSummary = com.example.util.BackupRestoreManager.parseAndRestoreJson(
+            jsonString = jsonOutput,
+            database = newDb,
+            preferences = newPrefs
+        )
+
+        assertEquals(1, restoreSummary.claimedRestoredCount)
+        assertEquals(1, restoreSummary.bookmarkedRestoredCount)
+        assertEquals(1, restoreSummary.steamRestoredCount)
+        assertEquals(2, restoreSummary.totalRestoredCount)
+
+        // Verify database contents on the restored device
+        val restoredClaimed = newDb.giveawayDao().getGiveawayById(101)
+        assertNotNull(restoredClaimed)
+        assertEquals("Subnautica", restoredClaimed?.title)
+        assertTrue(restoredClaimed?.isClaimed == true)
+        assertTrue(restoredClaimed?.isBookmarked == true)
+        assertEquals(PlayStatus.PLAYING, restoredClaimed?.playStatus)
+        assertEquals(8.5f, restoredClaimed?.manualInstallSizeGb)
+
+        val restoredSteam = newDb.steamGameDao().getSteamGameById(220)
+        assertNotNull(restoredSteam)
+        assertEquals("Half-Life 2", restoredSteam?.name)
+        assertEquals(PlayStatus.BEATEN, restoredSteam?.playStatus)
+        assertEquals(540, restoredSteam?.playtimeMinutes)
+        assertEquals(6.0f, restoredSteam?.manualInstallSizeGb)
+
+        assertEquals("76561198000123456", newPrefs.steamUserId)
+
+        db.close()
+        newDb.close()
+    }
+
+    @Test
+    fun `auto backup preferences persist interval and cloud folder configuration correctly`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val prefs = AppPreferences(context)
+
+        // Default interval is 2 days ("every couple days")
+        assertEquals(2, prefs.autoBackupIntervalDays)
+        assertFalse(prefs.isAutoBackupEnabled)
+
+        prefs.isAutoBackupEnabled = true
+        prefs.autoBackupFolderUri = "content://com.android.providers.downloads.documents/tree/downloads"
+        prefs.autoBackupFolderDisplayName = "Google Drive / LootDrop Backups"
+        prefs.autoBackupIntervalDays = 3
+
+        assertTrue(prefs.isAutoBackupEnabled)
+        assertEquals("content://com.android.providers.downloads.documents/tree/downloads", prefs.autoBackupFolderUri)
+        assertEquals("Google Drive / LootDrop Backups", prefs.autoBackupFolderDisplayName)
+        assertEquals(3, prefs.autoBackupIntervalDays)
+
+        // Test display name resolution utility
+        val folderUri = android.net.Uri.parse("content://com.android.externalstorage.documents/tree/primary%3ABackups")
+        val resolvedName = com.example.util.BackupRestoreManager.getFolderDisplayName(context, folderUri)
+        assertNotNull(resolvedName)
+        assertTrue(resolvedName.isNotBlank())
+
+        // Test scheduler registration and cancellation without crash
+        com.example.notifications.AutoBackupScheduler.schedulePeriodicAutoBackup(context)
+        com.example.notifications.AutoBackupScheduler.cancelPeriodicAutoBackup(context)
     }
 }
 

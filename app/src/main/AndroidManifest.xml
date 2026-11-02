@@ -64,6 +64,10 @@
             android:name=".notifications.NotificationSyncReceiver"
             android:exported="false" />
 
+        <receiver
+            android:name=".notifications.AutoBackupReceiver"
+            android:exported="false" />
+
         <!-- Latest Free Drop Home Screen Widget -->
         <receiver
             android:name=".widget.LatestDropWidgetProvider"

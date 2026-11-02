@@ -337,6 +337,12 @@ class AppPreferences(context: Context) {
         private const val KEY_LAST_GITHUB_CHECK_TIME = "key_last_github_check_time"
         private const val KEY_LAST_DISMISSED_UPDATE_TAG = "key_last_dismissed_update_tag"
         private const val KEY_CACHED_LATEST_VERSION = "key_cached_latest_version"
+        private const val KEY_AUTO_BACKUP_ENABLED = "key_auto_backup_enabled"
+        private const val KEY_AUTO_BACKUP_FOLDER_URI = "key_auto_backup_folder_uri"
+        private const val KEY_AUTO_BACKUP_FOLDER_NAME = "key_auto_backup_folder_name"
+        private const val KEY_AUTO_BACKUP_INTERVAL_DAYS = "key_auto_backup_interval_days"
+        private const val KEY_LAST_AUTO_BACKUP_TIMESTAMP = "key_last_auto_backup_timestamp"
+        private const val KEY_LAST_AUTO_BACKUP_STATUS = "key_last_auto_backup_status"
     }
 
     var themeMode: ThemeMode
@@ -564,4 +570,28 @@ class AppPreferences(context: Context) {
             return runCatching { com.example.data.model.LibraryViewMode.valueOf(name) }.getOrDefault(com.example.data.model.LibraryViewMode.VAULT)
         }
         set(value) = prefs.edit().putString("KEY_LIBRARY_VIEW_MODE", value.name).apply()
+
+    var isAutoBackupEnabled: Boolean
+        get() = prefs.getBoolean(KEY_AUTO_BACKUP_ENABLED, false)
+        set(value) = prefs.edit().putBoolean(KEY_AUTO_BACKUP_ENABLED, value).apply()
+
+    var autoBackupFolderUri: String
+        get() = prefs.getString(KEY_AUTO_BACKUP_FOLDER_URI, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_AUTO_BACKUP_FOLDER_URI, value).apply()
+
+    var autoBackupFolderDisplayName: String
+        get() = prefs.getString(KEY_AUTO_BACKUP_FOLDER_NAME, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_AUTO_BACKUP_FOLDER_NAME, value).apply()
+
+    var autoBackupIntervalDays: Int
+        get() = prefs.getInt(KEY_AUTO_BACKUP_INTERVAL_DAYS, 2)
+        set(value) = prefs.edit().putInt(KEY_AUTO_BACKUP_INTERVAL_DAYS, value).apply()
+
+    var lastAutoBackupTimestamp: Long
+        get() = prefs.getLong(KEY_LAST_AUTO_BACKUP_TIMESTAMP, 0L)
+        set(value) = prefs.edit().putLong(KEY_LAST_AUTO_BACKUP_TIMESTAMP, value).apply()
+
+    var lastAutoBackupStatus: String
+        get() = prefs.getString(KEY_LAST_AUTO_BACKUP_STATUS, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_LAST_AUTO_BACKUP_STATUS, value).apply()
 }
