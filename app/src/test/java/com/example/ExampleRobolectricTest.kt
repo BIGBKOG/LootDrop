@@ -657,18 +657,19 @@ class ExampleRobolectricTest {
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.1", "2.4.0"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.5.0", "2.4.0"))
 
-        // When running on 2.4.5
-        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V2.4.5", "2.4.5"))
-        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.5", "2.4.5"))
-        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.1", "2.4.5"))
-        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.0", "2.4.5"))
-        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.3.5", "2.4.5"))
-        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.3.0", "2.4.5"))
-        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.2.0", "2.4.5"))
-        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.0.0", "2.4.5"))
-        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.5", "2.4.5"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.6", "2.4.5"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.5.0", "2.4.5"))
+        // When running on 2.5.0
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V2.5.0", "2.5.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.5.0", "2.5.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.5", "2.5.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.1", "2.5.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.0", "2.5.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.3.5", "2.5.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.3.0", "2.5.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.2.0", "2.5.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.0.0", "2.5.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.5", "2.5.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.5.1", "2.5.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.6.0", "2.5.0"))
 
         // When running on 36.0
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V36.0", "36.0"))
@@ -1371,11 +1372,11 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `version 2 4 5 is configured and recognized as modern release stream`() {
-        assertEquals("2.4.5", BuildConfig.VERSION_NAME)
-        assertEquals(41, BuildConfig.VERSION_CODE)
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("2.4.5"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v2.4.5"))
+    fun `version 2 5 0 is configured and recognized as modern release stream`() {
+        assertEquals("2.5.0", BuildConfig.VERSION_NAME)
+        assertEquals(42, BuildConfig.VERSION_CODE)
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("2.5.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v2.5.0"))
     }
 
     @Test
@@ -2009,6 +2010,347 @@ class ExampleRobolectricTest {
         helper.sendMythicAchievementNotification(mythicAch)
         assertTrue(mythicAch.rarityTier == com.example.data.model.TrophyRarityTier.MYTHIC)
         assertEquals("2.1%", mythicAch.formattedRarity)
+    }
+
+    @Test
+    fun `official ost catalog resolves curated soundtracks with direct spotify and youtube music links`() {
+        // Subnautica curated OST
+        val subnautica = GiveawayItem(
+            id = 101,
+            title = "Subnautica",
+            worth = "$29.99",
+            numericWorth = 29.99,
+            thumbnail = "",
+            image = "",
+            description = "Underwater survival",
+            instructions = "",
+            openGiveawayUrl = "https://store.epicgames.com",
+            publishedDate = "",
+            type = "Game",
+            platforms = "PC",
+            endDate = "2026-12-31",
+            users = 10000,
+            status = "Active"
+        )
+        val subnauticaOst = com.example.util.OfficialOstCatalog.getOstInfo(subnautica)
+        assertNotNull(subnauticaOst)
+        assertEquals("Subnautica (Original Game Soundtrack)", subnauticaOst!!.albumTitle)
+        assertEquals("Simon Chylinski", subnauticaOst.composer)
+        assertTrue(subnauticaOst.spotifyUrl.contains("spotify.com"))
+        assertTrue(subnauticaOst.youtubeMusicUrl.contains("music.youtube.com"))
+        assertEquals("2018", subnauticaOst.releaseYear)
+
+        // Cyberpunk 2077 curated OST
+        val cp2077 = GiveawayItem(
+            id = 102,
+            title = "Cyberpunk 2077",
+            worth = "$59.99",
+            numericWorth = 59.99,
+            thumbnail = "",
+            image = "",
+            description = "Night City RPG",
+            instructions = "",
+            openGiveawayUrl = "https://store.steampowered.com",
+            publishedDate = "",
+            type = "Game",
+            platforms = "PC",
+            endDate = "2026-12-31",
+            users = 25000,
+            status = "Active"
+        )
+        val cpOst = com.example.util.OfficialOstCatalog.getOstInfo(cp2077)
+        assertNotNull(cpOst)
+        assertEquals("Cyberpunk 2077 (Original Score)", cpOst!!.albumTitle)
+        assertTrue(cpOst.spotifyUrl.startsWith("https://open.spotify.com/album/"))
+        assertTrue(cpOst.youtubeMusicUrl.startsWith("https://music.youtube.com/playlist"))
+
+        // Portal 2 curated OST
+        val portal2Ost = com.example.util.OfficialOstCatalog.getOstInfoForTitle("Portal 2")
+        assertNotNull(portal2Ost)
+        assertEquals("Portal 2: Songs to Test By", portal2Ost!!.albumTitle)
+        assertTrue(portal2Ost.composer.contains("Aperture Science"))
+    }
+
+    @Test
+    fun `official ost catalog flags DLC items, cosmetics, currency and packs as no OST`() {
+        val skinPack = GiveawayItem(
+            id = 201,
+            title = "Overwatch 2 Legendary Skin Pack",
+            worth = "$19.99",
+            numericWorth = 19.99,
+            thumbnail = "",
+            image = "",
+            description = "Skins and coins bundle",
+            instructions = "",
+            openGiveawayUrl = "",
+            publishedDate = "",
+            type = "Game", // Listed as game but contains skin/pack
+            platforms = "PC",
+            endDate = "",
+            users = 500,
+            status = "Active"
+        )
+        val skinOst = com.example.util.OfficialOstCatalog.getOstInfo(skinPack)
+        assertEquals(null, skinOst)
+
+        // Type is DLC
+        val dlcItem = GiveawayItem(
+            id = 202,
+            title = "Destiny 2: The Witch Queen Deluxe Expansion",
+            worth = "$39.99",
+            numericWorth = 39.99,
+            thumbnail = "",
+            image = "",
+            description = "DLC expansion",
+            instructions = "",
+            openGiveawayUrl = "",
+            publishedDate = "",
+            type = "DLC",
+            platforms = "PC",
+            endDate = "",
+            users = 5000,
+            status = "Active"
+        )
+        val dlcOst = com.example.util.OfficialOstCatalog.getOstInfo(dlcItem)
+        assertEquals(null, dlcOst)
+
+        // In-game currency bundle
+        val goldPack = GiveawayItem(
+            id = 203,
+            title = "World of Tanks 5000 Gold + Booster Pack",
+            worth = "$14.99",
+            numericWorth = 14.99,
+            thumbnail = "",
+            image = "",
+            description = "Gold and currency",
+            instructions = "",
+            openGiveawayUrl = "",
+            publishedDate = "",
+            type = "Loot",
+            platforms = "PC",
+            endDate = "",
+            users = 1000,
+            status = "Active"
+        )
+        val goldOst = com.example.util.OfficialOstCatalog.getOstInfo(goldPack)
+        assertEquals(null, goldOst)
+    }
+
+    @Test
+    fun `official ost catalog provides search links for verified full games without curated match`() {
+        val genericFullGame = GiveawayItem(
+            id = 301,
+            title = "Axiom Verge 2",
+            worth = "$19.99",
+            numericWorth = 19.99,
+            thumbnail = "",
+            image = "",
+            description = "Metroidvania exploration",
+            instructions = "",
+            openGiveawayUrl = "",
+            publishedDate = "",
+            type = "Game",
+            platforms = "PC",
+            endDate = "2026-12-31",
+            users = 4500,
+            status = "Active"
+        )
+        val ost = com.example.util.OfficialOstCatalog.getOstInfo(genericFullGame)
+        assertNotNull(ost)
+        assertTrue(ost!!.spotifyUrl.startsWith("https://open.spotify.com/search/"))
+        assertTrue(ost.youtubeMusicUrl.startsWith("https://music.youtube.com/search?q="))
+        assertTrue(ost.albumTitle.contains("Axiom Verge 2"))
+    }
+
+    @Test
+    fun `ost quick action intent helpers execute without crashing`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        // Verify launch methods execute safely on Robolectric
+        com.example.util.OfficialOstCatalog.openYouTubeMusic(context, "https://music.youtube.com")
+        com.example.util.OfficialOstCatalog.openSpotify(context, "https://open.spotify.com")
+        com.example.util.OfficialOstCatalog.openDiscogs(context, "https://www.discogs.com")
+    }
+
+    @Test
+    fun `discogs api client parses authentic video game soundtrack response and rejects covers`() {
+        val validJson = """
+            {
+              "results": [
+                {
+                  "id": 12895642,
+                  "type": "release",
+                  "title": "Simon Chylinski - Subnautica (Original Game Soundtrack)",
+                  "year": "2018",
+                  "genre": ["Stage & Screen", "Electronic"],
+                  "style": ["Video Game Music", "Soundtrack", "Ambient"],
+                  "uri": "/release/12895642-Simon-Chylinski-Subnautica"
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val result = com.example.data.remote.DiscogsApiClient.parseAndVerifyDiscogsResponse(validJson, "subnautica")
+        assertNotNull(result)
+        assertEquals("Subnautica (Original Game Soundtrack)", result!!.albumTitle)
+        assertEquals("Simon Chylinski", result.composer)
+        assertEquals("2018", result.year)
+        assertTrue(result.discogsUrl.contains("discogs.com/release/12895642"))
+        assertTrue(result.isVerifiedVideoGameScore)
+
+        // Test rejection of tribute / cover version
+        val tributeJson = """
+            {
+              "results": [
+                {
+                  "id": 9999999,
+                  "type": "release",
+                  "title": "8-Bit Band - Tribute to Subnautica Metal Cover",
+                  "year": "2021",
+                  "genre": ["Rock"],
+                  "style": ["Cover"],
+                  "uri": "/release/9999999"
+                }
+              ]
+            }
+        """.trimIndent()
+        val tributeResult = com.example.data.remote.DiscogsApiClient.parseAndVerifyDiscogsResponse(tributeJson, "subnautica")
+        assertEquals(null, tributeResult)
+
+        // Test rejection of unrelated album that contains a single common word
+        val unrelatedJson = """
+            {
+              "results": [
+                {
+                  "id": 8888888,
+                  "type": "release",
+                  "title": "Janet Jackson - Control",
+                  "year": "1986",
+                  "genre": ["Funk / Soul"],
+                  "style": ["RnB/Swing"],
+                  "uri": "/release/8888888"
+                }
+              ]
+            }
+        """.trimIndent()
+        val unrelatedResult = com.example.data.remote.DiscogsApiClient.parseAndVerifyDiscogsResponse(unrelatedJson, "control")
+        assertEquals(null, unrelatedResult)
+    }
+
+    @Test
+    fun `spotify api client parses authentic soundtrack album and rejects fan lofi remixes`() {
+        val validJson = """
+            {
+              "albums": {
+                "items": [
+                  {
+                    "name": "Hades (Original Soundtrack)",
+                    "release_date": "2020-09-17",
+                    "total_tracks": 30,
+                    "external_urls": {
+                      "spotify": "https://open.spotify.com/album/2oWf2p3U1N2gW8sM0M0v2Z"
+                    },
+                    "artists": [
+                      { "name": "Darren Korb" },
+                      { "name": "Ashley Barrett" }
+                    ]
+                  }
+                ]
+              }
+            }
+        """.trimIndent()
+
+        val result = com.example.data.remote.SpotifyApiClient.parseAndVerifySpotifyResponse(validJson, "hades")
+        assertNotNull(result)
+        assertEquals("Hades (Original Soundtrack)", result!!.albumTitle)
+        assertEquals("Darren Korb, Ashley Barrett", result.composer)
+        assertEquals("https://open.spotify.com/album/2oWf2p3U1N2gW8sM0M0v2Z", result.spotifyAlbumUrl)
+        assertEquals("2020", result.releaseYear)
+        assertTrue(result.isOfficialScore)
+
+        // Fan Lo-fi cover must be rejected
+        val lofiJson = """
+            {
+              "albums": {
+                "items": [
+                  {
+                    "name": "Hades Chill Lofi Beats Remix",
+                    "release_date": "2022-01-01",
+                    "total_tracks": 10,
+                    "external_urls": {
+                      "spotify": "https://open.spotify.com/album/12345"
+                    },
+                    "artists": [
+                      { "name": "Lofi Game Guy" }
+                    ]
+                  }
+                ]
+              }
+            }
+        """.trimIndent()
+        val lofiResult = com.example.data.remote.SpotifyApiClient.parseAndVerifySpotifyResponse(lofiJson, "hades")
+        assertEquals(null, lofiResult)
+    }
+
+    @Test
+    fun `official ost repository fetches curated soundtrack and persists to room database cache`() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val repo = com.example.data.repository.OfficialOstRepository.getInstance(context)
+
+        val hollowKnight = GiveawayItem(
+            id = 401,
+            title = "Hollow Knight",
+            worth = "$14.99",
+            numericWorth = 14.99,
+            thumbnail = "",
+            image = "",
+            description = "Hallownest insect adventure",
+            instructions = "",
+            openGiveawayUrl = "",
+            publishedDate = "",
+            type = "Game",
+            platforms = "PC",
+            endDate = "",
+            users = 8000,
+            status = "Active"
+        )
+
+        // Fetch from repo
+        val ost = repo.fetchOstInfo(hollowKnight)
+        assertNotNull(ost)
+        assertEquals("Hollow Knight (Original Soundtrack)", ost!!.albumTitle)
+        assertEquals("Christopher Larkin", ost.composer)
+        assertTrue(ost.spotifyUrl.contains("spotify.com"))
+        assertTrue(ost.isVerified)
+
+        // Verify it was persisted to Room DB ost_cache
+        val db = com.example.data.local.AppDatabase.getInstance(context)
+        val cached = db.ostCacheDao().getByKey("hollow knight")
+        assertNotNull(cached)
+        assertTrue(cached!!.hasOst)
+        assertEquals("Hollow Knight (Original Soundtrack)", cached.albumTitle)
+        assertEquals("Christopher Larkin", cached.composer)
+
+        // Non-game / DLC is ineligible and immediately returns null ("No OST")
+        val weaponSkin = GiveawayItem(
+            id = 402,
+            title = "Apex Legends Bloodhound Cosmetic Weapon Skin",
+            worth = "$9.99",
+            numericWorth = 9.99,
+            thumbnail = "",
+            image = "",
+            description = "Skin cosmetic",
+            instructions = "",
+            openGiveawayUrl = "",
+            publishedDate = "",
+            type = "DLC",
+            platforms = "PC",
+            endDate = "",
+            users = 500,
+            status = "Active"
+        )
+        val skinResult = repo.fetchOstInfo(weaponSkin)
+        assertEquals(null, skinResult)
+        org.junit.Assert.assertFalse(repo.isEligibleForOst(weaponSkin))
     }
 }
 

@@ -141,9 +141,24 @@ fun GiveawayDetailDialog(
         androidx.compose.runtime.mutableStateOf(item.manualInstallSizeGb?.toString() ?: "")
     }
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+    val ostRepo = remember(context) { com.example.data.repository.OfficialOstRepository.getInstance(context) }
+    var ostInfo by remember(item.id, item.title, item.type) {
+        androidx.compose.runtime.mutableStateOf(ostRepo.getInstantOstInfo(item))
+    }
+    var isOstLoading by remember(item.id, item.title, item.type) {
+        androidx.compose.runtime.mutableStateOf(ostInfo == null && ostRepo.isEligibleForOst(item))
+    }
 
-    androidx.compose.runtime.LaunchedEffect(Unit) {
+    androidx.compose.runtime.LaunchedEffect(item.id, item.title) {
         dialogVisible = true
+        if (ostRepo.isEligibleForOst(item)) {
+            val fetched = ostRepo.fetchOstInfo(item)
+            ostInfo = fetched
+            isOstLoading = false
+        } else {
+            ostInfo = null
+            isOstLoading = false
+        }
     }
 
     val dialogScale by animateFloatAsState(
@@ -1045,6 +1060,15 @@ fun GiveawayDetailDialog(
 
                     Spacer(modifier = Modifier.height(18.dp))
 
+                    // Official Game Soundtrack (OST) Quick Action & Status Section
+                    OfficialOstSection(
+                        ostInfo = ostInfo,
+                        modifier = Modifier.fillMaxWidth(),
+                        isLoading = isOstLoading
+                    )
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
                     // About Description
                     Text(
                         text = "ABOUT THIS GIVEAWAY",
@@ -1353,6 +1377,26 @@ fun GiveawayDetailDialog(
                             ) {
                                 Text("Expiration Date", fontSize = 12.sp, color = TextMuted)
                                 Text(item.endDate, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = NeonGreen)
+                            }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("detail_ost_row"),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Official OST", fontSize = 12.sp, color = TextMuted)
+                                val ostLabel = when {
+                                    isOstLoading -> "Checking databases..."
+                                    ostInfo != null -> if (!ostInfo!!.discogsUrl.isNullOrBlank()) "Spotify, YT & Discogs" else "YouTube Music & Spotify"
+                                    else -> "No OST"
+                                }
+                                Text(
+                                    text = ostLabel,
+                                    fontSize = 12.sp,
+                                    fontWeight = if (ostInfo != null) FontWeight.SemiBold else FontWeight.Medium,
+                                    color = if (ostInfo != null) NeonCyan else Color(0xFF94A3B8)
+                                )
                             }
                             if (item.users > 0) {
                                 Row(
