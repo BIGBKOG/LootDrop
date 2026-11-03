@@ -129,7 +129,8 @@ fun computeScreenDensityInfo(
 
     val basePadding = when {
         !isOptimizationEnabled -> 16.dp
-        dpiScaleMode == DpiScaleMode.COMPACT -> 12.dp
+        dpiScaleMode == DpiScaleMode.COMPACT -> 10.dp
+        dpiScaleMode == DpiScaleMode.BALANCED -> 14.dp
         dpiScaleMode == DpiScaleMode.SPACIOUS -> 20.dp
         isTabletOrFoldable -> 24.dp
         isNarrow -> 12.dp
@@ -139,6 +140,7 @@ fun computeScreenDensityInfo(
     val baseSpacing = when {
         !isOptimizationEnabled -> 14.dp
         dpiScaleMode == DpiScaleMode.COMPACT -> 8.dp
+        dpiScaleMode == DpiScaleMode.BALANCED -> 12.dp
         dpiScaleMode == DpiScaleMode.SPACIOUS -> 18.dp
         isTabletOrFoldable -> 16.dp
         isNarrow -> 10.dp
@@ -147,7 +149,8 @@ fun computeScreenDensityInfo(
 
     val coverHeight = when {
         !isOptimizationEnabled -> 180.dp
-        dpiScaleMode == DpiScaleMode.COMPACT -> 150.dp
+        dpiScaleMode == DpiScaleMode.COMPACT -> 145.dp
+        dpiScaleMode == DpiScaleMode.BALANCED -> 165.dp
         dpiScaleMode == DpiScaleMode.SPACIOUS -> 200.dp
         isTabletOrFoldable -> 190.dp
         isNarrow -> 155.dp

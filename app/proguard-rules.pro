@@ -32,3 +32,15 @@
 
 # Android App Widgets (RemoteViews Providers)
 -keep class com.example.widget.** { *; }
+
+# R8 Bytecode & DEX Optimization Rules
+-repackageclasses ''
+-allowaccessmodification
+-optimizations !code/simplification/arithmetic,!field/*,!class/merging/*
+
+# Strip verbose and debug logging in release builds to reduce DEX bytecode
+-assumenosideeffects class android.util.Log {
+    public static boolean isLoggable(java.lang.String, int);
+    public static int v(...);
+    public static int d(...);
+}

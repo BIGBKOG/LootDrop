@@ -31,8 +31,32 @@ android {
         "/META-INF/license.txt",
         "/META-INF/NOTICE",
         "/META-INF/NOTICE.txt",
-        "/META-INF/notice.txt"
+        "/META-INF/notice.txt",
+        "/META-INF/*.version",
+        "/META-INF/proguard/*",
+        "/META-INF/*.kotlin_module",
+        "META-INF/**/LICENSE*",
+        "META-INF/**/NOTICE*",
+        "META-INF/**/DEPENDENCIES*",
+        "META-INF/**/AL2.0",
+        "META-INF/**/LGPL2.1",
+        "**/*.proto"
       )
+    }
+    jniLibs {
+      useLegacyPackaging = false
+    }
+  }
+
+  bundle {
+    language {
+      enableSplit = true
+    }
+    density {
+      enableSplit = true
+    }
+    abi {
+      enableSplit = true
     }
   }
 
