@@ -42,6 +42,15 @@ class NotificationSyncReceiver : BroadcastReceiver() {
                 val repository = GiveawaysRepository(db.giveawayDao(), helper)
                 repository.refreshGiveaways()
 
+                // Check background Steam sync & Mythic achievement unlocks
+                if (prefs.steamUserId.isNotBlank()) {
+                    try {
+                        com.example.util.SteamSyncHelper.performBackgroundSteamSync(appContext, db, prefs, helper)
+                    } catch (_: Exception) {
+                        // Background Steam sync failure gracefully handled
+                    }
+                }
+
                 // Check for Ending Soon giveaways (ends today or in next 24h)
                 if (prefs.isNotifyEndingSoon) {
                     val bookmarkedItems = db.giveawayDao().getBookmarkedGiveawaysSync().map { it.toDomain() }

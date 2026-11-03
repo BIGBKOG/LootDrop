@@ -657,17 +657,18 @@ class ExampleRobolectricTest {
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.1", "2.4.0"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.5.0", "2.4.0"))
 
-        // When running on 2.4.1
-        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V2.4.1", "2.4.1"))
-        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.1", "2.4.1"))
-        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.0", "2.4.1"))
-        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.3.5", "2.4.1"))
-        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.3.0", "2.4.1"))
-        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.2.0", "2.4.1"))
-        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.0.0", "2.4.1"))
-        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.5", "2.4.1"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.2", "2.4.1"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.5.0", "2.4.1"))
+        // When running on 2.4.5
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V2.4.5", "2.4.5"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.5", "2.4.5"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.1", "2.4.5"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.0", "2.4.5"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.3.5", "2.4.5"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.3.0", "2.4.5"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.2.0", "2.4.5"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.0.0", "2.4.5"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.5", "2.4.5"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.6", "2.4.5"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.5.0", "2.4.5"))
 
         // When running on 36.0
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V36.0", "36.0"))
@@ -1370,11 +1371,11 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `version 2 4 1 is configured and recognized as modern release stream`() {
-        assertEquals("2.4.1", BuildConfig.VERSION_NAME)
-        assertEquals(40, BuildConfig.VERSION_CODE)
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("2.4.1"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v2.4.1"))
+    fun `version 2 4 5 is configured and recognized as modern release stream`() {
+        assertEquals("2.4.5", BuildConfig.VERSION_NAME)
+        assertEquals(41, BuildConfig.VERSION_CODE)
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("2.4.5"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v2.4.5"))
     }
 
     @Test
@@ -1863,6 +1864,151 @@ class ExampleRobolectricTest {
         // Test scheduler registration and cancellation without crash
         com.example.notifications.AutoBackupScheduler.schedulePeriodicAutoBackup(context)
         com.example.notifications.AutoBackupScheduler.cancelPeriodicAutoBackup(context)
+    }
+
+    @Test
+    fun `background steam sync detects newly unlocked mythic achievement and triggers in-app notification popup`() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
+
+        // 1. Initial state: Achievement is locked in the database
+        val lockedAch = com.example.data.local.SteamAchievementEntity(
+            appId = 620,
+            apiName = "ACH_SMASH_TV",
+            displayName = "Smash TV",
+            description = "Break 11 test chamber monitors throughout Aperture Science.",
+            isAchieved = false,
+            unlockTimestamp = 0L,
+            globalPercentage = 3.6f, // Mythic tier (< 5%)
+            iconUrl = "https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/620/b388277fe76b3a9c7d1e1fa37c570bca554901ba.jpg",
+            gameName = "Portal 2"
+        )
+        db.steamAchievementDao().insertAll(listOf(lockedAch))
+
+        // Reset any pending notification before test
+        com.example.util.MythicAchievementNotificationManager.dismissNotification(context)
+        assertEquals(null, com.example.util.MythicAchievementNotificationManager.pendingNotification.value)
+
+        // 2. Background sync detects achievement is now UNLOCKED
+        val unlockedAch = lockedAch.copy(
+            isAchieved = true,
+            unlockTimestamp = System.currentTimeMillis() / 1000L
+        )
+
+        val newlyUnlocked = com.example.util.SteamSyncHelper.checkAndNotifyMythicAchievements(
+            context = context,
+            db = db,
+            achievements = listOf(unlockedAch),
+            sendSystemNotification = true
+        )
+
+        // Verify mythic achievement was detected as newly unlocked
+        assertEquals(1, newlyUnlocked.size)
+        assertEquals("Smash TV", newlyUnlocked.first().displayName)
+        assertEquals(com.example.data.model.TrophyRarityTier.MYTHIC, newlyUnlocked.first().rarityTier)
+
+        // Verify in-app notification popup state is populated with achievement and icon
+        val inAppNotification = com.example.util.MythicAchievementNotificationManager.pendingNotification.value
+        assertNotNull(inAppNotification)
+        assertEquals("Smash TV", inAppNotification?.displayName)
+        assertEquals("Portal 2", inAppNotification?.gameName)
+        assertEquals("3.6%", inAppNotification?.formattedRarity)
+        assertEquals(unlockedAch.iconUrl, inAppNotification?.iconUrl)
+        assertTrue(inAppNotification?.effectiveIconUrl?.isNotBlank() == true)
+
+        // Verify persisted to preferences for restore upon app re-entry
+        val prefs = AppPreferences(context)
+        assertNotNull(prefs.pendingMythicAchievementJson)
+        assertTrue(prefs.pendingMythicAchievementJson!!.contains("Smash TV"))
+
+        // Test restoring from preferences
+        com.example.util.MythicAchievementNotificationManager.dismissNotification()
+        assertEquals(null, com.example.util.MythicAchievementNotificationManager.pendingNotification.value)
+
+        com.example.util.MythicAchievementNotificationManager.checkPendingFromPreferences(context)
+        val restored = com.example.util.MythicAchievementNotificationManager.pendingNotification.value
+        assertNotNull(restored)
+        assertEquals("Smash TV", restored?.displayName)
+
+        // Dismiss clears notification and preferences
+        com.example.util.MythicAchievementNotificationManager.dismissNotification(context)
+        assertEquals(null, com.example.util.MythicAchievementNotificationManager.pendingNotification.value)
+        assertEquals(null, prefs.pendingMythicAchievementJson)
+
+        db.close()
+    }
+
+    @Test
+    fun `mythic detection ignores already unlocked achievements and non-mythic achievements`() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
+
+        // Achievement is ALREADY unlocked
+        val alreadyUnlockedMythic = com.example.data.local.SteamAchievementEntity(
+            appId = 1091500,
+            apiName = "ACH_CP_AUTODIDACT",
+            displayName = "Autodidact",
+            description = "Develop any skill to the maximum level in Night City.",
+            isAchieved = true,
+            unlockTimestamp = 1600000000L,
+            globalPercentage = 4.2f, // Mythic tier
+            iconUrl = "",
+            gameName = "Cyberpunk 2077"
+        )
+        db.steamAchievementDao().insertAll(listOf(alreadyUnlockedMythic))
+
+        // Non-mythic unlocked achievement (> 5%, e.g. Gold tier 14.5%)
+        val commonUnlocked = com.example.data.local.SteamAchievementEntity(
+            appId = 1091500,
+            apiName = "ACH_CP_GUNSLINGER",
+            displayName = "Gunslinger",
+            description = "Shoot an enemy grenade in mid-air.",
+            isAchieved = true,
+            unlockTimestamp = 1600000000L,
+            globalPercentage = 14.5f, // Gold tier, NOT mythic
+            iconUrl = "",
+            gameName = "Cyberpunk 2077"
+        )
+
+        com.example.util.MythicAchievementNotificationManager.dismissNotification(context)
+
+        // Run sync check on both
+        val newlyDetected = com.example.util.SteamSyncHelper.checkAndNotifyMythicAchievements(
+            context = context,
+            db = db,
+            achievements = listOf(alreadyUnlockedMythic, commonUnlocked),
+            sendSystemNotification = false
+        )
+
+        // Should NOT trigger notification for already unlocked or non-mythic
+        assertEquals(0, newlyDetected.size)
+        assertEquals(null, com.example.util.MythicAchievementNotificationManager.pendingNotification.value)
+
+        db.close()
+    }
+
+    @Test
+    fun `system notification helper sends mythic achievement alert with custom icon`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val helper = NotificationHelper(context)
+        helper.isNotificationsEnabled = true
+
+        val mythicAch = com.example.data.local.SteamAchievementEntity(
+            appId = 367520,
+            apiName = "ACH_PURE_VESSEL",
+            displayName = "Pure Completion",
+            description = "Attain 112% game completion and finish the Pantheon of Hallownest.",
+            isAchieved = true,
+            unlockTimestamp = System.currentTimeMillis() / 1000L,
+            globalPercentage = 2.1f,
+            iconUrl = "https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/367520/226d7fa02640243feab2e342cbcc4ba8746df8f7.jpg",
+            gameName = "Hollow Knight"
+        )
+
+        // Verify sendMythicAchievementNotification dispatches cleanly
+        helper.sendMythicAchievementNotification(mythicAch)
+        assertTrue(mythicAch.rarityTier == com.example.data.model.TrophyRarityTier.MYTHIC)
+        assertEquals("2.1%", mythicAch.formattedRarity)
     }
 }
 

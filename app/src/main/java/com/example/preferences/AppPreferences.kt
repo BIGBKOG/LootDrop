@@ -594,4 +594,8 @@ class AppPreferences(context: Context) {
     var lastAutoBackupStatus: String
         get() = prefs.getString(KEY_LAST_AUTO_BACKUP_STATUS, "") ?: ""
         set(value) = prefs.edit().putString(KEY_LAST_AUTO_BACKUP_STATUS, value).apply()
+
+    var pendingMythicAchievementJson: String?
+        get() = prefs.getString("KEY_PENDING_MYTHIC_ACHIEVEMENT", null)
+        set(value) = prefs.edit().putString("KEY_PENDING_MYTHIC_ACHIEVEMENT", value).apply()
 }

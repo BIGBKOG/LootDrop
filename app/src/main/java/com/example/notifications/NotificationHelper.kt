@@ -46,6 +46,8 @@ class NotificationHelper(val context: Context) {
         const val EXTRA_GIVEAWAY_ID = "extra_giveaway_id"
         const val EXTRA_CLAIM_URL = "extra_claim_url"
         const val EXTRA_OPEN_UPDATE_DIALOG = "extra_open_update_dialog"
+        const val EXTRA_MYTHIC_ACHIEVEMENT_APP_ID = "extra_mythic_achievement_app_id"
+        const val EXTRA_MYTHIC_ACHIEVEMENT_API_NAME = "extra_mythic_achievement_api_name"
 
         private const val PREF_NOTIF_ENABLED = "pref_notif_enabled"
         private const val PREF_NOTIFY_PLAYSTATION = "pref_notify_playstation"
@@ -650,6 +652,67 @@ class NotificationHelper(val context: Context) {
         try {
             NotificationManagerCompat.from(context).notify(99999, builder.build())
         } catch (_: SecurityException) {
+        }
+    }
+
+    fun sendMythicAchievementNotification(achievement: com.example.data.local.SteamAchievementEntity) {
+        if (!isNotificationsEnabled || isQuietHoursActive()) return
+
+        val title = "💎 MYTHIC TROPHY UNLOCKED: ${achievement.displayName}"
+        val content = "Ultra-rare unlock in ${achievement.gameName}! Achieved by only ${achievement.formattedRarity} of players worldwide."
+
+        CoroutineScope(Dispatchers.IO).launch {
+            val bitmap = fetchBitmap(achievement.effectiveIconUrl)
+
+            val appIntent = Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra(EXTRA_MYTHIC_ACHIEVEMENT_APP_ID, achievement.appId)
+                putExtra(EXTRA_MYTHIC_ACHIEVEMENT_API_NAME, achievement.apiName)
+            }
+            val appPendingIntent = PendingIntent.getActivity(
+                context,
+                achievement.appId + 777000,
+                appIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            val builder = NotificationCompat.Builder(context, CHANNEL_MAJOR_GAMES)
+                .setSmallIcon(R.drawable.ic_stat_gamepad)
+                .setContentTitle(title)
+                .setContentText(content)
+                .setSubText("💎 Mythic Trophy • ${achievement.formattedRarity}")
+                .setColor(0xFFE040FB.toInt())
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+                .setContentIntent(appPendingIntent)
+                .addAction(0, "View in App", appPendingIntent)
+
+            if (!isNotificationSoundEnabled) {
+                builder.setSilent(true)
+            }
+            if (isNotificationVibrateEnabled) {
+                builder.setVibrate(longArrayOf(0, 150, 100, 250, 100, 350))
+            }
+
+            if (bitmap != null) {
+                builder.setLargeIcon(bitmap)
+                builder.setStyle(
+                    NotificationCompat.BigPictureStyle()
+                        .bigPicture(bitmap)
+                        .setBigContentTitle("💎 Mythic Trophy: ${achievement.displayName}")
+                        .setSummaryText("${achievement.gameName} • Only ${achievement.formattedRarity} global unlock rate!")
+                )
+            } else {
+                builder.setStyle(
+                    NotificationCompat.BigTextStyle()
+                        .bigText("${achievement.description.ifBlank { "You unlocked an ultra-rare Mythic trophy in ${achievement.gameName}!" }}\n\nGlobal unlock rate: ${achievement.formattedRarity}")
+                )
+            }
+
+            try {
+                NotificationManagerCompat.from(context).notify(achievement.appId + 888000, builder.build())
+            } catch (_: SecurityException) {
+            }
         }
     }
 

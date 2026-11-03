@@ -138,6 +138,7 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         viewModel.checkNewGamesOnAppReopen()
         viewModel.checkAndTriggerAutoBackupIfNeeded(this)
+        com.example.util.MythicAchievementNotificationManager.checkPendingFromPreferences(this)
     }
 
     override fun onStop() {
@@ -159,6 +160,9 @@ class MainActivity : ComponentActivity() {
         val giveawayId = intent.getIntExtra(NotificationHelper.EXTRA_GIVEAWAY_ID, -1)
         if (giveawayId != -1) {
             viewModel.openItemById(giveawayId)
+        }
+        if (intent.hasExtra(NotificationHelper.EXTRA_MYTHIC_ACHIEVEMENT_API_NAME)) {
+            com.example.util.MythicAchievementNotificationManager.checkPendingFromPreferences(this)
         }
 
         // Action-based shortcut handling

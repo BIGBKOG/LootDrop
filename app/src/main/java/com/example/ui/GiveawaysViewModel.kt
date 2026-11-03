@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -518,6 +519,44 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         _selectedGameAchievements.value = emptyList()
     }
 
+    val mythicAchievementNotification: StateFlow<com.example.data.local.SteamAchievementEntity?> =
+        com.example.util.MythicAchievementNotificationManager.pendingNotification
+
+    fun dismissMythicToast() {
+        com.example.util.MythicAchievementNotificationManager.dismissNotification(getApplication())
+    }
+
+    fun previewMythicUnlockToast(customAch: com.example.data.local.SteamAchievementEntity? = null) {
+        val ach = customAch ?: com.example.util.CuratedAchievementsCatalog.getInitialAchievements()
+            .firstOrNull { it.rarityTier == com.example.data.model.TrophyRarityTier.MYTHIC }
+            ?: com.example.data.local.SteamAchievementEntity(
+                appId = 1091500,
+                apiName = "ACH_CP_AUTODIDACT",
+                displayName = "Autodidact",
+                description = "Develop any skill to the maximum level in Night City.",
+                isAchieved = true,
+                globalPercentage = 4.2f,
+                gameName = "Cyberpunk 2077"
+            )
+        com.example.util.MythicAchievementNotificationManager.postMythicUnlock(ach, getApplication())
+    }
+
+    fun openAchievementsForAppId(appId: Int, gameName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val existing = database.steamGameDao().getSteamGameById(appId)
+            val game = existing ?: SteamGameEntity(
+                appId = appId,
+                name = gameName.ifBlank { "Steam Game" },
+                playtimeMinutes = 60,
+                lastPlayedTimestamp = System.currentTimeMillis() / 1000L,
+                playStatus = PlayStatus.PLAYING
+            )
+            withContext(Dispatchers.Main) {
+                openGameAchievements(game)
+            }
+        }
+    }
+
     fun loadAchievementsForGame(game: SteamGameEntity) {
         viewModelScope.launch(Dispatchers.IO) {
             _isLoadingGameAchievements.value = true
@@ -531,6 +570,12 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                 if (resolvedId != null) {
                     val remote = SteamApiClient.getDetailedPlayerAchievements(game.appId, resolvedId, apiKey, game.name)
                     if (remote.isNotEmpty()) {
+                        com.example.util.SteamSyncHelper.checkAndNotifyMythicAchievements(
+                            context = getApplication(),
+                            db = database,
+                            achievements = remote,
+                            sendSystemNotification = false
+                        )
                         repository.insertAchievements(remote)
                         _selectedGameAchievements.value = remote
                     }
@@ -787,6 +832,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         AutoBackupScheduler.schedulePeriodicAutoBackup(application)
         checkAndTriggerAutoBackupIfNeeded(application)
         checkGithubReleases(isManual = false)
+        com.example.util.MythicAchievementNotificationManager.checkPendingFromPreferences(application)
         viewModelScope.launch(Dispatchers.IO) {
             val curatedAppIds = listOf(1091500, 620, 367520, 1145360, 264710, 1794680, 413150)
             database.steamGameDao().deleteByAppIds(curatedAppIds)
@@ -1603,6 +1649,12 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                         gameName = sg.name
                     )
                     if (detailedAchievements.isNotEmpty()) {
+                        com.example.util.SteamSyncHelper.checkAndNotifyMythicAchievements(
+                            context = getApplication(),
+                            db = database,
+                            achievements = detailedAchievements,
+                            sendSystemNotification = false
+                        )
                         repository.insertAchievements(detailedAchievements)
                         val unlocked = detailedAchievements.count { it.isAchieved }
                         val total = detailedAchievements.size

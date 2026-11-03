@@ -37,6 +37,9 @@ data class SteamAchievementEntity(
 
     val formattedRarity: String
         get() = if (globalPercentage > 0f) String.format(Locale.US, "%.1f%%", globalPercentage) else "N/A"
+
+    val effectiveIconUrl: String
+        get() = if (iconUrl.isNotBlank()) iconUrl else if (appId > 0) "https://cdn.cloudflare.steamstatic.com/steam/apps/$appId/capsule_sm_120.jpg" else ""
 }
 
 @Dao
@@ -52,6 +55,12 @@ interface SteamAchievementDao {
 
     @Query("SELECT * FROM steam_achievements WHERE appId = :appId ORDER BY isAchieved DESC, globalPercentage ASC")
     suspend fun getAchievementsForApp(appId: Int): List<SteamAchievementEntity>
+
+    @Query("SELECT * FROM steam_achievements WHERE appId = :appId AND apiName = :apiName LIMIT 1")
+    suspend fun getAchievement(appId: Int, apiName: String): SteamAchievementEntity?
+
+    @Query("SELECT * FROM steam_achievements WHERE isAchieved = 1")
+    suspend fun getAllUnlockedAchievements(): List<SteamAchievementEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(achievements: List<SteamAchievementEntity>)

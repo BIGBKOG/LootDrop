@@ -1098,6 +1098,28 @@ fun AlertsSettingsCategoryContent(
                         }
                     }
                 }
+
+                // Preview Mythic Trophy Unlock Toast Button
+                OutlinedButton(
+                    onClick = {
+                        viewModel.previewMythicUnlockToast()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp)
+                        .testTag("settings_test_mythic_toast_button"),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, Color(0xFFE040FB)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE040FB))
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text("💎", fontSize = 14.sp)
+                        Text("Preview Mythic Trophy Popup Toast", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
     }

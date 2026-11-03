@@ -267,10 +267,11 @@ fun HomeScreen(
         viewModel.selectTab(MainTab.DISCOVER)
     }
 
-    Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             Box(
@@ -817,6 +818,19 @@ fun HomeScreen(
             onDismiss = { viewModel.closeGameAchievements() }
         )
     }
+
+    // Custom In-App Mythic Achievement Toast / Popup
+    val mythicNotification by viewModel.mythicAchievementNotification.collectAsState()
+    com.example.ui.components.MythicAchievementToast(
+        achievement = mythicNotification,
+        onDismiss = { viewModel.dismissMythicToast() },
+        onViewTrophy = { ach ->
+            viewModel.dismissMythicToast()
+            viewModel.openAchievementsForAppId(ach.appId, ach.gameName)
+        },
+        modifier = Modifier.align(Alignment.TopCenter)
+    )
+}
 }
 
 @Composable
