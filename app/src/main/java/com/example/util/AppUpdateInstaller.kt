@@ -153,6 +153,9 @@ object AppUpdateInstaller {
         return try {
             if (!apkFile.exists() || apkFile.length() <= 0) {
                 Log.e(TAG, "Cannot install: APK file does not exist or is empty")
+                try {
+                    Toast.makeText(context, "APK file not found. Please download again.", Toast.LENGTH_SHORT).show()
+                } catch (_: Exception) {}
                 return false
             }
 
@@ -169,12 +172,19 @@ object AppUpdateInstaller {
                         context.startActivity(manageUnknownSourcesIntent)
                         Toast.makeText(
                             context,
-                            "Allow LootDrop to install updates, then return to complete install.",
+                            "Allow LootDrop to install unknown apps, then tap Install Update again.",
                             Toast.LENGTH_LONG
                         ).show()
                     } catch (e: Exception) {
                         Log.w(TAG, "Could not launch ACTION_MANAGE_UNKNOWN_APP_SOURCES", e)
+                        try {
+                            val fallbackIntent = Intent(Settings.ACTION_SECURITY_SETTINGS).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            }
+                            context.startActivity(fallbackIntent)
+                        } catch (_: Exception) {}
                     }
+                    return false
                 }
             }
 
@@ -183,9 +193,7 @@ object AppUpdateInstaller {
 
             val installIntent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(apkUri, "application/vnd.android.package-archive")
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                        Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                        Intent.FLAG_GRANT_PREFIX_URI_PERMISSION
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
             }
 
             context.startActivity(installIntent)

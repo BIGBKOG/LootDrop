@@ -657,6 +657,18 @@ class ExampleRobolectricTest {
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.1", "2.4.0"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.5.0", "2.4.0"))
 
+        // When running on 2.4.1
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V2.4.1", "2.4.1"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.1", "2.4.1"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.0", "2.4.1"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.3.5", "2.4.1"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.3.0", "2.4.1"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.2.0", "2.4.1"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.0.0", "2.4.1"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.5", "2.4.1"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.2", "2.4.1"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.5.0", "2.4.1"))
+
         // When running on 36.0
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V36.0", "36.0"))
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("36.0", "36.0"))
@@ -1358,11 +1370,11 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `version 2 4 0 is configured and recognized as modern release stream`() {
-        assertEquals("2.4.0", BuildConfig.VERSION_NAME)
-        assertEquals(39, BuildConfig.VERSION_CODE)
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("2.4.0"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v2.4.0"))
+    fun `version 2 4 1 is configured and recognized as modern release stream`() {
+        assertEquals("2.4.1", BuildConfig.VERSION_NAME)
+        assertEquals(40, BuildConfig.VERSION_CODE)
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("2.4.1"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v2.4.1"))
     }
 
     @Test

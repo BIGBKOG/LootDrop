@@ -13,8 +13,8 @@ android {
     applicationId = "com.aistudio.lootdrop.fkgxwm"
     minSdk = 26
     targetSdk = 36
-    versionCode = 39
-    versionName = "2.4.0"
+    versionCode = 40
+    versionName = "2.4.1"
 
     resourceConfigurations.addAll(listOf("en"))
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -84,7 +84,15 @@ android {
     checkReleaseBuilds = false
     abortOnError = false
   }
-  testOptions { unitTests { isIncludeAndroidResources = true } }
+  testOptions {
+    unitTests {
+      isIncludeAndroidResources = true
+      all {
+        it.systemProperty("java.awt.headless", "true")
+        it.systemProperty("idea.awt.headless", "true")
+      }
+    }
+  }
   dependenciesInfo {
     includeInApk = false
     includeInBundle = false
