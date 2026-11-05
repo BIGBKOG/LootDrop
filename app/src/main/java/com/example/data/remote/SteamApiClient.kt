@@ -54,8 +54,8 @@ object SteamApiClient {
 
     private const val TAG = "SteamApiClient"
 
-    // Default key provided by user, with fallback to BuildConfig.STEAM_API_KEY
-    const val DEFAULT_API_KEY = "A5946B8A131FE51206631D8A0B3101BF"
+    // Default key fallback (empty by default; configured via Settings or BuildConfig)
+    const val DEFAULT_API_KEY = ""
 
     @Volatile
     private var steamHttpClient: OkHttpClient? = null
@@ -79,7 +79,9 @@ object SteamApiClient {
             val field = BuildConfig::class.java.getField("STEAM_API_KEY")
             field.get(null) as? String
         }.getOrNull()
-        if (!buildKey.isNullOrBlank()) return buildKey.trim()
+        if (!buildKey.isNullOrBlank() && buildKey != "YOUR_STEAM_API_KEY_HERE" && !buildKey.contains("PLACEHOLDER")) {
+            return buildKey.trim()
+        }
         return DEFAULT_API_KEY
     }
 
