@@ -56,6 +56,7 @@ import com.example.util.BackupSummary
 import com.example.util.RestoreSummary
 
 enum class MainTab {
+    HOME,
     DISCOVER,
     CLAIMED,
     CALENDAR,
@@ -78,7 +79,7 @@ enum class TypeFilter(val label: String, val apiMatch: String?) {
 }
 
 data class FilterCriteria(
-    val tab: MainTab = MainTab.DISCOVER,
+    val tab: MainTab = MainTab.HOME,
     val launchers: Set<LauncherType> = emptySet(),
     val typeFilter: TypeFilter = TypeFilter.ALL,
     val sort: SortOption = SortOption.NEWEST,
@@ -141,7 +142,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     )
     private val githubReleaseClient = GithubReleaseClient(application)
 
-    private val _selectedTab = MutableStateFlow(MainTab.DISCOVER)
+    private val _selectedTab = MutableStateFlow(preferences.defaultTab)
     val selectedTab: StateFlow<MainTab> = _selectedTab.asStateFlow()
 
     private val _selectedLaunchers = MutableStateFlow<Set<LauncherType>>(
@@ -256,6 +257,9 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _defaultLauncher = MutableStateFlow(preferences.defaultLauncher)
     val defaultLauncher: StateFlow<LauncherType> = _defaultLauncher.asStateFlow()
+
+    private val _defaultTab = MutableStateFlow(preferences.defaultTab)
+    val defaultTab: StateFlow<MainTab> = _defaultTab.asStateFlow()
 
     private val _isShowOriginalPrice = MutableStateFlow(preferences.isShowOriginalPrice)
     val isShowOriginalPrice: StateFlow<Boolean> = _isShowOriginalPrice.asStateFlow()
@@ -427,6 +431,28 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         SharingStarted.WhileSubscribed(5000),
         emptyList()
     )
+
+    // 3 Most recently played Steam games for Home dashboard
+    val recentPlayedSteamGames: StateFlow<List<SteamGameEntity>> = allSteamGames.map { games ->
+        val played = games.filter { it.playtimeMinutes > 0 || it.lastPlayedTimestamp > 0 }
+            .sortedWith(
+                compareByDescending<SteamGameEntity> { it.lastPlayedTimestamp }
+                    .thenByDescending { it.playtime2WeeksMinutes }
+                    .thenByDescending { it.playtimeMinutes }
+            )
+        if (played.isNotEmpty()) played.take(3) else games.take(3)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Best 3 free games today (highest rated / active) for Home carousel
+    val top3FreeGamesToday: StateFlow<List<GiveawayItem>> = allGiveaways.map { list ->
+        val active = list.filter { it.status.equals("Active", ignoreCase = true) }
+        val source = if (active.isNotEmpty()) active else list
+        source.sortedWith(
+            compareByDescending<GiveawayItem> { it.metacriticScore }
+                .thenByDescending { it.numericWorth }
+                .thenByDescending { it.users }
+        ).take(3)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val filteredSteamGames: StateFlow<List<SteamGameEntity>> = combine(
         allSteamGames,
@@ -810,6 +836,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         claimedGiveaways
     ) { tab, discover, claimed ->
         when (tab) {
+            MainTab.HOME -> discover
             MainTab.DISCOVER -> discover
             MainTab.CLAIMED -> claimed
             MainTab.CALENDAR -> discover
@@ -1201,6 +1228,11 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     fun setCardDensity(density: CardDensity) {
         preferences.cardDensity = density
         _cardDensity.value = density
+    }
+
+    fun setDefaultTab(tab: MainTab) {
+        preferences.defaultTab = tab
+        _defaultTab.value = tab
     }
 
     fun setShowOriginalPrice(show: Boolean) {

@@ -182,9 +182,10 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `navigation tabs contain discover claimed calendar and settings without saved tab`() {
+    fun `navigation tabs contain home all the way to the left followed by discover claimed calendar and settings`() {
         val tabNames = com.example.ui.MainTab.values().map { it.name }
-        assertEquals(listOf("DISCOVER", "CLAIMED", "CALENDAR", "SETTINGS"), tabNames)
+        assertEquals(listOf("HOME", "DISCOVER", "CLAIMED", "CALENDAR", "SETTINGS"), tabNames)
+        assertEquals("HOME", tabNames.first())
         org.junit.Assert.assertFalse(tabNames.contains("SAVED"))
     }
 
@@ -669,7 +670,21 @@ class ExampleRobolectricTest {
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.0.0", "2.5.0"))
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.5", "2.5.0"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.5.1", "2.5.0"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.6.0", "2.5.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.0.0", "2.5.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.0.0", "2.5.0"))
+
+        // When running on 3.0.0
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.0.0", "3.0.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.0.0", "3.0.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.5.1", "3.0.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.5.0", "3.0.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.5", "3.0.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.1", "3.0.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("2.4.0", "3.0.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("1.5.5", "3.0.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.0.1", "3.0.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.1.0", "3.0.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.0.1", "3.0.0"))
 
         // When running on 36.0
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V36.0", "36.0"))
@@ -1372,11 +1387,11 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `version 2 5 0 is configured and recognized as modern release stream`() {
-        assertEquals("2.5.0", BuildConfig.VERSION_NAME)
-        assertEquals(42, BuildConfig.VERSION_CODE)
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("2.5.0"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v2.5.0"))
+    fun `version 3 0 0 is configured and recognized as modern release stream`() {
+        assertEquals("3.0.0", BuildConfig.VERSION_NAME)
+        assertEquals(43, BuildConfig.VERSION_CODE)
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("3.0.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v3.0.0"))
     }
 
     @Test
@@ -2351,6 +2366,200 @@ class ExampleRobolectricTest {
         val skinResult = repo.fetchOstInfo(weaponSkin)
         assertEquals(null, skinResult)
         org.junit.Assert.assertFalse(repo.isEligibleForOst(weaponSkin))
+    }
+
+    @Test
+    fun `home tab is the default selected tab on ViewModel creation`() {
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val viewModel = com.example.ui.GiveawaysViewModel(context)
+        assertEquals(com.example.ui.MainTab.HOME, viewModel.selectedTab.value)
+    }
+
+    @Test
+    fun `home tab recent steam games sorts by last played and exposes playtime and achievements`() {
+        val game1 = com.example.data.local.SteamGameEntity(
+            appId = 101,
+            name = "Portal 2",
+            playtimeMinutes = 300,
+            playtime2WeeksMinutes = 60,
+            lastPlayedTimestamp = 1700000000L,
+            achievementsUnlocked = 20,
+            achievementsTotal = 50
+        )
+        val game2 = com.example.data.local.SteamGameEntity(
+            appId = 102,
+            name = "Cyberpunk 2077",
+            playtimeMinutes = 600,
+            playtime2WeeksMinutes = 120,
+            lastPlayedTimestamp = 1700005000L,
+            achievementsUnlocked = 44,
+            achievementsTotal = 44
+        )
+        val game3 = com.example.data.local.SteamGameEntity(
+            appId = 103,
+            name = "Stardew Valley",
+            playtimeMinutes = 120,
+            playtime2WeeksMinutes = 0,
+            lastPlayedTimestamp = 1690000000L,
+            achievementsUnlocked = 0,
+            achievementsTotal = 0
+        )
+        val game4 = com.example.data.local.SteamGameEntity(
+            appId = 104,
+            name = "Half-Life 2",
+            playtimeMinutes = 50,
+            playtime2WeeksMinutes = 0,
+            lastPlayedTimestamp = 1680000000L,
+            achievementsUnlocked = 10,
+            achievementsTotal = 33
+        )
+
+        val list = listOf(game1, game2, game3, game4)
+        val sortedRecent = list.sortedWith(
+            compareByDescending<com.example.data.local.SteamGameEntity> { it.lastPlayedTimestamp }
+                .thenByDescending { it.playtime2WeeksMinutes }
+                .thenByDescending { it.playtimeMinutes }
+        ).take(3)
+
+        assertEquals(3, sortedRecent.size)
+        assertEquals(102, sortedRecent[0].appId) // Cyberpunk 2077 (most recent)
+        assertEquals(101, sortedRecent[1].appId) // Portal 2
+        assertEquals(103, sortedRecent[2].appId) // Stardew Valley
+
+        // Verify playtime and achievements getters
+        assertEquals("10h", sortedRecent[0].playtimeHours)
+        assertEquals(100, sortedRecent[0].achievementsPercentage)
+        assertTrue(sortedRecent[0].achievementsTotal > 0)
+
+        assertEquals("5.0h", sortedRecent[1].playtimeHours)
+        assertEquals(40, sortedRecent[1].achievementsPercentage)
+
+        assertEquals(0, sortedRecent[2].achievementsTotal)
+        assertEquals(0, sortedRecent[2].achievementsPercentage)
+    }
+
+    @Test
+    fun `top 3 free games today takes top rated and highest value active giveaways`() {
+        val item1 = GiveawayItem(
+            id = 1,
+            title = "A Great Indie",
+            worth = "$19.99",
+            numericWorth = 19.99,
+            thumbnail = "",
+            image = "",
+            description = "Indie gem",
+            instructions = "",
+            openGiveawayUrl = "",
+            publishedDate = "",
+            type = "Game",
+            platforms = "PC",
+            endDate = "2026-12-01",
+            users = 1000,
+            status = "Active",
+            metacriticScore = 88
+        )
+        val item2 = GiveawayItem(
+            id = 2,
+            title = "AAA Masterpiece",
+            worth = "$59.99",
+            numericWorth = 59.99,
+            thumbnail = "",
+            image = "",
+            description = "Big game",
+            instructions = "",
+            openGiveawayUrl = "",
+            publishedDate = "",
+            type = "Game",
+            platforms = "PC",
+            endDate = "2026-12-01",
+            users = 5000,
+            status = "Active",
+            metacriticScore = 93
+        )
+        val item3 = GiveawayItem(
+            id = 3,
+            title = "Fun RPG",
+            worth = "$29.99",
+            numericWorth = 29.99,
+            thumbnail = "",
+            image = "",
+            description = "RPG",
+            instructions = "",
+            openGiveawayUrl = "",
+            publishedDate = "",
+            type = "Game",
+            platforms = "PC",
+            endDate = "2026-12-01",
+            users = 2500,
+            status = "Active",
+            metacriticScore = 80
+        )
+        val item4 = GiveawayItem(
+            id = 4,
+            title = "Older Game",
+            worth = "$9.99",
+            numericWorth = 9.99,
+            thumbnail = "",
+            image = "",
+            description = "Old",
+            instructions = "",
+            openGiveawayUrl = "",
+            publishedDate = "",
+            type = "Game",
+            platforms = "PC",
+            endDate = "2026-12-01",
+            users = 500,
+            status = "Active",
+            metacriticScore = 70
+        )
+
+        val list = listOf(item1, item2, item3, item4)
+        val top3 = list.filter { it.status.equals("Active", ignoreCase = true) }
+            .sortedWith(
+                compareByDescending<GiveawayItem> { it.metacriticScore }
+                    .thenByDescending { it.numericWorth }
+                    .thenByDescending { it.users }
+            ).take(3)
+
+        assertEquals(3, top3.size)
+        assertEquals(2, top3[0].id) // AAA Masterpiece (Metascore 93)
+        assertEquals(1, top3[1].id) // A Great Indie (Metascore 88)
+        assertEquals(3, top3[2].id) // Fun RPG (Metascore 80)
+    }
+
+    @Test
+    fun `default tab preference defaults to HOME and persists selection`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val prefs = com.example.preferences.AppPreferences(context)
+        assertEquals(com.example.ui.MainTab.HOME, prefs.defaultTab)
+
+        prefs.defaultTab = com.example.ui.MainTab.DISCOVER
+        assertEquals(com.example.ui.MainTab.DISCOVER, prefs.defaultTab)
+
+        prefs.defaultTab = com.example.ui.MainTab.CLAIMED
+        assertEquals(com.example.ui.MainTab.CLAIMED, prefs.defaultTab)
+
+        prefs.defaultTab = com.example.ui.MainTab.CALENDAR
+        assertEquals(com.example.ui.MainTab.CALENDAR, prefs.defaultTab)
+
+        // Reset back to HOME
+        prefs.defaultTab = com.example.ui.MainTab.HOME
+        assertEquals(com.example.ui.MainTab.HOME, prefs.defaultTab)
+    }
+
+    @Test
+    fun `viewModel setDefaultTab updates preference and state flow`() {
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val prefs = com.example.preferences.AppPreferences(context)
+        prefs.defaultTab = com.example.ui.MainTab.CALENDAR
+
+        val viewModel = com.example.ui.GiveawaysViewModel(context)
+        assertEquals(com.example.ui.MainTab.CALENDAR, viewModel.defaultTab.value)
+        assertEquals(com.example.ui.MainTab.CALENDAR, viewModel.selectedTab.value)
+
+        viewModel.setDefaultTab(com.example.ui.MainTab.HOME)
+        assertEquals(com.example.ui.MainTab.HOME, viewModel.defaultTab.value)
+        assertEquals(com.example.ui.MainTab.HOME, prefs.defaultTab)
     }
 }
 

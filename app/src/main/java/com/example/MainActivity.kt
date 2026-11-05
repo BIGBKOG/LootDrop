@@ -204,6 +204,7 @@ class MainActivity : ComponentActivity() {
                     viewModel.selectTab(com.example.ui.MainTab.CALENDAR)
                     com.example.shortcuts.AppShortcutHelper.reportShortcutUsed(this, com.example.shortcuts.AppShortcutHelper.ID_EXPIRING_SOON)
                 }
+                "HOME" -> viewModel.selectTab(com.example.ui.MainTab.HOME)
                 "SETTINGS" -> viewModel.selectTab(com.example.ui.MainTab.SETTINGS)
             }
         }

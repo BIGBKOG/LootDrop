@@ -106,7 +106,7 @@ class GithubReleaseClient(private val context: Context) {
         var selectedNotes: String? = null
 
         val cleanCurrentVersion = currentVersionName.trim().removePrefix("v").removePrefix("V")
-        val isCurrentModernStream = cleanCurrentVersion.startsWith("1.") || cleanCurrentVersion.startsWith("2.")
+        val isCurrentModern = isCurrentModernStream(currentVersionName)
 
         while (matcher.find()) {
             val entryText = matcher.group(1) ?: continue
@@ -115,9 +115,8 @@ class GithubReleaseClient(private val context: Context) {
             val tag = rawTag ?: continue
 
             val cleanTag = tag.removePrefix("v").removePrefix("V")
-            // If current version is on modern stream (1.x / 2.x), filter out legacy 4.x and 3.x tags from before reset
-            if (isCurrentModernStream && (cleanTag.startsWith("4.") || cleanTag.startsWith("3.") ||
-                        tag.contains("V4.") || tag.contains("V3.") || tag.contains("Loot-Drop-V3."))) {
+            // Filter out old legacy 4.x from before the reset, but preserve all modern versions (1.x, 2.x, 3.x, etc.)
+            if (isCurrentModern && (cleanTag.startsWith("4.") || tag.contains("V4.") || tag.contains("Loot-Drop-V3."))) {
                 continue
             }
 
@@ -197,9 +196,9 @@ class GithubReleaseClient(private val context: Context) {
         if (tagName.isBlank()) return null
 
         val cleanTag = tagName.removePrefix("v").removePrefix("V")
-        val isCurrentOnOneStream = currentVersionName.trim().removePrefix("v").removePrefix("V").startsWith("1.")
-        if (isCurrentOnOneStream && (cleanTag.startsWith("4.") || cleanTag.startsWith("3."))) {
-            // REST API returned legacy release; return null to allow atom feed to supply active 1.x release
+        val isCurrentModern = isCurrentModernStream(currentVersionName)
+        if (isCurrentModern && (cleanTag.startsWith("4.") || tagName.contains("V4.") || tagName.contains("Loot-Drop-V3."))) {
+            // REST API returned legacy release; return null to allow atom feed to supply active release
             return null
         }
 
@@ -290,31 +289,34 @@ class GithubReleaseClient(private val context: Context) {
      * Resolves the direct download URL for the release APK by inspecting GitHub expanded_assets.
      */
     fun resolveApkUrl(owner: String, repo: String, tag: String): String? {
-        try {
-            val expandedUrl = "https://github.com/$owner/$repo/releases/expanded_assets/$tag"
-            val request = Request.Builder()
-                .url(expandedUrl)
-                .header("User-Agent", "LootDrop-Android-App")
-                .header("Accept", "text/html, */*")
-                .build()
+        val cleanTag = tag.removePrefix("v").removePrefix("V")
+        val candidateTags = listOf(tag, "V$cleanTag", "v$cleanTag", cleanTag).distinct()
+        for (candidate in candidateTags) {
+            try {
+                val expandedUrl = "https://github.com/$owner/$repo/releases/expanded_assets/$candidate"
+                val request = Request.Builder()
+                    .url(expandedUrl)
+                    .header("User-Agent", "LootDrop-Android-App")
+                    .header("Accept", "text/html, */*")
+                    .build()
 
-            val response = httpClient.newCall(request).execute()
-            if (response.isSuccessful) {
-                val html = response.body?.string() ?: ""
-                val apkRegex = Pattern.compile("href=\"(/$owner/$repo/releases/download/[^\"]+\\.apk)\"", Pattern.CASE_INSENSITIVE)
-                val m = apkRegex.matcher(html)
-                if (m.find()) {
-                    val relativePath = m.group(1)
-                    return "https://github.com$relativePath"
+                val response = httpClient.newCall(request).execute()
+                if (response.isSuccessful) {
+                    val html = response.body?.string() ?: ""
+                    val apkRegex = Pattern.compile("href=\"(/$owner/$repo/releases/download/[^\"]+\\.apk)\"", Pattern.CASE_INSENSITIVE)
+                    val m = apkRegex.matcher(html)
+                    if (m.find()) {
+                        val relativePath = m.group(1)
+                        return "https://github.com$relativePath"
+                    }
                 }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed resolving expanded_assets for $candidate: ${e.message}")
             }
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed resolving expanded_assets for $tag: ${e.message}")
         }
 
-        // Predictable fallback: LootDrop releases follow predictable asset naming conventions
-        val cleanTag = tag.removePrefix("v").removePrefix("V")
-        return "https://github.com/$owner/$repo/releases/download/$tag/LootDrop-V$cleanTag.apk"
+        // Predictable fallback: Lootdrop releases follow predictable asset naming conventions
+        return "https://github.com/$owner/$repo/releases/download/V$cleanTag/Lootdrop-V$cleanTag.apk"
     }
 
     companion object {
@@ -327,14 +329,14 @@ class GithubReleaseClient(private val context: Context) {
         fun isCurrentModernStream(version: String): Boolean {
             val clean = version.trim().removePrefix("v").removePrefix("V")
             val major = clean.substringBefore(".").toIntOrNull() ?: 0
-            return clean.startsWith("1.") || clean.startsWith("2.") || major >= 5
+            return (major in 1..40) && !clean.startsWith("4.")
         }
 
         /**
-         * Compares semantic versions (e.g. "1.5.X" vs "1.5.0", "V4.1" vs "4.0").
+         * Compares semantic versions (e.g. "3.0.1" vs "3.0.0", "1.5.X" vs "1.5.0").
          * Returns true if remote is strictly newer than current.
-         * Correctly handles wildcard releases ("1.5.X"), and protects against legacy 4.x/3.x
-         * versions being falsely reported as newer when the app was reset to 1.5.0.
+         * Correctly handles wildcard releases ("1.5.X"), and protects against legacy 4.x
+         * versions being falsely reported as newer when the app was reset to modern streams.
          */
         fun isNewerVersion(remoteTag: String, currentVersion: String): Boolean {
             if (remoteTag.isBlank()) return false
@@ -343,19 +345,16 @@ class GithubReleaseClient(private val context: Context) {
 
             if (cleanRemote.equals(cleanCurrent, ignoreCase = true)) return false
 
-            // The app transitioned its versioning scheme from legacy 4.5 down to 1.5.0.
-            // If the user was on legacy 4.x/3.x, any 1.x release is the new release branch.
+            // The app transitioned its versioning scheme from legacy 4.x down to 1.5.0.
             val isRemoteOneSeries = cleanRemote.startsWith("1.")
-            val isCurrentLegacy = cleanCurrent.startsWith("4.") || cleanCurrent.startsWith("3.")
+            val isCurrentLegacy = cleanCurrent.startsWith("4.")
             if (isCurrentLegacy && isRemoteOneSeries) {
                 return true
             }
 
-            // Any older 4.x/3.x releases on GitHub are legacy releases from before the reset
-            // and should NOT be treated as newer when running on modern streams (1.x, 2.x).
+            // Older legacy 4.x or unversioned tags from before the reset should not be treated as newer
             if (isCurrentModernStream(cleanCurrent)) {
-                if (cleanRemote.startsWith("4.") || cleanRemote.startsWith("3.") ||
-                    cleanRemote.contains("V4.") || cleanRemote.contains("V3.") ||
+                if (cleanRemote.startsWith("4.") || cleanRemote.contains("V4.") ||
                     cleanRemote.contains("Loot-Drop-V3.")) {
                     return false
                 }

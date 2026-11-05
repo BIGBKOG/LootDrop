@@ -215,6 +215,8 @@ fun HomeScreen(
     val selectedGameForAchievements by viewModel.selectedGameForAchievements.collectAsState()
     val selectedGameAchievements by viewModel.selectedGameAchievements.collectAsState()
     val isLoadingGameAchievements by viewModel.isLoadingGameAchievements.collectAsState()
+    val recentPlayedSteamGames by viewModel.recentPlayedSteamGames.collectAsState()
+    val top3FreeGamesToday by viewModel.top3FreeGamesToday.collectAsState()
 
     val borderBeamAngle = rememberAnimatedBeamAngle(enabled = isAnimationsEnabled && !isLowEndOptimization)
 
@@ -223,7 +225,7 @@ fun HomeScreen(
     var launcherChooserItem by remember { mutableStateOf<GiveawayItem?>(null) }
     var showSteamDialog by remember { mutableStateOf(false) }
 
-    val tabs = remember { listOf(MainTab.DISCOVER, MainTab.CALENDAR, MainTab.CLAIMED, MainTab.SETTINGS) }
+    val tabs = remember { listOf(MainTab.HOME, MainTab.DISCOVER, MainTab.CALENDAR, MainTab.CLAIMED, MainTab.SETTINGS) }
     val pagerState = rememberPagerState(
         initialPage = tabs.indexOf(selectedTab).coerceAtLeast(0),
         pageCount = { tabs.size }
@@ -257,14 +259,15 @@ fun HomeScreen(
         }
     }
 
+    val homeListState = rememberLazyListState()
     val discoverListState = rememberLazyListState()
     val claimedListState = rememberLazyListState()
     val calendarListState = rememberLazyListState()
     val discoverGridState = rememberLazyGridState()
     val claimedGridState = rememberLazyGridState()
 
-    BackHandler(enabled = selectedTab != MainTab.DISCOVER) {
-        viewModel.selectTab(MainTab.DISCOVER)
+    BackHandler(enabled = selectedTab != MainTab.HOME) {
+        viewModel.selectTab(MainTab.HOME)
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -344,6 +347,7 @@ fun HomeScreen(
                                     ) {
                                         Text(
                                             text = when (currentTab) {
+                                                MainTab.HOME -> "HOME"
                                                 MainTab.SETTINGS -> "SETTINGS"
                                                 MainTab.CALENDAR -> "CALENDAR"
                                                 MainTab.CLAIMED -> "VAULT"
@@ -357,6 +361,7 @@ fun HomeScreen(
                                 }
                                 Text(
                                     text = when (currentTab) {
+                                        MainTab.HOME -> "RECENT ACTIVITY & TOP PICKS"
                                         MainTab.SETTINGS -> "APP PREFERENCES & CONTROLS"
                                         MainTab.CALENDAR -> "EXPIRATION RADAR & TIMELINE"
                                         MainTab.CLAIMED -> "MY CLAIMED GAME VAULT"
@@ -374,10 +379,10 @@ fun HomeScreen(
 
                         // Floating Pill Bar in Top Right Corner (Search, Filters, Notifications)
                         ExpressiveTopActionBar(
-                            isSearchExpanded = isSearchExpanded && currentTab != MainTab.SETTINGS,
+                            isSearchExpanded = isSearchExpanded && currentTab != MainTab.SETTINGS && currentTab != MainTab.HOME,
                             searchQuery = searchQuery,
                             onToggleSearch = {
-                                if (currentTab == MainTab.SETTINGS) {
+                                if (currentTab == MainTab.SETTINGS || currentTab == MainTab.HOME) {
                                     viewModel.selectTab(MainTab.DISCOVER)
                                     isSearchExpanded = true
                                 } else {
@@ -386,7 +391,7 @@ fun HomeScreen(
                             },
                             activeFilterCount = activeFilterCount,
                             onFilterClick = {
-                                if (currentTab == MainTab.SETTINGS) {
+                                if (currentTab == MainTab.SETTINGS || currentTab == MainTab.HOME) {
                                     viewModel.selectTab(MainTab.DISCOVER)
                                 }
                                 viewModel.setFilterSheetOpen(true)
@@ -519,6 +524,34 @@ fun HomeScreen(
                     .testTag("main_horizontal_pager")
             ) { page ->
                 when (tabs[page]) {
+                    MainTab.HOME -> {
+                        com.example.ui.home.HomeTabContent(
+                            recentSteamGames = recentPlayedSteamGames,
+                            top3FreeGames = top3FreeGamesToday,
+                            uiStats = uiStats,
+                            steamUserId = steamUserId,
+                            isLoading = isLoading,
+                            isSyncingSteam = isSyncingSteam,
+                            isAnimationsEnabled = isAnimationsEnabled,
+                            isLowEndOptimization = isLowEndOptimization,
+                            screenDensityInfo = screenDensityInfo,
+                            listState = homeListState,
+                            onRefresh = { viewModel.refreshGiveaways() },
+                            onItemClick = { viewModel.openDetail(it) },
+                            onClaimClick = { item ->
+                                if (item.hasMultipleLaunchers) {
+                                    launcherChooserItem = item
+                                } else {
+                                    viewModel.claimAndLaunch(context, item)
+                                }
+                            },
+                            onOpenSteamDialog = { showSteamDialog = true },
+                            onQuickSteamSync = { viewModel.syncSteamLibrary() },
+                            onOpenAchievements = { viewModel.openGameAchievements(it) },
+                            onExploreAllFreebies = { viewModel.selectTab(MainTab.DISCOVER) },
+                            onViewVault = { viewModel.selectTab(MainTab.CLAIMED) }
+                        )
+                    }
                     MainTab.DISCOVER -> {
                         GiveawaysTabContent(
                             tab = MainTab.DISCOVER,

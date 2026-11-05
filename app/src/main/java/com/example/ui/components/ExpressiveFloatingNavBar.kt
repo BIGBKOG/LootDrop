@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -61,15 +62,16 @@ fun ExpressiveFloatingNavBar(
     isLowEndOptimization: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    val navBarWidth = 356.dp
+    val navBarWidth = 372.dp
     val navBarHeight = 64.dp
-    val tabCount = 4
+    val tabCount = 5
 
     val targetIndex = when (selectedTab) {
-        MainTab.DISCOVER -> 0
-        MainTab.CALENDAR -> 1
-        MainTab.CLAIMED -> 2
-        MainTab.SETTINGS -> 3
+        MainTab.HOME -> 0
+        MainTab.DISCOVER -> 1
+        MainTab.CALENDAR -> 2
+        MainTab.CLAIMED -> 3
+        MainTab.SETTINGS -> 4
     }
 
     val themePrimary = MaterialTheme.colorScheme.primary
@@ -159,6 +161,17 @@ fun ExpressiveFloatingNavBar(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                ExpressiveNavTab(
+                    tab = MainTab.HOME,
+                    title = "Home",
+                    icon = Icons.Default.Home,
+                    isSelected = selectedTab == MainTab.HOME,
+                    activeColor = themePrimary,
+                    onClick = { onTabSelected(MainTab.HOME) },
+                    testTag = "nav_tab_home",
+                    modifier = Modifier.weight(1f).fillMaxHeight()
+                )
+
                 ExpressiveNavTab(
                     tab = MainTab.DISCOVER,
                     title = "Discover",

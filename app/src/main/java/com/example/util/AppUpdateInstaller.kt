@@ -188,13 +188,28 @@ object AppUpdateInstaller {
                 }
             }
 
+            apkFile.setReadable(true, false)
+
             val authority = "${context.packageName}.fileprovider"
             val apkUri = FileProvider.getUriForFile(context, authority, apkFile)
 
             val installIntent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(apkUri, "application/vnd.android.package-archive")
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+                putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true)
             }
+
+            // Grant read permission explicitly to any package installer matching the intent
+            try {
+                val resolvedActivities = context.packageManager.queryIntentActivities(
+                    installIntent,
+                    android.content.pm.PackageManager.MATCH_DEFAULT_ONLY
+                )
+                for (resolveInfo in resolvedActivities) {
+                    val packageName = resolveInfo.activityInfo.packageName
+                    context.grantUriPermission(packageName, apkUri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+            } catch (_: Exception) {}
 
             context.startActivity(installIntent)
             true

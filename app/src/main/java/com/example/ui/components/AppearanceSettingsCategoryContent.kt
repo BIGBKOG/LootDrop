@@ -20,12 +20,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BrightnessAuto
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.filled.ViewCarousel
@@ -55,6 +60,7 @@ import com.example.preferences.CardDensity
 import com.example.preferences.DpiScaleMode
 import com.example.preferences.ThemeMode
 import com.example.ui.GiveawaysViewModel
+import com.example.ui.MainTab
 import com.example.ui.theme.TextMuted
 
 @Composable
@@ -716,6 +722,97 @@ fun AppearanceSettingsCategoryContent(
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
+    }
+
+    Spacer(modifier = Modifier.height(20.dp))
+
+    // SECTION 6: Default Starting Tab
+    val defaultTab by viewModel.defaultTab.collectAsState()
+    SectionHeader(title = "DEFAULT STARTING TAB", icon = Icons.Default.Home)
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        val tabDetails = listOf(
+            Triple(MainTab.HOME, Icons.Default.Home to "Home (Recommended)", "Dashboard with recent Steam activity & top free game picks"),
+            Triple(MainTab.DISCOVER, Icons.Default.Explore to "Discover", "Browse all active PC, console & mobile free giveaways"),
+            Triple(MainTab.CALENDAR, Icons.Default.CalendarMonth to "Calendar", "Expiration radar & timeline for ending-soon deals"),
+            Triple(MainTab.CLAIMED, Icons.Default.CheckCircle to "In Library", "Your saved game vault and unlocked achievements"),
+            Triple(MainTab.SETTINGS, Icons.Default.Settings to "Settings", "App preferences, appearance, and configuration")
+        )
+
+        tabDetails.forEach { (tab, iconAndLabel, description) ->
+            val (icon, label) = iconAndLabel
+            val isSelected = tab == defaultTab
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent)
+                    .border(
+                        width = if (isSelected) 1.5.dp else 1.dp,
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .clickable { viewModel.setDefaultTab(tab) }
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                    .testTag("default_tab_${tab.name.lowercase()}"),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    Column {
+                        Text(
+                            text = label,
+                            fontSize = 14.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = description,
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                if (isSelected) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Selected",
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)
                     )

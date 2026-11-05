@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.ui.graphics.Color
 import com.example.data.model.LauncherType
+import com.example.ui.MainTab
 import com.example.ui.SortOption
 import com.example.ui.theme.EpicGamesBlue
 import com.example.ui.theme.GogPurple
@@ -306,6 +307,7 @@ class AppPreferences(context: Context) {
         private const val KEY_BG_THEME_DARK = "key_bg_theme_dark"
         private const val KEY_BG_THEME_LIGHT = "key_bg_theme_light"
         private const val KEY_CARD_DENSITY = "key_card_density"
+        private const val KEY_DEFAULT_TAB = "key_default_tab"
         private const val KEY_DEFAULT_LAUNCHER = "key_default_launcher"
         private const val KEY_SHOW_ORIGINAL_PRICE = "key_show_original_price"
         private const val KEY_SHOW_EXPIRATION = "key_show_expiration"
@@ -399,6 +401,17 @@ class AppPreferences(context: Context) {
             }
         }
         set(value) = prefs.edit().putString(KEY_CARD_DENSITY, value.name).apply()
+
+    var defaultTab: MainTab
+        get() {
+            val saved = prefs.getString(KEY_DEFAULT_TAB, MainTab.HOME.name)
+            return try {
+                MainTab.valueOf(saved ?: MainTab.HOME.name)
+            } catch (_: Exception) {
+                MainTab.HOME
+            }
+        }
+        set(value) = prefs.edit().putString(KEY_DEFAULT_TAB, value.name).apply()
 
     var defaultLauncher: LauncherType
         get() {
