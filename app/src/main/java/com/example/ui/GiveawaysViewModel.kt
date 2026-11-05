@@ -51,9 +51,11 @@ import com.example.data.model.LibraryViewMode
 import com.example.data.model.PlayabilityFilter
 import com.example.data.model.StorageFilter
 import com.example.data.model.StorageTier
+import com.example.data.model.UserProfile
 import com.example.util.BackupRestoreManager
 import com.example.util.BackupSummary
 import com.example.util.RestoreSummary
+import com.example.util.UserProfileManager
 
 enum class MainTab {
     HOME,
@@ -323,6 +325,9 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _showOnboardingWalkthrough = MutableStateFlow(!preferences.hasSeenOnboarding)
     val showOnboardingWalkthrough: StateFlow<Boolean> = _showOnboardingWalkthrough.asStateFlow()
+
+    private val _userProfile = MutableStateFlow(UserProfileManager.getProfile(preferences))
+    val userProfile: StateFlow<UserProfile> = _userProfile.asStateFlow()
 
     private val _reopenStatusMessage = MutableStateFlow<String?>(null)
     val reopenStatusMessage: StateFlow<String?> = _reopenStatusMessage.asStateFlow()
@@ -1318,6 +1323,26 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         _showOnboardingWalkthrough.value = true
     }
 
+    fun updateUserProfile(name: String, avatarUri: Uri? = null, removeAvatar: Boolean = false) {
+        val updated = UserProfileManager.saveProfile(
+            context = getApplication(),
+            preferences = preferences,
+            name = name,
+            avatarUri = avatarUri,
+            removeAvatar = removeAvatar
+        )
+        _userProfile.value = updated
+    }
+
+    fun updateDisplayedTrophies(hasCustom: Boolean, keys: Set<String>) {
+        val updated = UserProfileManager.saveDisplayedTrophies(preferences, hasCustom, keys)
+        _userProfile.value = updated
+    }
+
+    fun refreshUserProfile() {
+        _userProfile.value = UserProfileManager.getProfile(preferences)
+    }
+
     fun dismissNewToday() {
         preferences.isNewTodayDismissed = true
         _isNewTodayDismissed.value = true
@@ -1864,6 +1889,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                 _backupRestoreStatus.value = "🎉 ${summary.message}"
                 Toast.makeText(context, summary.message, Toast.LENGTH_LONG).show()
                 updateStorageFootprint()
+                refreshUserProfile()
             }.onFailure { e ->
                 _backupRestoreStatus.value = "❌ Restore failed: ${e.message}"
                 Toast.makeText(context, "Restore failed: ${e.message}", Toast.LENGTH_LONG).show()

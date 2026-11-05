@@ -53,6 +53,22 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Radar
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.SportsEsports
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.example.data.model.UserProfile
+import java.io.File
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -114,11 +130,21 @@ data class OnboardingStep(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun OnboardingWalkthroughDialog(
+    initialProfile: UserProfile = UserProfile(),
+    onSaveProfile: ((name: String, avatarUri: Uri?, removeAvatar: Boolean) -> Unit)? = null,
     onDismiss: () -> Unit,
     onFinish: () -> Unit
 ) {
     val steps = remember {
         listOf(
+            OnboardingStep(
+                title = "Create Your Profile",
+                subtitle = "YOUR GAMER IDENTITY IN LOOTDROP",
+                description = "Set your gamer tag and choose an avatar photo. Stored securely in local app data, displayed on your Home page top-left, and included in your JSON exports.",
+                badge = "STEP 1 • GAMER PROFILE",
+                icon = Icons.Default.Person,
+                tags = listOf("Custom Avatar", "Gamer Tag", "Local App Data", "JSON Export/Import")
+            ),
             OnboardingStep(
                 title = "PC & Console Free Radar",
                 subtitle = "NEVER MISS A $60 DROP GONE FREE",
@@ -164,7 +190,30 @@ fun OnboardingWalkthroughDialog(
     val animBoxSize = screenDensityInfo.walkthroughAnimBoxSize
     val buttonHeight = screenDensityInfo.walkthroughButtonHeight
 
+    var nameInput by remember(initialProfile.name) { mutableStateOf(initialProfile.name) }
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var shouldRemoveAvatar by remember { mutableStateOf(false) }
+
+    val avatarFile = remember(initialProfile.avatarPath) {
+        if (initialProfile.avatarPath.isNotBlank()) File(initialProfile.avatarPath) else null
+    }
+
+    val saveProfile = {
+        onSaveProfile?.invoke(nameInput.trim(), selectedImageUri, shouldRemoveAvatar)
+    }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            selectedImageUri = uri
+            shouldRemoveAvatar = false
+            onSaveProfile?.invoke(nameInput.trim(), uri, false)
+        }
+    }
+
     BackHandler {
+        saveProfile()
         if (currentStepIndex > 0) {
             currentStepIndex--
         } else {
@@ -175,8 +224,7 @@ fun OnboardingWalkthroughDialog(
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
+            usePlatformDefaultWidth = false
         )
     ) {
         Surface(
@@ -264,7 +312,10 @@ fun OnboardingWalkthroughDialog(
                                 }
 
                                 TextButton(
-                                    onClick = onFinish,
+                                    onClick = {
+                                        saveProfile()
+                                        onFinish()
+                                    },
                                     modifier = Modifier.testTag("onboarding_skip_button")
                                 ) {
                                     Text(
@@ -317,7 +368,7 @@ fun OnboardingWalkthroughDialog(
                         }
                     },
                     bottomBar = {
-                        // Bottom Navigation Action Buttons - Fixed & Docked permanently above navigation bars
+                        // Bottom Navigation Action Buttons - Lifted cleanly and safely above the bottom edge
                         Surface(
                             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
                             shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
@@ -328,13 +379,16 @@ fun OnboardingWalkthroughDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .navigationBarsPadding()
+                                .padding(bottom = 12.dp)
                         ) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(
-                                        horizontal = if (isSmallPhone) 12.dp else 18.dp,
-                                        vertical = if (isUltraCompactHeight) 6.dp else if (isCompactHeight) 8.dp else 12.dp
+                                        start = if (isSmallPhone) 14.dp else 20.dp,
+                                        end = if (isSmallPhone) 14.dp else 20.dp,
+                                        top = if (isUltraCompactHeight) 8.dp else 12.dp,
+                                        bottom = if (isUltraCompactHeight) 10.dp else if (isCompactHeight) 14.dp else 16.dp
                                     ),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
@@ -371,6 +425,7 @@ fun OnboardingWalkthroughDialog(
 
                                 Button(
                                     onClick = {
+                                        saveProfile()
                                         if (currentStepIndex < totalSteps - 1) {
                                             currentStepIndex++
                                         } else {
@@ -473,10 +528,21 @@ fun OnboardingWalkthroughDialog(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         when (stepIdx) {
-                                            0 -> RadarScanAnimation()
-                                            1 -> DirectClaimAnimation()
-                                            2 -> SavingsTrackerAnimation()
-                                            3 -> AlertsAndThemesAnimation()
+                                            0 -> ProfileAvatarTourPreview(
+                                                name = nameInput,
+                                                selectedUri = selectedImageUri,
+                                                avatarFile = avatarFile,
+                                                shouldRemove = shouldRemoveAvatar,
+                                                onPickPhoto = {
+                                                    photoPickerLauncher.launch(
+                                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                                    )
+                                                }
+                                            )
+                                            1 -> RadarScanAnimation()
+                                            2 -> DirectClaimAnimation()
+                                            3 -> SavingsTrackerAnimation()
+                                            4 -> AlertsAndThemesAnimation()
                                         }
                                     }
                                 }
@@ -544,6 +610,86 @@ fun OnboardingWalkthroughDialog(
 
                                 Spacer(modifier = Modifier.height(if (isUltraCompactHeight) 6.dp else 10.dp))
 
+                                // If Step 0: Render interactive photo buttons and gamer tag text field
+                                if (stepIdx == 0) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        OutlinedButton(
+                                            onClick = {
+                                                photoPickerLauncher.launch(
+                                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                                )
+                                            },
+                                            shape = RoundedCornerShape(10.dp),
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.6f)),
+                                            colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonCyan),
+                                            modifier = Modifier.testTag("onboarding_pick_photo_btn")
+                                        ) {
+                                            Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = if (selectedImageUri != null || (avatarFile != null && avatarFile.exists() && !shouldRemoveAvatar)) "Change Photo" else "Add Photo",
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+
+                                        if (selectedImageUri != null || (avatarFile != null && avatarFile.exists() && !shouldRemoveAvatar)) {
+                                            TextButton(
+                                                onClick = {
+                                                    selectedImageUri = null
+                                                    shouldRemoveAvatar = true
+                                                    onSaveProfile?.invoke(nameInput.trim(), null, true)
+                                                },
+                                                colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFEF4444)),
+                                                modifier = Modifier.testTag("onboarding_remove_photo_btn")
+                                            ) {
+                                                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text(text = "Remove", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                            }
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    OutlinedTextField(
+                                        value = nameInput,
+                                        onValueChange = {
+                                            if (it.length <= 30) {
+                                                nameInput = it
+                                                onSaveProfile?.invoke(it.trim(), selectedImageUri, shouldRemoveAvatar)
+                                            }
+                                        },
+                                        placeholder = { Text("Enter gamer tag or name...", color = TextMuted) },
+                                        singleLine = true,
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = Icons.Default.Person,
+                                                contentDescription = null,
+                                                tint = NeonCyan,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .testTag("onboarding_profile_name_input"),
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = NeonCyan,
+                                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                            focusedTextColor = TextPrimary,
+                                            unfocusedTextColor = TextPrimary
+                                        )
+                                    )
+
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                }
+
                                 // Highlight Chips
                                 FlowRow(
                                     modifier = Modifier.fillMaxWidth(),
@@ -576,7 +722,7 @@ fun OnboardingWalkthroughDialog(
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.height(if (isUltraCompactHeight) 6.dp else 12.dp))
+                                Spacer(modifier = Modifier.height(if (isUltraCompactHeight) 10.dp else 24.dp))
                             }
                         }
                     }
@@ -1015,3 +1161,102 @@ fun AlertsAndThemesAnimation() {
         }
     }
 }
+
+@Composable
+private fun ProfileAvatarTourPreview(
+    name: String,
+    selectedUri: Uri?,
+    avatarFile: File?,
+    shouldRemove: Boolean,
+    onPickPhoto: () -> Unit
+) {
+    val context = LocalContext.current
+    val infiniteTransition = rememberInfiniteTransition(label = "profile_glow")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 0.9f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseAlpha"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable { onPickPhoto() },
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(96.dp)
+                .clip(CircleShape)
+                .border(
+                    2.dp,
+                    Brush.sweepGradient(
+                        listOf(
+                            NeonCyan.copy(alpha = pulseAlpha),
+                            NeonGreen.copy(alpha = pulseAlpha),
+                            NeonCyan.copy(alpha = pulseAlpha)
+                        )
+                    ),
+                    CircleShape
+                )
+                .background(Color(0xFF0F121A)),
+            contentAlignment = Alignment.Center
+        ) {
+            val hasPending = selectedUri != null
+            val hasFile = !shouldRemove && avatarFile != null && avatarFile.exists()
+
+            if (hasPending) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context).data(selectedUri).crossfade(true).build(),
+                    contentDescription = "Selected Photo",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().clip(CircleShape)
+                )
+            } else if (hasFile) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context).data(avatarFile).crossfade(true).build(),
+                    contentDescription = "Profile Photo",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().clip(CircleShape)
+                )
+            } else if (name.isNotBlank()) {
+                Text(
+                    text = name.trim().take(1).uppercase(),
+                    fontSize = 38.sp,
+                    fontWeight = FontWeight.Black,
+                    color = NeonCyan
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = "Default Avatar",
+                    tint = NeonCyan,
+                    modifier = Modifier.size(50.dp)
+                )
+            }
+
+            // Camera Overlay badge
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .align(Alignment.BottomEnd)
+                    .clip(CircleShape)
+                    .background(Color(0xFF0B0E17))
+                    .border(1.dp, NeonCyan, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CameraAlt,
+                    contentDescription = "Add or Change Photo",
+                    tint = NeonCyan,
+                    modifier = Modifier.size(15.dp)
+                )
+            }
+        }
+    }
+}
+

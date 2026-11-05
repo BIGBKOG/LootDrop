@@ -1853,6 +1853,122 @@ class ExampleRobolectricTest {
     }
 
     @Test
+    fun `user profile persists in app data and exports and restores correctly through JSON backup`() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val prefs = AppPreferences(context)
+        prefs.userProfileName = "Valkyrie99"
+
+        // Create a dummy avatar file in app data
+        val avatarFile = java.io.File(context.filesDir, com.example.util.UserProfileManager.AVATAR_FILE_NAME)
+        avatarFile.writeText("fake_avatar_image_bytes")
+        prefs.userProfileAvatarPath = avatarFile.absolutePath
+
+        val profile = com.example.util.UserProfileManager.getProfile(prefs)
+        assertEquals("Valkyrie99", profile.name)
+        assertEquals("Valkyrie99", profile.displayName)
+        assertEquals("V", profile.initial)
+        assertTrue(profile.hasCustomAvatar)
+
+        // Export to JSON
+        val emptyGiveaways = emptyList<com.example.data.local.GiveawayEntity>()
+        val emptySteam = emptyList<com.example.data.local.SteamGameEntity>()
+        val avatarBase64 = com.example.util.UserProfileManager.getAvatarBase64(context, profile.avatarPath)
+        assertTrue(avatarBase64.isNotEmpty())
+
+        val backupJson = com.example.util.BackupRestoreManager.createBackupJson(
+            allGiveaways = emptyGiveaways,
+            steamGames = emptySteam,
+            steamUserId = "12345",
+            userProfileName = profile.name,
+            userProfileAvatarBase64 = avatarBase64
+        )
+        assertTrue(backupJson.contains("\"userProfile\""))
+        assertTrue(backupJson.contains("Valkyrie99"))
+        assertTrue(backupJson.contains("\"avatarBase64\""))
+
+        // Simulate restore on a fresh device
+        val newDb = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
+        val newPrefs = AppPreferences(context)
+        newPrefs.userProfileName = ""
+        newPrefs.userProfileAvatarPath = ""
+        com.example.util.UserProfileManager.deleteAvatarFile(context)
+
+        assertFalse(newPrefs.userProfileName == "Valkyrie99")
+
+        val restoreResult = com.example.util.BackupRestoreManager.parseAndRestoreJson(
+            jsonString = backupJson,
+            database = newDb,
+            preferences = newPrefs
+        )
+        assertNotNull(restoreResult)
+        assertEquals("Valkyrie99", newPrefs.userProfileName)
+        assertTrue(newPrefs.userProfileAvatarPath.isNotBlank())
+        val restoredFile = java.io.File(newPrefs.userProfileAvatarPath)
+        assertTrue(restoredFile.exists())
+        assertEquals("fake_avatar_image_bytes", restoredFile.readText())
+
+        newDb.close()
+    }
+
+    @Test
+    fun `user profile custom trophy showcase selection persists and exports correctly`() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val prefs = AppPreferences(context)
+        prefs.userProfileName = "TrophyHunter"
+        prefs.hasCustomTrophySelection = false
+        prefs.displayedTrophyKeys = emptySet()
+
+        val initialProfile = com.example.util.UserProfileManager.getProfile(prefs)
+        assertFalse(initialProfile.hasCustomTrophySelection)
+        assertTrue(initialProfile.displayedTrophyKeys.isEmpty())
+
+        // Choose custom trophies to display
+        val selectedKeys = setOf("730_ach_ace", "1091500_ach_cyberpunk")
+        val updatedProfile = com.example.util.UserProfileManager.saveDisplayedTrophies(
+            preferences = prefs,
+            hasCustom = true,
+            keys = selectedKeys
+        )
+
+        assertTrue(updatedProfile.hasCustomTrophySelection)
+        assertEquals(2, updatedProfile.displayedTrophyKeys.size)
+        assertTrue(updatedProfile.displayedTrophyKeys.contains("730_ach_ace"))
+        assertTrue(updatedProfile.displayedTrophyKeys.contains("1091500_ach_cyberpunk"))
+
+        // Verify JSON export and restore
+        val emptyGiveaways = emptyList<com.example.data.local.GiveawayEntity>()
+        val emptySteam = emptyList<com.example.data.local.SteamGameEntity>()
+        val backupJson = com.example.util.BackupRestoreManager.createBackupJson(
+            allGiveaways = emptyGiveaways,
+            steamGames = emptySteam,
+            steamUserId = "12345",
+            userProfileName = updatedProfile.name,
+            userProfileHasCustomTrophies = updatedProfile.hasCustomTrophySelection,
+            userProfileDisplayedTrophyKeys = updatedProfile.displayedTrophyKeys
+        )
+
+        assertTrue(backupJson.contains("\"hasCustomTrophies\""))
+        assertTrue(backupJson.contains("730_ach_ace"))
+
+        // Fresh restore
+        val newDb = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
+        val newPrefs = AppPreferences(context)
+        newPrefs.hasCustomTrophySelection = false
+        newPrefs.displayedTrophyKeys = emptySet()
+
+        com.example.util.BackupRestoreManager.parseAndRestoreJson(
+            jsonString = backupJson,
+            database = newDb,
+            preferences = newPrefs
+        )
+
+        assertTrue(newPrefs.hasCustomTrophySelection)
+        assertTrue(newPrefs.displayedTrophyKeys.contains("730_ach_ace"))
+        assertTrue(newPrefs.displayedTrophyKeys.contains("1091500_ach_cyberpunk"))
+        newDb.close()
+    }
+
+    @Test
     fun `auto backup preferences persist interval and cloud folder configuration correctly`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val prefs = AppPreferences(context)

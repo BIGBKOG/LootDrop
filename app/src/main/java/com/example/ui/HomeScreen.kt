@@ -27,6 +27,8 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.offset
 import com.example.ui.components.OnboardingWalkthroughDialog
+import com.example.ui.components.ProfileAvatarCircle
+import com.example.ui.components.ProfileDialog
 import com.example.ui.components.CategoryMultiSelectSheet
 import com.example.data.model.GameCategory
 import androidx.compose.foundation.Image
@@ -217,11 +219,13 @@ fun HomeScreen(
     val isLoadingGameAchievements by viewModel.isLoadingGameAchievements.collectAsState()
     val recentPlayedSteamGames by viewModel.recentPlayedSteamGames.collectAsState()
     val top3FreeGamesToday by viewModel.top3FreeGamesToday.collectAsState()
+    val userProfile by viewModel.userProfile.collectAsState()
 
     val borderBeamAngle = rememberAnimatedBeamAngle(enabled = isAnimationsEnabled && !isLowEndOptimization)
 
     var isSearchExpanded by remember { mutableStateOf(false) }
     var isNotificationSettingsSheetOpen by remember { mutableStateOf(false) }
+    var showProfileDialog by remember { mutableStateOf(false) }
     var launcherChooserItem by remember { mutableStateOf<GiveawayItem?>(null) }
     var showSteamDialog by remember { mutableStateOf(false) }
 
@@ -317,13 +321,21 @@ fun HomeScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.weight(1f, fill = false)
                         ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_app_logo),
-                                contentDescription = "LootDrop Logo",
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                            )
+                            if (currentTab == MainTab.HOME) {
+                                ProfileAvatarCircle(
+                                    profile = userProfile,
+                                    size = 36.dp,
+                                    onClick = { showProfileDialog = true }
+                                )
+                            } else {
+                                Image(
+                                    painter = painterResource(id = R.drawable.ic_app_logo),
+                                    contentDescription = "LootDrop Logo",
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                )
+                            }
                             Column {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
@@ -361,7 +373,7 @@ fun HomeScreen(
                                 }
                                 Text(
                                     text = when (currentTab) {
-                                        MainTab.HOME -> "RECENT ACTIVITY & TOP PICKS"
+                                        MainTab.HOME -> if (userProfile.name.isNotBlank()) "WELCOME, ${userProfile.name.uppercase()}" else "RECENT ACTIVITY & TOP PICKS"
                                         MainTab.SETTINGS -> "APP PREFERENCES & CONTROLS"
                                         MainTab.CALENDAR -> "EXPIRATION RADAR & TIMELINE"
                                         MainTab.CLAIMED -> "MY CLAIMED GAME VAULT"
@@ -788,8 +800,35 @@ fun HomeScreen(
     // Onboarding Feature Tour Walkthrough (first launch animation or replayed from settings)
     if (showOnboardingWalkthrough) {
         OnboardingWalkthroughDialog(
+            initialProfile = userProfile,
+            onSaveProfile = { name, uri, remove ->
+                viewModel.updateUserProfile(name, uri, remove)
+            },
             onDismiss = { viewModel.dismissOnboarding() },
             onFinish = { viewModel.completeOnboarding() }
+        )
+    }
+
+    // Gamer Profile Dialog
+    if (showProfileDialog) {
+        ProfileDialog(
+            profile = userProfile,
+            uiStats = uiStats,
+            steamUserId = steamUserId,
+            steamTrophies = rarestAchievements,
+            isSyncingSteam = isSyncingSteam,
+            onSyncSteam = { viewModel.syncSteamLibrary() },
+            onOpenSteamDialog = { showSteamDialog = true },
+            onSaveProfile = { name, uri, remove ->
+                viewModel.updateUserProfile(name, uri, remove)
+            },
+            onSaveDisplayedTrophies = { hasCustom, keys ->
+                viewModel.updateDisplayedTrophies(hasCustom, keys)
+            },
+            onReplayTour = {
+                viewModel.replayOnboarding()
+            },
+            onDismiss = { showProfileDialog = false }
         )
     }
 

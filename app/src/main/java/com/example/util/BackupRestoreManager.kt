@@ -50,7 +50,11 @@ object BackupRestoreManager {
     fun createBackupJson(
         allGiveaways: List<GiveawayEntity>,
         steamGames: List<SteamGameEntity>,
-        steamUserId: String = ""
+        steamUserId: String = "",
+        userProfileName: String = "",
+        userProfileAvatarBase64: String = "",
+        userProfileHasCustomTrophies: Boolean = false,
+        userProfileDisplayedTrophyKeys: Set<String> = emptySet()
     ): String {
         val root = JSONObject()
         root.put("schemaVersion", BACKUP_SCHEMA_VERSION)
@@ -58,6 +62,22 @@ object BackupRestoreManager {
         root.put("exportTimestamp", System.currentTimeMillis())
         root.put("exportDateIso", SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).format(Date()))
         root.put("steamUserId", steamUserId)
+
+        // User Profile
+        if (userProfileName.isNotBlank() || userProfileAvatarBase64.isNotBlank() || userProfileHasCustomTrophies) {
+            val profileObj = JSONObject()
+            if (userProfileName.isNotBlank()) profileObj.put("name", userProfileName)
+            if (userProfileAvatarBase64.isNotBlank()) {
+                profileObj.put("avatarBase64", userProfileAvatarBase64)
+            }
+            if (userProfileHasCustomTrophies) {
+                profileObj.put("hasCustomTrophies", true)
+                val trophyArr = org.json.JSONArray()
+                userProfileDisplayedTrophyKeys.forEach { trophyArr.put(it) }
+                profileObj.put("displayedTrophyKeys", trophyArr)
+            }
+            root.put("userProfile", profileObj)
+        }
 
         // Only export giveaways that the user has interacted with (claimed, bookmarked, play status, custom size)
         val userGiveaways = allGiveaways.filter {
@@ -252,6 +272,34 @@ object BackupRestoreManager {
             preferences.steamUserId = steamUserId
         }
 
+        // 4. Restore User Profile if present
+        val profileObj = root.optJSONObject("userProfile")
+        if (profileObj != null) {
+            val name = profileObj.optString("name", "")
+            if (name.isNotBlank()) {
+                preferences.userProfileName = name
+            }
+            val avatarBase64 = profileObj.optString("avatarBase64", "")
+            if (avatarBase64.isNotBlank()) {
+                val savedPath = UserProfileManager.saveAvatarFromBase64(preferences.appContext, avatarBase64)
+                if (savedPath != null) {
+                    preferences.userProfileAvatarPath = savedPath
+                }
+            }
+            val hasCustom = profileObj.optBoolean("hasCustomTrophies", false)
+            if (hasCustom) {
+                preferences.hasCustomTrophySelection = true
+                val arr = profileObj.optJSONArray("displayedTrophyKeys")
+                val set = mutableSetOf<String>()
+                if (arr != null) {
+                    for (i in 0 until arr.length()) {
+                        set.add(arr.getString(i))
+                    }
+                }
+                preferences.displayedTrophyKeys = set
+            }
+        }
+
         val total = claimedRestored + steamRestored
         val message = "Restored $claimedRestored claimed Vault games and $steamRestored Steam games!"
         RestoreSummary(
@@ -276,8 +324,18 @@ object BackupRestoreManager {
             val allGiveaways = database.giveawayDao().getAllGiveawaysList()
             val steamGames = database.steamGameDao().getAllSteamGamesList()
             val steamUserId = preferences.steamUserId
+            val profileName = preferences.userProfileName
+            val avatarBase64 = UserProfileManager.getAvatarBase64(context, preferences.userProfileAvatarPath)
 
-            val jsonString = createBackupJson(allGiveaways, steamGames, steamUserId)
+            val jsonString = createBackupJson(
+                allGiveaways = allGiveaways,
+                steamGames = steamGames,
+                steamUserId = steamUserId,
+                userProfileName = profileName,
+                userProfileAvatarBase64 = avatarBase64,
+                userProfileHasCustomTrophies = preferences.hasCustomTrophySelection,
+                userProfileDisplayedTrophyKeys = preferences.displayedTrophyKeys
+            )
             val bytes = jsonString.toByteArray(Charsets.UTF_8)
 
             context.contentResolver.openOutputStream(targetUri)?.use { outputStream ->
@@ -366,8 +424,18 @@ object BackupRestoreManager {
             val allGiveaways = database.giveawayDao().getAllGiveawaysList()
             val steamGames = database.steamGameDao().getAllSteamGamesList()
             val steamUserId = preferences.steamUserId
+            val profileName = preferences.userProfileName
+            val avatarBase64 = UserProfileManager.getAvatarBase64(context, preferences.userProfileAvatarPath)
 
-            val jsonString = createBackupJson(allGiveaways, steamGames, steamUserId)
+            val jsonString = createBackupJson(
+                allGiveaways = allGiveaways,
+                steamGames = steamGames,
+                steamUserId = steamUserId,
+                userProfileName = profileName,
+                userProfileAvatarBase64 = avatarBase64,
+                userProfileHasCustomTrophies = preferences.hasCustomTrophySelection,
+                userProfileDisplayedTrophyKeys = preferences.displayedTrophyKeys
+            )
             val bytes = jsonString.toByteArray(Charsets.UTF_8)
 
             val treeDocumentId = DocumentsContract.getTreeDocumentId(folderTreeUri)

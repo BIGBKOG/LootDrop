@@ -296,11 +296,13 @@ enum class BackgroundTheme(
 }
 
 class AppPreferences(context: Context) {
-    private val appContext: Context = context.applicationContext
+    val appContext: Context = context.applicationContext
     private val prefs: SharedPreferences =
         context.getSharedPreferences("lootdrop_app_settings", Context.MODE_PRIVATE)
 
     companion object {
+        private const val KEY_USER_PROFILE_NAME = "key_user_profile_name"
+        private const val KEY_USER_PROFILE_AVATAR_PATH = "key_user_profile_avatar_path"
         private const val KEY_LOW_END_OPTIMIZATION = "key_low_end_optimization"
         private const val KEY_THEME_MODE = "key_theme_mode"
         private const val KEY_ACCENT_THEME = "key_accent_theme"
@@ -345,6 +347,8 @@ class AppPreferences(context: Context) {
         private const val KEY_AUTO_BACKUP_INTERVAL_DAYS = "key_auto_backup_interval_days"
         private const val KEY_LAST_AUTO_BACKUP_TIMESTAMP = "key_last_auto_backup_timestamp"
         private const val KEY_LAST_AUTO_BACKUP_STATUS = "key_last_auto_backup_status"
+        private const val KEY_HAS_CUSTOM_TROPHY_SELECTION = "key_has_custom_trophy_selection"
+        private const val KEY_DISPLAYED_TROPHY_KEYS = "key_displayed_trophy_keys"
     }
 
     var themeMode: ThemeMode
@@ -611,4 +615,20 @@ class AppPreferences(context: Context) {
     var pendingMythicAchievementJson: String?
         get() = prefs.getString("KEY_PENDING_MYTHIC_ACHIEVEMENT", null)
         set(value) = prefs.edit().putString("KEY_PENDING_MYTHIC_ACHIEVEMENT", value).apply()
+
+    var userProfileName: String
+        get() = prefs.getString(KEY_USER_PROFILE_NAME, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_USER_PROFILE_NAME, value).apply()
+
+    var userProfileAvatarPath: String
+        get() = prefs.getString(KEY_USER_PROFILE_AVATAR_PATH, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_USER_PROFILE_AVATAR_PATH, value).apply()
+
+    var hasCustomTrophySelection: Boolean
+        get() = prefs.getBoolean(KEY_HAS_CUSTOM_TROPHY_SELECTION, false)
+        set(value) = prefs.edit().putBoolean(KEY_HAS_CUSTOM_TROPHY_SELECTION, value).apply()
+
+    var displayedTrophyKeys: Set<String>
+        get() = prefs.getStringSet(KEY_DISPLAYED_TROPHY_KEYS, emptySet()) ?: emptySet()
+        set(value) = prefs.edit().putStringSet(KEY_DISPLAYED_TROPHY_KEYS, value).apply()
 }
