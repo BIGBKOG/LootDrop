@@ -54,6 +54,7 @@ import com.example.data.model.StorageTier
 import com.example.data.model.UserProfile
 import com.example.util.BackupRestoreManager
 import com.example.util.BackupSummary
+import com.example.util.CloudBackupManager
 import com.example.util.RestoreSummary
 import com.example.util.UserProfileManager
 
@@ -858,20 +859,23 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     val storageFootprintBytes: StateFlow<Long> = _storageFootprintBytes.asStateFlow()
 
     init {
-        refreshGiveaways()
-        updateStorageFootprint()
-        NotificationScheduler.schedulePeriodicSync(application)
-        AutoBackupScheduler.schedulePeriodicAutoBackup(application)
-        checkAndTriggerAutoBackupIfNeeded(application)
-        checkGithubReleases(isManual = false)
-        com.example.util.MythicAchievementNotificationManager.checkPendingFromPreferences(application)
+        runCatching { refreshGiveaways() }
+        runCatching { updateStorageFootprint() }
+        runCatching { NotificationScheduler.schedulePeriodicSync(application) }
+        runCatching { AutoBackupScheduler.schedulePeriodicAutoBackup(application) }
+        runCatching { checkAndTriggerAutoBackupIfNeeded(application) }
+        runCatching { checkAndTriggerCloudAutoBackupIfNeeded(application) }
+        runCatching { checkGithubReleases(isManual = false) }
+        runCatching { com.example.util.MythicAchievementNotificationManager.checkPendingFromPreferences(application) }
         viewModelScope.launch(Dispatchers.IO) {
-            val curatedAppIds = listOf(1091500, 620, 367520, 1145360, 264710, 1794680, 413150)
-            database.steamGameDao().deleteByAppIds(curatedAppIds)
-            database.steamAchievementDao().deleteByAppIds(curatedAppIds)
-            if (_steamUserId.value.isBlank()) {
-                database.steamGameDao().clearAll()
-                database.steamAchievementDao().clearAll()
+            runCatching {
+                val curatedAppIds = listOf(1091500, 620, 367520, 1145360, 264710, 1794680, 413150)
+                database.steamGameDao().deleteByAppIds(curatedAppIds)
+                database.steamAchievementDao().deleteByAppIds(curatedAppIds)
+                if (_steamUserId.value.isBlank()) {
+                    database.steamGameDao().clearAll()
+                    database.steamAchievementDao().clearAll()
+                }
             }
         }
     }
@@ -1960,12 +1964,12 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     fun triggerManualAutoBackup(context: Context) {
         val folderUriStr = preferences.autoBackupFolderUri
         if (folderUriStr.isBlank()) {
-            Toast.makeText(context, "Please select a backup folder first", Toast.LENGTH_SHORT).show()
+            runCatching { Toast.makeText(context, "Please select a backup folder first", Toast.LENGTH_SHORT).show() }
             return
         }
         val folderUri = runCatching { Uri.parse(folderUriStr) }.getOrNull()
         if (folderUri == null) {
-            Toast.makeText(context, "Invalid folder configuration", Toast.LENGTH_SHORT).show()
+            runCatching { Toast.makeText(context, "Invalid folder configuration", Toast.LENGTH_SHORT).show() }
             return
         }
 
@@ -1978,12 +1982,12 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
             result.onSuccess { summary ->
                 val folderName = preferences.autoBackupFolderDisplayName.ifBlank { "Cloud Folder" }
                 val msg = "Auto-backup updated in $folderName! (${summary.totalGamesCount} games)"
-                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                runCatching { Toast.makeText(context, msg, Toast.LENGTH_LONG).show() }
                 updateStorageFootprint()
             }.onFailure { e ->
                 val errorMsg = "Auto-backup failed: ${e.message}"
                 _lastAutoBackupStatus.value = "❌ $errorMsg"
-                Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
+                runCatching { Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show() }
             }
         }
     }
@@ -1995,13 +1999,164 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         val elapsed = System.currentTimeMillis() - preferences.lastAutoBackupTimestamp
         if (preferences.lastAutoBackupTimestamp <= 0L || elapsed >= intervalMillis) {
             viewModelScope.launch {
-                val result = BackupRestoreManager.performScheduledAutoBackup(context)
+                val result = runCatching { BackupRestoreManager.performScheduledAutoBackup(context) }.getOrNull()
                 _lastAutoBackupTimestamp.value = preferences.lastAutoBackupTimestamp
                 _lastAutoBackupStatus.value = preferences.lastAutoBackupStatus
                 if (result?.isSuccess == true) {
                     updateStorageFootprint()
                 }
             }
+        }
+    }
+
+    // --- Direct Cloud Backup & Sync Suite (Supabase & Cloudflare Proxy) ---
+
+    val isCloudBackupConfigured: Boolean
+        get() = CloudBackupManager.isConfigured()
+
+    val cloudBackupProviderHost: String
+        get() = CloudBackupManager.getProviderHost()
+
+    private val _isCloudAccountLoggedIn = MutableStateFlow(preferences.isCloudAccountLoggedIn)
+    val isCloudAccountLoggedIn: StateFlow<Boolean> = _isCloudAccountLoggedIn.asStateFlow()
+
+    private val _cloudAccountUsername = MutableStateFlow(preferences.cloudAccountUsername)
+    val cloudAccountUsername: StateFlow<String> = _cloudAccountUsername.asStateFlow()
+
+    private val _isCloudAuthenticating = MutableStateFlow(false)
+    val isCloudAuthenticating: StateFlow<Boolean> = _isCloudAuthenticating.asStateFlow()
+
+    private val _isCloudBackingUp = MutableStateFlow(false)
+    val isCloudBackingUp: StateFlow<Boolean> = _isCloudBackingUp.asStateFlow()
+
+    private val _isCloudRestoring = MutableStateFlow(false)
+    val isCloudRestoring: StateFlow<Boolean> = _isCloudRestoring.asStateFlow()
+
+    private val _cloudBackupStatus = MutableStateFlow<String?>(preferences.lastCloudBackupStatus.ifBlank { null })
+    val cloudBackupStatus: StateFlow<String?> = _cloudBackupStatus.asStateFlow()
+
+    private val _lastCloudBackupTimestamp = MutableStateFlow(preferences.lastCloudBackupTimestamp)
+    val lastCloudBackupTimestamp: StateFlow<Long> = _lastCloudBackupTimestamp.asStateFlow()
+
+    private val _isCloudAutoBackupEnabled = MutableStateFlow(preferences.isCloudAutoBackupEnabled)
+    val isCloudAutoBackupEnabled: StateFlow<Boolean> = _isCloudAutoBackupEnabled.asStateFlow()
+
+    fun dismissCloudBackupStatus() {
+        _cloudBackupStatus.value = null
+    }
+
+    fun setCloudAutoBackupEnabled(enabled: Boolean) {
+        preferences.isCloudAutoBackupEnabled = enabled
+        _isCloudAutoBackupEnabled.value = enabled
+    }
+
+    val cloudAccountEmail: String
+        get() = preferences.cloudAccountEmail
+
+    val lastRememberedCloudEmail: String
+        get() = preferences.lastCloudAccountEmail
+
+    val isCloudSessionActive: Boolean
+        get() = preferences.cloudAccountToken.isNotBlank() || preferences.cloudAccountRefreshToken.isNotBlank() || (preferences.isCloudAccountLoggedIn && CloudBackupManager.resolveCloudBackupUrl().isNotBlank())
+
+    private val _isCloudSessionActive = MutableStateFlow(isCloudSessionActive)
+    val isCloudSessionActiveFlow: StateFlow<Boolean> = _isCloudSessionActive.asStateFlow()
+
+    fun createCloudAccount(username: String, password: String, context: Context, email: String = "", onResult: (Boolean, String) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            _isCloudAuthenticating.value = true
+            val result = CloudBackupManager.createAccount(username, password, preferences, email)
+            _isCloudAuthenticating.value = false
+            _isCloudAccountLoggedIn.value = preferences.isCloudAccountLoggedIn
+            _cloudAccountUsername.value = preferences.cloudAccountUsername
+            _isCloudSessionActive.value = isCloudSessionActive
+            _cloudBackupStatus.value = preferences.lastCloudBackupStatus
+            result.onSuccess { user ->
+                val msg = "Account '$user' connected to Cloud Backup!"
+                runCatching { Toast.makeText(context, msg, Toast.LENGTH_LONG).show() }
+                onResult(true, msg)
+            }.onFailure { e ->
+                val err = e.message ?: "Account creation failed"
+                runCatching { Toast.makeText(context, err, Toast.LENGTH_LONG).show() }
+                onResult(false, err)
+            }
+        }
+    }
+
+    fun signInCloudAccount(username: String, password: String, context: Context, email: String = "", onResult: (Boolean, String) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            _isCloudAuthenticating.value = true
+            val result = CloudBackupManager.signInAccount(username, password, preferences, email)
+            _isCloudAuthenticating.value = false
+            _isCloudAccountLoggedIn.value = preferences.isCloudAccountLoggedIn
+            _cloudAccountUsername.value = preferences.cloudAccountUsername
+            _isCloudSessionActive.value = isCloudSessionActive
+            _cloudBackupStatus.value = preferences.lastCloudBackupStatus
+            result.onSuccess { user ->
+                val msg = "Signed in as '$user'! Ready to sync your backup."
+                runCatching { Toast.makeText(context, msg, Toast.LENGTH_LONG).show() }
+                onResult(true, msg)
+            }.onFailure { e ->
+                val err = e.message ?: "Sign in failed"
+                runCatching { Toast.makeText(context, err, Toast.LENGTH_LONG).show() }
+                onResult(false, err)
+            }
+        }
+    }
+
+    fun signOutCloudAccount(context: Context) {
+        CloudBackupManager.signOut(preferences)
+        _isCloudAccountLoggedIn.value = false
+        _cloudAccountUsername.value = ""
+        _isCloudSessionActive.value = false
+        _cloudBackupStatus.value = preferences.lastCloudBackupStatus
+        runCatching { Toast.makeText(context, "Signed out of Cloud Account", Toast.LENGTH_SHORT).show() }
+    }
+
+    fun backupToCloud(context: Context, isAutomated: Boolean = false) {
+        viewModelScope.launch {
+            _isCloudBackingUp.value = true
+            val result = CloudBackupManager.uploadBackupToCloud(context, database, preferences)
+            _isCloudBackingUp.value = false
+            _isCloudSessionActive.value = isCloudSessionActive
+            _lastCloudBackupTimestamp.value = preferences.lastCloudBackupTimestamp
+            _cloudBackupStatus.value = preferences.lastCloudBackupStatus
+            result.onSuccess { statusMsg ->
+                if (!isAutomated) {
+                    runCatching { Toast.makeText(context, statusMsg, Toast.LENGTH_LONG).show() }
+                }
+                updateStorageFootprint()
+            }.onFailure { e ->
+                if (!isAutomated) {
+                    runCatching { Toast.makeText(context, "Cloud backup failed: ${e.message}", Toast.LENGTH_LONG).show() }
+                }
+            }
+        }
+    }
+
+    fun restoreFromCloud(context: Context) {
+        viewModelScope.launch {
+            _isCloudRestoring.value = true
+            val result = CloudBackupManager.restoreBackupFromCloud(context, database, preferences)
+            _isCloudRestoring.value = false
+            _isCloudSessionActive.value = isCloudSessionActive
+            _cloudBackupStatus.value = preferences.lastCloudBackupStatus
+            result.onSuccess { summary ->
+                runCatching { Toast.makeText(context, summary.message, Toast.LENGTH_LONG).show() }
+                updateStorageFootprint()
+                refreshUserProfile()
+            }.onFailure { e ->
+                runCatching { Toast.makeText(context, "Cloud restore failed: ${e.message}", Toast.LENGTH_LONG).show() }
+            }
+        }
+    }
+
+    fun checkAndTriggerCloudAutoBackupIfNeeded(context: Context) {
+        if (!preferences.isCloudAutoBackupEnabled || !CloudBackupManager.isConfigured() || !preferences.isCloudAccountLoggedIn) return
+        val oneDayMillis = 24L * 60L * 60L * 1000L
+        val elapsed = System.currentTimeMillis() - preferences.lastCloudBackupTimestamp
+        if (preferences.lastCloudBackupTimestamp <= 0L || elapsed >= oneDayMillis) {
+            backupToCloud(context, isAutomated = true)
         }
     }
 }

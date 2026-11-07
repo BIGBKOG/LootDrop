@@ -68,49 +68,51 @@ class NotificationHelper(val context: Context) {
 
     private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            runCatching {
+                val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
 
-            val majorGamesChannel = NotificationChannel(
-                CHANNEL_MAJOR_GAMES,
-                "🔥 Major Free Games",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Instant alerts with game art when 100% free PC and console games drop"
-                enableVibration(true)
-                setShowBadge(true)
+                val majorGamesChannel = NotificationChannel(
+                    CHANNEL_MAJOR_GAMES,
+                    "🔥 Major Free Games",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Instant alerts with game art when 100% free PC and console games drop"
+                    enableVibration(true)
+                    setShowBadge(true)
+                }
+
+                val endingSoonChannel = NotificationChannel(
+                    CHANNEL_ENDING_SOON,
+                    "⏳ Expiring Soon Alerts",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Urgent alerts 24 hours before free game offers expire"
+                    enableVibration(true)
+                    setShowBadge(true)
+                }
+
+                val dlcChannel = NotificationChannel(
+                    CHANNEL_DLC,
+                    "🎁 DLC, Add-ons & Loot",
+                    NotificationManager.IMPORTANCE_DEFAULT
+                ).apply {
+                    description = "Notifications for free DLC packs, cosmetic skins, and in-game loot"
+                    setShowBadge(true)
+                }
+
+                val systemChannel = NotificationChannel(
+                    CHANNEL_SYSTEM,
+                    "🔔 System & Test Alerts",
+                    NotificationManager.IMPORTANCE_LOW
+                ).apply {
+                    description = "Sync status, test previews, and configuration confirmation"
+                    setShowBadge(false)
+                }
+
+                manager.createNotificationChannels(
+                    listOf(majorGamesChannel, endingSoonChannel, dlcChannel, systemChannel)
+                )
             }
-
-            val endingSoonChannel = NotificationChannel(
-                CHANNEL_ENDING_SOON,
-                "⏳ Expiring Soon Alerts",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Urgent alerts 24 hours before free game offers expire"
-                enableVibration(true)
-                setShowBadge(true)
-            }
-
-            val dlcChannel = NotificationChannel(
-                CHANNEL_DLC,
-                "🎁 DLC, Add-ons & Loot",
-                NotificationManager.IMPORTANCE_DEFAULT
-            ).apply {
-                description = "Notifications for free DLC packs, cosmetic skins, and in-game loot"
-                setShowBadge(true)
-            }
-
-            val systemChannel = NotificationChannel(
-                CHANNEL_SYSTEM,
-                "🔔 System & Test Alerts",
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Sync status, test previews, and configuration confirmation"
-                setShowBadge(false)
-            }
-
-            manager.createNotificationChannels(
-                listOf(majorGamesChannel, endingSoonChannel, dlcChannel, systemChannel)
-            )
         }
     }
 

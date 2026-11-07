@@ -631,4 +631,58 @@ class AppPreferences(context: Context) {
     var displayedTrophyKeys: Set<String>
         get() = prefs.getStringSet(KEY_DISPLAYED_TROPHY_KEYS, emptySet()) ?: emptySet()
         set(value) = prefs.edit().putStringSet(KEY_DISPLAYED_TROPHY_KEYS, value).apply()
+
+    var lastCloudBackupTimestamp: Long
+        get() = prefs.getLong("KEY_LAST_CLOUD_BACKUP_TIMESTAMP", 0L)
+        set(value) = prefs.edit().putLong("KEY_LAST_CLOUD_BACKUP_TIMESTAMP", value).apply()
+
+    var lastCloudBackupStatus: String
+        get() = prefs.getString("KEY_LAST_CLOUD_BACKUP_STATUS", "") ?: ""
+        set(value) = prefs.edit().putString("KEY_LAST_CLOUD_BACKUP_STATUS", value).apply()
+
+    var isCloudAutoBackupEnabled: Boolean
+        get() = prefs.getBoolean("KEY_IS_CLOUD_AUTO_BACKUP_ENABLED", false)
+        set(value) = prefs.edit().putBoolean("KEY_IS_CLOUD_AUTO_BACKUP_ENABLED", value).apply()
+
+    var cloudAccountUsername: String
+        get() = prefs.getString("KEY_CLOUD_ACCOUNT_USERNAME", "") ?: ""
+        set(value) = prefs.edit().putString("KEY_CLOUD_ACCOUNT_USERNAME", value).apply()
+
+    var cloudAccountEmail: String
+        get() = prefs.getString("KEY_CLOUD_ACCOUNT_EMAIL", "") ?: ""
+        set(value) = prefs.edit().putString("KEY_CLOUD_ACCOUNT_EMAIL", value).apply()
+
+    var cloudAccountPasswordHash: String
+        get() = prefs.getString("KEY_CLOUD_ACCOUNT_PW_HASH", "") ?: ""
+        set(value) = prefs.edit().putString("KEY_CLOUD_ACCOUNT_PW_HASH", value).apply()
+
+    var cloudAccountId: String
+        get() = prefs.getString("KEY_CLOUD_ACCOUNT_ID", "") ?: ""
+        set(value) = prefs.edit().putString("KEY_CLOUD_ACCOUNT_ID", value).apply()
+
+    var cloudAccountToken: String
+        get() = prefs.getString("KEY_CLOUD_ACCOUNT_TOKEN", "") ?: ""
+        set(value) = prefs.edit().putString("KEY_CLOUD_ACCOUNT_TOKEN", value).apply()
+
+    var cloudAccountRefreshToken: String
+        get() = prefs.getString("KEY_CLOUD_ACCOUNT_REFRESH_TOKEN", "") ?: ""
+        set(value) = prefs.edit().putString("KEY_CLOUD_ACCOUNT_REFRESH_TOKEN", value).apply()
+
+    var lastCloudAccountEmail: String
+        get() = prefs.getString("KEY_LAST_REMEMBERED_CLOUD_EMAIL", "") ?: ""
+        set(value) = prefs.edit().putString("KEY_LAST_REMEMBERED_CLOUD_EMAIL", value).apply()
+
+    val isCloudAccountLoggedIn: Boolean
+        get() = cloudAccountUsername.isNotBlank() && (cloudAccountPasswordHash.isNotBlank() || cloudAccountToken.isNotBlank())
+
+    fun clearCloudAccount() {
+        prefs.edit()
+            .remove("KEY_CLOUD_ACCOUNT_USERNAME")
+            .remove("KEY_CLOUD_ACCOUNT_EMAIL")
+            .remove("KEY_CLOUD_ACCOUNT_PW_HASH")
+            .remove("KEY_CLOUD_ACCOUNT_ID")
+            .remove("KEY_CLOUD_ACCOUNT_TOKEN")
+            .remove("KEY_CLOUD_ACCOUNT_REFRESH_TOKEN")
+            .apply()
+    }
 }

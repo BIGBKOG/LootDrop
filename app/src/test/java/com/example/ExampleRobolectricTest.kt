@@ -1387,11 +1387,11 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `version 3 0 0 is configured and recognized as modern release stream`() {
-        assertEquals("3.0.0", BuildConfig.VERSION_NAME)
-        assertEquals(43, BuildConfig.VERSION_CODE)
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("3.0.0"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v3.0.0"))
+    fun `version 3 1 0 is configured and recognized as modern release stream`() {
+        assertEquals("3.1.0", BuildConfig.VERSION_NAME)
+        assertEquals(44, BuildConfig.VERSION_CODE)
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("3.1.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v3.1.0"))
     }
 
     @Test

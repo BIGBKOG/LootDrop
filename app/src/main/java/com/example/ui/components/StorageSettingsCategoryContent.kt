@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Refresh
@@ -326,8 +327,17 @@ fun StorageSettingsCategoryContent(
 
     Spacer(modifier = Modifier.height(20.dp))
 
-    // SECTION: Library Backup & Restore
-    SectionHeader(title = "LIBRARY BACKUP & RESTORE", icon = Icons.Default.Sync)
+    // SECTION: Cloud Backup & Sync (Cloudflare R2 Object Storage)
+    SectionHeader(title = "CLOUD BACKUP (CLOUDFLARE R2)", icon = Icons.Default.Cloud)
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    CloudBackupCard(viewModel = viewModel)
+
+    Spacer(modifier = Modifier.height(20.dp))
+
+    // SECTION: Local File Backup & Restore
+    SectionHeader(title = "LOCAL FILE BACKUP & RESTORE", icon = Icons.Default.Sync)
 
     Spacer(modifier = Modifier.height(8.dp))
 

@@ -34,8 +34,8 @@ class MainActivity : ComponentActivity() {
         val dm = resources.displayMetrics
         viewModel.setDetectedScreenDpi(dm.densityDpi)
 
-        handleIntent(intent)
-        com.example.shortcuts.AppShortcutHelper.updateDynamicShortcuts(this)
+        runCatching { handleIntent(intent) }
+        runCatching { com.example.shortcuts.AppShortcutHelper.updateDynamicShortcuts(this) }
 
         setContent {
             val themeMode by viewModel.themeMode.collectAsState()
@@ -136,9 +136,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        viewModel.checkNewGamesOnAppReopen()
-        viewModel.checkAndTriggerAutoBackupIfNeeded(this)
-        com.example.util.MythicAchievementNotificationManager.checkPendingFromPreferences(this)
+        runCatching { viewModel.checkNewGamesOnAppReopen() }
+        runCatching { viewModel.checkAndTriggerAutoBackupIfNeeded(this) }
+        runCatching { viewModel.checkAndTriggerCloudAutoBackupIfNeeded(this) }
+        runCatching { com.example.util.MythicAchievementNotificationManager.checkPendingFromPreferences(this) }
     }
 
     override fun onStop() {
