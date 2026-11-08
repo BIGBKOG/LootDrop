@@ -113,10 +113,10 @@ class GithubReleaseClient(private val context: Context) {
             val idMatch = idRegex.matcher(entryText)
             val rawTag = if (idMatch.find()) idMatch.group(1)?.trim() else null
             val tag = rawTag ?: continue
-
             val cleanTag = tag.removePrefix("v").removePrefix("V")
+
             // Filter out old legacy 4.x from before the reset, but preserve all modern versions (1.x, 2.x, 3.x, etc.)
-            if (isCurrentModern && (cleanTag.startsWith("4.") || tag.contains("V4.") || tag.contains("Loot-Drop-V3."))) {
+            if (isCurrentModern && (cleanTag.startsWith("4.") || tag.contains("V4."))) {
                 continue
             }
 
@@ -354,8 +354,7 @@ class GithubReleaseClient(private val context: Context) {
 
             // Older legacy 4.x or unversioned tags from before the reset should not be treated as newer
             if (isCurrentModernStream(cleanCurrent)) {
-                if (cleanRemote.startsWith("4.") || cleanRemote.contains("V4.") ||
-                    cleanRemote.contains("Loot-Drop-V3.")) {
+                if (cleanRemote.startsWith("4.") || cleanRemote.contains("V4.")) {
                     return false
                 }
             }

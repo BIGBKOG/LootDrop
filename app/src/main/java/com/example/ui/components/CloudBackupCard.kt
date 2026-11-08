@@ -709,7 +709,8 @@ fun CloudBackupCard(
 
     // --- DIALOG: Create Cloud Account ---
     if (showCreateAccountDialog) {
-        var inputUser by remember { mutableStateOf(username) }
+        val currentProfileName = viewModel.userProfile.collectAsState().value.name
+        var inputUser by remember { mutableStateOf(username.ifBlank { currentProfileName.ifBlank { "" } }) }
         var inputEmail by remember { mutableStateOf("") }
         var inputPass by remember { mutableStateOf("") }
         var inputConfirmPass by remember { mutableStateOf("") }
@@ -738,7 +739,7 @@ fun CloudBackupCard(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        text = "Set up your gamer account and password (min 6 characters) to secure your personal .json backup in the cloud.",
+                        text = "Set up your gamer account and password (min 6 characters). Your display name will match your profile name and be reserved so nobody else can use it.",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -746,7 +747,7 @@ fun CloudBackupCard(
                     OutlinedTextField(
                         value = inputUser,
                         onValueChange = { inputUser = it; errorMessage = null },
-                        label = { Text("Gamer Tag / Account Name") },
+                        label = { Text("Gamer Tag / Profile Name") },
                         leadingIcon = { Icon(Icons.Default.AccountCircle, contentDescription = null, modifier = Modifier.size(18.dp)) },
                         singleLine = true,
                         modifier = Modifier
@@ -821,6 +822,10 @@ fun CloudBackupCard(
                         val p = inputPass
                         if (u.length < 3) {
                             errorMessage = "Account name must be at least 3 characters."
+                            return@Button
+                        }
+                        if (e.isBlank() || !e.contains("@") || !e.contains(".")) {
+                            errorMessage = "Please enter a valid email address (e.g. name@example.com)."
                             return@Button
                         }
                         if (p.length < 6) {

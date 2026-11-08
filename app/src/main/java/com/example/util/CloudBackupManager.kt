@@ -128,7 +128,87 @@ object CloudBackupManager {
     }
 
     /**
+     * Checks if a username has already been claimed by another email address in the cloud registry.
+     */
+    suspend fun checkUsernameAvailability(cleanUser: String, candidateEmail: String): Pair<Boolean, String?> = withContext(Dispatchers.IO) {
+        val cloudUrl = resolveCloudBackupUrl()
+        val supabaseKey = resolveSupabaseAnonKey()
+        val accountId = deriveAccountId(cleanUser)
+        if (cloudUrl.isBlank()) return@withContext Pair(true, null)
+
+        val registryUrl = "$cloudUrl?accountId=$accountId&filename=lootdrop_username_registry.json"
+        val req = Request.Builder()
+            .url(registryUrl)
+            .get()
+            .header("User-Agent", "LootDrop-Android/${BuildConfig.VERSION_NAME}")
+            .apply {
+                if (supabaseKey.isNotBlank()) {
+                    header("Authorization", "Bearer $supabaseKey")
+                }
+            }
+            .build()
+
+        runCatching {
+            httpClient.newCall(req).execute().use { resp ->
+                if (resp.isSuccessful) {
+                    val body = resp.body?.string() ?: ""
+                    val json = runCatching { JSONObject(body) }.getOrNull()
+                    val registeredEmail = json?.optString("email", "")?.trim() ?: ""
+                    val registeredUsername = json?.optString("username", "")?.trim() ?: cleanUser
+                    if (registeredEmail.isNotBlank() && !registeredEmail.equals(candidateEmail.trim(), ignoreCase = true)) {
+                        val msg = "The username '$registeredUsername' is already taken by another gamer. Nobody else can use your username! Please choose a different username."
+                        return@withContext Pair(false, msg)
+                    }
+                }
+            }
+        }
+        Pair(true, null)
+    }
+
+    /**
+     * Records the user's claimed username, email, and account ID in the Cloudflare R2 registry
+     * so that nobody else can register the same username with a different email.
+     */
+    suspend fun recordUsernameReservation(cleanUser: String, userEmail: String, pwHash: String): Boolean = withContext(Dispatchers.IO) {
+        val cloudUrl = resolveCloudBackupUrl()
+        val supabaseKey = resolveSupabaseAnonKey()
+        val accountId = deriveAccountId(cleanUser)
+        if (cloudUrl.isBlank()) return@withContext false
+
+        val payload = JSONObject().apply {
+            put("username", cleanUser)
+            put("accountId", accountId)
+            put("email", userEmail.trim())
+            put("pwHash", pwHash)
+            put("claimedAt", System.currentTimeMillis())
+        }.toString()
+
+        val registryUrl = "$cloudUrl?accountId=$accountId&filename=lootdrop_username_registry.json"
+        val req = Request.Builder()
+            .url(registryUrl)
+            .post(payload.toRequestBody(JSON_MEDIA_TYPE))
+            .header("Content-Type", "application/json")
+            .header("User-Agent", "LootDrop-Android/${BuildConfig.VERSION_NAME}")
+            .header("X-Account-Id", accountId)
+            .header("X-Account-Username", cleanUser)
+            .header("X-Account-Key", pwHash)
+            .apply {
+                if (supabaseKey.isNotBlank()) {
+                    header("Authorization", "Bearer $supabaseKey")
+                }
+            }
+            .build()
+
+        runCatching {
+            httpClient.newCall(req).execute().use { it.isSuccessful }
+        }.getOrDefault(false)
+    }
+
+    /**
      * Creates a new cloud backup account with username, email, and password.
+     * Attaches a display_name matching the user's profile name in Supabase user_metadata,
+     * updates the user record via PUT /auth/v1/user, and reserves the username so nobody
+     * else can use the same username.
      */
     suspend fun createAccount(
         username: String,
@@ -136,35 +216,71 @@ object CloudBackupManager {
         preferences: AppPreferences,
         emailInput: String = ""
     ): Result<String> = withContext(Dispatchers.IO) {
-        val cleanUser = username.trim().ifBlank { "User" }
+        val cleanUser = username.trim().ifBlank { preferences.userProfileName.trim().ifBlank { "User" } }
+        if (cleanUser.length < 3) {
+            return@withContext Result.failure(IllegalArgumentException("Gamer Tag / Username must be at least 3 characters."))
+        }
         if (password.length < 6) {
             return@withContext Result.failure(IllegalArgumentException("Password must be at least 6 characters for cloud security."))
         }
+        val targetEmail = if (emailInput.isNotBlank()) {
+            emailInput.trim()
+        } else if (preferences.cloudAccountEmail.isNotBlank()) {
+            preferences.cloudAccountEmail.trim()
+        } else {
+            "${deriveAccountId(cleanUser)}@lootdrop.app"
+        }
+
+        if (!targetEmail.contains("@") || !targetEmail.contains(".")) {
+            return@withContext Result.failure(IllegalArgumentException("Please enter a valid email address."))
+        }
+
         if (!isConfigured()) {
             return@withContext Result.failure(IllegalStateException("Cloud endpoint is not configured. Please set your secrets in AI Studio."))
         }
 
-        val targetEmail = if (emailInput.isNotBlank()) emailInput.trim() else resolveAuthEmail(cleanUser, preferences)
+        // Profile display name to send to Supabase (matches profile name)
+        val profileDisplayName = cleanUser
         val accountId = deriveAccountId(cleanUser)
         val pwHash = hashPassword(password, cleanUser)
+
+        // 1. Enforce Username Uniqueness: Check if another gamer has already registered this username
+        val (isAvailable, conflictReason) = checkUsernameAvailability(cleanUser, targetEmail)
+        if (!isAvailable) {
+            val err = conflictReason ?: "The username '$profileDisplayName' is already taken by another gamer. Nobody else can use your username! Please choose a different username."
+            preferences.lastCloudBackupStatus = "❌ $err"
+            return@withContext Result.failure(IllegalStateException(err))
+        }
 
         val supabaseUrl = resolveSupabaseUrl()
         val supabaseKey = resolveSupabaseAnonKey()
         var tokenAcquired = ""
+        var refreshTokenAcquired = ""
         var pendingEmailConfirmation = false
         var lastAuthError = ""
+        var userAlreadyExists = false
 
-        // 1. Supabase Auth signup
         if (supabaseUrl.isNotBlank() && supabaseKey.isNotBlank()) {
             val base = supabaseUrl.trimEnd('/')
             val authUrl = "$base/auth/v1/signup"
+
+            // Construct Supabase user_metadata with display_name matching profile name
+            val userMeta = JSONObject().apply {
+                put("display_name", profileDisplayName)
+                put("full_name", profileDisplayName)
+                put("name", profileDisplayName)
+                put("username", profileDisplayName)
+                put("user_name", profileDisplayName)
+                put("gamer_tag", profileDisplayName)
+                put("profile_name", profileDisplayName)
+                put("account_id", accountId)
+                put("contact_email", targetEmail)
+            }
+
+            // Main Supabase Auth signup with display_name matching profile name
             val authBody = JSONObject().apply {
                 put("email", targetEmail)
                 put("password", password)
-                val userMeta = JSONObject().apply {
-                    put("gamer_tag", cleanUser)
-                    put("account_id", accountId)
-                }
                 put("data", userMeta)
             }.toString()
 
@@ -174,17 +290,19 @@ object CloudBackupManager {
                 .header("apikey", supabaseKey)
                 .header("Authorization", "Bearer $supabaseKey")
                 .header("Content-Type", "application/json")
+                .header("User-Agent", "LootDrop-Android/${BuildConfig.VERSION_NAME}")
                 .build()
 
             runCatching {
                 httpClient.newCall(authReq).execute().use { resp ->
                     val body = resp.body?.string() ?: ""
+                    Log.d(TAG, "Supabase signup response code: ${resp.code}, body: ${body.take(150)}")
                     if (resp.isSuccessful) {
                         val json = JSONObject(body)
                         tokenAcquired = json.optString("access_token", "")
                         val rToken = json.optString("refresh_token", "")
                         if (rToken.isNotBlank()) {
-                            preferences.cloudAccountRefreshToken = rToken
+                            refreshTokenAcquired = rToken
                         }
                         // Check if email confirmation is required
                         if (tokenAcquired.isBlank()) {
@@ -195,15 +313,20 @@ object CloudBackupManager {
                             }
                         }
                     } else {
+                        val code = runCatching { JSONObject(body).optString("error_code", "") }.getOrDefault("")
                         val errMsg = runCatching { JSONObject(body).optString("msg", "") }.getOrDefault("")
                         val desc = runCatching { JSONObject(body).optString("error_description", "") }.getOrDefault("")
-                        lastAuthError = desc.ifBlank { errMsg }
+                        if (code == "user_already_exists" || errMsg.contains("User already registered", ignoreCase = true)) {
+                            userAlreadyExists = true
+                        } else {
+                            lastAuthError = desc.ifBlank { errMsg }
+                        }
                     }
                 }
             }
 
-            // If user was already signed up, attempt immediate password sign-in
-            if (tokenAcquired.isBlank()) {
+            // 2. If user already exists in Supabase with this email, authenticate to verify password and update display name
+            if (userAlreadyExists || (tokenAcquired.isBlank() && !pendingEmailConfirmation && lastAuthError.isBlank())) {
                 val tokenUrl = "$base/auth/v1/token?grant_type=password"
                 val tokenBody = JSONObject().apply {
                     put("email", targetEmail)
@@ -215,6 +338,7 @@ object CloudBackupManager {
                     .post(tokenBody.toRequestBody(JSON_MEDIA_TYPE))
                     .header("apikey", supabaseKey)
                     .header("Content-Type", "application/json")
+                    .header("User-Agent", "LootDrop-Android/${BuildConfig.VERSION_NAME}")
                     .build()
 
                 runCatching {
@@ -225,16 +349,18 @@ object CloudBackupManager {
                             tokenAcquired = json.optString("access_token", "")
                             val rToken = json.optString("refresh_token", "")
                             if (rToken.isNotBlank()) {
-                                preferences.cloudAccountRefreshToken = rToken
+                                refreshTokenAcquired = rToken
                             }
                             pendingEmailConfirmation = false
+                            userAlreadyExists = false
                         } else {
-                            val code = runCatching { JSONObject(body).optString("error_code", "") }.getOrDefault("")
                             val desc = runCatching { JSONObject(body).optString("error_description", "") }.getOrDefault("")
-                            if (code == "email_not_confirmed" || desc.contains("Email not confirmed", ignoreCase = true)) {
-                                pendingEmailConfirmation = true
-                            } else if (desc.isNotBlank()) {
-                                lastAuthError = desc
+                            val msg = runCatching { JSONObject(body).optString("msg", "") }.getOrDefault("")
+                            val clean = desc.ifBlank { msg }
+                            if (clean.contains("invalid login", ignoreCase = true) || clean.contains("invalid_grant", ignoreCase = true)) {
+                                lastAuthError = "An account with email '$targetEmail' is already registered with a different password. If this is your account, please enter your correct password or tap 'Sign In'."
+                            } else {
+                                lastAuthError = clean
                             }
                         }
                     }
@@ -245,11 +371,12 @@ object CloudBackupManager {
         // If email confirmation is pending on Supabase, inform the user clearly
         if (pendingEmailConfirmation && tokenAcquired.isBlank()) {
             preferences.cloudAccountUsername = cleanUser
+            preferences.userProfileName = cleanUser
             preferences.cloudAccountEmail = targetEmail
             preferences.cloudAccountId = accountId
             preferences.cloudAccountPasswordHash = pwHash
             val note = if (targetEmail.contains("@lootdrop.app")) {
-                "Account created. Please sign in with your credentials to activate cloud sync."
+                "Account created with display name '$profileDisplayName'. Please sign in with your credentials to activate cloud sync."
             } else {
                 "Verification email sent to $targetEmail. Please verify your email to finish activating your account."
             }
@@ -263,8 +390,9 @@ object CloudBackupManager {
             return@withContext Result.failure(IllegalStateException(err))
         }
 
-        // Save session
+        // Save session & update local profile name to match cloud display name
         preferences.cloudAccountUsername = cleanUser
+        preferences.userProfileName = cleanUser
         preferences.cloudAccountEmail = targetEmail
         preferences.lastCloudAccountEmail = targetEmail
         preferences.cloudAccountId = accountId
@@ -272,11 +400,75 @@ object CloudBackupManager {
         if (tokenAcquired.isNotBlank()) {
             preferences.cloudAccountToken = tokenAcquired
         }
+        if (refreshTokenAcquired.isNotBlank()) {
+            preferences.cloudAccountRefreshToken = refreshTokenAcquired
+        }
 
-        val successMsg = "Account '$cleanUser' connected to Cloud Backup!"
+        // Explicitly sync display_name to Supabase user metadata via PUT /auth/v1/user
+        if (tokenAcquired.isNotBlank()) {
+            updateSupabaseDisplayName(cleanUser, preferences, tokenOverride = tokenAcquired)
+        }
+
+        // Reserve username in R2 so nobody else can take it
+        recordUsernameReservation(cleanUser, targetEmail, pwHash)
+
+        val successMsg = "Account '$cleanUser' connected with display name matching your profile!"
         preferences.lastCloudBackupStatus = "✅ $successMsg"
 
         Result.success(cleanUser)
+    }
+
+    /**
+     * Updates the user's display name and profile name in Supabase user metadata.
+     */
+    suspend fun updateSupabaseDisplayName(
+        newProfileName: String,
+        preferences: AppPreferences,
+        tokenOverride: String? = null
+    ): Boolean = withContext(Dispatchers.IO) {
+        val cleanName = newProfileName.trim()
+        if (cleanName.isBlank()) return@withContext false
+        val token = tokenOverride?.takeIf { it.isNotBlank() } ?: preferences.cloudAccountToken
+        val supabaseUrl = resolveSupabaseUrl()
+        val supabaseKey = resolveSupabaseAnonKey()
+        if (token.isBlank() || supabaseUrl.isBlank() || supabaseKey.isBlank()) return@withContext false
+
+        val base = supabaseUrl.trimEnd('/')
+        val userUrl = "$base/auth/v1/user"
+        val payload = JSONObject().apply {
+            val userMeta = JSONObject().apply {
+                put("display_name", cleanName)
+                put("full_name", cleanName)
+                put("name", cleanName)
+                put("username", cleanName)
+                put("user_name", cleanName)
+                put("gamer_tag", cleanName)
+                put("profile_name", cleanName)
+            }
+            put("data", userMeta)
+        }.toString()
+
+        val req = Request.Builder()
+            .url(userUrl)
+            .put(payload.toRequestBody(JSON_MEDIA_TYPE))
+            .header("apikey", supabaseKey)
+            .header("Authorization", "Bearer $token")
+            .header("Content-Type", "application/json")
+            .header("User-Agent", "LootDrop-Android/${BuildConfig.VERSION_NAME}")
+            .build()
+
+        runCatching {
+            httpClient.newCall(req).execute().use { resp ->
+                val ok = resp.isSuccessful
+                if (ok) {
+                    preferences.cloudAccountUsername = cleanName
+                    Log.d(TAG, "Successfully updated Supabase display_name to '$cleanName'")
+                } else {
+                    Log.w(TAG, "Supabase PUT /auth/v1/user returned code: ${resp.code}")
+                }
+                ok
+            }
+        }.getOrDefault(false)
     }
 
     /**
@@ -446,10 +638,14 @@ object CloudBackupManager {
         preferences.cloudAccountPasswordHash = expectedPwHash
         if (tokenAcquired.isNotBlank()) {
             preferences.cloudAccountToken = tokenAcquired
+            updateSupabaseDisplayName(cleanIdentifier, preferences, tokenOverride = tokenAcquired)
         }
         if (refreshTokenAcquired.isNotBlank()) {
             preferences.cloudAccountRefreshToken = refreshTokenAcquired
         }
+
+        // Keep username reservation updated in R2
+        recordUsernameReservation(cleanIdentifier, finalEmail, expectedPwHash)
 
         val msg = "Signed in as '$cleanIdentifier'. Cloud Backup connected."
         preferences.lastCloudBackupStatus = "✅ $msg"

@@ -686,6 +686,10 @@ class ExampleRobolectricTest {
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.1.0", "3.0.0"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.1.1", "3.1.0"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.1.1", "3.1.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.1.2", "3.1.1"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.1.2", "3.1.1"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.1.1", "3.1.2"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.1.1", "3.1.2"))
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.1.0", "3.1.1"))
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.1.0", "3.1.1"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.0.1", "3.0.0"))
@@ -1391,11 +1395,22 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `version 3 1 1 is configured and recognized as modern release stream`() {
-        assertEquals("3.1.1", BuildConfig.VERSION_NAME)
-        assertEquals(45, BuildConfig.VERSION_CODE)
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("3.1.1"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v3.1.1"))
+    fun `version 3 1 2 is configured and recognized as modern release stream`() {
+        assertEquals("3.1.2", BuildConfig.VERSION_NAME)
+        assertEquals(46, BuildConfig.VERSION_CODE)
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("3.1.2"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v3.1.2"))
+    }
+
+    @Test
+    fun `cloud backup account display name derives deterministic account ID and anchors username`() {
+        val id1 = com.example.util.CloudBackupManager.deriveAccountId("Bkiller127")
+        val id2 = com.example.util.CloudBackupManager.deriveAccountId("bkiller127")
+        val id3 = com.example.util.CloudBackupManager.deriveAccountId("  BKiller127  ")
+        assertEquals(id1, id2)
+        assertEquals(id1, id3)
+        assertTrue(id1.startsWith("acc_bkiller127_"))
+        assertTrue(com.example.util.CloudBackupManager.isConfigured())
     }
 
     @Test

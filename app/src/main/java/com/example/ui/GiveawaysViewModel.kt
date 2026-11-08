@@ -1338,6 +1338,11 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
             removeAvatar = removeAvatar
         )
         _userProfile.value = updated
+        if (preferences.isCloudAccountLoggedIn) {
+            viewModelScope.launch {
+                CloudBackupManager.updateSupabaseDisplayName(name, preferences)
+            }
+        }
     }
 
     fun updateDisplayedTrophies(hasCustom: Boolean, keys: Set<String>) {
@@ -2120,7 +2125,8 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
             _isCloudSessionActive.value = isCloudSessionActive
             _cloudBackupStatus.value = preferences.lastCloudBackupStatus
             result.onSuccess { user ->
-                val msg = "Account '$user' connected to Cloud Backup!"
+                updateUserProfile(name = user)
+                val msg = "Account '$user' connected with display name matching your profile!"
                 runCatching { Toast.makeText(context, msg, Toast.LENGTH_LONG).show() }
                 onResult(true, msg)
             }.onFailure { e ->
@@ -2141,6 +2147,9 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
             _isCloudSessionActive.value = isCloudSessionActive
             _cloudBackupStatus.value = preferences.lastCloudBackupStatus
             result.onSuccess { user ->
+                if (preferences.userProfileName.isBlank() || preferences.userProfileName == "Gamer") {
+                    updateUserProfile(name = user)
+                }
                 val msg = "Signed in as '$user'! Ready to sync your backup."
                 runCatching { Toast.makeText(context, msg, Toast.LENGTH_LONG).show() }
                 onResult(true, msg)
