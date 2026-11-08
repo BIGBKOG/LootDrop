@@ -19,8 +19,15 @@ data class SteamOwnedGame(
     val name: String,
     val playtimeForeverMinutes: Int,
     val playtime2WeeksMinutes: Int = 0,
-    val rtimeLastPlayed: Long = 0L
+    val rtimeLastPlayed: Long = 0L,
+    val imgIconUrl: String = ""
 )
+
+sealed class SteamOwnedGamesResult {
+    data class Success(val games: List<SteamOwnedGame>) : SteamOwnedGamesResult()
+    object PrivacyRestricted : SteamOwnedGamesResult()
+    data class Error(val message: String) : SteamOwnedGamesResult()
+}
 
 data class SteamAchievementsResult(
     val unlockedCount: Int,
@@ -54,8 +61,9 @@ object SteamApiClient {
 
     private const val TAG = "SteamApiClient"
 
-    // Default key fallback (empty by default; configured via Settings or BuildConfig)
-    const val DEFAULT_API_KEY = ""
+    // Default key fallback
+    // Pre-configured Steam API Key fallback
+    const val DEFAULT_API_KEY = "22F46E31080D84AE934E0D1A142E6209"
 
     @Volatile
     private var steamHttpClient: OkHttpClient? = null
@@ -71,7 +79,7 @@ object SteamApiClient {
 
     /**
      * Resolves the active Steam API key, prioritizing user preferences,
-     * then BuildConfig, then the provided default key.
+     * then BuildConfig, then the pre-configured default key.
      */
     fun resolveApiKey(userKey: String?): String {
         if (!userKey.isNullOrBlank()) return userKey.trim()
@@ -88,66 +96,139 @@ object SteamApiClient {
     /**
      * Resolves a vanity profile name (e.g. "gabelogannewell") to a 64-bit Steam ID.
      * If the input is already a 17-digit numeric Steam ID, returns it immediately.
+     * Supports Steam Web API ResolveVanityURL as well as direct XML profile parsing fallback.
      */
     suspend fun resolveSteamId(vanityOrId: String, apiKey: String): String? = withContext(Dispatchers.IO) {
         val trimmed = vanityOrId.trim()
         if (trimmed.isBlank()) return@withContext null
 
-        // If it's already a 17-digit numeric Steam ID (76561198...)
-        if (trimmed.length == 17 && trimmed.all { it.isDigit() }) {
-            return@withContext trimmed
+        // 1. Direct 17-digit numeric SteamID (e.g. 76561198000000000)
+        val idRegex = Regex("""\b(7656119\d{10}|\d{17})\b""")
+        val directMatch = idRegex.find(trimmed)
+        if (directMatch != null) {
+            return@withContext directMatch.value
         }
 
-        // Clean any leading url parts (e.g. steamcommunity.com/id/gaben/ -> gaben)
-        val vanityName = trimmed
-            .removePrefix("https://")
-            .removePrefix("http://")
-            .removePrefix("steamcommunity.com/id/")
-            .removePrefix("steamcommunity.com/profiles/")
-            .trim('/')
+        // 2. Clean URLs (e.g. https://steamcommunity.com/id/gaben/ -> gaben)
+        var vanity = trimmed
+            .substringBefore("?")
+            .substringBefore("#")
+            .trim()
 
-        if (vanityName.length == 17 && vanityName.all { it.isDigit() }) {
-            return@withContext vanityName
+        if (vanity.contains("/id/")) {
+            vanity = vanity.substringAfter("/id/").trim('/')
+            vanity = vanity.substringBefore('/')
+        } else if (vanity.contains("/profiles/")) {
+            vanity = vanity.substringAfter("/profiles/").trim('/')
+            vanity = vanity.substringBefore('/')
+        } else {
+            vanity = vanity
+                .removePrefix("https://")
+                .removePrefix("http://")
+                .removePrefix("www.")
+                .removePrefix("steamcommunity.com/")
+                .trim('/')
         }
 
-        val url = "https://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/" +
-                "?key=$apiKey&vanityurl=$vanityName&format=json"
+        if (vanity.length == 17 && vanity.all { it.isDigit() }) {
+            return@withContext vanity
+        }
 
+        val effectiveKey = resolveApiKey(apiKey)
+
+        // 3. Steam Web API ResolveVanityURL
+        if (effectiveKey.isNotBlank()) {
+            val url = "https://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/" +
+                    "?key=$effectiveKey&vanityurl=$vanity&format=json"
+
+            try {
+                val request = Request.Builder().url(url).build()
+                val response = getClient().newCall(request).execute()
+                if (response.isSuccessful) {
+                    val body = response.body?.string() ?: ""
+                    val json = JSONObject(body)
+                    val resp = json.optJSONObject("response")
+                    if (resp?.optInt("success", 0) == 1) {
+                        val steamId = resp.optString("steamid").takeIf { it.isNotBlank() }
+                        if (steamId != null) return@withContext steamId
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Steam Web API ResolveVanityURL failed for '$vanity': ${e.message}")
+            }
+        }
+
+        // 4. Fallback 1: Parse public Steam community profile XML (steamcommunity.com/id/{vanity}/?xml=1)
         try {
-            val request = Request.Builder().url(url).build()
-            val response = getClient().newCall(request).execute()
-            if (!response.isSuccessful) return@withContext null
-
-            val body = response.body?.string() ?: return@withContext null
-            val json = JSONObject(body)
-            val resp = json.optJSONObject("response") ?: return@withContext null
-            if (resp.optInt("success", 0) == 1) {
-                resp.optString("steamid").takeIf { it.isNotBlank() }
-            } else {
-                null
+            val xmlUrl = "https://steamcommunity.com/id/$vanity/?xml=1"
+            val req = Request.Builder()
+                .url(xmlUrl)
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                .build()
+            val resp = getClient().newCall(req).execute()
+            if (resp.isSuccessful) {
+                val body = resp.body?.string() ?: ""
+                val idMatch = Regex("""<steamID64>(\d{17})</steamID64>""").find(body)
+                val resolvedId = idMatch?.groupValues?.getOrNull(1)
+                if (!resolvedId.isNullOrBlank()) {
+                    return@withContext resolvedId
+                }
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to resolve Steam vanity URL '$vanityOrId': ${e.message}")
-            null
+            Log.w(TAG, "Steam community XML resolve failed for '$vanity': ${e.message}")
         }
+
+        // 5. Fallback 2: Parse profiles XML (steamcommunity.com/profiles/{vanity}/?xml=1)
+        try {
+            val xmlUrl = "https://steamcommunity.com/profiles/$vanity/?xml=1"
+            val req = Request.Builder()
+                .url(xmlUrl)
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                .build()
+            val resp = getClient().newCall(req).execute()
+            if (resp.isSuccessful) {
+                val body = resp.body?.string() ?: ""
+                val idMatch = Regex("""<steamID64>(\d{17})</steamID64>""").find(body)
+                val resolvedId = idMatch?.groupValues?.getOrNull(1)
+                if (!resolvedId.isNullOrBlank()) {
+                    return@withContext resolvedId
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Steam community XML profiles resolve failed for '$vanity': ${e.message}")
+        }
+
+        null
     }
 
     /**
-     * Fetches all games owned on the given Steam account including total playtime.
+     * Fetches owned games with explicit privacy status reporting.
      */
-    suspend fun getOwnedGames(steamId: String, apiKey: String): List<SteamOwnedGame> = withContext(Dispatchers.IO) {
+    suspend fun getOwnedGamesWithStatus(steamId: String, apiKey: String): SteamOwnedGamesResult = withContext(Dispatchers.IO) {
+        val effectiveKey = resolveApiKey(apiKey)
         val url = "https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/" +
-                "?key=$apiKey&steamid=$steamId&include_appinfo=1&include_played_free_games=1&format=json"
+                "?key=$effectiveKey&steamid=$steamId&include_appinfo=1&include_played_free_games=1&format=json"
 
         try {
             val request = Request.Builder().url(url).build()
             val response = getClient().newCall(request).execute()
-            if (!response.isSuccessful) return@withContext emptyList()
+            if (!response.isSuccessful) {
+                return@withContext SteamOwnedGamesResult.Error("HTTP ${response.code}: ${response.message}")
+            }
 
-            val body = response.body?.string() ?: return@withContext emptyList()
+            val body = response.body?.string() ?: return@withContext SteamOwnedGamesResult.Error("Empty response body")
             val json = JSONObject(body)
-            val resp = json.optJSONObject("response") ?: return@withContext emptyList()
-            val gamesArray = resp.optJSONArray("games") ?: return@withContext emptyList()
+            val resp = json.optJSONObject("response") ?: return@withContext SteamOwnedGamesResult.PrivacyRestricted
+
+            // Check if games or game_count was omitted by Valve due to privacy restrictions
+            if (!resp.has("games") && !resp.has("game_count")) {
+                return@withContext SteamOwnedGamesResult.PrivacyRestricted
+            }
+
+            val gamesArray = resp.optJSONArray("games")
+            if (gamesArray == null) {
+                return@withContext SteamOwnedGamesResult.Success(emptyList())
+            }
 
             val list = mutableListOf<SteamOwnedGame>()
             for (i in 0 until gamesArray.length()) {
@@ -157,6 +238,7 @@ object SteamApiClient {
                 val playtime = g.optInt("playtime_forever", 0)
                 val playtime2Weeks = g.optInt("playtime_2weeks", 0)
                 val rtimeLastPlayed = g.optLong("rtime_last_played", 0L)
+                val imgIconUrl = g.optString("img_icon_url", "")
 
                 if (appId > 0 && name.isNotBlank()) {
                     list.add(
@@ -165,15 +247,26 @@ object SteamApiClient {
                             name = name,
                             playtimeForeverMinutes = playtime,
                             playtime2WeeksMinutes = playtime2Weeks,
-                            rtimeLastPlayed = rtimeLastPlayed
+                            rtimeLastPlayed = rtimeLastPlayed,
+                            imgIconUrl = imgIconUrl
                         )
                     )
                 }
             }
-            list
+            SteamOwnedGamesResult.Success(list)
         } catch (e: Exception) {
             Log.w(TAG, "Failed to fetch owned Steam games for $steamId: ${e.message}")
-            emptyList()
+            SteamOwnedGamesResult.Error(e.message ?: "Network error connecting to Steam")
+        }
+    }
+
+    /**
+     * Fetches all games owned on the given Steam account including total playtime.
+     */
+    suspend fun getOwnedGames(steamId: String, apiKey: String): List<SteamOwnedGame> {
+        return when (val res = getOwnedGamesWithStatus(steamId, apiKey)) {
+            is SteamOwnedGamesResult.Success -> res.games
+            else -> emptyList()
         }
     }
 
@@ -181,8 +274,9 @@ object SteamApiClient {
      * Fetches unlocked and total achievements for a specific Steam game.
      */
     suspend fun getPlayerAchievements(appId: Int, steamId: String, apiKey: String): SteamAchievementsResult? = withContext(Dispatchers.IO) {
+        val effectiveKey = resolveApiKey(apiKey)
         val url = "https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/" +
-                "?appid=$appId&key=$apiKey&steamid=$steamId"
+                "?appid=$appId&key=$effectiveKey&steamid=$steamId"
 
         try {
             val request = Request.Builder().url(url).build()
@@ -258,8 +352,9 @@ object SteamApiClient {
         apiKey: String,
         gameName: String = ""
     ): List<com.example.data.local.SteamAchievementEntity> = withContext(Dispatchers.IO) {
+        val effectiveKey = resolveApiKey(apiKey)
         val url = "https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/" +
-                "?appid=$appId&key=$apiKey&steamid=$steamId&l=en"
+                "?appid=$appId&key=$effectiveKey&steamid=$steamId&l=en"
 
         try {
             val request = Request.Builder().url(url).build()
@@ -310,25 +405,62 @@ object SteamApiClient {
     }
 
     /**
-     * Extracts Steam App ID from a store or giveaway URL.
+     * Extracts Steam App ID from a store, community, or steam:// URL.
      */
     fun extractSteamAppId(url: String): Int? {
-        val regex = Regex("""store\.steampowered\.com/app/(\d+)""")
+        val regex = Regex("""(?:store\.steampowered\.com/app/|steamcommunity\.com/app/|steam://run/)(\d+)""")
         return regex.find(url)?.groupValues?.getOrNull(1)?.toIntOrNull()
     }
 
+    private fun normalizeGameTitle(title: String): String {
+        return title
+            .replace(Regex("[™®©]"), "")
+            .replace(Regex("\\([^)]*\\)"), "")
+            .replace(Regex("\\[[^\\]]*\\]"), "")
+            .replace(
+                Regex("(?i)\\b(giveaway|free|dlc|pack|key|keys|bundle|edition|deluxe|definitive|remastered|goty|starter|loot|bonus|steam|epic games|gog)\\b"),
+                ""
+            )
+            .replace(Regex("[^a-zA-Z0-9 ]"), " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+            .lowercase(Locale.ROOT)
+    }
+
     /**
-     * Matches a LootDrop giveaway item against a user's Steam library.
+     * Matches a LootDrop giveaway item against a user's Steam library with multi-stage verification.
      */
     fun matchSteamGame(item: GiveawayItem, steamGames: List<SteamOwnedGame>): SteamOwnedGame? {
-        // 1. Check direct URL match
+        // 1. Direct Steam App ID match if already known on the item
+        if (item.steamAppId != null && item.steamAppId > 0) {
+            val directMatch = steamGames.find { it.appId == item.steamAppId }
+            if (directMatch != null) return directMatch
+        }
+
+        // 2. Direct App ID extracted from openGiveawayUrl
         val appIdFromUrl = extractSteamAppId(item.openGiveawayUrl)
         if (appIdFromUrl != null) {
             val directMatch = steamGames.find { it.appId == appIdFromUrl }
             if (directMatch != null) return directMatch
         }
 
-        // 2. Clean normalized title matching
+        // 3. Direct App ID from any launcher options
+        for (launcher in item.availableLaunchers) {
+            val launcherAppId = extractSteamAppId(launcher.url)
+            if (launcherAppId != null) {
+                val directMatch = steamGames.find { it.appId == launcherAppId }
+                if (directMatch != null) return directMatch
+            }
+        }
+
+        // 4. Exact normalized title matching
+        val targetNorm = normalizeGameTitle(item.title)
+        if (targetNorm.length >= 3) {
+            val exactNormMatch = steamGames.find { normalizeGameTitle(it.name) == targetNorm }
+            if (exactNormMatch != null) return exactNormMatch
+        }
+
+        // 5. Clean MetacriticCatalog matching
         val targetClean = MetacriticCatalog.cleanTitle(item.title).lowercase(Locale.ROOT)
         return steamGames.find { steamGame ->
             val steamClean = MetacriticCatalog.cleanTitle(steamGame.name).lowercase(Locale.ROOT)
@@ -344,6 +476,7 @@ object SteamApiClient {
      */
     suspend fun getWishlist(steamId: String, apiKey: String): Map<Int, String> = withContext(Dispatchers.IO) {
         val resultMap = mutableMapOf<Int, String>()
+        val effectiveKey = resolveApiKey(apiKey)
 
         // 1. Try store endpoint first to get both appId and game names
         try {
@@ -369,9 +502,9 @@ object SteamApiClient {
         }
 
         // 2. Fallback to IWishlistService/GetWishlist/v1 if store returned empty
-        if (resultMap.isEmpty() && apiKey.isNotBlank()) {
+        if (resultMap.isEmpty() && effectiveKey.isNotBlank()) {
             try {
-                val serviceUrl = "https://api.steampowered.com/IWishlistService/GetWishlist/v1/?key=$apiKey&steamid=$steamId"
+                val serviceUrl = "https://api.steampowered.com/IWishlistService/GetWishlist/v1/?key=$effectiveKey&steamid=$steamId"
                 val request = Request.Builder().url(serviceUrl).build()
                 val response = getClient().newCall(request).execute()
                 if (response.isSuccessful) {

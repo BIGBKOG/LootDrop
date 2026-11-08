@@ -32,6 +32,8 @@ import com.example.data.model.LauncherOption
 import com.example.data.model.PlayStatus
 import com.example.data.model.LibraryPlayFilter
 import com.example.data.remote.SteamApiClient
+import com.example.data.remote.SteamOwnedGame
+import com.example.data.remote.SteamOwnedGamesResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -1584,51 +1586,80 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                 val rawUserId = (customSteamId ?: _steamUserId.value).trim()
 
                 if (rawUserId.isBlank()) {
-                    _steamSyncStatus.value = "Please enter your Steam ID or profile URL."
+                    _steamSyncStatus.value = "Please enter your Steam ID, Custom URL, or profile URL."
                     return@launch
                 }
 
                 _steamSyncStatus.value = "Resolving Steam profile: $rawUserId..."
                 val resolvedSteamId = SteamApiClient.resolveSteamId(rawUserId, apiKey)
                 if (resolvedSteamId == null) {
-                    _steamSyncStatus.value = "Could not resolve Steam ID. Check your custom URL or Steam ID64."
+                    _steamSyncStatus.value = "Could not find Steam profile '$rawUserId'. In Steam: check your Custom URL in Edit Profile, or paste your 17-digit numeric Steam ID (starts with 7656119...)."
                     return@launch
                 }
                 preferences.steamUserId = rawUserId
                 _steamUserId.value = rawUserId
 
                 _steamSyncStatus.value = "Fetching owned games & wishlist from Steam..."
-                val ownedGames = SteamApiClient.getOwnedGames(resolvedSteamId, apiKey)
+                val gamesResult = SteamApiClient.getOwnedGamesWithStatus(resolvedSteamId, apiKey)
                 val wishlistMap = SteamApiClient.getWishlist(resolvedSteamId, apiKey)
 
+                val ownedGames: List<SteamOwnedGame> = when (gamesResult) {
+                    is SteamOwnedGamesResult.Success -> gamesResult.games
+                    is SteamOwnedGamesResult.PrivacyRestricted -> {
+                        _steamSyncStatus.value = "Profile found, but your Game Details are Private! In Steam app: go to Profile > Edit Profile > Privacy Settings > set 'Game details' to Public and uncheck 'Always keep my playtime private'."
+                        return@launch
+                    }
+                    is SteamOwnedGamesResult.Error -> {
+                        _steamSyncStatus.value = "Steam API error: ${gamesResult.message}"
+                        return@launch
+                    }
+                }
+
                 if (ownedGames.isEmpty() && wishlistMap.isEmpty()) {
-                    _steamSyncStatus.value = "No games found. Please ensure 'Game details' is set to Public in your Steam Privacy Settings."
+                    _steamSyncStatus.value = "No games found on Steam account ($resolvedSteamId)."
                     return@launch
                 }
 
-                // 1. Process and save ALL Steam library games (All+Paid feature)
+                // 1. Process and save ALL Steam library games (preserving existing trophies and statuses)
                 val claimedItems = allGiveaways.value.filter { it.isClaimed }
+                val existingMap = database.steamGameDao().getAllSteamGamesList().associateBy { it.appId }
+
                 val steamEntities = ownedGames.map { g ->
                     val matchedClaimed = claimedItems.firstOrNull { claimed ->
                         SteamApiClient.matchSteamGame(claimed, listOf(g)) != null
                     }
                     val isClaimed = matchedClaimed != null
-                    val classifiedStatus = SteamApiClient.classifyPlayStatus(
-                        playtimeMinutes = g.playtimeForeverMinutes,
-                        unlockedAchievements = 0,
-                        totalAchievements = 0
-                    )
+                    val existing = existingMap[g.appId]
+                    val unlocked = existing?.achievementsUnlocked ?: 0
+                    val total = existing?.achievementsTotal ?: 0
+                    val preservedStatus = if (existing != null && (existing.playStatus == PlayStatus.BEATEN || existing.playStatus == PlayStatus.DROPPED)) {
+                        existing.playStatus
+                    } else {
+                        SteamApiClient.classifyPlayStatus(
+                            playtimeMinutes = g.playtimeForeverMinutes,
+                            unlockedAchievements = unlocked,
+                            totalAchievements = total
+                        )
+                    }
+                    val icon = if (g.imgIconUrl.isNotBlank()) {
+                        "https://media.steampowered.com/steamcommunity/public/images/apps/${g.appId}/${g.imgIconUrl}.jpg"
+                    } else {
+                        existing?.imgIconUrl ?: ""
+                    }
+
                     SteamGameEntity(
                         appId = g.appId,
                         name = g.name,
                         playtimeMinutes = g.playtimeForeverMinutes,
                         playtime2WeeksMinutes = g.playtime2WeeksMinutes,
                         lastPlayedTimestamp = g.rtimeLastPlayed,
-                        playStatus = classifiedStatus,
-                        achievementsUnlocked = 0,
-                        achievementsTotal = 0,
-                        matchedGiveawayId = matchedClaimed?.id,
-                        isLootDropClaimed = isClaimed
+                        playStatus = preservedStatus,
+                        achievementsUnlocked = unlocked,
+                        achievementsTotal = total,
+                        imgIconUrl = icon,
+                        matchedGiveawayId = matchedClaimed?.id ?: existing?.matchedGiveawayId,
+                        isLootDropClaimed = isClaimed || (existing?.isLootDropClaimed == true),
+                        manualInstallSizeGb = existing?.manualInstallSizeGb
                     )
                 }
 
@@ -1692,6 +1723,14 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                         )
 
                         repository.updateSteamGamePlayStatus(steamGame.appId, classifiedStatus)
+                        database.steamGameDao().updateTelemetry(
+                            appId = steamGame.appId,
+                            status = classifiedStatus,
+                            playtime = steamGame.playtimeForeverMinutes,
+                            unlocked = unlocked,
+                            total = total,
+                            lastPlayed = steamGame.rtimeLastPlayed
+                        )
                     }
                 }
 
@@ -1699,7 +1738,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                 _steamSyncStatus.value = "Scanning trophies & global achievement rarities..."
                 val gamesWithPlaytime = ownedGames.filter { it.playtimeForeverMinutes > 0 }
                     .sortedByDescending { it.playtimeForeverMinutes }
-                    .take(12)
+                    .take(25)
 
                 var syncedTrophiesCount = 0
                 for (sg in gamesWithPlaytime) {
@@ -1729,13 +1768,22 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                             total = total,
                             lastPlayed = sg.rtimeLastPlayed
                         )
+                    } else {
+                        database.steamGameDao().updateTelemetry(
+                            appId = sg.appId,
+                            status = SteamApiClient.classifyPlayStatus(sg.playtimeForeverMinutes, 0, 0),
+                            playtime = sg.playtimeForeverMinutes,
+                            unlocked = 0,
+                            total = 0,
+                            lastPlayed = sg.rtimeLastPlayed
+                        )
                     }
                 }
 
                 val trophyMsg = if (syncedTrophiesCount > 0) " • $syncedTrophiesCount trophies tracked" else ""
                 val wishlistMsg = if (wishlistMap.isNotEmpty()) " • ${wishlistMap.size} wishlisted ($wishlistMatchCount free in app)" else ""
                 _steamSyncStatus.value = if (ownedGames.isNotEmpty()) {
-                    "Synced ${ownedGames.size} Steam games into All+Paid ($matchedCount claimed)$trophyMsg$wishlistMsg!"
+                    "Synced ${ownedGames.size} Steam games into All+Paid ($matchedCount claimed matched)$trophyMsg$wishlistMsg!"
                 } else {
                     "Synced wishlist ($wishlistMatchCount matches found)!"
                 }

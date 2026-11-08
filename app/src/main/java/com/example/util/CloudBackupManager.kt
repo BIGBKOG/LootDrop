@@ -35,6 +35,11 @@ object CloudBackupManager {
             .build()
     }
 
+    // Production fallbacks to guarantee cloud connectivity when secrets aren't bundled in exported APKs
+    private const val FALLBACK_SUPABASE_URL = "https://imcwutouksxeevmofcmn.supabase.co"
+    private const val FALLBACK_SUPABASE_KEY = "sb_publishable_htD9aXXk0QHjhG_ifS3nYg_kjUp7osD"
+    private const val FALLBACK_CLOUD_URL = "https://lootdrop-storage-proxy.hardingbentley67.workers.dev"
+
     /**
      * Resolves the Supabase URL, checking both uppercase and lowercase field variants.
      */
@@ -43,7 +48,7 @@ object CloudBackupManager {
         if (!b1.isNullOrBlank() && b1 != "YOUR_SUPABASE_URL_HERE") return b1.trim()
         val b2 = runCatching { BuildConfig::class.java.getField("SUPABASE_URL").get(null) as? String }.getOrNull()
         if (!b2.isNullOrBlank() && b2 != "YOUR_SUPABASE_URL_HERE") return b2.trim()
-        return ""
+        return FALLBACK_SUPABASE_URL
     }
 
     /**
@@ -54,7 +59,7 @@ object CloudBackupManager {
         if (!b1.isNullOrBlank() && b1 != "YOUR_SUPABASE_ANON_KEY_HERE") return b1.trim()
         val b2 = runCatching { BuildConfig::class.java.getField("SUPABASE_ANON_KEY").get(null) as? String }.getOrNull()
         if (!b2.isNullOrBlank() && b2 != "YOUR_SUPABASE_ANON_KEY_HERE") return b2.trim()
-        return ""
+        return FALLBACK_SUPABASE_KEY
     }
 
     /**
@@ -63,7 +68,7 @@ object CloudBackupManager {
     fun resolveCloudBackupUrl(): String {
         val b = runCatching { BuildConfig::class.java.getField("CLOUD_BACKUP_URL").get(null) as? String }.getOrNull()
         if (!b.isNullOrBlank() && b != "YOUR_CLOUD_BACKUP_URL_HERE") return b.trim()
-        return ""
+        return FALLBACK_CLOUD_URL
     }
 
     /**
@@ -582,7 +587,7 @@ object CloudBackupManager {
                 .url("$cloudUrl?accountId=$accountId&filename=lootdrop_backup_${accountId}.json")
                 .post(jsonString.toRequestBody(JSON_MEDIA_TYPE))
                 .header("Content-Type", "application/json")
-                .header("User-Agent", "LootDrop-Android/3.1.0")
+                .header("User-Agent", "LootDrop-Android/${BuildConfig.VERSION_NAME}")
                 .header("X-Account-Id", accountId)
                 .header("X-Account-Username", username)
                 .header("X-Account-Key", pwHash)
@@ -804,7 +809,7 @@ object CloudBackupManager {
             val reqBuilder = Request.Builder()
                 .url("$cloudUrl?accountId=$accountId&filename=lootdrop_backup_${accountId}.json")
                 .get()
-                .header("User-Agent", "LootDrop-Android/3.1.0")
+                .header("User-Agent", "LootDrop-Android/${BuildConfig.VERSION_NAME}")
                 .header("X-Account-Id", accountId)
                 .header("X-Account-Username", username)
                 .header("X-Account-Key", pwHash)

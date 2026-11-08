@@ -774,8 +774,8 @@ fun SteamSyncDialog(
                 OutlinedTextField(
                     value = userIdInput,
                     onValueChange = { userIdInput = it },
-                    label = { Text("Steam ID or Vanity Username", color = Color(0xFF8F98A0)) },
-                    placeholder = { Text("e.g. gaben or 76561198000000000", color = Color(0xFF667382)) },
+                    label = { Text("Steam ID64 or Custom URL", color = Color(0xFF8F98A0)) },
+                    placeholder = { Text("e.g. 76561198... or your Custom URL", color = Color(0xFF667382)) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Person,
@@ -798,12 +798,32 @@ fun SteamSyncDialog(
                     )
                 )
 
-                Text(
-                    text = "Tip: Found in your profile URL (steamcommunity.com/id/YOUR_NAME or /profiles/YOUR_ID64) or lookup at steamid64.net. Make sure 'Game details' is Public in Steam Privacy Settings.",
-                    fontSize = 10.sp,
-                    lineHeight = 14.sp,
-                    color = Color(0xFF8F98A0)
-                )
+                // Steam ID & Privacy Instructions Box
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFF131B23))
+                        .border(1.dp, Color(0xFF2A475E).copy(alpha = 0.6f), RoundedCornerShape(10.dp))
+                        .padding(10.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "How to find your Steam ID & sync games:",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF66C0F4)
+                        )
+                        Text(
+                            text = "1. In Steam app: click your account avatar (top right) > Account Details > copy your 17-digit Steam ID (starts with 7656119...).\n" +
+                                    "2. Or in Steam: Edit Profile > check your Custom URL.\n" +
+                                    "3. Privacy: In Steam > Edit Profile > Privacy Settings > set 'Game details' to Public (and uncheck 'Always keep playtime private').",
+                            fontSize = 10.sp,
+                            lineHeight = 15.sp,
+                            color = Color(0xFFC7D5E0)
+                        )
+                    }
+                }
 
                 // Advanced API Key toggle
                 Row(
@@ -852,12 +872,25 @@ fun SteamSyncDialog(
 
                 // Sync status message inside dialog
                 if (statusMessage != null) {
-                    Text(
-                        text = statusMessage,
-                        fontSize = 11.sp,
-                        color = if (statusMessage.contains("failed", ignoreCase = true)) MaterialTheme.colorScheme.error else NeonGreen,
-                        fontWeight = FontWeight.Medium
-                    )
+                    val isError = statusMessage.contains("failed", ignoreCase = true) ||
+                            statusMessage.contains("error", ignoreCase = true) ||
+                            statusMessage.contains("private", ignoreCase = true) ||
+                            statusMessage.contains("could not", ignoreCase = true)
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isError) Color(0xFF3B181E) else Color(0xFF0F382A),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, if (isError) Color(0xFFE53935) else NeonGreen)
+                    ) {
+                        Text(
+                            text = statusMessage,
+                            fontSize = 11.sp,
+                            color = if (isError) Color(0xFFFFB4AB) else NeonGreen,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(10.dp),
+                            lineHeight = 15.sp
+                        )
+                    }
                 }
 
                 // Action buttons
