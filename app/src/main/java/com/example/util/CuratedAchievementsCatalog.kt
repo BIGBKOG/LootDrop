@@ -27,6 +27,53 @@ object CuratedAchievementsCatalog {
     private val nowTimestamp = System.currentTimeMillis() / 1000L
 
     private val CATALOG = listOf(
+        // Backlog Challenge Milestone Trophies (777000)
+        PredefinedAchievement(
+            appId = 777000,
+            gameName = "Backlog Challenge",
+            apiName = "ACH_BACKLOG_SLAYER",
+            title = "Backlog Slayer",
+            description = "Completed a full line in the monthly 3x3 Backlog Challenge grid!",
+            globalPercent = 1.2f,
+            isDefaultUnlocked = false
+        ),
+        PredefinedAchievement(
+            appId = 777000,
+            gameName = "Backlog Challenge",
+            apiName = "ACH_VAULT_CLEANER",
+            title = "Vault Cleaner",
+            description = "Achieved a full 3x3 Blackout in the monthly Backlog Challenge grid!",
+            globalPercent = 0.4f,
+            isDefaultUnlocked = false
+        ),
+        PredefinedAchievement(
+            appId = 777000,
+            gameName = "Backlog Challenge",
+            apiName = "ACH_ROW_RAIDER",
+            title = "Row Raider",
+            description = "Completed a horizontal row of challenges in the monthly grid!",
+            globalPercent = 6.2f,
+            isDefaultUnlocked = false
+        ),
+        PredefinedAchievement(
+            appId = 777000,
+            gameName = "Backlog Challenge",
+            apiName = "ACH_COLUMN_CONQUEROR",
+            title = "Column Conqueror",
+            description = "Cleared an entire vertical column in the monthly Backlog Challenge!",
+            globalPercent = 4.8f,
+            isDefaultUnlocked = false
+        ),
+        PredefinedAchievement(
+            appId = 777000,
+            gameName = "Backlog Challenge",
+            apiName = "ACH_BLACKOUT_CHAMPION",
+            title = "Blackout Champion",
+            description = "Mastered all 9 tiles on the monthly Backlog Clearing card!",
+            globalPercent = 0.2f,
+            isDefaultUnlocked = false
+        ),
+
         // Cyberpunk 2077 (1091500)
         PredefinedAchievement(
             appId = 1091500,

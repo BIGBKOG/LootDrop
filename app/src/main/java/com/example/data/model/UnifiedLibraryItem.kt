@@ -12,11 +12,14 @@ import com.example.util.MetacriticCatalog
 sealed interface UnifiedLibraryItem {
     val key: String
     val name: String
+    val title: String get() = name
     val playStatus: PlayStatus
     val coverImageUrl: String
     val launcherLabel: String
     val metacriticScore: Int?
     val launchUri: String
+    val playtimeMinutes: Int
+    val hasControllerSupport: Boolean
 
     data class Steam(val game: SteamGameEntity) : UnifiedLibraryItem {
         override val key: String get() = "steam_${game.appId}"
@@ -27,6 +30,8 @@ sealed interface UnifiedLibraryItem {
         override val metacriticScore: Int?
             get() = MetacriticCatalog.resolveScore(game.name, "game", "", game.appId).takeIf { it > 0 }
         override val launchUri: String get() = game.launchUri
+        override val playtimeMinutes: Int get() = game.playtimeMinutes
+        override val hasControllerSupport: Boolean get() = game.hardwareProfile.isControllerFriendly
     }
 
     data class Vault(val giveaway: GiveawayItem) : UnifiedLibraryItem {
@@ -37,5 +42,7 @@ sealed interface UnifiedLibraryItem {
         override val launcherLabel: String get() = giveaway.launcherCategory.displayName
         override val metacriticScore: Int? get() = giveaway.metacriticScore.takeIf { it > 0 }
         override val launchUri: String get() = giveaway.openGiveawayUrl
+        override val playtimeMinutes: Int get() = 0
+        override val hasControllerSupport: Boolean get() = giveaway.hardwareProfile.isControllerFriendly
     }
 }

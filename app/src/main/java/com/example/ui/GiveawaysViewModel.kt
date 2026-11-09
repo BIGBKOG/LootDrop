@@ -58,6 +58,10 @@ import com.example.util.BackupRestoreManager
 import com.example.util.BackupSummary
 import com.example.util.CloudBackupManager
 import com.example.util.RestoreSummary
+import com.example.data.model.BacklogChallengeGrid
+import com.example.data.model.BacklogMilestoneReward
+import com.example.data.model.UnifiedLibraryItem
+import com.example.util.BacklogChallengeManager
 import com.example.util.UserProfileManager
 
 enum class MainTab {
@@ -543,6 +547,106 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isLoadingGameAchievements = MutableStateFlow(false)
     val isLoadingGameAchievements: StateFlow<Boolean> = _isLoadingGameAchievements.asStateFlow()
 
+    val allUnifiedLibraryItems: StateFlow<List<UnifiedLibraryItem>> = combine(
+        allGiveaways,
+        allSteamGames
+    ) { giveaways, steamGames ->
+        val vaultItems = giveaways.filter { it.isClaimed }.map { UnifiedLibraryItem.Vault(it) }
+        val steamItems = steamGames.map { UnifiedLibraryItem.Steam(it) }
+        vaultItems + steamItems
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _selectedBacklogWeek = MutableStateFlow(BacklogChallengeManager.getCurrentWeekKey())
+    val selectedBacklogWeek: StateFlow<String> = _selectedBacklogWeek.asStateFlow()
+    val selectedBacklogMonth: StateFlow<String> = selectedBacklogWeek
+
+    private val _isBacklogChallengeDialogVisible = MutableStateFlow(false)
+    val isBacklogChallengeDialogVisible: StateFlow<Boolean> = _isBacklogChallengeDialogVisible.asStateFlow()
+
+    fun setBacklogChallengeDialogVisible(visible: Boolean) {
+        _isBacklogChallengeDialogVisible.value = visible
+    }
+
+    private val _backlogGridRefreshTrigger = MutableStateFlow(0)
+
+    val backlogChallengeGrid: StateFlow<BacklogChallengeGrid> = combine(
+        allUnifiedLibraryItems,
+        rarestAchievements,
+        _selectedBacklogWeek,
+        _backlogGridRefreshTrigger
+    ) { games, trophies, weekKey, _ ->
+        BacklogChallengeManager.getOrGenerateGrid(
+            preferences = preferences,
+            weekKey = weekKey,
+            games = games,
+            trophies = trophies
+        )
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        BacklogChallengeManager.getOrGenerateGrid(preferences)
+    )
+
+    fun selectBacklogWeek(weekKey: String) {
+        val currentWeek = BacklogChallengeManager.getCurrentWeekKey()
+        val diffFromCurrent = BacklogChallengeManager.getWeeksBetween(currentWeek, weekKey)
+        val diffFromAnchor = BacklogChallengeManager.getWeeksBetween(BacklogChallengeManager.ANCHOR_WEEK_KEY, weekKey)
+        if (diffFromAnchor >= 0 && diffFromCurrent <= BacklogChallengeManager.MAX_FUTURE_WEEKS_PREVIEW) {
+            _selectedBacklogWeek.value = weekKey
+        }
+    }
+
+    fun selectBacklogMonth(monthKey: String) {
+        selectBacklogWeek(monthKey)
+    }
+
+    fun checkWeeklyBacklogRollover() {
+        val currentWeek = BacklogChallengeManager.getCurrentWeekKey()
+        val lastWeek = preferences.lastActiveBacklogWeekKey
+        if (lastWeek.isNotBlank() && lastWeek != currentWeek) {
+            preferences.lastActiveBacklogWeekKey = currentWeek
+            _selectedBacklogWeek.value = currentWeek
+            _backlogGridRefreshTrigger.value += 1
+            notificationHelper.sendWeeklyBacklogChallengeNotification(
+                BacklogChallengeManager.getWeekDisplayName(currentWeek)
+            )
+        } else if (lastWeek.isBlank()) {
+            preferences.lastActiveBacklogWeekKey = currentWeek
+        }
+    }
+
+    fun checkMonthlyBacklogRollover() {
+        checkWeeklyBacklogRollover()
+    }
+
+    fun refreshBacklogChallengeGrid() {
+        checkWeeklyBacklogRollover()
+        _backlogGridRefreshTrigger.value += 1
+    }
+
+    fun toggleBacklogTileManual(tileIndex: Int, weekKey: String = _selectedBacklogWeek.value): Boolean {
+        val success = BacklogChallengeManager.toggleManualOverride(preferences, weekKey, tileIndex)
+        if (success) {
+            _backlogGridRefreshTrigger.value += 1
+        }
+        return success
+    }
+
+    fun claimBacklogMilestones(onClaimed: (List<BacklogMilestoneReward>) -> Unit = {}) {
+        viewModelScope.launch {
+            val grid = backlogChallengeGrid.value
+            val newlyAwarded = BacklogChallengeManager.checkAndAwardMilestones(
+                grid = grid,
+                database = database,
+                preferences = preferences
+            )
+            if (newlyAwarded.isNotEmpty()) {
+                _backlogGridRefreshTrigger.value += 1
+                onClaimed(newlyAwarded)
+            }
+        }
+    }
+
     fun openGameAchievements(game: SteamGameEntity) {
         _selectedGameForAchievements.value = game
         loadAchievementsForGame(game)
@@ -869,6 +973,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         runCatching { checkAndTriggerCloudAutoBackupIfNeeded(application) }
         runCatching { checkGithubReleases(isManual = false) }
         runCatching { com.example.util.MythicAchievementNotificationManager.checkPendingFromPreferences(application) }
+        runCatching { checkWeeklyBacklogRollover() }
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {
                 val curatedAppIds = listOf(1091500, 620, 367520, 1145360, 264710, 1794680, 413150)

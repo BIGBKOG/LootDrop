@@ -39,10 +39,11 @@ enum class DpiScaleMode(val label: String, val shortName: String, val descriptio
 }
 
 enum class AccentCategory(val label: String) {
-    ALL("All (16)"),
+    ALL("All (19)"),
     GAMING("Gaming (6)"),
     CYBER("Cyber (5)"),
-    VAULT("Vault (5)")
+    VAULT("Vault (5)"),
+    REWARDS("Rewards (3)")
 }
 
 enum class AccentTheme(
@@ -214,6 +215,36 @@ enum class AccentTheme(
         "Iconic gamer community blurple",
         "Discord",
         AccentCategory.GAMING
+    ),
+    BACKLOG_SLAYER(
+        "Backlog Slayer",
+        Color(0xFFFF0055), // Radiant Neon Crimson
+        Color(0xFFFF5500), // Fiery Neon Orange
+        Color(0xFFDC2626),
+        Color(0xFFB91C1C),
+        "Unlocked via Backlog Challenge! Aggressive neon crimson & blaze",
+        "Slayer",
+        AccentCategory.REWARDS
+    ),
+    VAULT_CLEANER(
+        "Vault Cleaner Gold",
+        Color(0xFFFFD700), // 24K Pure Gold
+        Color(0xFF00FFCC), // Cyber Mint Accent
+        Color(0xFFB45309),
+        Color(0xFF0F766E),
+        "Unlocked via Backlog Blackout! Pure 24K vault gold & cyber teal",
+        "Vault Gold",
+        AccentCategory.REWARDS
+    ),
+    NEBULA_BLACKOUT(
+        "Nebula Blackout",
+        Color(0xFFB026FF), // Neon Purple
+        Color(0xFF00F0FF), // Cyber Cyan
+        Color(0xFF7E22CE),
+        Color(0xFF0284C7),
+        "Unlocked via Backlog Challenge! Cosmic nebula violet & electric cyan",
+        "Nebula",
+        AccentCategory.REWARDS
     );
 
     fun primary(isDark: Boolean): Color = if (isDark) darkPrimary else lightPrimary
@@ -685,4 +716,60 @@ class AppPreferences(context: Context) {
             .remove("KEY_CLOUD_ACCOUNT_REFRESH_TOKEN")
             .apply()
     }
+
+    // --- Backlog Challenge 3x3 Grid & Milestone Rewards ---
+    var unlockedAccentThemes: Set<String>
+        get() = prefs.getStringSet("KEY_UNLOCKED_ACCENT_THEMES", emptySet()) ?: emptySet()
+        set(value) = prefs.edit().putStringSet("KEY_UNLOCKED_ACCENT_THEMES", value).apply()
+
+    fun isAccentThemeUnlocked(theme: AccentTheme): Boolean {
+        return when (theme) {
+            AccentTheme.BACKLOG_SLAYER,
+            AccentTheme.VAULT_CLEANER,
+            AccentTheme.NEBULA_BLACKOUT -> theme.name in unlockedAccentThemes
+            else -> true
+        }
+    }
+
+    fun unlockAccentTheme(theme: AccentTheme): Boolean {
+        val current = unlockedAccentThemes.toMutableSet()
+        val added = current.add(theme.name)
+        if (added) {
+            unlockedAccentThemes = current
+        }
+        return added
+    }
+
+    var awardedBacklogMilestones: Set<String>
+        get() = prefs.getStringSet("KEY_AWARDED_BACKLOG_MILESTONES", emptySet()) ?: emptySet()
+        set(value) = prefs.edit().putStringSet("KEY_AWARDED_BACKLOG_MILESTONES", value).apply()
+
+    fun isBacklogMilestoneAwarded(milestoneId: String): Boolean {
+        return milestoneId in awardedBacklogMilestones
+    }
+
+    fun markBacklogMilestoneAwarded(milestoneId: String): Boolean {
+        val current = awardedBacklogMilestones.toMutableSet()
+        val added = current.add(milestoneId)
+        if (added) {
+            awardedBacklogMilestones = current
+        }
+        return added
+    }
+
+    fun getBacklogChallengeProgress(monthKey: String): String {
+        return prefs.getString("KEY_BACKLOG_GRID_PROGRESS_$monthKey", "") ?: ""
+    }
+
+    fun saveBacklogChallengeProgress(monthKey: String, progressJson: String) {
+        prefs.edit().putString("KEY_BACKLOG_GRID_PROGRESS_$monthKey", progressJson).apply()
+    }
+
+    var lastActiveBacklogMonthKey: String
+        get() = prefs.getString("KEY_LAST_ACTIVE_BACKLOG_MONTH_KEY", "") ?: ""
+        set(value) = prefs.edit().putString("KEY_LAST_ACTIVE_BACKLOG_MONTH_KEY", value).apply()
+
+    var lastActiveBacklogWeekKey: String
+        get() = prefs.getString("KEY_LAST_ACTIVE_BACKLOG_WEEK_KEY", "") ?: ""
+        set(value) = prefs.edit().putString("KEY_LAST_ACTIVE_BACKLOG_WEEK_KEY", value).apply()
 }

@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tune
@@ -37,6 +38,8 @@ import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -67,6 +70,7 @@ import com.example.ui.theme.TextMuted
 fun AppearanceSettingsCategoryContent(
     viewModel: GiveawaysViewModel
 ) {
+    val context = LocalContext.current
     val themeMode by viewModel.themeMode.collectAsState()
     val accentTheme by viewModel.accentTheme.collectAsState()
     val darkBgTheme by viewModel.darkBackgroundTheme.collectAsState()
@@ -379,13 +383,24 @@ fun AppearanceSettingsCategoryContent(
                     ) {
                         rowThemes.forEach { theme ->
                             val isSelected = theme == accentTheme
+                            val isUnlocked = viewModel.preferences.isAccentThemeUnlocked(theme)
                             val primary = theme.primary(isCurrentDark)
                             val secondary = theme.secondary(isCurrentDark)
 
                             Column(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .clickable { viewModel.setAccentTheme(theme) }
+                                    .clickable {
+                                        if (isUnlocked) {
+                                            viewModel.setAccentTheme(theme)
+                                        } else {
+                                            Toast.makeText(
+                                                context,
+                                                "🔒 Complete a row or blackout in Backlog Challenge to unlock ${theme.title}!",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
                                     .padding(vertical = 4.dp)
                                     .testTag("accent_theme_${theme.name.lowercase()}"),
                                 horizontalAlignment = Alignment.CenterHorizontally
@@ -397,7 +412,7 @@ fun AppearanceSettingsCategoryContent(
                                         .background(if (isSelected) primary.copy(alpha = 0.22f) else MaterialTheme.colorScheme.surfaceVariant)
                                         .border(
                                             width = if (isSelected) 2.5.dp else 1.dp,
-                                            color = if (isSelected) primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
+                                            color = if (isSelected) primary else if (!isUnlocked) Color(0xFF64748B) else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
                                             shape = CircleShape
                                         ),
                                     contentAlignment = Alignment.Center
@@ -408,7 +423,7 @@ fun AppearanceSettingsCategoryContent(
                                             .clip(CircleShape)
                                             .background(
                                                 Brush.linearGradient(
-                                                    colors = listOf(primary, secondary)
+                                                    colors = if (isUnlocked) listOf(primary, secondary) else listOf(primary.copy(alpha = 0.4f), secondary.copy(alpha = 0.4f))
                                                 )
                                             ),
                                         contentAlignment = Alignment.Center
@@ -428,6 +443,13 @@ fun AppearanceSettingsCategoryContent(
                                                     modifier = Modifier.size(12.dp)
                                                 )
                                             }
+                                        } else if (!isUnlocked) {
+                                            Icon(
+                                                imageVector = Icons.Default.Lock,
+                                                contentDescription = "Locked",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(12.dp)
+                                            )
                                         }
                                     }
                                 }
@@ -435,10 +457,10 @@ fun AppearanceSettingsCategoryContent(
                                 Spacer(modifier = Modifier.height(4.dp))
 
                                 Text(
-                                    text = theme.shortName,
+                                    text = if (!isUnlocked) "🔒 ${theme.shortName}" else theme.shortName,
                                     fontSize = 11.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) primary else MaterialTheme.colorScheme.onSurface,
+                                    color = if (isSelected) primary else if (!isUnlocked) Color(0xFF94A3B8) else MaterialTheme.colorScheme.onSurface,
                                     maxLines = 1,
                                     textAlign = TextAlign.Center
                                 )
@@ -461,6 +483,7 @@ fun AppearanceSettingsCategoryContent(
             ) {
                 items(displayedThemes) { theme ->
                     val isSelected = theme == accentTheme
+                    val isUnlocked = viewModel.preferences.isAccentThemeUnlocked(theme)
                     val primary = theme.primary(isCurrentDark)
                     val secondary = theme.secondary(isCurrentDark)
 
@@ -471,10 +494,20 @@ fun AppearanceSettingsCategoryContent(
                             .background(if (isSelected) primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant)
                             .border(
                                 width = if (isSelected) 2.dp else 1.dp,
-                                color = if (isSelected) primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
+                                color = if (isSelected) primary else if (!isUnlocked) Color(0xFF64748B) else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
                                 shape = RoundedCornerShape(14.dp)
                             )
-                            .clickable { viewModel.setAccentTheme(theme) }
+                            .clickable {
+                                if (isUnlocked) {
+                                    viewModel.setAccentTheme(theme)
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        "🔒 Complete a row or blackout in Backlog Challenge to unlock ${theme.title}!",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
                             .padding(12.dp)
                             .testTag("accent_theme_${theme.name.lowercase()}")
                     ) {
@@ -488,8 +521,18 @@ fun AppearanceSettingsCategoryContent(
                                     modifier = Modifier
                                         .size(26.dp)
                                         .clip(CircleShape)
-                                        .background(Brush.linearGradient(listOf(primary, secondary)))
-                                )
+                                        .background(Brush.linearGradient(listOf(primary, secondary))),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (!isUnlocked) {
+                                        Icon(
+                                            imageVector = Icons.Default.Lock,
+                                            contentDescription = "Locked",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                }
                                 if (isSelected) {
                                     Box(
                                         modifier = Modifier
@@ -504,6 +547,20 @@ fun AppearanceSettingsCategoryContent(
                                             color = Color(0xFF0B0F19)
                                         )
                                     }
+                                } else if (!isUnlocked) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(5.dp))
+                                            .background(Color(0xFF334155))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = "LOCKED",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFFCBD5E1)
+                                        )
+                                    }
                                 }
                             }
 
@@ -511,14 +568,14 @@ fun AppearanceSettingsCategoryContent(
                                 text = theme.title,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isSelected) primary else MaterialTheme.colorScheme.onSurface,
+                                color = if (isSelected) primary else if (!isUnlocked) Color(0xFF94A3B8) else MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1
                             )
 
                             Text(
-                                text = theme.description,
+                                text = if (!isUnlocked) "Unlock via Backlog Challenge" else theme.description,
                                 fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = if (!isUnlocked) Color(0xFFFBBF24) else MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 2,
                                 lineHeight = 14.sp
                             )

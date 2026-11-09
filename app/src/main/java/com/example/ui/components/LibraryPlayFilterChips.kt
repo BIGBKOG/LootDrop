@@ -103,6 +103,7 @@ fun LibraryPlayFilterChips(
     onStorageSelect: (StorageFilter) -> Unit = {},
     trophyCount: Int = 0,
     onRollRandomBacklog: (() -> Unit)? = null,
+    onOpenBacklogChallenge: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -389,6 +390,37 @@ fun LibraryPlayFilterChips(
                                     color = Color(0xFF0F1420)
                                 )
                             }
+                        }
+                    }
+                }
+
+                // 3x3 Backlog Challenge Grid Button
+                if (onOpenBacklogChallenge != null) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFF1E293B))
+                            .border(
+                                width = 1.dp,
+                                color = Color(0xFFF59E0B).copy(alpha = 0.6f),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .clickable { onOpenBacklogChallenge() }
+                            .padding(horizontal = 10.dp, vertical = 7.dp)
+                            .testTag("open_backlog_challenge_button"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text("🎯", fontSize = 12.sp)
+                            Text(
+                                text = "3×3 Challenge",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFFBBF24)
+                            )
                         }
                     }
                 }

@@ -61,6 +61,17 @@ class NotificationSyncReceiver : BroadcastReceiver() {
                     }
                 }
 
+                // Check weekly backlog rollover and notify if week changed (refreshes every Monday)
+                val currentWeek = com.example.util.BacklogChallengeManager.getCurrentWeekKey()
+                if (prefs.lastActiveBacklogWeekKey.isNotBlank() && prefs.lastActiveBacklogWeekKey != currentWeek) {
+                    prefs.lastActiveBacklogWeekKey = currentWeek
+                    helper.sendWeeklyBacklogChallengeNotification(
+                        com.example.util.BacklogChallengeManager.getWeekDisplayName(currentWeek)
+                    )
+                } else if (prefs.lastActiveBacklogWeekKey.isBlank()) {
+                    prefs.lastActiveBacklogWeekKey = currentWeek
+                }
+
                 // Reschedule next sync alarm
                 NotificationScheduler.schedulePeriodicSync(appContext)
             } catch (_: Exception) {

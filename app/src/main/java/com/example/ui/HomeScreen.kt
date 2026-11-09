@@ -162,6 +162,7 @@ import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 import com.example.data.model.UnifiedLibraryItem
 import com.example.ui.components.BacklogRouletteDialog
+import com.example.ui.components.BacklogChallengeGridDialog
 import android.widget.Toast
 import java.util.Locale
 
@@ -228,6 +229,9 @@ fun HomeScreen(
     var showProfileDialog by remember { mutableStateOf(false) }
     var launcherChooserItem by remember { mutableStateOf<GiveawayItem?>(null) }
     var showSteamDialog by remember { mutableStateOf(false) }
+    var showBacklogChallengeDialog by remember { mutableStateOf(false) }
+    val isBacklogChallengeDialogVisibleFromVm by viewModel.isBacklogChallengeDialogVisible.collectAsState()
+    val backlogChallengeGrid by viewModel.backlogChallengeGrid.collectAsState()
 
     val tabs = remember { listOf(MainTab.HOME, MainTab.DISCOVER, MainTab.CALENDAR, MainTab.CLAIMED, MainTab.SETTINGS) }
     val pagerState = rememberPagerState(
@@ -667,7 +671,8 @@ fun HomeScreen(
                             achievementOverviewStats = achievementOverviewStats,
                             rarestAchievements = rarestAchievements,
                             closestToHundredGames = closestToHundredGames,
-                            onOpenAchievements = { viewModel.openGameAchievements(it) }
+                            onOpenAchievements = { viewModel.openGameAchievements(it) },
+                            onOpenBacklogChallenge = { showBacklogChallengeDialog = true }
                         )
                     }
                     MainTab.CALENDAR -> {
@@ -829,6 +834,25 @@ fun HomeScreen(
                 viewModel.replayOnboarding()
             },
             onDismiss = { showProfileDialog = false }
+        )
+    }
+
+    // 3x3 Weekly Backlog Challenge Grid Dialog
+    if (showBacklogChallengeDialog || isBacklogChallengeDialogVisibleFromVm) {
+        BacklogChallengeGridDialog(
+            grid = backlogChallengeGrid,
+            onDismiss = {
+                showBacklogChallengeDialog = false
+                viewModel.setBacklogChallengeDialogVisible(false)
+            },
+            onToggleManualTile = { index -> viewModel.toggleBacklogTileManual(index) },
+            onRefreshCheck = { viewModel.refreshBacklogChallengeGrid() },
+            onClaimMilestones = { onAwarded -> viewModel.claimBacklogMilestones(onAwarded) },
+            onEquipTheme = { theme ->
+                viewModel.setAccentTheme(theme)
+                Toast.makeText(context, "Equipped ${theme.title}!", Toast.LENGTH_SHORT).show()
+            },
+            onSelectWeek = { week -> viewModel.selectBacklogWeek(week) }
         )
     }
 
@@ -1110,6 +1134,7 @@ fun GiveawaysTabContent(
     rarestAchievements: List<SteamAchievementEntity> = emptyList(),
     closestToHundredGames: List<SteamGameEntity> = emptyList(),
     onOpenAchievements: ((SteamGameEntity) -> Unit)? = null,
+    onOpenBacklogChallenge: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val isAllPaidMode = tab == MainTab.CLAIMED && libraryViewMode == LibraryViewMode.ALL_PAID
@@ -1180,7 +1205,8 @@ fun GiveawaysTabContent(
             selectedSort = selectedSort,
             onOpenFilterSheet = onOpenFilterSheet,
             onResetFilters = onResetFilters,
-            onRollRandomBacklog = { showBacklogRoulette = true }
+            onRollRandomBacklog = { showBacklogRoulette = true },
+            onOpenBacklogChallenge = onOpenBacklogChallenge
         )
     }
 
@@ -1839,6 +1865,7 @@ private fun InLibraryTopMenus(
     onOpenFilterSheet: () -> Unit,
     onResetFilters: () -> Unit,
     onRollRandomBacklog: (() -> Unit)? = null,
+    onOpenBacklogChallenge: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -1880,7 +1907,8 @@ private fun InLibraryTopMenus(
             selectedStorage = selectedStorageFilter,
             onStorageSelect = onStorageFilterSelect,
             trophyCount = trophyCount,
-            onRollRandomBacklog = onRollRandomBacklog
+            onRollRandomBacklog = onRollRandomBacklog,
+            onOpenBacklogChallenge = onOpenBacklogChallenge
         )
 
         // Active Filters Summary Pill (if any non-defaults are selected in Vault / All Paid)

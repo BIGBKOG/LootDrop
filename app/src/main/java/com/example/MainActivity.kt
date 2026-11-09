@@ -165,6 +165,9 @@ class MainActivity : ComponentActivity() {
         if (intent.hasExtra(NotificationHelper.EXTRA_MYTHIC_ACHIEVEMENT_API_NAME)) {
             com.example.util.MythicAchievementNotificationManager.checkPendingFromPreferences(this)
         }
+        if (intent.getBooleanExtra("EXTRA_OPEN_BACKLOG_CHALLENGE", false)) {
+            viewModel.setBacklogChallengeDialogVisible(true)
+        }
 
         // Action-based shortcut handling
         when (intent.action) {

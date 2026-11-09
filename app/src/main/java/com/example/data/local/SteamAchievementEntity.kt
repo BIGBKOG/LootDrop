@@ -39,7 +39,7 @@ data class SteamAchievementEntity(
         get() = if (globalPercentage > 0f) String.format(Locale.US, "%.1f%%", globalPercentage) else "N/A"
 
     val effectiveIconUrl: String
-        get() = if (iconUrl.isNotBlank()) iconUrl else if (appId > 0) "https://cdn.cloudflare.steamstatic.com/steam/apps/$appId/capsule_sm_120.jpg" else ""
+        get() = if (iconUrl.isNotBlank()) iconUrl else if (appId > 0 && appId != 777000) "https://cdn.cloudflare.steamstatic.com/steam/apps/$appId/capsule_sm_120.jpg" else ""
 }
 
 @Dao

@@ -657,6 +657,47 @@ class NotificationHelper(val context: Context) {
         }
     }
 
+    fun sendWeeklyBacklogChallengeNotification(weekDisplayName: String) {
+        if (!isNotificationsEnabled || isQuietHoursActive()) return
+
+        val title = "🎯 New $weekDisplayName Backlog Challenge!"
+        val content = "A fresh 3×3 challenge grid is active for this week! Complete lines to unlock trophies & theme colors."
+
+        val appIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("EXTRA_OPEN_BACKLOG_CHALLENGE", true)
+        }
+        val appPendingIntent = PendingIntent.getActivity(
+            context,
+            777100,
+            appIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_SYSTEM)
+            .setSmallIcon(R.drawable.ic_stat_gamepad)
+            .setContentTitle(title)
+            .setContentText(content)
+            .setSubText("Weekly Backlog Challenge")
+            .setColor(0xFFFFD700.toInt())
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .setContentIntent(appPendingIntent)
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText("$content\n\nPlay your backlog, beat games, and unlock cosmetic rewards!")
+            )
+
+        try {
+            NotificationManagerCompat.from(context).notify(777000, builder.build())
+        } catch (_: SecurityException) {
+        }
+    }
+
+    fun sendMonthlyBacklogChallengeNotification(monthDisplayName: String) {
+        sendWeeklyBacklogChallengeNotification(monthDisplayName)
+    }
+
     fun sendMythicAchievementNotification(achievement: com.example.data.local.SteamAchievementEntity) {
         if (!isNotificationsEnabled || isQuietHoursActive()) return
 
