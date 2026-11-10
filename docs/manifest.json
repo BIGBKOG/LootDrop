@@ -1,0 +1,17 @@
+{
+  "name": "LootDrop - Free Games Tracker",
+  "short_name": "LootDrop",
+  "description": "Real-time free game & 100% discount tracker for PC & Console with instant claim links, calendar expiration radar, vault library, and 3x3 backlog challenges.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0D0E15",
+  "theme_color": "#00F0FF",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎁</text></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

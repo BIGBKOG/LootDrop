@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>LootDrop - Free Games & 100% Discount Tracker</title>
+  <meta name="description" content="Real-time free game & 100% discount tracker for PC & Console (Steam, Epic Games, GOG, PlayStation, Xbox) with instant claim links, calendar expiration radar, vault library, and 3x3 backlog challenges.">
+  <meta name="theme-color" content="#12131C">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎁</text></svg>">
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="theme-cyan dark-mode">
+
+  <!-- Confetti Canvas for Milestone & Roulette Unlocks -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <!-- Top App Bar -->
+  <header class="top-bar">
+    <div class="top-bar-inner">
+      <div class="brand" id="brand-home-btn" title="Back to Home">
+        <div class="brand-logo-wrap">
+          <span class="brand-icon">📦</span>
+          <span class="brand-glow"></span>
+        </div>
+        <div class="brand-text">
+          <div class="brand-title-row">
+            <span class="brand-name">LootDrop</span>
+            <span class="version-badge">V3.2.0</span>
+          </div>
+          <span class="brand-sub">FREE GAME & BACKLOG RADAR</span>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <!-- Quick Backlog Challenge Grid Button -->
+        <button class="icon-btn pulse-glow" id="btn-open-challenge" title="Weekly 3×3 Backlog Challenge">
+          <span class="btn-emoji">🏆</span>
+          <span class="badge-dot" id="challenge-badge"></span>
+        </button>
+
+        <!-- Backlog Roulette Button -->
+        <button class="icon-btn" id="btn-open-roulette" title="Backlog Roulette (Pick Random Game)">
+          <span class="btn-emoji">🎲</span>
+        </button>
+
+        <!-- Notification Center -->
+        <button class="icon-btn" id="btn-open-notifications" title="Notifications & Alerts">
+          <span class="btn-emoji">🔔</span>
+          <span class="badge-count" id="notif-count">3</span>
+        </button>
+
+        <!-- Profile / Trophies Button -->
+        <button class="profile-avatar-btn" id="btn-open-profile" title="Player Profile & Trophies">
+          <div class="avatar-circle" id="top-avatar-circle">🎮</div>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container (Paved for Bottom Nav) -->
+  <main class="main-container">
+
+    <!-- TAB 1: HOME -->
+    <section class="tab-pane active" id="pane-home">
+      <!-- Announcement Banner (Patreon & Notice) -->
+      <div class="announcement-banner">
+        <div class="announcement-content">
+          <span class="announcement-tag">COMMUNITY</span>
+          <span class="announcement-text">Support LootDrop development on <strong>Patreon</strong> & grab the latest Android APK release!</span>
+        </div>
+        <div class="announcement-actions">
+          <a href="https://www.patreon.com/cw/LootDrop" target="_blank" rel="noopener" class="banner-btn patreon-btn">
+            ❤️ Support on Patreon
+          </a>
+          <a href="https://github.com/BIGBKOG/LootDrop/releases/download/V3.2.0/Lootdrop-V3.2.0.apk" class="banner-btn apk-btn" download>
+            ⬇️ Download V3.2.0 APK
+          </a>
+        </div>
+      </div>
+
+      <!-- Hero / Stats Banner -->
+      <div class="hero-card">
+        <div class="hero-left">
+          <div class="hero-eyebrow">
+            <span class="live-dot"></span> LIVE LOOT RADAR
+          </div>
+          <h1 class="hero-title">Claim 100% Free Games & Clear Your Backlog</h1>
+          <p class="hero-desc">Tracks active giveaways across Steam, Epic Games, GOG, PlayStation & Xbox. Never miss a limited-time freebie again.</p>
+          <div class="hero-cta-row">
+            <button class="btn btn-primary" id="hero-browse-btn">
+              ⚡ Explore Active Drops (<span id="stat-active-count">...</span>)
+            </button>
+            <button class="btn btn-secondary" id="hero-challenge-btn">
+              🎯 3×3 Weekly Grid
+            </button>
+          </div>
+        </div>
+        <div class="hero-stats-grid">
+          <div class="stat-box">
+            <span class="stat-number" id="stat-total-value">$0.00</span>
+            <span class="stat-label">FREE VALUE AVAILABLE</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-number" id="stat-vault-saved">$0.00</span>
+            <span class="stat-label">SAVED IN YOUR VAULT</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-number" id="stat-vault-count">0</span>
+            <span class="stat-label">CLAIMED IN VAULT</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-number" id="stat-expiring-soon">0</span>
+            <span class="stat-label">EXPIRING THIS WEEK</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3x3 Backlog Challenge Mini Preview Widget -->
+      <div class="challenge-widget-card" id="home-challenge-widget">
+        <div class="widget-header">
+          <div class="widget-title-group">
+            <span class="widget-icon">🏆</span>
+            <div>
+              <h3 class="widget-title">Weekly Backlog Challenge (3×3)</h3>
+              <p class="widget-subtitle" id="home-challenge-week-label">Week 1 • Ends Sunday</p>
+            </div>
+          </div>
+          <button class="btn btn-sm btn-outline" id="home-challenge-open-btn">
+            Open Grid & Unlocks ↗
+          </button>
+        </div>
+        <div class="mini-grid-progress">
+          <div class="progress-bar-wrap">
+            <div class="progress-fill" id="home-challenge-progress-fill" style="width: 0%;"></div>
+          </div>
+          <div class="progress-labels">
+            <span id="home-challenge-progress-text">0 / 9 Tiles Completed</span>
+            <span id="home-challenge-milestones-text">0 / 4 Milestones Claimed</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Featured / Top Drops Carousel -->
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <span class="section-badge">HOT PICKS</span>
+          <h2 class="section-title">Featured Freebies</h2>
+        </div>
+        <button class="link-btn" id="view-all-drops-btn">View All Radar ➔</button>
+      </div>
+
+      <div class="featured-carousel" id="featured-drops-container">
+        <!-- Rendered via JS -->
+        <div class="loading-spinner-wrap"><div class="spinner"></div><p>Scanning giveaway feeds...</p></div>
+      </div>
+
+      <!-- Fresh Drops Section -->
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <span class="section-badge">NEW DROPS</span>
+          <h2 class="section-title">Recently Added</h2>
+        </div>
+      </div>
+      <div class="drops-grid" id="home-recent-drops-container">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+    <!-- TAB 2: DISCOVER / RADAR -->
+    <section class="tab-pane" id="pane-discover">
+      <div class="radar-controls">
+        <!-- Search Bar -->
+        <div class="search-bar-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="radar-search-input" class="search-input" placeholder="Search by game title, publisher, DLC...">
+          <button class="clear-search-btn" id="clear-search-btn" style="display: none;">✕</button>
+        </div>
+
+        <!-- Platform Filter Chips -->
+        <div class="filter-chips-scroll" id="platform-chips">
+          <button class="filter-chip active" data-platform="all">🌐 All Platforms</button>
+          <button class="filter-chip" data-platform="steam">🎮 Steam</button>
+          <button class="filter-chip" data-platform="epic-games-store">⚡ Epic Games</button>
+          <button class="filter-chip" data-platform="gog">🔮 GOG</button>
+          <button class="filter-chip" data-platform="ps4,ps5">🕹️ PlayStation</button>
+          <button class="filter-chip" data-platform="xbox-one,xbox-series-xs">💚 Xbox</button>
+          <button class="filter-chip" data-platform="itchio">👾 Itch.io</button>
+          <button class="filter-chip" data-platform="ubisoft">⚜️ Ubisoft</button>
+          <button class="filter-chip" data-platform="pc">💻 PC Digital</button>
+        </div>
+
+        <!-- Secondary Filters Row -->
+        <div class="filter-secondary-row">
+          <div class="select-group">
+            <label for="filter-type">Type:</label>
+            <select id="filter-type" class="custom-select">
+              <option value="all">All Types</option>
+              <option value="game">Full Games Only</option>
+              <option value="loot">DLC & In-Game Loot</option>
+              <option value="beta">Beta / Early Access</option>
+            </select>
+          </div>
+
+          <div class="select-group">
+            <label for="sort-by">Sort By:</label>
+            <select id="sort-by" class="custom-select">
+              <option value="date">Newest First</option>
+              <option value="value">Highest Worth ($)</option>
+              <option value="popularity">Most Popular</option>
+              <option value="alphabetical">Title (A–Z)</option>
+            </select>
+          </div>
+
+          <div class="view-mode-toggle">
+            <button class="view-btn active" id="btn-view-grid" title="Grid View">🔲</button>
+            <button class="view-btn" id="btn-view-list" title="List View">☰</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Radar Deals Grid -->
+      <div class="radar-results-info">
+        <span id="radar-count-label">Showing giveaways...</span>
+      </div>
+      <div class="drops-grid" id="radar-drops-container">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+    <!-- TAB 3: CALENDAR / EXPIRATION RADAR -->
+    <section class="tab-pane" id="pane-calendar">
+      <div class="calendar-hero">
+        <div class="calendar-hero-content">
+          <span class="section-badge">TIMELINE RADAR</span>
+          <h2 class="section-title">Giveaway Expiration Radar</h2>
+          <p class="section-desc">Keep track of drop closing dates so you never let a free game or DLC slip away.</p>
+        </div>
+      </div>
+
+      <div class="calendar-groups" id="calendar-groups-container">
+        <!-- Rendered via JS (Ending Today, Ending This Week, Ending Later, Ongoing) -->
+      </div>
+    </section>
+
+    <!-- TAB 4: VAULT / CLAIMED -->
+    <section class="tab-pane" id="pane-vault">
+      <div class="vault-hero">
+        <div class="vault-stats-summary">
+          <div class="vault-stat">
+            <span class="vault-stat-val" id="vault-total-count">0</span>
+            <span class="vault-stat-lbl">GAMES IN VAULT</span>
+          </div>
+          <div class="vault-stat">
+            <span class="vault-stat-val" id="vault-saved-val">$0.00</span>
+            <span class="vault-stat-lbl">TOTAL VALUE CLAIMED</span>
+          </div>
+          <div class="vault-stat">
+            <span class="vault-stat-val" id="vault-beaten-count">0</span>
+            <span class="vault-stat-lbl">BEATEN / FINISHED</span>
+          </div>
+        </div>
+
+        <div class="vault-action-bar">
+          <!-- Play Status Filter Chips -->
+          <div class="filter-chips-scroll" id="vault-status-chips">
+            <button class="filter-chip active" data-status="all">All Items</button>
+            <button class="filter-chip" data-status="backlog">⏳ Backlog</button>
+            <button class="filter-chip" data-status="playing">🎮 Playing</button>
+            <button class="filter-chip" data-status="beaten">👑 Beaten</button>
+            <button class="filter-chip" data-status="dropped">⏸️ Paused</button>
+          </div>
+
+          <div class="vault-secondary-actions">
+            <button class="btn btn-sm btn-outline" id="btn-sync-steam">
+              🔄 Sync Steam 64 ID
+            </button>
+            <button class="btn btn-sm btn-outline" id="btn-spin-roulette">
+              🎲 Roulette
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vault Items Grid -->
+      <div class="drops-grid" id="vault-items-container">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+    <!-- TAB 5: SETTINGS -->
+    <section class="tab-pane" id="pane-settings">
+      <div class="settings-container">
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <span class="section-badge">PREFERENCES</span>
+            <h2 class="section-title">App Settings & Cloud</h2>
+          </div>
+        </div>
+
+        <!-- Appearance & Themes -->
+        <div class="settings-card">
+          <h3 class="settings-card-title">🎨 Appearance & Accent Theme</h3>
+          <p class="settings-card-sub">Customize accent glow, colors, and contrast.</p>
+          <div class="theme-options-grid" id="theme-options">
+            <button class="theme-btn active" data-theme="theme-cyan">
+              <span class="color-dot cyan"></span> Cyber Cyan
+            </button>
+            <button class="theme-btn" data-theme="theme-steam">
+              <span class="color-dot steam"></span> Steam Sky
+            </button>
+            <button class="theme-btn" data-theme="theme-violet">
+              <span class="color-dot violet"></span> Neon Violet
+            </button>
+            <button class="theme-btn" data-theme="theme-emerald">
+              <span class="color-dot emerald"></span> Vault Emerald
+            </button>
+            <button class="theme-btn" data-theme="theme-slayer">
+              <span class="color-dot slayer"></span> Backlog Slayer 🔥
+            </button>
+            <button class="theme-btn" data-theme="theme-amoled">
+              <span class="color-dot amoled"></span> AMOLED Black
+            </button>
+          </div>
+        </div>
+
+        <!-- Steam 64 ID Integration -->
+        <div class="settings-card">
+          <h3 class="settings-card-title">🎮 Steam 64 ID Integration</h3>
+          <p class="settings-card-sub">
+            Link your Steam account to synchronize library statistics and complete 3×3 challenge grid tiles.
+            Need your Steam 64 ID? Look it up quickly at 
+            <a href="https://www.steamid64.net" target="_blank" rel="noopener" class="text-link">steamid64.net ↗</a>.
+          </p>
+          <div class="steam-input-row">
+            <input type="text" id="steam-id-input" class="custom-input" placeholder="e.g. 76561198000000000 or custom vanity URL">
+            <button class="btn btn-primary" id="btn-save-steam-id">Save & Sync</button>
+          </div>
+          <p class="input-hint" id="steam-status-hint">Steam status: Not linked</p>
+        </div>
+
+        <!-- Cloud Backup / Restore -->
+        <div class="settings-card">
+          <h3 class="settings-card-title">☁️ Backup & Export</h3>
+          <p class="settings-card-sub">Export your LootDrop Vault, 3×3 challenge progress, and settings to JSON, or restore an existing backup.</p>
+          <div class="backup-btn-row">
+            <button class="btn btn-outline" id="btn-export-backup">💾 Export Backup (JSON)</button>
+            <label class="btn btn-outline file-label">
+              📂 Restore Backup
+              <input type="file" id="backup-file-input" accept=".json" style="display: none;">
+            </label>
+            <button class="btn btn-danger-outline" id="btn-clear-vault">🗑️ Clear Vault</button>
+          </div>
+        </div>
+
+        <!-- Community & Support -->
+        <div class="settings-card highlight-card">
+          <h3 class="settings-card-title">💖 LootDrop Community & Releases</h3>
+          <p class="settings-card-sub">
+            Support the creator, download mobile APK releases, and track F-Droid updates.
+          </p>
+          <div class="settings-links-list">
+            <a href="https://www.patreon.com/cw/LootDrop" target="_blank" rel="noopener" class="settings-link-item">
+              <span class="link-icon">❤️</span>
+              <div class="link-info">
+                <strong>LootDrop Patreon</strong>
+                <span>Support development & get exclusive backer perks</span>
+              </div>
+              <span class="link-arrow">↗</span>
+            </a>
+            <a href="https://github.com/BIGBKOG/LootDrop/releases" target="_blank" rel="noopener" class="settings-link-item">
+              <span class="link-icon">📦</span>
+              <div class="link-info">
+                <strong>GitHub Releases & APK Downloads</strong>
+                <span>Latest release: LootDrop V3.2.0 (Build 47)</span>
+              </div>
+              <span class="link-arrow">↗</span>
+            </a>
+            <div class="settings-link-item fdroid-item">
+              <span class="link-icon">🤖</span>
+              <div class="link-info">
+                <strong>F-Droid Store</strong>
+                <span>Loot Drop is coming to F-Droid in January!</span>
+              </div>
+              <span class="badge-pill">Coming Soon</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Floating Expressive Bottom Navigation Bar -->
+  <nav class="floating-nav-bar">
+    <button class="nav-item active" data-tab="pane-home">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Home</span>
+    </button>
+    <button class="nav-item" data-tab="pane-discover">
+      <span class="nav-icon">📡</span>
+      <span class="nav-label">Radar</span>
+    </button>
+    <button class="nav-item" data-tab="pane-calendar">
+      <span class="nav-icon">📅</span>
+      <span class="nav-label">Calendar</span>
+    </button>
+    <button class="nav-item" data-tab="pane-vault">
+      <span class="nav-icon">💎</span>
+      <span class="nav-label">Vault</span>
+      <span class="nav-dot" id="vault-nav-dot" style="display: none;"></span>
+    </button>
+    <button class="nav-item" data-tab="pane-settings">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">Settings</span>
+    </button>
+  </nav>
+
+  <!-- MODAL: 3x3 Backlog Challenge Grid -->
+  <div class="modal-overlay" id="modal-challenge">
+    <div class="modal-card challenge-modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-badge">GAMIFIED BACKLOG CLEARING</span>
+          <h2 class="modal-title">3×3 Weekly Backlog Grid</h2>
+          <p class="modal-subtitle" id="modal-week-title">Week 1 (Nov 9 – Nov 15)</p>
+        </div>
+        <button class="close-modal-btn" id="close-challenge-btn">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Week Navigation -->
+        <div class="week-nav-bar">
+          <button class="week-nav-btn" id="btn-prev-week" title="Previous Week">◀ Previous</button>
+          <div class="week-display" id="week-display-badge">Week 1 (Active)</div>
+          <button class="week-nav-btn" id="btn-next-week" title="Next Week (Max 2 weeks forward)">Next (Preview) ▶</button>
+        </div>
+
+        <!-- Manual Unlock Warning / Status Bar -->
+        <div class="manual-unlock-status" id="manual-unlock-status-bar">
+          <span class="unlock-counter-icon">🔑</span>
+          <span id="manual-unlock-text">Manual Overrides Remaining: <strong>2 / 2</strong></span>
+          <span class="unlock-tooltip-hint" title="You can manually unlock up to 2 tiles per week if a game doesn't track achievements or was played offline. Unchecking recycles your slot!">ℹ️ Rule</span>
+        </div>
+
+        <!-- 3x3 Tiles Grid -->
+        <div class="challenge-grid-3x3" id="challenge-grid-container">
+          <!-- 9 interactive tiles rendered via JS -->
+        </div>
+
+        <!-- Milestone Rewards Section -->
+        <div class="milestones-section">
+          <div class="milestones-header">
+            <h3>🎁 Milestone Rewards</h3>
+            <span class="milestone-badge" id="milestones-count-badge">0 / 4 Claimed</span>
+          </div>
+          <p class="milestones-desc">Complete rows, columns, or a full blackout to earn exclusive cosmetic trophies and in-app themes!</p>
+          <div class="milestones-list" id="milestones-list-container">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Giveaway Detail Dialog -->
+  <div class="modal-overlay" id="modal-giveaway-detail">
+    <div class="modal-card detail-modal-card">
+      <div class="modal-header image-header">
+        <img src="" alt="Game Banner" class="detail-banner-img" id="detail-banner-img">
+        <button class="close-modal-btn floating-close" id="close-detail-btn">✕</button>
+      </div>
+      <div class="modal-body detail-modal-body">
+        <div class="detail-top-info">
+          <div class="detail-badges-row">
+            <span class="badge-platform" id="detail-platform">Steam</span>
+            <span class="badge-type" id="detail-type">GAME</span>
+            <span class="badge-price" id="detail-worth">$19.99 FREE</span>
+            <span class="metacritic-badge" id="detail-metacritic" style="display: none;">88</span>
+          </div>
+          <h2 class="detail-title" id="detail-title">Game Title</h2>
+          <div class="detail-timer-row">
+            <span class="timer-icon">⏳</span>
+            <span id="detail-expiration">Ends in 3 days</span>
+          </div>
+        </div>
+
+        <div class="detail-instructions-box">
+          <h4>How to Claim:</h4>
+          <p id="detail-instructions">Follow the store link and add to your library.</p>
+        </div>
+
+        <div class="detail-description-box">
+          <h4>Description:</h4>
+          <p id="detail-description">Game details will appear here.</p>
+        </div>
+
+        <div class="detail-actions-bar">
+          <a href="#" target="_blank" rel="noopener" class="btn btn-primary btn-claim" id="detail-claim-link">
+            🚀 Claim on Store ↗
+          </a>
+          <button class="btn btn-secondary" id="detail-vault-toggle">
+            📥 Add to Vault
+          </button>
+          <button class="btn btn-outline" id="detail-share-btn">
+            🔗 Share Deal
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Backlog Roulette -->
+  <div class="modal-overlay" id="modal-roulette">
+    <div class="modal-card roulette-modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-badge">RANDOM PICKER</span>
+          <h2 class="modal-title">🎲 Backlog Roulette</h2>
+          <p class="modal-subtitle">Can't decide what to play? Let fate choose your next adventure.</p>
+        </div>
+        <button class="close-modal-btn" id="close-roulette-btn">✕</button>
+      </div>
+      <div class="modal-body roulette-body">
+        <div class="roulette-wheel-box">
+          <div class="roulette-display-card" id="roulette-display">
+            <span class="roulette-emoji">🎮</span>
+            <h3 class="roulette-game-title" id="roulette-game-title">Press Spin to Start!</h3>
+            <span class="roulette-game-status" id="roulette-game-platform">From your Vault & Giveaways</span>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-lg pulse-glow" id="btn-spin-wheel">
+          🎰 SPIN THE ROULETTE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Player Profile & Trophies -->
+  <div class="modal-overlay" id="modal-profile">
+    <div class="modal-card profile-modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-badge">GAMER IDENTITY</span>
+          <h2 class="modal-title">Player Profile & Trophies</h2>
+        </div>
+        <button class="close-modal-btn" id="close-profile-btn">✕</button>
+      </div>
+      <div class="modal-body profile-body">
+        <div class="profile-header-card">
+          <div class="profile-avatar-large" id="profile-avatar-large">🎮</div>
+          <div class="profile-meta">
+            <h3 id="profile-name-display">Vault Hunter</h3>
+            <span class="profile-title-tag" id="profile-title-badge">Backlog Slayer</span>
+            <p class="profile-bio-text" id="profile-bio-display">Clearing the backlog, one drop at a time.</p>
+          </div>
+        </div>
+
+        <div class="profile-edit-section">
+          <div class="input-group">
+            <label for="edit-profile-name">Gamer Tag / Name:</label>
+            <input type="text" id="edit-profile-name" class="custom-input" value="Vault Hunter">
+          </div>
+          <div class="input-group">
+            <label for="edit-profile-bio">Bio / Motto:</label>
+            <input type="text" id="edit-profile-bio" class="custom-input" value="Clearing the backlog, one drop at a time.">
+          </div>
+          <button class="btn btn-sm btn-outline" id="btn-save-profile">Save Profile Changes</button>
+        </div>
+
+        <!-- Trophy Showcase -->
+        <div class="trophy-showcase-section">
+          <div class="section-title-row">
+            <h4>🏆 Unlocked Trophies Showcase</h4>
+            <span class="trophy-count-pill" id="profile-trophy-count">0 Unlocked</span>
+          </div>
+          <div class="trophy-showcase-grid" id="profile-trophies-container">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Notification Center -->
+  <div class="modal-overlay" id="modal-notifications">
+    <div class="modal-card notif-modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-badge">ALERTS</span>
+          <h2 class="modal-title">🔔 Notification Center</h2>
+        </div>
+        <button class="close-modal-btn" id="close-notif-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="notif-actions-row">
+          <button class="btn btn-sm btn-outline" id="btn-mark-all-read">Mark All Read</button>
+          <button class="btn btn-sm btn-outline" id="btn-clear-notifs">Clear History</button>
+        </div>
+        <div class="notif-list" id="notif-list-container">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Popup -->
+  <div class="toast-popup" id="toast-popup">
+    <span class="toast-icon" id="toast-icon">✨</span>
+    <span class="toast-message" id="toast-message">Notification message</span>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
