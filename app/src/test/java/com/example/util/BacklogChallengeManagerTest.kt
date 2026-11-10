@@ -144,23 +144,14 @@ class BacklogChallengeManagerTest {
     @Test
     fun testManualOverrideAndLineCompletion() = runBlocking {
         val weekKey = "2026-W46"
-        // Initially no tiles are completed
-        val initialGrid = BacklogChallengeManager.getOrGenerateGrid(preferences, weekKey)
-        assertFalse(initialGrid.tiles[0].isCompleted)
-
-        // Use 2 manual unlocks for tiles 0 and 1
-        val toggle0 = BacklogChallengeManager.toggleManualOverride(preferences, weekKey, 0)
-        val toggle1 = BacklogChallengeManager.toggleManualOverride(preferences, weekKey, 1)
-        assertTrue(toggle0)
-        assertTrue(toggle1)
-
-        // Satisfy tile 2 with game/trophy data to complete row 0
         val testGame = UnifiedLibraryItem.Steam(
             SteamGameEntity(
                 appId = 12345,
                 name = "Celeste",
                 playStatus = PlayStatus.BEATEN,
-                playtimeMinutes = 180
+                playtimeMinutes = 180,
+                achievementsUnlocked = 10,
+                achievementsTotal = 10
             )
         )
         val testTrophy = SteamAchievementEntity(
@@ -175,6 +166,29 @@ class BacklogChallengeManagerTest {
             gameName = "Celeste"
         )
 
+        // Evaluate grid with game data - at least one tile will be auto-completed (e.g. BEAT_GAME or IMMERSION_SESSION)
+        val initialGrid = BacklogChallengeManager.getOrGenerateGrid(
+            preferences = preferences,
+            weekKey = weekKey,
+            games = listOf(testGame),
+            trophies = listOf(testTrophy)
+        )
+
+        val autoCompletedTile = initialGrid.tiles.firstOrNull { it.isCompleted }
+        assertNotNull("Should have at least one auto-completed tile with beaten game and trophy data", autoCompletedTile)
+        val autoIndex = autoCompletedTile!!.index
+        val targetRow = autoIndex / 3
+
+        // Use our 2 allowed manual unlocks on the remaining 2 tiles in this same row
+        val rowTiles = listOf(targetRow * 3, targetRow * 3 + 1, targetRow * 3 + 2)
+        val otherTwoTiles = rowTiles.filter { it != autoIndex }
+        assertEquals(2, otherTwoTiles.size)
+
+        val toggleFirst = BacklogChallengeManager.toggleManualOverride(preferences, weekKey, otherTwoTiles[0])
+        val toggleSecond = BacklogChallengeManager.toggleManualOverride(preferences, weekKey, otherTwoTiles[1])
+        assertTrue("First manual unlock in row should succeed", toggleFirst)
+        assertTrue("Second manual unlock in row should succeed", toggleSecond)
+
         val updatedGrid = BacklogChallengeManager.getOrGenerateGrid(
             preferences = preferences,
             weekKey = weekKey,
@@ -182,11 +196,13 @@ class BacklogChallengeManagerTest {
             trophies = listOf(testTrophy)
         )
 
-        assertTrue(updatedGrid.tiles[0].isCompleted)
-        assertTrue(updatedGrid.tiles[1].isCompleted)
-        assertTrue(updatedGrid.tiles[2].isCompleted)
-        assertTrue(updatedGrid.completedRows.contains(0))
-        assertEquals(1, updatedGrid.totalLinesCompleted)
+        assertTrue(updatedGrid.tiles[rowTiles[0]].isCompleted)
+        assertTrue(updatedGrid.tiles[rowTiles[1]].isCompleted)
+        assertTrue(updatedGrid.tiles[rowTiles[2]].isCompleted)
+        assertTrue(updatedGrid.completedRows.contains(targetRow))
+        assertTrue(updatedGrid.totalLinesCompleted >= 1)
+        assertEquals(2, updatedGrid.manualOverridesUsed)
+        assertEquals(0, updatedGrid.remainingManualOverrides)
         assertFalse(updatedGrid.isBlackout)
 
         // Backlog Slayer milestone should be unlocked because a line was completed

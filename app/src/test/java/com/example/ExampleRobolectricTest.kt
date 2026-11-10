@@ -688,6 +688,14 @@ class ExampleRobolectricTest {
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.1.1", "3.1.0"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.1.2", "3.1.1"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.1.2", "3.1.1"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.2.0", "3.1.2"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.2.0", "3.1.2"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.1.2", "3.2.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.1.2", "3.2.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.2.0", "3.2.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.2.0", "3.2.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.2.1", "3.2.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.2.1", "3.2.0"))
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.1.1", "3.1.2"))
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.1.1", "3.1.2"))
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.1.0", "3.1.1"))
@@ -1395,11 +1403,29 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `version 3 1 2 is configured and recognized as modern release stream`() {
-        assertEquals("3.1.2", BuildConfig.VERSION_NAME)
-        assertEquals(46, BuildConfig.VERSION_CODE)
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("3.1.2"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v3.1.2"))
+    fun `version 3 2 0 is configured and recognized as modern release stream`() {
+        assertEquals("3.2.0", BuildConfig.VERSION_NAME)
+        assertEquals(47, BuildConfig.VERSION_CODE)
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("3.2.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v3.2.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("V3.2.0"))
+    }
+
+    @Test
+    fun `github release pull and installer resolution operates with v3 2 0 conventions`() {
+        val client = com.example.data.remote.GithubReleaseClient(ApplicationProvider.getApplicationContext())
+        val apkUrl = client.resolveApkUrl(
+            com.example.data.remote.GithubReleaseClient.DEFAULT_OWNER,
+            com.example.data.remote.GithubReleaseClient.DEFAULT_REPO,
+            "V3.2.0"
+        )
+        assertNotNull(apkUrl)
+        assertTrue(apkUrl!!.contains("LootDrop/releases/download/V3.2.0/Lootdrop-V3.2.0.apk"))
+
+        // Verify installer handles missing APK gracefully without crashing
+        val dummyFile = java.io.File(ApplicationProvider.getApplicationContext<android.content.Context>().cacheDir, "non_existent.apk")
+        val installed = com.example.util.AppUpdateInstaller.installApk(ApplicationProvider.getApplicationContext(), dummyFile)
+        org.junit.Assert.assertFalse(installed)
     }
 
     @Test
