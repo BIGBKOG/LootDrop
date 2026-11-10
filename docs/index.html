@@ -10,18 +10,33 @@
   <link rel="manifest" href="manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body class="theme-cyan dark-mode">
+<body class="theme-cyber-cyan bg-dark">
 
-  <!-- Confetti Canvas for Milestone & Roulette Unlocks -->
+  <!-- Celebration Confetti Canvas -->
   <canvas id="confetti-canvas"></canvas>
+
+  <!-- Notification Permission Prompt Banner -->
+  <div class="perm-banner" id="perm-banner" style="display: none;">
+    <div class="perm-content">
+      <span class="perm-icon">🔔</span>
+      <div class="perm-text">
+        <strong>Enable Website Drop Alerts</strong>
+        <span>Get real-time browser alerts when games become 100% free on Steam, Epic, GOG, PlayStation & Xbox.</span>
+      </div>
+    </div>
+    <div class="perm-actions">
+      <button class="btn btn-sm btn-primary" id="btn-enable-web-alerts">Allow Alerts</button>
+      <button class="btn btn-sm btn-outline" id="btn-dismiss-perm">Later</button>
+    </div>
+  </div>
 
   <!-- Top App Bar -->
   <header class="top-bar">
     <div class="top-bar-inner">
-      <div class="brand" id="brand-home-btn" title="Back to Home">
+      <div class="brand" id="brand-home-btn" title="LootDrop Home">
         <div class="brand-logo-wrap">
           <span class="brand-icon">📦</span>
           <span class="brand-glow"></span>
@@ -36,19 +51,19 @@
       </div>
 
       <div class="top-actions">
-        <!-- Quick Backlog Challenge Grid Button -->
+        <!-- 3x3 Backlog Challenge Grid Button -->
         <button class="icon-btn pulse-glow" id="btn-open-challenge" title="Weekly 3×3 Backlog Challenge">
           <span class="btn-emoji">🏆</span>
           <span class="badge-dot" id="challenge-badge"></span>
         </button>
 
         <!-- Backlog Roulette Button -->
-        <button class="icon-btn" id="btn-open-roulette" title="Backlog Roulette (Pick Random Game)">
+        <button class="icon-btn" id="btn-open-roulette" title="Backlog Roulette (Random Game Picker)">
           <span class="btn-emoji">🎲</span>
         </button>
 
-        <!-- Notification Center -->
-        <button class="icon-btn" id="btn-open-notifications" title="Notifications & Alerts">
+        <!-- Notification Center & Alert Settings -->
+        <button class="icon-btn" id="btn-open-notifications" title="Notifications & Alert Settings">
           <span class="btn-emoji">🔔</span>
           <span class="badge-count" id="notif-count">3</span>
         </button>
@@ -61,16 +76,16 @@
     </div>
   </header>
 
-  <!-- Main Content Container (Paved for Bottom Nav) -->
+  <!-- Main Content Container -->
   <main class="main-container">
 
     <!-- TAB 1: HOME -->
     <section class="tab-pane active" id="pane-home">
-      <!-- Announcement Banner (Patreon & Notice) -->
+      <!-- Announcement Banner -->
       <div class="announcement-banner">
         <div class="announcement-content">
           <span class="announcement-tag">COMMUNITY</span>
-          <span class="announcement-text">Support LootDrop development on <strong>Patreon</strong> & grab the latest Android APK release!</span>
+          <span class="announcement-text">Support LootDrop on <strong>Patreon</strong> & download the native Android APK release!</span>
         </div>
         <div class="announcement-actions">
           <a href="https://www.patreon.com/cw/LootDrop" target="_blank" rel="noopener" class="banner-btn patreon-btn">
@@ -88,11 +103,11 @@
           <div class="hero-eyebrow">
             <span class="live-dot"></span> LIVE LOOT RADAR
           </div>
-          <h1 class="hero-title">Claim 100% Free Games & Clear Your Backlog</h1>
-          <p class="hero-desc">Tracks active giveaways across Steam, Epic Games, GOG, PlayStation & Xbox. Never miss a limited-time freebie again.</p>
+          <h1 class="hero-title">Claim 100% Free Games & Conquer Your Backlog</h1>
+          <p class="hero-desc">Real-time alerts for limited-time freebies across PC, Steam, Epic Games, GOG, PlayStation & Xbox.</p>
           <div class="hero-cta-row">
             <button class="btn btn-primary" id="hero-browse-btn">
-              ⚡ Explore Active Drops (<span id="stat-active-count">...</span>)
+              ⚡ Explore Radar (<span id="stat-active-count">...</span>)
             </button>
             <button class="btn btn-secondary" id="hero-challenge-btn">
               🎯 3×3 Weekly Grid
@@ -102,7 +117,7 @@
         <div class="hero-stats-grid">
           <div class="stat-box">
             <span class="stat-number" id="stat-total-value">$0.00</span>
-            <span class="stat-label">FREE VALUE AVAILABLE</span>
+            <span class="stat-label">TOTAL FREE VALUE</span>
           </div>
           <div class="stat-box">
             <span class="stat-number" id="stat-vault-saved">$0.00</span>
@@ -119,14 +134,14 @@
         </div>
       </div>
 
-      <!-- 3x3 Backlog Challenge Mini Preview Widget -->
+      <!-- 3x3 Backlog Challenge Mini Widget -->
       <div class="challenge-widget-card" id="home-challenge-widget">
         <div class="widget-header">
           <div class="widget-title-group">
             <span class="widget-icon">🏆</span>
             <div>
               <h3 class="widget-title">Weekly Backlog Challenge (3×3)</h3>
-              <p class="widget-subtitle" id="home-challenge-week-label">Week 1 • Ends Sunday</p>
+              <p class="widget-subtitle" id="home-challenge-week-label">Week 1 • Active</p>
             </div>
           </div>
           <button class="btn btn-sm btn-outline" id="home-challenge-open-btn">
@@ -154,7 +169,6 @@
       </div>
 
       <div class="featured-carousel" id="featured-drops-container">
-        <!-- Rendered via JS -->
         <div class="loading-spinner-wrap"><div class="spinner"></div><p>Scanning giveaway feeds...</p></div>
       </div>
 
@@ -165,9 +179,7 @@
           <h2 class="section-title">Recently Added</h2>
         </div>
       </div>
-      <div class="drops-grid" id="home-recent-drops-container">
-        <!-- Rendered via JS -->
-      </div>
+      <div class="drops-grid" id="home-recent-drops-container"></div>
     </section>
 
     <!-- TAB 2: DISCOVER / RADAR -->
@@ -224,11 +236,9 @@
 
       <!-- Radar Deals Grid -->
       <div class="radar-results-info">
-        <span id="radar-count-label">Showing giveaways...</span>
+        <span id="radar-count-label">Scanning free giveaways...</span>
       </div>
-      <div class="drops-grid" id="radar-drops-container">
-        <!-- Rendered via JS -->
-      </div>
+      <div class="drops-grid" id="radar-drops-container"></div>
     </section>
 
     <!-- TAB 3: CALENDAR / EXPIRATION RADAR -->
@@ -241,9 +251,7 @@
         </div>
       </div>
 
-      <div class="calendar-groups" id="calendar-groups-container">
-        <!-- Rendered via JS (Ending Today, Ending This Week, Ending Later, Ongoing) -->
-      </div>
+      <div class="calendar-groups" id="calendar-groups-container"></div>
     </section>
 
     <!-- TAB 4: VAULT / CLAIMED -->
@@ -286,43 +294,92 @@
       </div>
 
       <!-- Vault Items Grid -->
-      <div class="drops-grid" id="vault-items-container">
-        <!-- Rendered via JS -->
-      </div>
+      <div class="drops-grid" id="vault-items-container"></div>
     </section>
 
-    <!-- TAB 5: SETTINGS -->
+    <!-- TAB 5: SETTINGS & THEMES -->
     <section class="tab-pane" id="pane-settings">
       <div class="settings-container">
         <div class="section-header">
           <div class="section-title-wrap">
             <span class="section-badge">PREFERENCES</span>
-            <h2 class="section-title">App Settings & Cloud</h2>
+            <h2 class="section-title">Settings & Customization</h2>
           </div>
         </div>
 
-        <!-- Appearance & Themes -->
+        <!-- Background Mode (Dark / AMOLED / Light) -->
         <div class="settings-card">
-          <h3 class="settings-card-title">🎨 Appearance & Accent Theme</h3>
-          <p class="settings-card-sub">Customize accent glow, colors, and contrast.</p>
-          <div class="theme-options-grid" id="theme-options">
-            <button class="theme-btn active" data-theme="theme-cyan">
-              <span class="color-dot cyan"></span> Cyber Cyan
+          <h3 class="settings-card-title">🌓 Background Display Mode</h3>
+          <p class="settings-card-sub">Select your display contrast and dark mode behavior.</p>
+          <div class="bg-mode-row" id="bg-mode-options">
+            <button class="bg-mode-btn active" data-bg="bg-dark">
+              🌙 Dark Gaming
             </button>
-            <button class="theme-btn" data-theme="theme-steam">
-              <span class="color-dot steam"></span> Steam Sky
+            <button class="bg-mode-btn" data-bg="bg-amoled">
+              🖤 AMOLED Black
             </button>
-            <button class="theme-btn" data-theme="theme-violet">
-              <span class="color-dot violet"></span> Neon Violet
+            <button class="bg-mode-btn" data-bg="bg-light">
+              ☀️ Clean Light
             </button>
-            <button class="theme-btn" data-theme="theme-emerald">
-              <span class="color-dot emerald"></span> Vault Emerald
+          </div>
+        </div>
+
+        <!-- 19 Full Accent Themes (Grouped by Category) -->
+        <div class="settings-card">
+          <div class="card-title-header">
+            <div>
+              <h3 class="settings-card-title">🎨 Accent Theme Catalog (19 Themes)</h3>
+              <p class="settings-card-sub">Choose your signature gaming color palette from the official LootDrop collection.</p>
+            </div>
+            <span class="badge-pill" id="current-theme-badge">Cyber Cyan</span>
+          </div>
+
+          <!-- Theme Category Tabs -->
+          <div class="theme-category-tabs" id="theme-cat-tabs">
+            <button class="theme-cat-tab active" data-cat="all">All (19)</button>
+            <button class="theme-cat-tab" data-cat="gaming">Gaming (6)</button>
+            <button class="theme-cat-tab" data-cat="cyber">Cyber (5)</button>
+            <button class="theme-cat-tab" data-cat="vault">Vault (5)</button>
+            <button class="theme-cat-tab" data-cat="rewards">Rewards (3)</button>
+          </div>
+
+          <!-- 19 Theme Buttons Grid -->
+          <div class="theme-options-grid" id="full-theme-grid">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+
+        <!-- Website Drop Alerts & Notification Config -->
+        <div class="settings-card highlight-card">
+          <div class="card-title-header">
+            <div>
+              <h3 class="settings-card-title">🔔 Website Drop Alerts & Notifications</h3>
+              <p class="settings-card-sub">Configure browser alerts, audio chimes, and giveaway filter thresholds.</p>
+            </div>
+            <button class="btn btn-sm btn-primary" id="btn-open-alerts-sheet">
+              ⚙️ Alert Settings
             </button>
-            <button class="theme-btn" data-theme="theme-slayer">
-              <span class="color-dot slayer"></span> Backlog Slayer 🔥
+          </div>
+          <div class="alert-quick-toggles">
+            <label class="toggle-row">
+              <input type="checkbox" id="toggle-audio-chime" checked>
+              <span class="toggle-label">🎵 Play Gamer Sound Chime on New Drop</span>
+            </label>
+            <label class="toggle-row">
+              <input type="checkbox" id="toggle-desktop-alerts" checked>
+              <span class="toggle-label">🖥️ Desktop / Mobile Browser Alerts</span>
+            </label>
+            <label class="toggle-row">
+              <input type="checkbox" id="toggle-ending-soon-alerts" checked>
+              <span class="toggle-label">⏳ Alert When Deals Expire in &lt;24h</span>
+            </label>
+          </div>
+          <div class="test-chime-row">
+            <button class="btn btn-sm btn-outline" id="btn-test-chime">
+              🔊 Test Sound Chime
             </button>
-            <button class="theme-btn" data-theme="theme-amoled">
-              <span class="color-dot amoled"></span> AMOLED Black
+            <button class="btn btn-sm btn-outline" id="btn-test-notification">
+              🚨 Trigger Test Drop Alert
             </button>
           </div>
         </div>
@@ -357,11 +414,9 @@
         </div>
 
         <!-- Community & Support -->
-        <div class="settings-card highlight-card">
+        <div class="settings-card">
           <h3 class="settings-card-title">💖 LootDrop Community & Releases</h3>
-          <p class="settings-card-sub">
-            Support the creator, download mobile APK releases, and track F-Droid updates.
-          </p>
+          <p class="settings-card-sub">Support the creator, download mobile APK releases, and track F-Droid updates.</p>
           <div class="settings-links-list">
             <a href="https://www.patreon.com/cw/LootDrop" target="_blank" rel="noopener" class="settings-link-item">
               <span class="link-icon">❤️</span>
@@ -446,9 +501,7 @@
         </div>
 
         <!-- 3x3 Tiles Grid -->
-        <div class="challenge-grid-3x3" id="challenge-grid-container">
-          <!-- 9 interactive tiles rendered via JS -->
-        </div>
+        <div class="challenge-grid-3x3" id="challenge-grid-container"></div>
 
         <!-- Milestone Rewards Section -->
         <div class="milestones-section">
@@ -457,10 +510,118 @@
             <span class="milestone-badge" id="milestones-count-badge">0 / 4 Claimed</span>
           </div>
           <p class="milestones-desc">Complete rows, columns, or a full blackout to earn exclusive cosmetic trophies and in-app themes!</p>
-          <div class="milestones-list" id="milestones-list-container">
-            <!-- Rendered via JS -->
-          </div>
+          <div class="milestones-list" id="milestones-list-container"></div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Detailed Alert Settings Sheet (Replica of NotificationSettingsSheet.kt) -->
+  <div class="modal-overlay" id="modal-alert-settings">
+    <div class="modal-card notif-settings-modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-badge">ALERTS CONFIGURATION</span>
+          <h2 class="modal-title">🔔 Notification & Drop Alerts</h2>
+          <p class="modal-subtitle">Customize which free drops notify you and how alerts sound.</p>
+        </div>
+        <button class="close-modal-btn" id="close-alert-settings-btn">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Master Alert Switch -->
+        <div class="sheet-toggle-card">
+          <div class="toggle-meta">
+            <strong>Enable Website Drop Alerts</strong>
+            <span>Receive notifications for free games and giveaways</span>
+          </div>
+          <label class="switch-toggle">
+            <input type="checkbox" id="master-alert-toggle" checked>
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+
+        <!-- Platform Notification Filters -->
+        <div class="sheet-section-title">PLATFORM ALERTS</div>
+        <div class="platform-toggles-grid">
+          <label class="toggle-chip active">
+            <input type="checkbox" id="alert-plat-steam" checked> 🎮 Steam
+          </label>
+          <label class="toggle-chip active">
+            <input type="checkbox" id="alert-plat-epic" checked> ⚡ Epic Games
+          </label>
+          <label class="toggle-chip active">
+            <input type="checkbox" id="alert-plat-gog" checked> 🔮 GOG
+          </label>
+          <label class="toggle-chip active">
+            <input type="checkbox" id="alert-plat-ps" checked> 🕹️ PlayStation
+          </label>
+          <label class="toggle-chip active">
+            <input type="checkbox" id="alert-plat-xbox" checked> 💚 Xbox
+          </label>
+          <label class="toggle-chip active">
+            <input type="checkbox" id="alert-plat-nintendo" checked> 🔴 Nintendo
+          </label>
+        </div>
+
+        <!-- Filters & Thresholds -->
+        <div class="sheet-section-title">DEAL CRITERIA & TIMING</div>
+        <div class="sheet-options-list">
+          <label class="sheet-option-row">
+            <div>
+              <strong>Full Games Only</strong>
+              <span>Filter out DLC, cosmetic packs, and beta codes</span>
+            </div>
+            <input type="checkbox" id="alert-filter-games-only">
+          </label>
+          <label class="sheet-option-row">
+            <div>
+              <strong>High-Value Drops ($20+ Only)</strong>
+              <span>Only trigger alerts for AAA and high value games</span>
+            </div>
+            <input type="checkbox" id="alert-filter-high-value">
+          </label>
+          <label class="sheet-option-row">
+            <div>
+              <strong>Expiring Deal Radar (<24 Hours)</strong>
+              <span>Send urgency reminders before free deals expire</span>
+            </div>
+            <input type="checkbox" id="alert-filter-expiring" checked>
+          </label>
+          <label class="sheet-option-row">
+            <div>
+              <strong>Play Chime Sound</strong>
+              <span>Synthesizes a pleasant gaming chime on alert</span>
+            </div>
+            <input type="checkbox" id="alert-filter-sound" checked>
+          </label>
+        </div>
+
+        <div class="sheet-actions-row">
+          <button class="btn btn-primary" id="btn-save-alert-settings">Save Alert Preferences</button>
+          <button class="btn btn-outline" id="btn-fire-test-alert">🚨 Send Test Alert</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Notification Center / Inbox -->
+  <div class="modal-overlay" id="modal-notifications">
+    <div class="modal-card notif-modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-badge">INBOX & HISTORY</span>
+          <h2 class="modal-title">🔔 Drop Alerts & History</h2>
+        </div>
+        <button class="close-modal-btn" id="close-notif-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="notif-actions-row">
+          <button class="btn btn-sm btn-outline" id="btn-settings-notif">⚙️ Alert Settings</button>
+          <button class="btn btn-sm btn-outline" id="btn-mark-all-read">Mark All Read</button>
+          <button class="btn btn-sm btn-outline" id="btn-clear-notifs">Clear History</button>
+        </div>
+        <div class="notif-list" id="notif-list-container"></div>
       </div>
     </div>
   </div>
@@ -576,37 +737,13 @@
             <h4>🏆 Unlocked Trophies Showcase</h4>
             <span class="trophy-count-pill" id="profile-trophy-count">0 Unlocked</span>
           </div>
-          <div class="trophy-showcase-grid" id="profile-trophies-container">
-            <!-- Rendered via JS -->
-          </div>
+          <div class="trophy-showcase-grid" id="profile-trophies-container"></div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: Notification Center -->
-  <div class="modal-overlay" id="modal-notifications">
-    <div class="modal-card notif-modal-card">
-      <div class="modal-header">
-        <div class="modal-title-group">
-          <span class="modal-badge">ALERTS</span>
-          <h2 class="modal-title">🔔 Notification Center</h2>
-        </div>
-        <button class="close-modal-btn" id="close-notif-btn">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="notif-actions-row">
-          <button class="btn btn-sm btn-outline" id="btn-mark-all-read">Mark All Read</button>
-          <button class="btn btn-sm btn-outline" id="btn-clear-notifs">Clear History</button>
-        </div>
-        <div class="notif-list" id="notif-list-container">
-          <!-- Rendered via JS -->
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Toast Notification Popup -->
+  <!-- Floating Toast Notification Popup -->
   <div class="toast-popup" id="toast-popup">
     <span class="toast-icon" id="toast-icon">✨</span>
     <span class="toast-message" id="toast-message">Notification message</span>

@@ -1,7 +1,39 @@
 /**
- * LootDrop V3.2.0 - Client Application
- * 1-to-1 Web Edition for GitHub Pages
+ * LootDrop V3.2.0 - Complete Client Application
+ * 1-to-1 Web Edition with 19 Accent Themes & Comprehensive Website Alerts
  */
+
+// ==========================================
+// 19 Official Accent Themes (From AppPreferences.kt)
+// ==========================================
+const ACCENT_THEMES = [
+  // Cyber (5)
+  { id: 'theme-cyber-cyan', title: 'Cyber Cyan', short: 'Cyan', cat: 'cyber', primary: '#00F0FF', secondary: '#00FF88', desc: 'Vibrant high-contrast cyber blue' },
+  { id: 'theme-gog-purple', title: 'Ultraviolet', short: 'Ultra Violet', cat: 'cyber', primary: '#A855F7', secondary: '#D946EF', desc: 'Deep electric violet & magenta' },
+  { id: 'theme-razer-lime', title: 'Toxic Lime', short: 'Toxic Lime', cat: 'cyber', primary: '#22C55E', secondary: '#10B981', desc: 'High-energy matrix green' },
+  { id: 'theme-inferno-red', title: 'Inferno Red', short: 'Inferno', cat: 'cyber', primary: '#EF4444', secondary: '#F97316', desc: 'Warm battle red & ember' },
+  { id: 'theme-cherry-rose', title: 'Cherry Blossom', short: 'Sakura', cat: 'cyber', primary: '#EC4899', secondary: '#F43F5E', desc: 'Vivid neon pink & sakura' },
+
+  // Gaming (6)
+  { id: 'theme-steam-blue', title: 'Steam Sky', short: 'Steam', cat: 'gaming', primary: '#38BDF8', secondary: '#818CF8', desc: 'Classic PC gaming blue' },
+  { id: 'theme-epic-indigo', title: 'Epic Indigo', short: 'Epic', cat: 'gaming', primary: '#6366F1', secondary: '#8B5CF6', desc: 'Deep launcher indigo' },
+  { id: 'theme-playstation-blue', title: 'PlayStation Blue', short: 'PlayStation', cat: 'gaming', primary: '#0070D1', secondary: '#38BDF8', desc: 'Official PlayStation electric cobalt' },
+  { id: 'theme-xbox-green', title: 'Xbox Green', short: 'Xbox', cat: 'gaming', primary: '#107C10', secondary: '#22C55E', desc: 'Iconic Xbox emerald neon green' },
+  { id: 'theme-nintendo-red', title: 'Nintendo Red', short: 'Nintendo', cat: 'gaming', primary: '#E60012', secondary: '#FF4D5A', desc: 'Iconic Nintendo Switch neon crimson' },
+  { id: 'theme-discord-blurple', title: 'Discord Blurple', short: 'Discord', cat: 'gaming', primary: '#5865F2', secondary: '#818CF8', desc: 'Iconic gamer community blurple' },
+
+  // Vault (5)
+  { id: 'theme-golden-loot', title: 'Loot Gold', short: 'Loot Gold', cat: 'vault', primary: '#FBBF24', secondary: '#F59E0B', desc: 'Legendary gold drops' },
+  { id: 'theme-ocean-teal', title: 'Ocean Teal', short: 'Teal', cat: 'vault', primary: '#14B8A6', secondary: '#06B6D4', desc: 'Deep oceanic crystal teal' },
+  { id: 'theme-sunset-coral', title: 'Sunset Coral', short: 'Sunset', cat: 'vault', primary: '#FB923C', secondary: '#F43F5E', desc: 'Warm twilight sunset blaze' },
+  { id: 'theme-deep-royale', title: 'Royal Violet', short: 'Royale', cat: 'vault', primary: '#8B5CF6', secondary: '#C084FC', desc: 'Majestic royal imperial purple' },
+  { id: 'theme-emerald-mint', title: 'Emerald Vault', short: 'Emerald', cat: 'vault', primary: '#10B981', secondary: '#34D399', desc: 'Lush emerald gemstone green' },
+
+  // Rewards (3)
+  { id: 'theme-backlog-slayer', title: 'Backlog Slayer', short: 'Slayer', cat: 'rewards', primary: '#FF0055', secondary: '#FF5500', desc: 'Unlocked via Backlog Challenge! Aggressive neon crimson & blaze' },
+  { id: 'theme-vault-cleaner', title: 'Vault Cleaner Gold', short: 'Vault Gold', cat: 'rewards', primary: '#FFD700', secondary: '#00FFCC', desc: 'Unlocked via Backlog Blackout! Pure 24K vault gold & cyber teal' },
+  { id: 'theme-nebula-blackout', title: 'Nebula Blackout', short: 'Nebula', cat: 'rewards', primary: '#B026FF', secondary: '#00F0FF', desc: 'Unlocked via Backlog Challenge! Cosmic nebula violet & electric cyan' }
+];
 
 // ==========================================
 // App State & Local Storage Keys
@@ -12,9 +44,10 @@ const STORAGE_KEYS = {
   CHALLENGES: 'lootdrop_challenge_state',
   MILESTONES: 'lootdrop_milestones_claimed',
   THEME: 'lootdrop_accent_theme',
+  BG_MODE: 'lootdrop_bg_mode',
   STEAM_ID: 'lootdrop_steam_id',
   NOTIFICATIONS: 'lootdrop_notifications',
-  VIEW_MODE: 'lootdrop_view_mode'
+  ALERT_SETTINGS: 'lootdrop_alert_settings'
 };
 
 // Anchor week for week 1 calculation (Monday Nov 9, 2026)
@@ -45,7 +78,7 @@ const FALLBACK_GIVEAWAYS = [
     thumbnail: "https://www.gamerpower.com/offers/1/65bb0d970e70d.jpg",
     image: "https://www.gamerpower.com/offers/1/65bb0d970e70d.jpg",
     description: "Visceral first-person 4-player co-op melee action game set in the apocalyptic End Times of the Warhammer world.",
-    instructions: "Visit Steam store page and click 'Add to Account' before the free weekend promotional offer expires.",
+    instructions: "Visit Steam store page and click 'Add to Account' before the promotional offer expires.",
     open_giveaway_url: "https://store.steampowered.com/",
     published_date: "2026-11-08 14:00:00",
     end_date: "2026-11-15 18:00:00",
@@ -141,6 +174,19 @@ let userProfile = JSON.parse(localStorage.getItem(STORAGE_KEYS.PROFILE) || JSON.
   avatar: '🎮',
   title: 'Backlog Slayer'
 }));
+let alertSettings = JSON.parse(localStorage.getItem(STORAGE_KEYS.ALERT_SETTINGS) || JSON.stringify({
+  master: true,
+  sound: true,
+  desktop: true,
+  expiring: true,
+  gamesOnly: false,
+  highValueOnly: false,
+  platforms: { steam: true, epic: true, gog: true, ps: true, xbox: true, nintendo: true }
+}));
+let notificationsList = JSON.parse(localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS) || '[]');
+let currentThemeId = localStorage.getItem(STORAGE_KEYS.THEME) || 'theme-cyber-cyan';
+let currentBgMode = localStorage.getItem(STORAGE_KEYS.BG_MODE) || 'bg-dark';
+
 let activePlatformFilter = 'all';
 let activeTypeFilter = 'all';
 let activeSort = 'date';
@@ -150,34 +196,243 @@ let currentWeekKey = '';
 let activeChallengeWeekKey = '';
 let selectedGiveaway = null;
 
+// Audio Synthesizer Context
+let audioCtx = null;
+
 // ==========================================
 // Initialization
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-  initTheme();
+  applyThemeAndBg(currentThemeId, currentBgMode);
   initNavigation();
   initWeekKeys();
-  loadNotifications();
+  renderThemeCatalog('all');
+  initAlertSettingsUI();
+  initNotificationsList();
   setupEventListeners();
+  checkNotificationPermissionState();
   fetchGiveaways();
   renderProfile();
   updateStats();
 });
 
 // ==========================================
-// Theme Management
+// Audio Synthesizer (Gaming Chime)
 // ==========================================
-function initTheme() {
-  const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME) || 'theme-cyan';
-  setTheme(savedTheme);
+function playGamerChime() {
+  if (!alertSettings.sound) return;
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    if (!audioCtx) audioCtx = new AudioContext();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    // Notes: C5, E5, G5, C6 (classic victory arpeggio)
+    const notes = [523.25, 659.25, 783.99, 1046.50];
+    const now = audioCtx.currentTime;
+
+    notes.forEach((freq, idx) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+
+      gain.gain.setValueAtTime(0, now + idx * 0.08);
+      gain.gain.linearRampToValueAtTime(0.18, now + idx * 0.08 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.28);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start(now + idx * 0.08);
+      osc.stop(now + idx * 0.08 + 0.3);
+    });
+  } catch (err) {
+    console.warn('Audio chime playback failed:', err);
+  }
 }
 
-function setTheme(themeClass) {
-  document.body.className = `${themeClass} dark-mode`;
-  localStorage.setItem(STORAGE_KEYS.THEME, themeClass);
+// ==========================================
+// Web Drop Alerts & Notifications System
+// ==========================================
+function checkNotificationPermissionState() {
+  const banner = document.getElementById('perm-banner');
+  if (!banner) return;
 
-  document.querySelectorAll('.theme-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.theme === themeClass);
+  if ('Notification' in window) {
+    if (Notification.permission === 'default' && alertSettings.desktop) {
+      banner.style.display = 'flex';
+    } else {
+      banner.style.display = 'none';
+    }
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+async function requestNotificationPermission() {
+  if ('Notification' in window) {
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      showToast('Browser drop alerts enabled!', '🔔');
+      playGamerChime();
+      document.getElementById('perm-banner').style.display = 'none';
+    } else {
+      showToast('Browser notifications were declined', 'ℹ️');
+      document.getElementById('perm-banner').style.display = 'none';
+    }
+  }
+}
+
+function triggerWebsiteAlert(title, message, url = '#', icon = '🎁') {
+  // 1. Play synthesized gamer chime
+  playGamerChime();
+
+  // 2. Display on-page toast popup
+  showToast(message, icon);
+
+  // 3. Trigger native desktop notification if permitted
+  if ('Notification' in window && Notification.permission === 'granted' && alertSettings.desktop) {
+    try {
+      const notif = new Notification(title, {
+        body: message,
+        icon: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎁</text></svg>'
+      });
+      notif.onclick = () => {
+        window.focus();
+        if (url && url !== '#') window.open(url, '_blank');
+      };
+    } catch (_) {}
+  }
+
+  // 4. Add to notification history
+  notificationsList.unshift({
+    id: Date.now(),
+    title,
+    desc: message,
+    url,
+    timestamp: Date.now(),
+    unread: true
+  });
+  if (notificationsList.length > 50) notificationsList.pop();
+  localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notificationsList));
+  renderNotificationsList();
+}
+
+function initNotificationsList() {
+  if (notificationsList.length === 0) {
+    notificationsList = [
+      { id: 1, title: '🎉 LootDrop V3.2.0 Web Live!', desc: '1-to-1 Web client running directly on GitHub Pages with 19 themes.', timestamp: Date.now(), unread: true },
+      { id: 2, title: '🏆 Weekly 3×3 Challenge Ready', desc: 'Complete challenge tiles this week to unlock exclusive themes.', timestamp: Date.now() - 3600000, unread: true },
+      { id: 3, title: '❤️ Support on Patreon', desc: 'Help sustain servers and track upcoming F-Droid release.', timestamp: Date.now() - 7200000, unread: false }
+    ];
+    localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notificationsList));
+  }
+  renderNotificationsList();
+}
+
+function renderNotificationsList() {
+  const container = document.getElementById('notif-list-container');
+  const countBadge = document.getElementById('notif-count');
+  if (!container) return;
+
+  const unreadCount = notificationsList.filter(n => n.unread).length;
+  if (countBadge) {
+    countBadge.textContent = unreadCount;
+    countBadge.style.display = unreadCount > 0 ? 'flex' : 'none';
+  }
+
+  if (notificationsList.length === 0) {
+    container.innerHTML = `
+      <div style="padding: 32px; text-align: center; color: var(--color-text-muted);">
+        <span style="font-size: 32px; display: block; margin-bottom: 8px;">📭</span>
+        <p>No notifications yet. You will receive alerts when new free games drop!</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = notificationsList.map(n => `
+    <div class="notif-item ${n.unread ? 'unread' : ''}" data-id="${n.id}">
+      <span style="font-size: 22px;">🎁</span>
+      <div class="notif-text">
+        <strong>${escapeHtml(n.title)}</strong>
+        <span>${escapeHtml(n.desc)}</span>
+      </div>
+      ${n.unread ? '<span class="notif-dot"></span>' : ''}
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.notif-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const id = parseInt(item.dataset.id, 10);
+      const target = notificationsList.find(n => n.id === id);
+      if (target) {
+        target.unread = false;
+        localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notificationsList));
+        renderNotificationsList();
+        if (target.url && target.url !== '#') window.open(target.url, '_blank');
+      }
+    });
+  });
+}
+
+// ==========================================
+// Theme & Background Mode Management
+// ==========================================
+function applyThemeAndBg(themeId, bgMode) {
+  currentThemeId = themeId;
+  currentBgMode = bgMode;
+
+  document.body.className = `${themeId} ${bgMode}`;
+  localStorage.setItem(STORAGE_KEYS.THEME, themeId);
+  localStorage.setItem(STORAGE_KEYS.BG_MODE, bgMode);
+
+  // Update theme badge in settings
+  const foundTheme = ACCENT_THEMES.find(t => t.id === themeId);
+  const badge = document.getElementById('current-theme-badge');
+  if (badge && foundTheme) {
+    badge.textContent = foundTheme.title;
+    badge.style.backgroundColor = foundTheme.primary;
+    badge.style.color = '#000';
+  }
+
+  // Update BG mode buttons
+  document.querySelectorAll('.bg-mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.bg === bgMode);
+  });
+}
+
+function renderThemeCatalog(category = 'all') {
+  const container = document.getElementById('full-theme-grid');
+  if (!container) return;
+
+  const filtered = category === 'all' 
+    ? ACCENT_THEMES 
+    : ACCENT_THEMES.filter(t => t.cat === category);
+
+  container.innerHTML = filtered.map(t => `
+    <div class="theme-btn-card ${t.id === currentThemeId ? 'active' : ''}" data-id="${t.id}">
+      <div class="theme-preview-dots">
+        <span class="theme-dot" style="background: ${t.primary};"></span>
+        <span class="theme-dot secondary" style="background: ${t.secondary};"></span>
+      </div>
+      <div class="theme-info">
+        <span class="theme-title">${t.title}</span>
+        <span class="theme-cat">${t.cat.toUpperCase()}</span>
+      </div>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.theme-btn-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const id = card.dataset.id;
+      applyThemeAndBg(id, currentBgMode);
+      renderThemeCatalog(category);
+      playGamerChime();
+      showToast(`Applied ${card.querySelector('.theme-title').textContent} theme!`, '🎨');
+    });
   });
 }
 
@@ -252,18 +507,13 @@ function switchTab(tabId) {
 // Fetching Live Giveaways (GamerPower API)
 // ==========================================
 async function fetchGiveaways() {
-  const container = document.getElementById('featured-drops-container');
-  const radarContainer = document.getElementById('radar-drops-container');
-
   try {
-    // Attempt 1: Direct GamerPower API call
     let response;
     try {
       response = await fetch('https://www.gamerpower.com/api/giveaways', {
         headers: { 'Accept': 'application/json' }
       });
     } catch (_) {
-      // Attempt 2: CORS Proxy fallback
       response = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent('https://www.gamerpower.com/api/giveaways'));
     }
 
@@ -316,7 +566,6 @@ function renderRadar() {
 
   let filtered = [...allGiveaways];
 
-  // Platform Filter
   if (activePlatformFilter !== 'all') {
     const requested = activePlatformFilter.toLowerCase().split(',');
     filtered = filtered.filter(g => {
@@ -325,12 +574,10 @@ function renderRadar() {
     });
   }
 
-  // Type Filter
   if (activeTypeFilter !== 'all') {
     filtered = filtered.filter(g => (g.type || '').toLowerCase().includes(activeTypeFilter));
   }
 
-  // Search Filter
   if (activeSearchQuery.trim()) {
     const q = activeSearchQuery.toLowerCase();
     filtered = filtered.filter(g => 
@@ -340,7 +587,6 @@ function renderRadar() {
     );
   }
 
-  // Sorting
   if (activeSort === 'value') {
     filtered.sort((a, b) => parsePrice(b.worth) - parsePrice(a.worth));
   } else if (activeSort === 'popularity') {
@@ -348,7 +594,6 @@ function renderRadar() {
   } else if (activeSort === 'alphabetical') {
     filtered.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
   } else {
-    // Newest date first
     filtered.sort((a, b) => new Date(b.published_date || 0) - new Date(a.published_date || 0));
   }
 
@@ -358,7 +603,7 @@ function renderRadar() {
 
   if (filtered.length === 0) {
     container.innerHTML = `
-      <div class="empty-state-card" style="grid-column: 1 / -1; padding: 40px; text-align: center; color: var(--color-text-muted);">
+      <div style="grid-column: 1 / -1; padding: 40px; text-align: center; color: var(--color-text-muted);">
         <span style="font-size: 36px; display: block; margin-bottom: 10px;">🔍</span>
         <h3>No Giveaways Matched</h3>
         <p>Try broadening your platform or type filters, or search for a different game.</p>
@@ -474,15 +719,15 @@ function renderVault() {
   container.innerHTML = displayed.map(item => `
     <div class="giveaway-card" data-id="${item.id}">
       <div class="giveaway-card-thumb-wrap">
-        <img src="${item.thumbnail || item.image || ''}" alt="${item.title}" class="giveaway-card-thumb" loading="lazy">
+        <img src="${item.thumbnail || item.image || ''}" alt="${escapeHtml(item.title)}" class="giveaway-card-thumb" loading="lazy">
         <div class="card-top-badges">
-          <span class="badge-platform">${item.platforms || 'PC'}</span>
+          <span class="badge-platform">${escapeHtml(item.platforms || 'PC')}</span>
           <span class="badge-type">${(item.playStatus || 'BACKLOG').toUpperCase()}</span>
         </div>
-        <div class="badge-price">${item.worth || 'FREE'}</div>
+        <div class="badge-price">${escapeHtml(item.worth || 'FREE')}</div>
       </div>
       <div class="giveaway-card-body">
-        <h3 class="giveaway-card-title">${item.title}</h3>
+        <h3 class="giveaway-card-title">${escapeHtml(item.title)}</h3>
         <div class="giveaway-card-meta">
           <span>Status:</span>
           <select class="custom-select vault-status-select" data-id="${item.id}" onclick="event.stopPropagation()">
@@ -504,7 +749,6 @@ function renderVault() {
     </div>
   `).join('');
 
-  // Attach status change and remove listeners
   container.querySelectorAll('.vault-status-select').forEach(sel => {
     sel.addEventListener('change', (e) => {
       const id = parseInt(e.target.dataset.id, 10);
@@ -513,6 +757,7 @@ function renderVault() {
       if (target) {
         target.playStatus = newStatus;
         localStorage.setItem(STORAGE_KEYS.VAULT, JSON.stringify(vaultItems));
+        playGamerChime();
         showToast(`Updated status to ${newStatus.toUpperCase()}`, '🎮');
         updateStats();
       }
@@ -596,6 +841,7 @@ function toggleVaultItem(id) {
       playStatus: 'backlog',
       addedAt: Date.now()
     });
+    playGamerChime();
     showToast('Added to your Vault!', '💎');
   }
 
@@ -632,7 +878,6 @@ function openGiveawayDetail(g) {
 
 // ==========================================
 // 3x3 Backlog Challenge Grid Logic
-// (Ported from BacklogChallengeManager.kt)
 // ==========================================
 function getChallengeStateForWeek(weekKey) {
   const allStates = JSON.parse(localStorage.getItem(STORAGE_KEYS.CHALLENGES) || '{}');
@@ -649,7 +894,6 @@ function saveChallengeStateForWeek(weekKey, state) {
 }
 
 function getWeekBlueprints(weekKey) {
-  // Deterministic seed based on week key
   let hash = 0;
   for (let i = 0; i < weekKey.length; i++) {
     hash = (hash << 5) - hash + weekKey.charCodeAt(i);
@@ -657,7 +901,6 @@ function getWeekBlueprints(weekKey) {
   }
   const rngSeed = Math.abs(hash);
 
-  // Pick 9 distinct challenges deterministically
   const shuffled = [...CHALLENGE_BLUEPRINTS];
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = (rngSeed + i * 17) % (i + 1);
@@ -678,7 +921,6 @@ function renderChallengeModal() {
   const state = getChallengeStateForWeek(weekKey);
   const tiles = getWeekBlueprints(weekKey);
 
-  // Update Week Display & Navigation Buttons
   const modalWeekTitle = document.getElementById('modal-week-title');
   const weekDisplayBadge = document.getElementById('week-display-badge');
   const prevBtn = document.getElementById('btn-prev-week');
@@ -689,12 +931,10 @@ function renderChallengeModal() {
     weekDisplayBadge.textContent = weekKey === currentWeekKey ? `Week ${relativeWeekNum} (Active)` : `Week ${relativeWeekNum}`;
   }
 
-  // Navigation constraints: cannot go before Week 1; max 2 weeks forward preview
   if (prevBtn) prevBtn.disabled = relativeWeekNum <= 1;
   const currentRel = getRelativeWeekNumber(currentWeekKey);
   if (nextBtn) nextBtn.disabled = relativeWeekNum >= (currentRel + MAX_FUTURE_WEEKS_PREVIEW);
 
-  // Manual Overrides remaining
   const manualUsed = Object.values(state.manualOverrides || {}).filter(Boolean).length;
   const manualRemaining = Math.max(0, MAX_MANUAL_OVERRIDES - manualUsed);
   const manualText = document.getElementById('manual-unlock-text');
@@ -702,12 +942,10 @@ function renderChallengeModal() {
     manualText.innerHTML = `Manual Overrides Remaining: <strong>${manualRemaining} / ${MAX_MANUAL_OVERRIDES}</strong>`;
   }
 
-  // Check auto-completion against vault items
   const evaluated = tiles.map((tile, idx) => {
     const isManual = !!state.manualOverrides[idx];
     let isAutoDone = false;
 
-    // Smart heuristic evaluations based on user's vault items
     if (tile.id === 'BEAT_GAME' || tile.id === 'COMPLETION_JOURNEY') {
       isAutoDone = vaultItems.some(v => v.playStatus === 'beaten');
     } else if (tile.id === 'VAULT_STARTER' || tile.id === 'UNPLAYED_REVIVAL') {
@@ -720,7 +958,6 @@ function renderChallengeModal() {
     return { ...tile, index: idx, isCompleted, isManual };
   });
 
-  // Render 3x3 Grid
   const gridContainer = document.getElementById('challenge-grid-container');
   if (gridContainer) {
     gridContainer.innerHTML = evaluated.map(t => `
@@ -734,7 +971,6 @@ function renderChallengeModal() {
       </div>
     `).join('');
 
-    // Attach click events for manual unlock with recycle logic
     gridContainer.querySelectorAll('.challenge-tile').forEach(tileEl => {
       tileEl.addEventListener('click', () => {
         const idx = parseInt(tileEl.dataset.idx, 10);
@@ -743,7 +979,6 @@ function renderChallengeModal() {
     });
   }
 
-  // Check win conditions (Rows, Columns, Blackout)
   checkMilestoneWins(evaluated, weekKey);
   renderMiniChallengeWidget();
 }
@@ -755,17 +990,16 @@ function toggleManualUnlock(tileIdx) {
   const currentlyDone = !!currentOverrides[tileIdx];
 
   if (currentlyDone) {
-    // Unchecking: recycle manual override slot!
     delete currentOverrides[tileIdx];
     showToast('Recycled manual unlock slot (+1)', '♻️');
   } else {
-    // Checking: enforce max 2 overrides limit
     const used = Object.values(currentOverrides).filter(Boolean).length;
     if (used >= MAX_MANUAL_OVERRIDES) {
       showToast(`Limit reached: Max ${MAX_MANUAL_OVERRIDES} manual unlocks per week!`, '⚠️');
       return;
     }
     currentOverrides[tileIdx] = true;
+    playGamerChime();
     showToast('Tile manually completed! (1 slot used)', '🔑');
   }
 
@@ -775,17 +1009,14 @@ function toggleManualUnlock(tileIdx) {
 }
 
 function checkMilestoneWins(evaluated, weekKey) {
-  // Check rows
   const completedRows = [0, 1, 2].filter(r => 
     evaluated[r * 3].isCompleted && evaluated[r * 3 + 1].isCompleted && evaluated[r * 3 + 2].isCompleted
   );
 
-  // Check columns
   const completedCols = [0, 1, 2].filter(c => 
     evaluated[c].isCompleted && evaluated[c + 3].isCompleted && evaluated[c + 6].isCompleted
   );
 
-  // Check diagonals
   const diag1 = evaluated[0].isCompleted && evaluated[4].isCompleted && evaluated[8].isCompleted;
   const diag2 = evaluated[2].isCompleted && evaluated[4].isCompleted && evaluated[6].isCompleted;
   const totalLines = completedRows.length + completedCols.length + (diag1 ? 1 : 0) + (diag2 ? 1 : 0);
@@ -799,7 +1030,7 @@ function checkMilestoneWins(evaluated, weekKey) {
       name: 'Backlog Slayer Trophy & Theme',
       sub: 'Complete any 3-tile line (row, col, or diag)',
       isEligible: totalLines > 0,
-      rewardTheme: 'theme-slayer',
+      rewardTheme: 'theme-backlog-slayer',
       trophy: '🏆 Backlog Slayer'
     },
     {
@@ -821,7 +1052,7 @@ function checkMilestoneWins(evaluated, weekKey) {
       name: 'Blackout Champion Trophy & Vault Cleaner Theme',
       sub: 'Blackout all 9 tiles on the grid',
       isEligible: isBlackout,
-      rewardTheme: 'theme-emerald',
+      rewardTheme: 'theme-vault-cleaner',
       trophy: '⚡ Blackout Champion'
     }
   ];
@@ -852,11 +1083,12 @@ window.claimMilestone = function(id, rewardTheme, trophy) {
   claimedMilestones[id] = true;
   localStorage.setItem(STORAGE_KEYS.MILESTONES, JSON.stringify(claimedMilestones));
 
-  // Trigger celebration confetti
   triggerConfetti();
+  playGamerChime();
 
   if (rewardTheme) {
-    setTheme(rewardTheme);
+    applyThemeAndBg(rewardTheme, currentBgMode);
+    renderThemeCatalog('all');
     showToast(`Claimed ${trophy}! Unlocked and applied new theme!`, '🎉');
   } else {
     showToast(`Claimed ${trophy}! Displayed on your profile!`, '🏆');
@@ -871,7 +1103,6 @@ function renderMiniChallengeWidget() {
   if (!widget) return;
 
   const state = getChallengeStateForWeek(currentWeekKey);
-  const tiles = getWeekBlueprints(currentWeekKey);
   const manualCount = Object.values(state.manualOverrides || {}).filter(Boolean).length;
   const completedCount = manualCount + (vaultItems.length > 0 ? 1 : 0);
   const pct = Math.min(100, Math.round((completedCount / 9) * 100));
@@ -921,6 +1152,7 @@ function spinRoulette() {
       titleEl.textContent = finalPick.title;
       platformEl.textContent = `Selected: ${finalPick.platforms || 'PC'}! Enjoy playing!`;
       triggerConfetti();
+      playGamerChime();
       showToast(`Fate has spoken: Play ${finalPick.title}!`, '🎰');
     }
   }, speed);
@@ -966,32 +1198,8 @@ function renderProfile() {
 }
 
 // ==========================================
-// Notifications & Toast
+// Toast Messages & Confetti
 // ==========================================
-function loadNotifications() {
-  const notifContainer = document.getElementById('notif-list-container');
-  const countBadge = document.getElementById('notif-count');
-  const notifs = [
-    { title: '🎉 LootDrop V3.2.0 Web Live!', desc: '1-to-1 Web client running directly on GitHub Pages.', unread: true },
-    { title: '🏆 Weekly Backlog 3x3 Grid Ready', desc: 'Complete tiles this week and claim exclusive themes.', unread: true },
-    { title: '❤️ Support on Patreon', desc: 'Help sustain serverless trackers and upcoming F-Droid release.', unread: false }
-  ];
-
-  if (countBadge) countBadge.textContent = notifs.filter(n => n.unread).length;
-
-  if (notifContainer) {
-    notifContainer.innerHTML = notifs.map(n => `
-      <div class="notif-item ${n.unread ? 'unread' : ''}">
-        <span style="font-size: 20px;">🔔</span>
-        <div class="notif-text">
-          <strong>${n.title}</strong>
-          <span>${n.desc}</span>
-        </div>
-      </div>
-    `).join('');
-  }
-}
-
 function showToast(message, icon = '✨') {
   const toast = document.getElementById('toast-popup');
   const iconEl = document.getElementById('toast-icon');
@@ -1007,9 +1215,6 @@ function showToast(message, icon = '✨') {
   }, 3200);
 }
 
-// ==========================================
-// Celebration Confetti
-// ==========================================
 function triggerConfetti() {
   const canvas = document.getElementById('confetti-canvas');
   if (!canvas) return;
@@ -1038,7 +1243,7 @@ function triggerConfetti() {
     particles.forEach(p => {
       p.x += p.vx;
       p.y += p.vy;
-      p.vy += 0.25; // gravity
+      p.vy += 0.25;
       p.alpha -= 0.015;
 
       if (p.alpha > 0) {
@@ -1059,7 +1264,7 @@ function triggerConfetti() {
 }
 
 // ==========================================
-// Stats Calculation
+// Stats Calculation & Helpers
 // ==========================================
 function updateStats() {
   let activeValue = 0;
@@ -1089,9 +1294,6 @@ function updateStats() {
   document.getElementById('stat-expiring-soon').textContent = expiringSoonCount;
 }
 
-// ==========================================
-// Helper Utilities
-// ==========================================
 function parsePrice(str) {
   if (!str) return 0;
   const cleaned = str.replace(/[^0-9.]/g, '');
@@ -1122,6 +1324,51 @@ function escapeHtml(str) {
 }
 
 // ==========================================
+// Alert Settings Sheet UI Synchronization
+// ==========================================
+function initAlertSettingsUI() {
+  const masterToggle = document.getElementById('master-alert-toggle');
+  const soundToggle = document.getElementById('alert-filter-sound');
+  const expiringToggle = document.getElementById('alert-filter-expiring');
+  const gamesOnlyToggle = document.getElementById('alert-filter-games-only');
+  const highValueToggle = document.getElementById('alert-filter-high-value');
+
+  if (masterToggle) masterToggle.checked = alertSettings.master;
+  if (soundToggle) soundToggle.checked = alertSettings.sound;
+  if (expiringToggle) expiringToggle.checked = alertSettings.expiring;
+  if (gamesOnlyToggle) gamesOnlyToggle.checked = alertSettings.gamesOnly;
+  if (highValueToggle) highValueToggle.checked = alertSettings.highValueOnly;
+
+  // Quick toggles in Settings
+  const quickChime = document.getElementById('toggle-audio-chime');
+  const quickDesktop = document.getElementById('toggle-desktop-alerts');
+  const quickExpiring = document.getElementById('toggle-ending-soon-alerts');
+
+  if (quickChime) quickChime.checked = alertSettings.sound;
+  if (quickDesktop) quickDesktop.checked = alertSettings.desktop;
+  if (quickExpiring) quickExpiring.checked = alertSettings.expiring;
+
+  quickChime?.addEventListener('change', (e) => {
+    alertSettings.sound = e.target.checked;
+    localStorage.setItem(STORAGE_KEYS.ALERT_SETTINGS, JSON.stringify(alertSettings));
+    if (alertSettings.sound) playGamerChime();
+  });
+
+  quickDesktop?.addEventListener('change', (e) => {
+    alertSettings.desktop = e.target.checked;
+    localStorage.setItem(STORAGE_KEYS.ALERT_SETTINGS, JSON.stringify(alertSettings));
+    if (alertSettings.desktop && 'Notification' in window && Notification.permission === 'default') {
+      requestNotificationPermission();
+    }
+  });
+
+  quickExpiring?.addEventListener('change', (e) => {
+    alertSettings.expiring = e.target.checked;
+    localStorage.setItem(STORAGE_KEYS.ALERT_SETTINGS, JSON.stringify(alertSettings));
+  });
+}
+
+// ==========================================
 // Setup Global UI Event Listeners
 // ==========================================
 function setupEventListeners() {
@@ -1138,6 +1385,12 @@ function setupEventListeners() {
     });
   });
 
+  // Permission Banner
+  document.getElementById('btn-enable-web-alerts')?.addEventListener('click', () => requestNotificationPermission());
+  document.getElementById('btn-dismiss-perm')?.addEventListener('click', () => {
+    document.getElementById('perm-banner').style.display = 'none';
+  });
+
   // Top Action Buttons
   document.getElementById('btn-open-challenge')?.addEventListener('click', () => openChallengeModal());
   document.getElementById('hero-challenge-btn')?.addEventListener('click', () => openChallengeModal());
@@ -1150,6 +1403,85 @@ function setupEventListeners() {
   });
   document.getElementById('btn-open-notifications')?.addEventListener('click', () => {
     document.getElementById('modal-notifications')?.classList.add('open');
+  });
+  document.getElementById('btn-settings-notif')?.addEventListener('click', () => {
+    document.getElementById('modal-notifications')?.classList.remove('open');
+    document.getElementById('modal-alert-settings')?.classList.add('open');
+  });
+  document.getElementById('btn-open-alerts-sheet')?.addEventListener('click', () => {
+    document.getElementById('modal-alert-settings')?.classList.add('open');
+  });
+
+  // Test Chime & Test Alert Triggers
+  document.getElementById('btn-test-chime')?.addEventListener('click', () => {
+    playGamerChime();
+    showToast('Playing synthesized gaming chime sound', '🎵');
+  });
+
+  document.getElementById('btn-test-notification')?.addEventListener('click', () => {
+    triggerWebsiteAlert(
+      '🚨 New Drop Alert: Warhammer 40K',
+      'Warhammer 40,000: Gladius is currently 100% FREE on Steam! Grab it before it ends.',
+      'https://store.steampowered.com/',
+      '🎮'
+    );
+  });
+
+  document.getElementById('btn-fire-test-alert')?.addEventListener('click', () => {
+    triggerWebsiteAlert(
+      '⚡ High-Value Freebie: Cyberpunk OST',
+      'The complete digital soundtrack is free on GOG. Claim to keep forever!',
+      'https://www.gog.com/',
+      '⚡'
+    );
+  });
+
+  // Save Alert Settings Sheet
+  document.getElementById('btn-save-alert-settings')?.addEventListener('click', () => {
+    alertSettings.master = document.getElementById('master-alert-toggle').checked;
+    alertSettings.sound = document.getElementById('alert-filter-sound').checked;
+    alertSettings.expiring = document.getElementById('alert-filter-expiring').checked;
+    alertSettings.gamesOnly = document.getElementById('alert-filter-games-only').checked;
+    alertSettings.highValueOnly = document.getElementById('alert-filter-high-value').checked;
+
+    localStorage.setItem(STORAGE_KEYS.ALERT_SETTINGS, JSON.stringify(alertSettings));
+    initAlertSettingsUI();
+    document.getElementById('modal-alert-settings')?.classList.remove('open');
+    playGamerChime();
+    showToast('Alert preferences saved successfully!', '🔔');
+  });
+
+  // Notification Inbox Actions
+  document.getElementById('btn-mark-all-read')?.addEventListener('click', () => {
+    notificationsList.forEach(n => n.unread = false);
+    localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notificationsList));
+    renderNotificationsList();
+    showToast('Marked all alerts as read', '✓');
+  });
+
+  document.getElementById('btn-clear-notifs')?.addEventListener('click', () => {
+    notificationsList = [];
+    localStorage.removeItem(STORAGE_KEYS.NOTIFICATIONS);
+    renderNotificationsList();
+    showToast('Cleared notification history', '🗑️');
+  });
+
+  // Background Mode Buttons
+  document.querySelectorAll('.bg-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.bg;
+      applyThemeAndBg(currentThemeId, mode);
+      showToast(`Switched to ${btn.textContent.trim()} mode!`, '🌓');
+    });
+  });
+
+  // Theme Category Tabs
+  document.querySelectorAll('.theme-cat-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.theme-cat-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      renderThemeCatalog(tab.dataset.cat);
+    });
   });
 
   // Platform Filter Chips
@@ -1251,14 +1583,6 @@ function setupEventListeners() {
       navigator.clipboard.writeText(selectedGiveaway.open_giveaway_url || window.location.href);
       showToast('Giveaway link copied to clipboard!', '🔗');
     }
-  });
-
-  // Theme Buttons in Settings
-  document.querySelectorAll('.theme-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      setTheme(btn.dataset.theme);
-      showToast(`Applied ${btn.textContent.trim()} theme!`, '🎨');
-    });
   });
 
   // Profile Save
