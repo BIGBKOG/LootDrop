@@ -826,12 +826,24 @@
           <span>🛡️ LootDrop In-App Deal Browser &bull; Safe Browsing & Deal Claiming</span>
         </div>
         <div class="browser-iframe-container" id="browser-frame-container">
-          <iframe id="browser-iframe" src="about:blank" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" referrerpolicy="no-referrer"></iframe>
+          <iframe id="browser-iframe" src="about:blank" referrerpolicy="no-referrer"></iframe>
           <div class="browser-fallback-card" id="browser-fallback-card" style="display: none;">
             <div class="fallback-icon">🛡️</div>
-            <h3>External Store Protected Page</h3>
-            <p>Major stores (e.g. Epic Games, Steam, Xbox) restrict direct iframe embedding for user security. You can claim this 100% free deal directly below:</p>
-            <a href="#" id="browser-fallback-btn" target="_blank" rel="noopener" class="btn btn-primary btn-lg">🚀 Launch Store Deal Page ↗</a>
+            <h3 id="browser-fallback-title">Store Protection Active</h3>
+            <p id="browser-fallback-desc">
+              This website (like Epic Games, Steam, GOG, or Google) protects logins by sending <code>X-Frame-Options: SAMEORIGIN</code> or <code>Content-Security-Policy: frame-ancestors</code>, which tells your web browser not to render it inside an iframe.
+            </p>
+            <div class="fallback-action-buttons">
+              <a href="#" id="browser-fallback-btn" target="_blank" rel="noopener" class="btn btn-primary btn-lg">
+                🚀 Launch Website in Tab ↗
+              </a>
+              <button type="button" class="btn btn-outline" id="browser-try-iframe-btn">
+                🔄 Force Try Iframe
+              </button>
+            </div>
+            <p class="fallback-tip">
+              💡 Tip: Websites that allow embedding (e.g. Wikipedia, blogs, docs, many game wikis) load directly inside this window. For protected storefronts, clicking Launch opens it instantly without losing your LootDrop session.
+            </p>
           </div>
         </div>
       </div>

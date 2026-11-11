@@ -66,6 +66,64 @@ function sanitizeUrl(rawUrl) {
   return trimmed;
 }
 
+// Known domains that send X-Frame-Options: SAMEORIGIN / DENY or CSP frame-ancestors: 'none'
+const KNOWN_FRAME_BLOCKED_HOSTS = [
+  'epicgames.com',
+  'steampowered.com',
+  'steamcommunity.com',
+  'gog.com',
+  'xbox.com',
+  'playstation.com',
+  'nintendo.com',
+  'google.com',
+  'youtube.com',
+  'twitter.com',
+  'x.com',
+  'facebook.com',
+  'reddit.com',
+  'twitch.tv',
+  'discord.com',
+  'github.com',
+  'microsoft.com',
+  'apple.com'
+];
+
+function isKnownFrameBlocked(url) {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    return KNOWN_FRAME_BLOCKED_HOSTS.some(domain => host === domain || host.endsWith('.' + domain));
+  } catch (e) {
+    return false;
+  }
+}
+
+function showBrowserFallback(url, customReason = null) {
+  const iframe = document.getElementById('browser-iframe');
+  const fallbackCard = document.getElementById('browser-fallback-card');
+  const fallbackBtn = document.getElementById('browser-fallback-btn');
+  const fallbackTitle = document.getElementById('browser-fallback-title');
+  const fallbackDesc = document.getElementById('browser-fallback-desc');
+
+  if (iframe) iframe.style.display = 'none';
+  if (fallbackBtn) fallbackBtn.href = url;
+  if (fallbackCard) fallbackCard.style.display = 'flex';
+
+  let hostname = '';
+  try { hostname = new URL(url).hostname; } catch (e) { hostname = url; }
+
+  if (fallbackTitle) {
+    fallbackTitle.textContent = `${hostname || 'Website'} Refuses Embedding`;
+  }
+  if (fallbackDesc) {
+    fallbackDesc.innerHTML = customReason || `
+      <strong>${hostname}</strong> sends security headers (<code>X-Frame-Options</code> or <code>Content-Security-Policy</code>) that prevent web pages from displaying it inside an iframe.
+      <br><br>
+      You can open and browse <strong>${hostname}</strong> directly without leaving LootDrop:
+    `;
+  }
+}
+
 function openDealBrowser(url, title = 'Giveaway Deal') {
   const targetUrl = sanitizeUrl(url || customDefaultBrowserUrl);
   if (!targetUrl || targetUrl === '#' || targetUrl === 'about:blank') return;
@@ -88,11 +146,9 @@ function openDealBrowser(url, title = 'Giveaway Deal') {
     modal.classList.add('open');
   }
 
-  // Check if target storefront blocks iframe embedding via X-Frame-Options/CSP
-  const isEmbedBlocked = /epicgames\.com|steampowered\.com|gog\.com|xbox\.com|playstation\.com|nintendo\.com/i.test(targetUrl);
-  if (isEmbedBlocked) {
-    if (iframe) iframe.style.display = 'none';
-    if (fallbackCard) fallbackCard.style.display = 'flex';
+  // Check if target storefront or popular service blocks iframe embedding
+  if (isKnownFrameBlocked(targetUrl)) {
+    showBrowserFallback(targetUrl);
   } else {
     if (fallbackCard) fallbackCard.style.display = 'none';
     if (iframe) {
@@ -1640,6 +1696,28 @@ function setupEventListeners() {
       }
     });
   });
+
+  // Force Try Iframe button (bypasses restriction warning if user wants to attempt embedding)
+  document.getElementById('browser-try-iframe-btn')?.addEventListener('click', () => {
+    const currentVal = document.getElementById('browser-address-input')?.value;
+    const iframe = document.getElementById('browser-iframe');
+    const fallbackCard = document.getElementById('browser-fallback-card');
+    if (currentVal && iframe) {
+      if (fallbackCard) fallbackCard.style.display = 'none';
+      iframe.style.display = 'block';
+      iframe.src = currentVal;
+      showToast('Attempting direct embed...', '🔄');
+    }
+  });
+
+  // Iframe error / load detection
+  const browserIframe = document.getElementById('browser-iframe');
+  if (browserIframe) {
+    browserIframe.addEventListener('error', () => {
+      const currentVal = document.getElementById('browser-address-input')?.value;
+      if (currentVal) showBrowserFallback(currentVal);
+    });
+  }
 
   // In-App Browser Controls
   document.getElementById('close-browser-btn')?.addEventListener('click', () => {
