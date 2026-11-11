@@ -145,6 +145,7 @@ import com.example.ui.components.ExpressiveTopActionBar
 import com.example.ui.components.FilterSortBottomSheet
 import com.example.ui.components.GiveawayCard
 import com.example.ui.components.GiveawayDetailDialog
+import com.example.ui.components.InAppBrowserDialog
 import com.example.ui.components.LibraryPlayFilterChips
 import com.example.ui.components.SteamGameCard
 import com.example.ui.components.SteamSyncDialog
@@ -221,6 +222,8 @@ fun HomeScreen(
     val recentPlayedSteamGames by viewModel.recentPlayedSteamGames.collectAsState()
     val top3FreeGamesToday by viewModel.top3FreeGamesToday.collectAsState()
     val userProfile by viewModel.userProfile.collectAsState()
+    val inAppBrowserUrl by viewModel.inAppBrowserUrl.collectAsState()
+    val inAppBrowserTitle by viewModel.inAppBrowserTitle.collectAsState()
 
     val borderBeamAngle = rememberAnimatedBeamAngle(enabled = isAnimationsEnabled && !isLowEndOptimization)
 
@@ -798,6 +801,18 @@ fun HomeScreen(
                     customSteamId = uid,
                     customApiKey = if (key.isBlank()) null else key
                 )
+            }
+        )
+    }
+
+    // In-App Browser Dialog (for claiming games and browsing giveaway links)
+    inAppBrowserUrl?.let { url ->
+        InAppBrowserDialog(
+            url = url,
+            title = inAppBrowserTitle,
+            onDismiss = { viewModel.closeInAppBrowser() },
+            onOpenExternal = { targetUrl ->
+                viewModel.launchExternalBrowser(context, targetUrl)
             }
         )
     }

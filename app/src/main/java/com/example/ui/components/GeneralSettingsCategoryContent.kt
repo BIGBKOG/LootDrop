@@ -78,6 +78,7 @@ fun GeneralSettingsCategoryContent(
     val isShowOriginalPrice by viewModel.isShowOriginalPrice.collectAsState()
     val isShowExpiration by viewModel.isShowExpiration.collectAsState()
     val isConfirmToastOnClaim by viewModel.isConfirmToastOnClaim.collectAsState()
+    val isUseInAppBrowser by viewModel.isUseInAppBrowser.collectAsState()
     val isAutoCheckOnReopen by viewModel.isAutoCheckOnReopen.collectAsState()
     val isAutoCheckGithubUpdates by viewModel.isAutoCheckGithubUpdates.collectAsState()
     val isAnimationsEnabled by viewModel.isAnimationsEnabled.collectAsState()
@@ -266,6 +267,40 @@ fun GeneralSettingsCategoryContent(
             Switch(
                 checked = isConfirmToastOnClaim,
                 onCheckedChange = { viewModel.setConfirmToastOnClaim(it) },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.background,
+                    checkedTrackColor = MaterialTheme.colorScheme.primary
+                )
+            )
+        }
+
+        Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "In-App Browser",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Open deal links inside LootDrop instead of an external browser",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Switch(
+                checked = isUseInAppBrowser,
+                onCheckedChange = { viewModel.setUseInAppBrowser(it) },
+                modifier = Modifier.testTag("switch_use_in_app_browser"),
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = MaterialTheme.colorScheme.background,
                     checkedTrackColor = MaterialTheme.colorScheme.primary

@@ -25,6 +25,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -2723,6 +2724,91 @@ class ExampleRobolectricTest {
         viewModel.setDefaultTab(com.example.ui.MainTab.HOME)
         assertEquals(com.example.ui.MainTab.HOME, viewModel.defaultTab.value)
         assertEquals(com.example.ui.MainTab.HOME, prefs.defaultTab)
+    }
+
+    @Test
+    fun `inAppBrowser preference persists and defaults to true`() {
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val prefs = com.example.preferences.AppPreferences(context)
+        
+        // Defaults to true
+        assertTrue(prefs.isUseInAppBrowser)
+
+        prefs.isUseInAppBrowser = false
+        assertFalse(prefs.isUseInAppBrowser)
+
+        prefs.isUseInAppBrowser = true
+        assertTrue(prefs.isUseInAppBrowser)
+    }
+
+    @Test
+    fun `viewModel setUseInAppBrowser and browser dialog state flow operate correctly`() {
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val viewModel = com.example.ui.GiveawaysViewModel(context)
+
+        // Verify initial state defaults to true
+        assertTrue(viewModel.isUseInAppBrowser.value)
+        assertNull(viewModel.inAppBrowserUrl.value)
+
+        // Toggle to false
+        viewModel.setUseInAppBrowser(false)
+        assertFalse(viewModel.isUseInAppBrowser.value)
+
+        // Toggle back to true
+        viewModel.setUseInAppBrowser(true)
+        assertTrue(viewModel.isUseInAppBrowser.value)
+
+        // Open in-app browser
+        viewModel.openInAppBrowser("https://store.epicgames.com/test", "Test Game")
+        assertEquals("https://store.epicgames.com/test", viewModel.inAppBrowserUrl.value)
+        assertEquals("Test Game", viewModel.inAppBrowserTitle.value)
+
+        // Close in-app browser
+        viewModel.closeInAppBrowser()
+        assertNull(viewModel.inAppBrowserUrl.value)
+        assertEquals("", viewModel.inAppBrowserTitle.value)
+    }
+
+    @Test
+    fun `claimAndLaunch routes to inAppBrowser when enabled and records claim`() {
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val viewModel = com.example.ui.GiveawaysViewModel(context)
+        viewModel.setUseInAppBrowser(true)
+
+        val testItem = com.example.data.model.GiveawayItem(
+            id = 77123,
+            title = "InApp Deal Test Game",
+            worth = "$29.99",
+            numericWorth = 29.99,
+            thumbnail = "https://example.com/thumb.jpg",
+            image = "https://example.com/img.jpg",
+            description = "Test game description",
+            instructions = "Claim instructions",
+            openGiveawayUrl = "https://store.steampowered.com/app/77123",
+            publishedDate = "2026-11-10",
+            type = "Game",
+            platforms = "PC",
+            endDate = "2026-11-20",
+            users = 500,
+            status = "Active",
+            isClaimed = false
+        )
+
+        viewModel.claimAndLaunch(context, testItem)
+
+        // Should route to in-app browser
+        assertEquals("https://store.steampowered.com/app/77123", viewModel.inAppBrowserUrl.value)
+        assertEquals("InApp Deal Test Game", viewModel.inAppBrowserTitle.value)
+
+        // Close it
+        viewModel.closeInAppBrowser()
+        assertNull(viewModel.inAppBrowserUrl.value)
+
+        // Now test when disabled
+        viewModel.setUseInAppBrowser(false)
+        // With isUseInAppBrowser = false, inAppBrowserUrl should NOT be set
+        viewModel.claimAndLaunch(context, testItem, targetUrl = "https://store.epicgames.com/deal")
+        assertNull(viewModel.inAppBrowserUrl.value)
     }
 }
 

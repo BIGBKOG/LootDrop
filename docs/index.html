@@ -384,6 +384,20 @@
           </div>
         </div>
 
+        <!-- In-App Browser & Giveaway Launch Preference -->
+        <div class="settings-card">
+          <div class="card-title-header">
+            <div>
+              <h3 class="settings-card-title">🌐 In-App Browser</h3>
+              <p class="settings-card-sub">Choose whether deal and claim links open inside LootDrop or in a new browser tab.</p>
+            </div>
+            <label class="switch-control">
+              <input type="checkbox" id="setting-use-in-app-browser" checked>
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+        </div>
+
         <!-- Steam 64 ID Integration -->
         <div class="settings-card">
           <h3 class="settings-card-title">🎮 Steam 64 ID Integration</h3>
@@ -752,6 +766,36 @@
             <span class="trophy-count-pill" id="profile-trophy-count">0 Unlocked</span>
           </div>
           <div class="trophy-showcase-grid" id="profile-trophies-container"></div>
+        </div>
+      </div>
+    </div>
+  <!-- MODAL: In-App Browser Modal -->
+  <div class="modal-overlay" id="modal-in-app-browser">
+    <div class="modal-card in-app-browser-modal-card">
+      <div class="modal-header browser-modal-header">
+        <div class="browser-address-bar">
+          <span class="browser-ssl-icon">🔒</span>
+          <span class="browser-url-text" id="browser-address-text">https://store.epicgames.com</span>
+        </div>
+        <div class="browser-header-actions">
+          <button class="btn btn-sm btn-outline" id="browser-reload-btn" title="Reload page">🔄</button>
+          <button class="btn btn-sm btn-outline" id="browser-copy-btn" title="Copy URL">📋</button>
+          <a href="#" id="browser-external-link" target="_blank" rel="noopener" class="btn btn-sm btn-primary" title="Open in external browser">↗ Open External</a>
+          <button class="close-modal-btn" id="close-browser-btn" title="Close browser">✕</button>
+        </div>
+      </div>
+      <div class="browser-body">
+        <div class="browser-security-note">
+          <span>🛡️ LootDrop In-App Deal Browser &bull; Safe Browsing & Deal Claiming</span>
+        </div>
+        <div class="browser-iframe-container" id="browser-frame-container">
+          <iframe id="browser-iframe" src="about:blank" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" referrerpolicy="no-referrer"></iframe>
+          <div class="browser-fallback-card" id="browser-fallback-card" style="display: none;">
+            <div class="fallback-icon">🛡️</div>
+            <h3>External Store Protected Page</h3>
+            <p>Major stores (e.g. Epic Games, Steam, Xbox) restrict direct iframe embedding for user security. You can claim this 100% free deal directly below:</p>
+            <a href="#" id="browser-fallback-btn" target="_blank" rel="noopener" class="btn btn-primary btn-lg">🚀 Launch Store Deal Page ↗</a>
+          </div>
         </div>
       </div>
     </div>

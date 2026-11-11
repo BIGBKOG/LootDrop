@@ -47,8 +47,46 @@ const STORAGE_KEYS = {
   BG_MODE: 'lootdrop_bg_mode',
   STEAM_ID: 'lootdrop_steam_id',
   NOTIFICATIONS: 'lootdrop_notifications',
-  ALERT_SETTINGS: 'lootdrop_alert_settings'
+  ALERT_SETTINGS: 'lootdrop_alert_settings',
+  USE_IN_APP_BROWSER: 'lootdrop_use_in_app_browser'
 };
+
+let isUseInAppBrowser = localStorage.getItem(STORAGE_KEYS.USE_IN_APP_BROWSER) !== 'false';
+
+function openDealBrowser(url, title = 'Giveaway Deal') {
+  if (!url || url === '#' || url === 'about:blank') return;
+  if (!isUseInAppBrowser) {
+    window.open(url, '_blank', 'noopener,noreferrer');
+    return;
+  }
+  const modal = document.getElementById('modal-in-app-browser');
+  const addressText = document.getElementById('browser-address-text');
+  const externalLink = document.getElementById('browser-external-link');
+  const iframe = document.getElementById('browser-iframe');
+  const fallbackCard = document.getElementById('browser-fallback-card');
+  const fallbackBtn = document.getElementById('browser-fallback-btn');
+
+  if (addressText) addressText.textContent = url;
+  if (externalLink) externalLink.href = url;
+  if (fallbackBtn) fallbackBtn.href = url;
+
+  if (modal) {
+    modal.classList.add('open');
+  }
+
+  // Check if target storefront blocks iframe embedding
+  const isEmbedBlocked = /epicgames\.com|steampowered\.com|gog\.com|xbox\.com|playstation\.com|nintendo\.com/i.test(url);
+  if (isEmbedBlocked) {
+    if (iframe) iframe.style.display = 'none';
+    if (fallbackCard) fallbackCard.style.display = 'flex';
+  } else {
+    if (fallbackCard) fallbackCard.style.display = 'none';
+    if (iframe) {
+      iframe.style.display = 'block';
+      iframe.src = url;
+    }
+  }
+}
 
 // Anchor week for week 1 calculation (Monday Nov 9, 2026)
 const ANCHOR_WEEK = { year: 2026, week: 46 };
@@ -738,7 +776,7 @@ function renderVault() {
           </select>
         </div>
         <div class="card-actions-row">
-          <a href="${item.open_giveaway_url || '#'}" target="_blank" rel="noopener" class="btn btn-sm btn-primary" style="flex:1;" onclick="event.stopPropagation()">
+          <a href="${item.open_giveaway_url || '#'}" target="_blank" rel="noopener" class="btn btn-sm btn-primary claim-deal-btn" data-url="${item.open_giveaway_url || ''}" data-title="${escapeHtml(item.title)}" style="flex:1;" onclick="event.stopPropagation()">
             Launch / Claim ↗
           </a>
           <button class="btn-vault-icon remove-vault-btn" data-id="${item.id}" title="Remove from Vault" onclick="event.stopPropagation()">
@@ -803,7 +841,7 @@ function createGiveawayCardHtml(g, isFeatured = false) {
           <span>👥 ${g.users ? `${g.users} claims` : 'Active'}</span>
         </div>
         <div class="card-actions-row">
-          <a href="${g.open_giveaway_url || '#'}" target="_blank" rel="noopener" class="btn btn-sm btn-primary" style="flex:1;" onclick="event.stopPropagation()">
+          <a href="${g.open_giveaway_url || '#'}" target="_blank" rel="noopener" class="btn btn-sm btn-primary claim-deal-btn" data-url="${g.open_giveaway_url || ''}" data-title="${escapeHtml(g.title)}" style="flex:1;" onclick="event.stopPropagation()">
             Claim Free ↗
           </a>
           <button class="btn-vault-icon ${isSaved ? 'active' : ''}" data-id="${g.id}" title="${isSaved ? 'In Vault' : 'Add to Vault'}" onclick="event.stopPropagation(); toggleVaultItem(${g.id});">
@@ -816,6 +854,16 @@ function createGiveawayCardHtml(g, isFeatured = false) {
 }
 
 function attachCardEvents() {
+  document.querySelectorAll('.claim-deal-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      if (isUseInAppBrowser) {
+        e.preventDefault();
+        e.stopPropagation();
+        openDealBrowser(btn.dataset.url, btn.dataset.title);
+      }
+    });
+  });
+
   document.querySelectorAll('.giveaway-card').forEach(card => {
     card.addEventListener('click', () => {
       const id = parseInt(card.dataset.id, 10);
@@ -867,7 +915,14 @@ function openGiveawayDetail(g) {
   document.getElementById('detail-expiration').textContent = formatExpiration(g.end_date);
   document.getElementById('detail-instructions').textContent = g.instructions || 'Claim directly on store page.';
   document.getElementById('detail-description').textContent = g.description || '';
-  document.getElementById('detail-claim-link').href = g.open_giveaway_url || '#';
+  const claimLink = document.getElementById('detail-claim-link');
+  claimLink.href = g.open_giveaway_url || '#';
+  claimLink.onclick = (e) => {
+    if (isUseInAppBrowser && g.open_giveaway_url) {
+      e.preventDefault();
+      openDealBrowser(g.open_giveaway_url, g.title);
+    }
+  };
 
   const isSaved = vaultItems.some(v => v.id === g.id);
   const vaultBtn = document.getElementById('detail-vault-toggle');
@@ -1464,6 +1519,37 @@ function setupEventListeners() {
     localStorage.removeItem(STORAGE_KEYS.NOTIFICATIONS);
     renderNotificationsList();
     showToast('Cleared notification history', '🗑️');
+  });
+
+  // In-App Browser Preference Toggle
+  const inAppBrowserToggle = document.getElementById('setting-use-in-app-browser');
+  if (inAppBrowserToggle) {
+    inAppBrowserToggle.checked = isUseInAppBrowser;
+    inAppBrowserToggle.addEventListener('change', (e) => {
+      isUseInAppBrowser = e.target.checked;
+      localStorage.setItem(STORAGE_KEYS.USE_IN_APP_BROWSER, isUseInAppBrowser ? 'true' : 'false');
+      showToast(isUseInAppBrowser ? 'In-App Browser enabled' : 'External browser enabled', '🌐');
+    });
+  }
+
+  // In-App Browser Controls
+  document.getElementById('close-browser-btn')?.addEventListener('click', () => {
+    document.getElementById('modal-in-app-browser')?.classList.remove('open');
+    const iframe = document.getElementById('browser-iframe');
+    if (iframe) iframe.src = 'about:blank';
+  });
+
+  document.getElementById('browser-reload-btn')?.addEventListener('click', () => {
+    const url = document.getElementById('browser-address-text')?.textContent;
+    if (url) openDealBrowser(url);
+  });
+
+  document.getElementById('browser-copy-btn')?.addEventListener('click', () => {
+    const url = document.getElementById('browser-address-text')?.textContent;
+    if (url) {
+      navigator.clipboard.writeText(url);
+      showToast('Deal URL copied to clipboard!', '📋');
+    }
   });
 
   // Background Mode Buttons

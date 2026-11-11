@@ -279,6 +279,15 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isConfirmToastOnClaim = MutableStateFlow(preferences.isConfirmToastOnClaim)
     val isConfirmToastOnClaim: StateFlow<Boolean> = _isConfirmToastOnClaim.asStateFlow()
 
+    private val _isUseInAppBrowser = MutableStateFlow(preferences.isUseInAppBrowser)
+    val isUseInAppBrowser: StateFlow<Boolean> = _isUseInAppBrowser.asStateFlow()
+
+    private val _inAppBrowserUrl = MutableStateFlow<String?>(null)
+    val inAppBrowserUrl: StateFlow<String?> = _inAppBrowserUrl.asStateFlow()
+
+    private val _inAppBrowserTitle = MutableStateFlow("")
+    val inAppBrowserTitle: StateFlow<String> = _inAppBrowserTitle.asStateFlow()
+
     private val _isAutoCheckOnReopen = MutableStateFlow(preferences.isAutoCheckOnReopen)
     val isAutoCheckOnReopen: StateFlow<Boolean> = _isAutoCheckOnReopen.asStateFlow()
 
@@ -1366,6 +1375,21 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         _isConfirmToastOnClaim.value = confirm
     }
 
+    fun setUseInAppBrowser(enabled: Boolean) {
+        preferences.isUseInAppBrowser = enabled
+        _isUseInAppBrowser.value = enabled
+    }
+
+    fun openInAppBrowser(url: String, title: String = "") {
+        _inAppBrowserTitle.value = title
+        _inAppBrowserUrl.value = url
+    }
+
+    fun closeInAppBrowser() {
+        _inAppBrowserUrl.value = null
+        _inAppBrowserTitle.value = ""
+    }
+
     fun setAutoCheckOnReopen(enabled: Boolean) {
         preferences.isAutoCheckOnReopen = enabled
         _isAutoCheckOnReopen.value = enabled
@@ -1998,6 +2022,15 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
             }
         }
         val url = targetUrl ?: item.openGiveawayUrl
+        if (_isUseInAppBrowser.value && !url.isNullOrBlank()) {
+            openInAppBrowser(url, item.title)
+        } else {
+            launchExternalBrowser(context, url ?: "")
+        }
+    }
+
+    fun launchExternalBrowser(context: Context, url: String) {
+        if (url.isBlank()) return
         try {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK

@@ -345,6 +345,7 @@ class AppPreferences(context: Context) {
         private const val KEY_SHOW_ORIGINAL_PRICE = "key_show_original_price"
         private const val KEY_SHOW_EXPIRATION = "key_show_expiration"
         private const val KEY_CONFIRM_ON_CLAIM = "key_confirm_on_claim"
+        private const val KEY_USE_IN_APP_BROWSER = "key_use_in_app_browser"
         private const val KEY_AUTO_CHECK_ON_REOPEN = "key_auto_check_on_reopen"
         private const val KEY_HAS_SEEN_ONBOARDING = "key_has_seen_onboarding"
         private const val KEY_UI_ANIMATIONS_ENABLED = "key_ui_animations_enabled"
@@ -470,6 +471,10 @@ class AppPreferences(context: Context) {
     var isConfirmToastOnClaim: Boolean
         get() = prefs.getBoolean(KEY_CONFIRM_ON_CLAIM, true)
         set(value) = prefs.edit().putBoolean(KEY_CONFIRM_ON_CLAIM, value).apply()
+
+    var isUseInAppBrowser: Boolean
+        get() = prefs.getBoolean(KEY_USE_IN_APP_BROWSER, true)
+        set(value) = prefs.edit().putBoolean(KEY_USE_IN_APP_BROWSER, value).apply()
 
     var isAutoCheckOnReopen: Boolean
         get() = prefs.getBoolean(KEY_AUTO_CHECK_ON_REOPEN, true)
