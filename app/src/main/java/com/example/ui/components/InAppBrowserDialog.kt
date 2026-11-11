@@ -6,8 +6,11 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
+import android.view.View
 import android.view.ViewGroup
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -40,6 +43,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -61,6 +66,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -90,6 +96,7 @@ fun InAppBrowserDialog(
     var isLoading by remember { mutableStateOf(true) }
     var canGoBack by remember { mutableStateOf(false) }
     var canGoForward by remember { mutableStateOf(false) }
+    var hasRenderCrashed by remember { mutableStateOf(false) }
 
     // Intercept back button to navigate backwards in web history before closing
     BackHandler(enabled = true) {
@@ -189,7 +196,13 @@ fun InAppBrowserDialog(
 
                             // Refresh
                             IconButton(
-                                onClick = { webViewInstance?.reload() }
+                                onClick = {
+                                    if (hasRenderCrashed) {
+                                        hasRenderCrashed = false
+                                    } else {
+                                        webViewInstance?.reload()
+                                    }
+                                }
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Refresh,
@@ -250,77 +263,160 @@ fun InAppBrowserDialog(
                         .weight(1f)
                         .background(Color.White)
                 ) {
-                    AndroidView(
-                        modifier = Modifier.fillMaxSize(),
-                        factory = { ctx ->
-                            WebView(ctx).apply {
-                                layoutParams = ViewGroup.LayoutParams(
-                                    ViewGroup.LayoutParams.MATCH_PARENT,
-                                    ViewGroup.LayoutParams.MATCH_PARENT
-                                )
-                                settings.apply {
-                                    javaScriptEnabled = true
-                                    domStorageEnabled = true
-                                    databaseEnabled = true
-                                    useWideViewPort = true
-                                    loadWithOverviewMode = true
-                                    builtInZoomControls = true
-                                    displayZoomControls = false
-                                    setSupportZoom(true)
-                                    mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-                                    // Strip webview token from user agent so sites like Epic and Steam render desktop/full web layouts
-                                    userAgentString = userAgentString.replace("; wv", "")
-                                }
+                    if (!hasRenderCrashed) {
+                        AndroidView(
+                            modifier = Modifier.fillMaxSize(),
+                            factory = { ctx ->
+                                WebView(ctx).apply {
+                                    layoutParams = ViewGroup.LayoutParams(
+                                        ViewGroup.LayoutParams.MATCH_PARENT,
+                                        ViewGroup.LayoutParams.MATCH_PARENT
+                                    )
+                                    // Software layer avoids GPU process crash in virtual container/emulator
+                                    setLayerType(View.LAYER_TYPE_SOFTWARE, null)
 
-                                webViewClient = object : WebViewClient() {
-                                    override fun onPageStarted(view: WebView?, pageUrl: String?, favicon: Bitmap?) {
-                                        super.onPageStarted(view, pageUrl, favicon)
-                                        pageUrl?.let { currentUrl = it }
-                                        isLoading = true
-                                        canGoBack = canGoBack()
-                                        canGoForward = canGoForward()
+                                    settings.apply {
+                                        javaScriptEnabled = true
+                                        domStorageEnabled = true
+                                        useWideViewPort = true
+                                        loadWithOverviewMode = true
+                                        builtInZoomControls = true
+                                        displayZoomControls = false
+                                        setSupportZoom(true)
+                                        mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+                                        cacheMode = WebSettings.LOAD_DEFAULT
+                                        mediaPlaybackRequiresUserGesture = true
+                                        allowFileAccess = false
+                                        allowContentAccess = false
                                     }
 
-                                    override fun onPageFinished(view: WebView?, pageUrl: String?) {
-                                        super.onPageFinished(view, pageUrl)
-                                        pageUrl?.let { currentUrl = it }
-                                        isLoading = false
-                                        canGoBack = canGoBack()
-                                        canGoForward = canGoForward()
-                                        view?.title?.takeIf { it.isNotBlank() && !it.startsWith("http") }?.let {
-                                            displayTitle = it
+                                    webViewClient = object : WebViewClient() {
+                                        override fun onPageStarted(view: WebView?, pageUrl: String?, favicon: Bitmap?) {
+                                            super.onPageStarted(view, pageUrl, favicon)
+                                            pageUrl?.let { currentUrl = it }
+                                            isLoading = true
+                                            canGoBack = canGoBack()
+                                            canGoForward = canGoForward()
                                         }
-                                    }
-                                }
 
-                                webChromeClient = object : WebChromeClient() {
-                                    override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                                        loadProgress = (newProgress / 100f).coerceIn(0.05f, 1f)
-                                        if (newProgress >= 100) {
+                                        override fun onPageFinished(view: WebView?, pageUrl: String?) {
+                                            super.onPageFinished(view, pageUrl)
+                                            pageUrl?.let { currentUrl = it }
                                             isLoading = false
+                                            canGoBack = canGoBack()
+                                            canGoForward = canGoForward()
+                                            view?.title?.takeIf { it.isNotBlank() && !it.startsWith("http") }?.let {
+                                                displayTitle = it
+                                            }
                                         }
-                                        canGoBack = canGoBack()
-                                        canGoForward = canGoForward()
+
+                                        override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                                            val reqUri = request?.url ?: return false
+                                            val scheme = reqUri.scheme?.lowercase() ?: ""
+                                            if (scheme != "http" && scheme != "https") {
+                                                try {
+                                                    val intent = Intent(Intent.ACTION_VIEW, reqUri).apply {
+                                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                    }
+                                                    context.startActivity(intent)
+                                                } catch (_: Exception) {}
+                                                return true
+                                            }
+                                            return false
+                                        }
+
+                                        override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
+                                            // CRITICAL: Return true to prevent Android OS from killing the host app
+                                            try {
+                                                val parent = view?.parent as? ViewGroup
+                                                parent?.removeView(view)
+                                                view?.destroy()
+                                            } catch (_: Exception) {}
+                                            webViewInstance = null
+                                            hasRenderCrashed = true
+                                            isLoading = false
+                                            return true
+                                        }
                                     }
 
-                                    override fun onReceivedTitle(view: WebView?, webTitle: String?) {
-                                        super.onReceivedTitle(view, webTitle)
-                                        if (!webTitle.isNullOrBlank() && !webTitle.startsWith("http")) {
-                                            displayTitle = webTitle
+                                    webChromeClient = object : WebChromeClient() {
+                                        override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                                            loadProgress = (newProgress / 100f).coerceIn(0.05f, 1f)
+                                            if (newProgress >= 100) {
+                                                isLoading = false
+                                            }
+                                            canGoBack = canGoBack()
+                                            canGoForward = canGoForward()
+                                        }
+
+                                        override fun onReceivedTitle(view: WebView?, webTitle: String?) {
+                                            super.onReceivedTitle(view, webTitle)
+                                            if (!webTitle.isNullOrBlank() && !webTitle.startsWith("http")) {
+                                                displayTitle = webTitle
+                                            }
                                         }
                                     }
+
+                                    loadUrl(url)
+                                    webViewInstance = this
                                 }
-
-                                loadUrl(url)
-                                webViewInstance = this
+                            },
+                            update = { wv ->
+                                if (!hasRenderCrashed) {
+                                    canGoBack = wv.canGoBack()
+                                    canGoForward = wv.canGoForward()
+                                }
                             }
-                        },
-                        update = { wv ->
-                            // Update navigation capabilities
-                            canGoBack = wv.canGoBack()
-                            canGoForward = wv.canGoForward()
+                        )
+                    } else {
+                        // Resilient fallback when renderer process is terminated
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.background)
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Warning,
+                                contentDescription = "Renderer Interrupted",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(52.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "Storefront Requires External Browser",
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "This external storefront encountered high memory usage or anti-embed protection in the embedded engine. You can claim it directly in your device's browser.",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Button(
+                                onClick = {
+                                    onOpenExternal(currentUrl)
+                                    onDismiss()
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Open in External Browser")
+                            }
                         }
-                    )
+                    }
 
                     // Initial loading overlay
                     if (isLoading && loadProgress < 0.25f) {
