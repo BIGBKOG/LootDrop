@@ -396,6 +396,30 @@
               <span class="switch-slider"></span>
             </label>
           </div>
+
+          <div class="settings-browser-url-section" id="settings-browser-url-section">
+            <label class="settings-input-label" for="setting-default-browser-url">
+              🏠 Default In-App Browser Website / Homepage
+            </label>
+            <p class="settings-card-sub" style="margin-bottom: 8px;">
+              Change the default link opened by the in-app browser to any custom website (e.g. your favorite store, deal aggregator, or homepage).
+            </p>
+            <div class="settings-url-input-row">
+              <input type="url" id="setting-default-browser-url" class="custom-input" placeholder="https://store.epicgames.com/" value="https://store.epicgames.com/">
+              <button class="btn btn-primary" id="btn-save-browser-url">Save Link</button>
+              <button class="btn btn-outline" id="btn-reset-browser-url" title="Reset to default Epic Games store">Reset</button>
+              <button class="btn btn-outline" id="btn-launch-browser-url" title="Open in In-App Browser">🚀 Open</button>
+            </div>
+            <div class="preset-links-row">
+              <span class="preset-label">Quick Presets:</span>
+              <button type="button" class="btn-preset-pill" data-preset="https://store.epicgames.com/">Epic Games</button>
+              <button type="button" class="btn-preset-pill" data-preset="https://store.steampowered.com/">Steam Store</button>
+              <button type="button" class="btn-preset-pill" data-preset="https://www.gog.com/">GOG.com</button>
+              <button type="button" class="btn-preset-pill" data-preset="https://www.gamerpower.com/">GamerPower</button>
+              <button type="button" class="btn-preset-pill" data-preset="https://www.google.com/">Google</button>
+            </div>
+            <p class="input-hint" id="browser-url-status-hint">Current default: https://store.epicgames.com/</p>
+          </div>
         </div>
 
         <!-- Steam 64 ID Integration -->
@@ -775,16 +799,27 @@
   <div class="modal-overlay" id="modal-in-app-browser">
     <div class="modal-card in-app-browser-modal-card">
       <div class="modal-header browser-modal-header">
-        <div class="browser-address-bar">
+        <form class="browser-address-bar" id="browser-address-form" onsubmit="return false;">
+          <button type="button" class="browser-nav-btn" id="browser-home-btn" title="Go to default homepage">🏠</button>
           <span class="browser-ssl-icon">🔒</span>
-          <span class="browser-url-text" id="browser-address-text">https://store.epicgames.com</span>
-        </div>
+          <input type="text" id="browser-address-input" class="browser-address-input" placeholder="Type or paste any URL (e.g. google.com, epicgames.com)..." autocomplete="off" spellcheck="false">
+          <button type="submit" class="browser-go-btn" id="browser-go-btn" title="Navigate to URL">➔</button>
+        </form>
         <div class="browser-header-actions">
           <button class="btn btn-sm btn-outline" id="browser-reload-btn" title="Reload page">🔄</button>
           <button class="btn btn-sm btn-outline" id="browser-copy-btn" title="Copy URL">📋</button>
           <a href="#" id="browser-external-link" target="_blank" rel="noopener" class="btn btn-sm btn-primary" title="Open in external browser">↗ Open External</a>
           <button class="close-modal-btn" id="close-browser-btn" title="Close browser">✕</button>
         </div>
+      </div>
+      <div class="browser-quick-bar" id="browser-quick-bar">
+        <span class="browser-quick-label">Bookmarks:</span>
+        <button type="button" class="browser-quick-pill" data-url="homepage" id="browser-pill-home">🏠 My Homepage</button>
+        <button type="button" class="browser-quick-pill" data-url="https://store.epicgames.com/">Epic Games</button>
+        <button type="button" class="browser-quick-pill" data-url="https://store.steampowered.com/">Steam</button>
+        <button type="button" class="browser-quick-pill" data-url="https://www.gog.com/">GOG</button>
+        <button type="button" class="browser-quick-pill" data-url="https://www.gamerpower.com/">GamerPower</button>
+        <button type="button" class="browser-quick-pill" data-url="https://www.google.com/">Google</button>
       </div>
       <div class="browser-body">
         <div class="browser-security-note">

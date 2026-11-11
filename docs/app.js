@@ -48,34 +48,48 @@ const STORAGE_KEYS = {
   STEAM_ID: 'lootdrop_steam_id',
   NOTIFICATIONS: 'lootdrop_notifications',
   ALERT_SETTINGS: 'lootdrop_alert_settings',
-  USE_IN_APP_BROWSER: 'lootdrop_use_in_app_browser'
+  USE_IN_APP_BROWSER: 'lootdrop_use_in_app_browser',
+  DEFAULT_BROWSER_URL: 'lootdrop_default_browser_url'
 };
 
+const STANDARD_DEFAULT_BROWSER_URL = 'https://store.epicgames.com/';
 let isUseInAppBrowser = localStorage.getItem(STORAGE_KEYS.USE_IN_APP_BROWSER) !== 'false';
+let customDefaultBrowserUrl = localStorage.getItem(STORAGE_KEYS.DEFAULT_BROWSER_URL) || STANDARD_DEFAULT_BROWSER_URL;
+
+function sanitizeUrl(rawUrl) {
+  if (!rawUrl) return STANDARD_DEFAULT_BROWSER_URL;
+  let trimmed = rawUrl.trim();
+  if (!trimmed) return STANDARD_DEFAULT_BROWSER_URL;
+  if (!/^https?:\/\//i.test(trimmed)) {
+    trimmed = 'https://' + trimmed;
+  }
+  return trimmed;
+}
 
 function openDealBrowser(url, title = 'Giveaway Deal') {
-  if (!url || url === '#' || url === 'about:blank') return;
+  const targetUrl = sanitizeUrl(url || customDefaultBrowserUrl);
+  if (!targetUrl || targetUrl === '#' || targetUrl === 'about:blank') return;
   if (!isUseInAppBrowser) {
-    window.open(url, '_blank', 'noopener,noreferrer');
+    window.open(targetUrl, '_blank', 'noopener,noreferrer');
     return;
   }
   const modal = document.getElementById('modal-in-app-browser');
-  const addressText = document.getElementById('browser-address-text');
+  const addressInput = document.getElementById('browser-address-input');
   const externalLink = document.getElementById('browser-external-link');
   const iframe = document.getElementById('browser-iframe');
   const fallbackCard = document.getElementById('browser-fallback-card');
   const fallbackBtn = document.getElementById('browser-fallback-btn');
 
-  if (addressText) addressText.textContent = url;
-  if (externalLink) externalLink.href = url;
-  if (fallbackBtn) fallbackBtn.href = url;
+  if (addressInput) addressInput.value = targetUrl;
+  if (externalLink) externalLink.href = targetUrl;
+  if (fallbackBtn) fallbackBtn.href = targetUrl;
 
   if (modal) {
     modal.classList.add('open');
   }
 
-  // Check if target storefront blocks iframe embedding
-  const isEmbedBlocked = /epicgames\.com|steampowered\.com|gog\.com|xbox\.com|playstation\.com|nintendo\.com/i.test(url);
+  // Check if target storefront blocks iframe embedding via X-Frame-Options/CSP
+  const isEmbedBlocked = /epicgames\.com|steampowered\.com|gog\.com|xbox\.com|playstation\.com|nintendo\.com/i.test(targetUrl);
   if (isEmbedBlocked) {
     if (iframe) iframe.style.display = 'none';
     if (fallbackCard) fallbackCard.style.display = 'flex';
@@ -83,7 +97,7 @@ function openDealBrowser(url, title = 'Giveaway Deal') {
     if (fallbackCard) fallbackCard.style.display = 'none';
     if (iframe) {
       iframe.style.display = 'block';
-      iframe.src = url;
+      iframe.src = targetUrl;
     }
   }
 }
@@ -1532,6 +1546,101 @@ function setupEventListeners() {
     });
   }
 
+  // Settings Default Browser URL Configuration
+  const defaultBrowserUrlInput = document.getElementById('setting-default-browser-url');
+  const browserUrlStatusHint = document.getElementById('browser-url-status-hint');
+  if (defaultBrowserUrlInput) {
+    defaultBrowserUrlInput.value = customDefaultBrowserUrl;
+    if (browserUrlStatusHint) {
+      browserUrlStatusHint.textContent = `Current default: ${customDefaultBrowserUrl}`;
+    }
+  }
+
+  // Save Custom In-App Browser URL
+  document.getElementById('btn-save-browser-url')?.addEventListener('click', () => {
+    const inputVal = defaultBrowserUrlInput?.value;
+    const sanitized = sanitizeUrl(inputVal);
+    customDefaultBrowserUrl = sanitized;
+    localStorage.setItem(STORAGE_KEYS.DEFAULT_BROWSER_URL, sanitized);
+    if (defaultBrowserUrlInput) defaultBrowserUrlInput.value = sanitized;
+    if (browserUrlStatusHint) browserUrlStatusHint.textContent = `Current default: ${sanitized}`;
+    showToast('In-App Browser default website updated!', '🌐');
+  });
+
+  // Reset to Default Store URL
+  document.getElementById('btn-reset-browser-url')?.addEventListener('click', () => {
+    customDefaultBrowserUrl = STANDARD_DEFAULT_BROWSER_URL;
+    localStorage.removeItem(STORAGE_KEYS.DEFAULT_BROWSER_URL);
+    if (defaultBrowserUrlInput) defaultBrowserUrlInput.value = STANDARD_DEFAULT_BROWSER_URL;
+    if (browserUrlStatusHint) browserUrlStatusHint.textContent = `Current default: ${STANDARD_DEFAULT_BROWSER_URL}`;
+    showToast('Reset in-app browser to default store!', '🔄');
+  });
+
+  // Open Browser from Settings
+  document.getElementById('btn-launch-browser-url')?.addEventListener('click', () => {
+    const target = defaultBrowserUrlInput?.value || customDefaultBrowserUrl;
+    openDealBrowser(target, 'Default Homepage');
+  });
+
+  // Settings Preset Quick Buttons
+  document.querySelectorAll('.btn-preset-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const presetUrl = btn.dataset.preset;
+      if (presetUrl && defaultBrowserUrlInput) {
+        defaultBrowserUrlInput.value = presetUrl;
+        customDefaultBrowserUrl = presetUrl;
+        localStorage.setItem(STORAGE_KEYS.DEFAULT_BROWSER_URL, presetUrl);
+        if (browserUrlStatusHint) browserUrlStatusHint.textContent = `Current default: ${presetUrl}`;
+        showToast(`Default website set to ${btn.textContent.trim()}!`, '🌐');
+      }
+    });
+  });
+
+  // In-App Browser Address Bar Navigation & Form Submission
+  const addressForm = document.getElementById('browser-address-form');
+  const addressInput = document.getElementById('browser-address-input');
+
+  const executeBrowserNavigation = () => {
+    const url = addressInput?.value;
+    if (url) {
+      openDealBrowser(url);
+    }
+  };
+
+  addressForm?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    executeBrowserNavigation();
+  });
+
+  document.getElementById('browser-go-btn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    executeBrowserNavigation();
+  });
+
+  addressInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      executeBrowserNavigation();
+    }
+  });
+
+  // Home Button (Go to configured default homepage)
+  document.getElementById('browser-home-btn')?.addEventListener('click', () => {
+    openDealBrowser(customDefaultBrowserUrl, 'Homepage');
+    showToast('Returned to default homepage', '🏠');
+  });
+
+  // Bookmark Quick Pills inside In-App Browser Modal
+  document.querySelectorAll('.browser-quick-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      const pillUrl = pill.dataset.url;
+      const target = pillUrl === 'homepage' ? customDefaultBrowserUrl : pillUrl;
+      if (target) {
+        openDealBrowser(target);
+      }
+    });
+  });
+
   // In-App Browser Controls
   document.getElementById('close-browser-btn')?.addEventListener('click', () => {
     document.getElementById('modal-in-app-browser')?.classList.remove('open');
@@ -1540,15 +1649,15 @@ function setupEventListeners() {
   });
 
   document.getElementById('browser-reload-btn')?.addEventListener('click', () => {
-    const url = document.getElementById('browser-address-text')?.textContent;
-    if (url) openDealBrowser(url);
+    const currentVal = document.getElementById('browser-address-input')?.value;
+    if (currentVal) openDealBrowser(currentVal);
   });
 
   document.getElementById('browser-copy-btn')?.addEventListener('click', () => {
-    const url = document.getElementById('browser-address-text')?.textContent;
-    if (url) {
-      navigator.clipboard.writeText(url);
-      showToast('Deal URL copied to clipboard!', '📋');
+    const currentVal = document.getElementById('browser-address-input')?.value;
+    if (currentVal) {
+      navigator.clipboard.writeText(currentVal);
+      showToast('Website URL copied to clipboard!', '📋');
     }
   });
 
