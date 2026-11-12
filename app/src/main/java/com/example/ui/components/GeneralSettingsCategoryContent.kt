@@ -62,6 +62,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.BuildConfig
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.WorkspacePremium
 import com.example.data.model.LauncherType
 import com.example.data.model.UpdateDownloadState
 import com.example.preferences.TargetFrameRate
@@ -74,6 +76,8 @@ fun GeneralSettingsCategoryContent(
     viewModel: GiveawaysViewModel
 ) {
     val context = LocalContext.current
+    val publicReviews by viewModel.publicReviews.collectAsState()
+    val userProfile by viewModel.userProfile.collectAsState()
     val defaultLauncher by viewModel.defaultLauncher.collectAsState()
     val isShowOriginalPrice by viewModel.isShowOriginalPrice.collectAsState()
     val isShowExpiration by viewModel.isShowExpiration.collectAsState()
@@ -89,6 +93,27 @@ fun GeneralSettingsCategoryContent(
     val isCheckingUpdates by viewModel.isCheckingUpdates.collectAsState()
     val updateCheckStatus by viewModel.updateCheckStatus.collectAsState()
     val updateDownloadState by viewModel.updateDownloadState.collectAsState()
+
+    // SECTION 0: LootDrop App Rating & Community Reviews
+    SectionHeader(title = "LOOTDROP APP RATING & REVIEWS", icon = Icons.Default.Star)
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    LootDropAppRatingCard(
+        reviews = publicReviews,
+        defaultAuthorName = userProfile.name,
+        onPostAppReview = { rating, title, comment ->
+            viewModel.postAppReview(rating = rating, title = title, comment = comment)
+        },
+        onVoteHelpful = { reviewId ->
+            viewModel.voteReviewHelpful(reviewId)
+        },
+        hasVotedHelpful = { reviewId ->
+            viewModel.hasVotedHelpful(reviewId)
+        }
+    )
+
+    Spacer(modifier = Modifier.height(20.dp))
 
     // SECTION 7: Default Launcher Filter
     SectionHeader(title = "DEFAULT LAUNCHER ON STARTUP", icon = Icons.Default.SportsEsports)

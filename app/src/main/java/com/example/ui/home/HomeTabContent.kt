@@ -115,6 +115,11 @@ fun HomeTabContent(
     onOpenAchievements: (SteamGameEntity) -> Unit,
     onExploreAllFreebies: () -> Unit,
     onViewVault: () -> Unit,
+    publicReviews: List<com.example.data.model.PublicReview> = emptyList(),
+    defaultAuthorName: String = "",
+    onPostAppReview: (Int, String, String) -> Unit = { _, _, _ -> },
+    onVoteHelpful: (String) -> Unit = {},
+    hasVotedHelpful: (String) -> Boolean = { false },
     modifier: Modifier = Modifier
 ) {
     val pullRefreshState = rememberPullToRefreshState()
@@ -174,6 +179,41 @@ fun HomeTabContent(
                     onOpenAchievements = onOpenAchievements,
                     isAnimationsEnabled = isAnimationsEnabled
                 )
+            }
+
+            // Section 3: LootDrop App Rating & Community Reviews
+            item(key = "home_app_rating_reviews_section") {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            tint = Color(0xFFFFD700),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = "LOOTDROP APP RATING & REVIEWS",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFFFD700),
+                            letterSpacing = 0.8.sp
+                        )
+                    }
+                    com.example.ui.components.LootDropAppRatingCard(
+                        reviews = publicReviews,
+                        defaultAuthorName = defaultAuthorName,
+                        onPostAppReview = onPostAppReview,
+                        onVoteHelpful = onVoteHelpful,
+                        hasVotedHelpful = hasVotedHelpful
+                    )
+                }
             }
         }
     }

@@ -61,8 +61,10 @@ import com.example.util.CloudBackupManager
 import com.example.util.RestoreSummary
 import com.example.data.model.BacklogChallengeGrid
 import com.example.data.model.BacklogMilestoneReward
+import com.example.data.model.PublicReview
 import com.example.data.model.UnifiedLibraryItem
 import com.example.util.BacklogChallengeManager
+import com.example.util.PublicReviewsManager
 import com.example.util.UserProfileManager
 
 enum class MainTab {
@@ -974,9 +976,13 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     private val _storageFootprintBytes = MutableStateFlow(0L)
     val storageFootprintBytes: StateFlow<Long> = _storageFootprintBytes.asStateFlow()
 
+    private val _publicReviews = MutableStateFlow<List<PublicReview>>(emptyList())
+    val publicReviews: StateFlow<List<PublicReview>> = _publicReviews.asStateFlow()
+
     init {
         runCatching { refreshGiveaways() }
         runCatching { updateStorageFootprint() }
+        runCatching { refreshPublicReviews() }
         runCatching { NotificationScheduler.schedulePeriodicSync(application) }
         runCatching { AutoBackupScheduler.schedulePeriodicAutoBackup(application) }
         runCatching { checkAndTriggerAutoBackupIfNeeded(application) }
@@ -995,6 +1001,142 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                 }
             }
         }
+    }
+
+    fun refreshPublicReviews() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val list = PublicReviewsManager.fetchReviews(getApplication())
+            _publicReviews.value = list
+        }
+    }
+
+    fun getReviewsForGame(giveawayId: Long, gameTitle: String): List<PublicReview> {
+        val all = _publicReviews.value
+        val cleanGame = gameTitle.trim().lowercase()
+        return all.filter { review ->
+            (giveawayId > 0 && review.giveawayId == giveawayId) ||
+            (cleanGame.isNotBlank() && review.gameTitle.trim().lowercase() == cleanGame) ||
+            (cleanGame.length >= 4 && (review.gameTitle.lowercase().contains(cleanGame) || cleanGame.contains(review.gameTitle.lowercase())))
+        }
+    }
+
+    fun getReviewsForGame(giveawayId: Int, gameTitle: String): List<PublicReview> {
+        return getReviewsForGame(giveawayId.toLong(), gameTitle)
+    }
+
+    fun getAppReviews(): List<PublicReview> {
+        return _publicReviews.value.filter { it.isForApp }
+    }
+
+    fun postAppReview(
+        rating: Int,
+        title: String,
+        comment: String,
+        onComplete: (Boolean, String) -> Unit = { _, _ -> }
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val author = preferences.userProfileName.ifBlank { "Gamer" }
+            val result = PublicReviewsManager.postReview(
+                context = getApplication(),
+                giveawayId = -1L,
+                gameTitle = "LootDrop App",
+                authorName = author,
+                authorTag = "LootDrop Player",
+                rating = rating,
+                title = title,
+                comment = comment,
+                platform = "Android",
+                isVerifiedClaimer = true,
+                isAppReview = true
+            )
+            result.onSuccess { review ->
+                val updated = _publicReviews.value.toMutableList()
+                updated.removeAll { it.id == review.id }
+                updated.add(0, review)
+                _publicReviews.value = updated
+                withContext(Dispatchers.Main) {
+                    onComplete(true, "Your LootDrop App review has been posted publicly!")
+                }
+            }.onFailure { err ->
+                withContext(Dispatchers.Main) {
+                    onComplete(false, err.message ?: "Failed to post review")
+                }
+            }
+        }
+    }
+
+    fun postPublicReview(
+        giveawayId: Long,
+        gameTitle: String,
+        rating: Int,
+        title: String,
+        comment: String,
+        onComplete: (Boolean, String) -> Unit = { _, _ -> }
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val author = preferences.userProfileName.ifBlank { "Gamer" }
+            val isClaimed = claimedGiveaways.value.any { it.id == giveawayId.toInt() }
+            val tag = if (isClaimed) "Verified Claimer" else "Community Member"
+            val result = PublicReviewsManager.postReview(
+                context = getApplication(),
+                giveawayId = giveawayId,
+                gameTitle = gameTitle,
+                authorName = author,
+                authorTag = tag,
+                rating = rating,
+                title = title,
+                comment = comment,
+                platform = "Android",
+                isVerifiedClaimer = isClaimed
+            )
+            result.onSuccess { review ->
+                val updated = _publicReviews.value.toMutableList()
+                updated.removeAll { it.id == review.id }
+                updated.add(0, review)
+                _publicReviews.value = updated
+                withContext(Dispatchers.Main) {
+                    onComplete(true, "Your review has been posted publicly to the community!")
+                }
+            }.onFailure { err ->
+                withContext(Dispatchers.Main) {
+                    onComplete(false, err.message ?: "Failed to post review")
+                }
+            }
+        }
+    }
+
+    fun postPublicReview(
+        giveawayId: Int,
+        gameTitle: String,
+        rating: Int,
+        title: String,
+        comment: String,
+        onComplete: (Boolean, String) -> Unit = { _, _ -> }
+    ) {
+        postPublicReview(giveawayId.toLong(), gameTitle, rating, title, comment, onComplete)
+    }
+
+    fun voteReviewHelpful(reviewId: String, onComplete: (Boolean, String) -> Unit = { _, _ -> }) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val res = PublicReviewsManager.voteHelpful(getApplication(), reviewId)
+            res.onSuccess { newCount ->
+                val updated = _publicReviews.value.map {
+                    if (it.id == reviewId) it.copy(helpfulCount = newCount) else it
+                }
+                _publicReviews.value = updated
+                withContext(Dispatchers.Main) {
+                    onComplete(true, "Marked as helpful!")
+                }
+            }.onFailure { err ->
+                withContext(Dispatchers.Main) {
+                    onComplete(false, err.message ?: "Could not vote")
+                }
+            }
+        }
+    }
+
+    fun hasVotedHelpful(reviewId: String): Boolean {
+        return PublicReviewsManager.hasVotedHelpful(getApplication(), reviewId)
     }
 
     fun updateStorageFootprint() {

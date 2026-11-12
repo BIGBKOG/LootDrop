@@ -58,6 +58,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -109,6 +110,8 @@ import com.example.ui.theme.TextSecondary
 fun GiveawayDetailDialog(
     item: GiveawayItem,
     ownershipStatus: com.example.ui.GiveawaysViewModel.OwnershipStatus? = null,
+    reviews: List<com.example.data.model.PublicReview> = emptyList(),
+    defaultAuthorName: String = "Gamer",
     onDismiss: () -> Unit,
     onClaimClick: () -> Unit,
     onToggleBookmark: () -> Unit,
@@ -116,7 +119,10 @@ fun GiveawayDetailDialog(
     onToggleWishlist: () -> Unit = {},
     onPlayStatusChange: ((PlayStatus) -> Unit)? = null,
     onUpdateManualStorage: ((Float?) -> Unit)? = null,
-    onLauncherOptionClick: ((url: String, launcherName: String) -> Unit)? = null
+    onLauncherOptionClick: ((url: String, launcherName: String) -> Unit)? = null,
+    onPostReview: ((rating: Int, title: String, comment: String) -> Unit)? = null,
+    onVoteHelpful: ((reviewId: String) -> Unit)? = null,
+    hasVotedHelpful: ((reviewId: String) -> Boolean)? = null
 ) {
     val context = LocalContext.current
     val screenDensityInfo = LocalScreenDensityInfo.current
@@ -504,6 +510,61 @@ fun GiveawayDetailDialog(
                                 } catch (_: Exception) {
                                     Toast.makeText(context, "Could not open browser", Toast.LENGTH_SHORT).show()
                                 }
+                            }
+                        )
+                    }
+
+                    // Prominent Community Review Quick Pill right below title & badges
+                    var isDirectWriteDialogOpen by remember { mutableStateOf(false) }
+                    val avgGameRating = remember(reviews) {
+                        if (reviews.isEmpty()) 5.0 else reviews.map { it.rating }.average()
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFF1E1B13))
+                            .border(1.dp, Color(0xFFFFB800).copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                            .clickable { isDirectWriteDialogOpen = true }
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                            .testTag("detail_reviews_quick_pill"),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "⭐ ${String.format(java.util.Locale.US, "%.1f", avgGameRating)}",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color(0xFFFFB800)
+                            )
+                            Text(
+                                text = "• ${reviews.size} Player ${if (reviews.size == 1) "Review" else "Reviews"}",
+                                fontSize = 12.sp,
+                                color = TextPrimary
+                            )
+                        }
+                        Text(
+                            text = "Leave Review ✍️",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFFFB800)
+                        )
+                    }
+
+                    if (isDirectWriteDialogOpen) {
+                        WriteReviewDialog(
+                            gameTitle = item.title,
+                            defaultAuthorName = defaultAuthorName,
+                            initialIsAppReview = false,
+                            onDismiss = { isDirectWriteDialogOpen = false },
+                            onSubmit = { rating, title, comment, _ ->
+                                onPostReview?.invoke(rating, title, comment)
+                                isDirectWriteDialogOpen = false
                             }
                         )
                     }
@@ -1145,6 +1206,24 @@ fun GiveawayDetailDialog(
                         ostInfo = ostInfo,
                         modifier = Modifier.fillMaxWidth(),
                         isLoading = isOstLoading
+                    )
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    // Public Community Reviews Section (Stored in Cloudflare R2)
+                    PublicReviewsSection(
+                        item = item,
+                        reviews = reviews,
+                        defaultAuthorName = defaultAuthorName,
+                        onPostReview = { rating, title, comment ->
+                            onPostReview?.invoke(rating, title, comment)
+                        },
+                        onVoteHelpful = { reviewId ->
+                            onVoteHelpful?.invoke(reviewId)
+                        },
+                        hasVotedHelpful = { reviewId ->
+                            hasVotedHelpful?.invoke(reviewId) ?: false
+                        }
                     )
 
                     Spacer(modifier = Modifier.height(18.dp))

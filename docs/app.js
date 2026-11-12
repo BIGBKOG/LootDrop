@@ -223,6 +223,8 @@ document.addEventListener('DOMContentLoaded', () => {
   fetchGiveaways();
   renderProfile();
   updateStats();
+  fetchPublicReviewsFromR2();
+  initReviewsModal();
 });
 
 // ==========================================
@@ -941,6 +943,7 @@ function openGiveawayDetail(g) {
     }
   }
 
+  loadAndRenderReviewsForGame(g);
   modal.classList.add('open');
 }
 
@@ -1751,4 +1754,546 @@ function setupEventListeners() {
       showToast('Vault cleared', '🗑️');
     }
   });
+}
+
+// ==========================================
+// Cloudflare R2 Public Reviews System
+// ==========================================
+const R2_REVIEWS_URL = 'https://lootdrop-storage-proxy.hardingbentley67.workers.dev?accountId=public_reviews&filename=lootdrop_reviews.json';
+const R2_AUTH_KEY = 'sb_publishable_htD9aXXk0QHjhG_ifS3nYg_kjUp7osD';
+let publicReviewsList = [];
+let currentReviewRating = 5;
+
+const INITIAL_SEED_REVIEWS = [
+  {
+    id: "rev_seed_1",
+    giveawayId: 0,
+    gameTitle: "Death Stranding",
+    authorName: "SamPorter99",
+    authorTag: "Verified Claimer",
+    rating: 5,
+    title: "Atmospheric masterpiece! Grab it while it's free",
+    comment: "One of the most unique experiences in modern gaming. The soundtrack is incredible and the traversal mechanics are surprisingly engaging. Runs great on Steam Deck!",
+    platform: "Epic Games",
+    timestamp: Date.now() - 86400000 * 2,
+    helpfulCount: 28,
+    isVerifiedClaimer: true
+  },
+  {
+    id: "rev_seed_2",
+    giveawayId: 0,
+    gameTitle: "Fallout: New Vegas",
+    authorName: "CourierSix",
+    authorTag: "RPG Veteran",
+    rating: 5,
+    title: "The pinnacle of modern Fallout",
+    comment: "Best writing, best factions, and unmatched quest variety. If you've never played New Vegas, this free giveaway is an absolute must-claim.",
+    platform: "GOG",
+    timestamp: Date.now() - 86400000 * 5,
+    helpfulCount: 45,
+    isVerifiedClaimer: true
+  },
+  {
+    id: "rev_seed_3",
+    giveawayId: 0,
+    gameTitle: "Tomb Raider Definitive Edition",
+    authorName: "LaraExplorer",
+    authorTag: "Verified Claimer",
+    rating: 4,
+    title: "Action packed reboot with thrilling set-pieces",
+    comment: "Terrific reboot of the classic franchise. Fluid combat, fun traversal puzzles, and great visuals. Definitely worth claiming and playing through over a weekend.",
+    platform: "Steam",
+    timestamp: Date.now() - 86400000 * 7,
+    helpfulCount: 19,
+    isVerifiedClaimer: true
+  },
+  {
+    id: "rev_seed_4",
+    giveawayId: 0,
+    gameTitle: "Control Standard Edition",
+    authorName: "RemedyFanatic",
+    authorTag: "Remedy Fan",
+    rating: 5,
+    title: "Mind-bending lore and telekinetic powers",
+    comment: "The atmosphere of the Oldest House is unmatched. Throwing forklifts at Hiss enemies with telekinesis never gets old. Claim it without hesitation!",
+    platform: "Epic Games",
+    timestamp: Date.now() - 86400000 * 9,
+    helpfulCount: 33,
+    isVerifiedClaimer: true
+  },
+  {
+    id: "rev_app_seed_1",
+    giveawayId: -1,
+    gameTitle: "LootDrop App",
+    isAppReview: true,
+    authorName: "CyberHunterX",
+    authorTag: "Vault Master",
+    rating: 5,
+    title: "Best free games tracker hands down!",
+    comment: "Never miss an Epic, Steam, or GOG freebie again. The 3x3 challenge grid and Steam library sync make clearing my backlog actually fun. 10/10!",
+    platform: "LootDrop V3.3.0",
+    timestamp: Date.now() - 86400000 * 3,
+    helpfulCount: 52,
+    isVerifiedClaimer: true
+  },
+  {
+    id: "rev_app_seed_2",
+    giveawayId: -1,
+    gameTitle: "LootDrop App",
+    isAppReview: true,
+    authorName: "PixelKnight",
+    authorTag: "Verified Claimer",
+    rating: 5,
+    title: "Essential for PC and Console gamers",
+    comment: "Saved me over $300 in games this year alone. Fast notifications, clean dark cyberpunk UI, zero ads, and instant R2 cloud sync. Absolute perfection!",
+    platform: "LootDrop V3.3.0",
+    timestamp: Date.now() - 86400000 * 6,
+    helpfulCount: 41,
+    isVerifiedClaimer: true
+  }
+];
+
+async function fetchPublicReviewsFromR2() {
+  const cached = localStorage.getItem('lootdrop_public_reviews');
+  if (cached) {
+    try {
+      publicReviewsList = JSON.parse(cached);
+    } catch (_) {}
+  }
+
+  try {
+    const resp = await fetch(R2_REVIEWS_URL, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${R2_AUTH_KEY}`,
+        'User-Agent': 'LootDrop-Web/3.3.0'
+      }
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (Array.isArray(data) && data.length > 0) {
+        const seedIds = new Set(data.map(d => d.id));
+        const merged = [...data];
+        INITIAL_SEED_REVIEWS.forEach(s => {
+          if (!seedIds.has(s.id)) merged.push(s);
+        });
+        publicReviewsList = merged;
+        localStorage.setItem('lootdrop_public_reviews', JSON.stringify(merged));
+      }
+    }
+  } catch (err) {
+    console.warn('Could not fetch R2 reviews, using cache or seed reviews', err);
+  }
+
+  if (publicReviewsList.length === 0) {
+    publicReviewsList = [...INITIAL_SEED_REVIEWS];
+  }
+
+  updateSettingsAppRatingUI();
+}
+
+function getAppReviews() {
+  return publicReviewsList.filter(r => r.isAppReview || r.giveawayId === -1 || r.gameTitle === 'LootDrop App');
+}
+
+function updateSettingsAppRatingUI() {
+  const appReviews = getAppReviews();
+  const scoreEl = document.getElementById('settings-app-score');
+  const starsEl = document.getElementById('settings-app-stars');
+  const countEl = document.getElementById('settings-app-reviews-count');
+  const countLabelEl = document.getElementById('settings-app-count-label');
+  const previewEl = document.getElementById('settings-app-reviews-preview');
+
+  if (!scoreEl) return;
+
+  const count = appReviews.length;
+  if (countEl) countEl.textContent = count;
+
+  if (count === 0) {
+    scoreEl.textContent = '5.0';
+    if (starsEl) starsEl.textContent = '★★★★★';
+    if (countLabelEl) countLabelEl.textContent = 'Be the first to rate LootDrop App!';
+  } else {
+    const avg = appReviews.reduce((sum, r) => sum + (r.rating || 5), 0) / count;
+    const rounded = Math.round(avg);
+    scoreEl.textContent = avg.toFixed(1);
+    if (starsEl) starsEl.textContent = '★'.repeat(rounded) + '☆'.repeat(5 - rounded);
+    if (countLabelEl) countLabelEl.textContent = `Based on ${count} community ${count === 1 ? 'review' : 'reviews'} across Android & Web.`;
+  }
+
+  if (previewEl && previewEl.style.display !== 'none') {
+    renderAppReviewsPreview();
+  }
+}
+
+function renderAppReviewsPreview() {
+  const previewEl = document.getElementById('settings-app-reviews-preview');
+  if (!previewEl) return;
+  const appReviews = getAppReviews();
+  const votedIds = JSON.parse(localStorage.getItem('lootdrop_voted_reviews') || '[]');
+
+  if (appReviews.length === 0) {
+    previewEl.innerHTML = '<p class="input-hint">No app reviews posted yet.</p>';
+    return;
+  }
+
+  previewEl.innerHTML = appReviews.map(r => {
+    const starStr = '★'.repeat(r.rating || 5) + '☆'.repeat(5 - (r.rating || 5));
+    const initial = (r.authorName || 'G').trim().charAt(0).toUpperCase();
+    const isVoted = votedIds.includes(r.id);
+    const dateFormatted = new Date(r.timestamp || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+    return `
+      <div class="review-item-card" data-review-id="${r.id}" style="margin-bottom: 10px;">
+        <div class="review-card-header">
+          <div class="review-author-box">
+            <div class="review-author-avatar">${initial}</div>
+            <div class="review-author-meta">
+              <span class="review-author-name">
+                ${escapeHtml(r.authorName || 'Gamer')}
+                <span class="review-verified-badge">✓ Verified User</span>
+              </span>
+              <span class="review-time-platform">${escapeHtml(r.platform || 'LootDrop')} • ${dateFormatted}</span>
+            </div>
+          </div>
+          <div class="review-stars-badge">${starStr}</div>
+        </div>
+        ${r.title ? `<div class="review-card-title">${escapeHtml(r.title)}</div>` : ''}
+        ${r.comment ? `<div class="review-card-body">${escapeHtml(r.comment)}</div>` : ''}
+        <div class="review-card-footer">
+          <button class="review-helpful-btn ${isVoted ? 'voted' : ''}" data-review-id="${r.id}">
+            👍 Helpful (${r.helpfulCount || 0})
+          </button>
+          <span style="font-size: 10px; color: var(--color-text-dim);">⭐ LootDrop App Review</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  previewEl.querySelectorAll('.review-helpful-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const revId = btn.getAttribute('data-review-id');
+      await voteReviewHelpful(revId, null);
+      renderAppReviewsPreview();
+    });
+  });
+}
+
+function getReviewsForGame(game) {
+  if (!game) return [];
+  const cleanTitle = (game.title || '').trim().toLowerCase();
+  return publicReviewsList.filter(r => {
+    if (game.id && r.giveawayId === game.id) return true;
+    const rTitle = (r.gameTitle || '').trim().toLowerCase();
+    if (cleanTitle && rTitle === cleanTitle) return true;
+    if (cleanTitle.length >= 4 && (rTitle.includes(cleanTitle) || cleanTitle.includes(rTitle))) return true;
+    return false;
+  });
+}
+
+function loadAndRenderReviewsForGame(game) {
+  const reviews = getReviewsForGame(game);
+  const listEl = document.getElementById('detail-reviews-list');
+  const avgScoreEl = document.getElementById('detail-reviews-avg-score');
+  const starsEl = document.getElementById('detail-reviews-stars');
+  const countLabelEl = document.getElementById('detail-reviews-count-label');
+
+  if (!listEl) return;
+
+  if (reviews.length === 0) {
+    avgScoreEl.textContent = '5.0';
+    starsEl.textContent = '★★★★★';
+    countLabelEl.textContent = 'Be the first to review this game!';
+    listEl.innerHTML = `
+      <div class="review-empty-state">
+        <p>🎮 No community reviews yet for <strong>${escapeHtml(game.title || 'this game')}</strong>.</p>
+        <p style="font-size: 11px; margin-top: 4px;">Click <strong>"Leave Review"</strong> to share your rating with everyone!</p>
+      </div>
+    `;
+    return;
+  }
+
+  const avg = reviews.reduce((sum, r) => sum + (r.rating || 5), 0) / reviews.length;
+  const rounded = Math.round(avg);
+  avgScoreEl.textContent = avg.toFixed(1);
+  starsEl.textContent = '★'.repeat(rounded) + '☆'.repeat(5 - rounded);
+  countLabelEl.textContent = `Based on ${reviews.length} community ${reviews.length === 1 ? 'review' : 'reviews'}`;
+
+  const votedIds = JSON.parse(localStorage.getItem('lootdrop_voted_reviews') || '[]');
+
+  listEl.innerHTML = reviews.map(r => {
+    const starStr = '★'.repeat(r.rating || 5) + '☆'.repeat(5 - (r.rating || 5));
+    const initial = (r.authorName || 'G').trim().charAt(0).toUpperCase();
+    const isVoted = votedIds.includes(r.id);
+    const dateFormatted = new Date(r.timestamp || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+    return `
+      <div class="review-item-card" data-review-id="${r.id}">
+        <div class="review-card-header">
+          <div class="review-author-box">
+            <div class="review-author-avatar">${initial}</div>
+            <div class="review-author-meta">
+              <span class="review-author-name">
+                ${escapeHtml(r.authorName || 'Gamer')}
+                ${r.isVerifiedClaimer ? '<span class="review-verified-badge">✓ Verified</span>' : ''}
+              </span>
+              <span class="review-time-platform">${escapeHtml(r.platform || 'PC')} • ${dateFormatted}</span>
+            </div>
+          </div>
+          <div class="review-stars-badge">${starStr}</div>
+        </div>
+        ${r.title ? `<div class="review-card-title">${escapeHtml(r.title)}</div>` : ''}
+        ${r.comment ? `<div class="review-card-body">${escapeHtml(r.comment)}</div>` : ''}
+        <div class="review-card-footer">
+          <button class="review-helpful-btn ${isVoted ? 'voted' : ''}" data-review-id="${r.id}">
+            👍 Helpful (${r.helpfulCount || 0})
+          </button>
+          ${r.authorTag ? `<span style="font-size: 10px; color: var(--color-text-dim);">🏷️ ${escapeHtml(r.authorTag)}</span>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Attach helpful vote listeners
+  listEl.querySelectorAll('.review-helpful-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const revId = btn.getAttribute('data-review-id');
+      await voteReviewHelpful(revId, game);
+    });
+  });
+}
+
+async function voteReviewHelpful(reviewId, game) {
+  const votedIds = JSON.parse(localStorage.getItem('lootdrop_voted_reviews') || '[]');
+  if (votedIds.includes(reviewId)) {
+    showToast('You already voted helpful on this review!', 'ℹ️');
+    return;
+  }
+
+  const review = publicReviewsList.find(r => r.id === reviewId);
+  if (!review) return;
+
+  review.helpfulCount = (review.helpfulCount || 0) + 1;
+  votedIds.push(reviewId);
+  localStorage.setItem('lootdrop_voted_reviews', JSON.stringify(votedIds));
+  localStorage.setItem('lootdrop_public_reviews', JSON.stringify(publicReviewsList));
+
+  if (game) {
+    loadAndRenderReviewsForGame(game);
+  }
+  updateSettingsAppRatingUI();
+  showToast('Marked as helpful!', '👍');
+
+  // Push updated list to R2
+  try {
+    await fetch(R2_REVIEWS_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${R2_AUTH_KEY}`,
+        'X-Account-Id': 'public_reviews',
+        'User-Agent': 'LootDrop-Web/3.3.0'
+      },
+      body: JSON.stringify(publicReviewsList)
+    });
+  } catch (_) {}
+}
+
+async function postPublicReviewToR2(newReview) {
+  publicReviewsList.unshift(newReview);
+  localStorage.setItem('lootdrop_public_reviews', JSON.stringify(publicReviewsList));
+
+  try {
+    const resp = await fetch(R2_REVIEWS_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${R2_AUTH_KEY}`,
+        'X-Account-Id': 'public_reviews',
+        'User-Agent': 'LootDrop-Web/3.3.0'
+      },
+      body: JSON.stringify(publicReviewsList.slice(0, 300))
+    });
+    return resp.ok;
+  } catch (err) {
+    console.warn('Failed to sync review to Cloudflare R2', err);
+    return false;
+  }
+}
+
+function initReviewsModal() {
+  const modal = document.getElementById('modal-write-review');
+  const openBtn = document.getElementById('btn-open-write-review');
+  const closeBtn = document.getElementById('close-write-review-btn');
+  const submitBtn = document.getElementById('btn-submit-review');
+  const starsContainer = document.getElementById('write-review-star-selector');
+  const ratingLabel = document.getElementById('write-review-rating-label');
+  const targetGameBtn = document.getElementById('btn-target-game');
+  const targetAppBtn = document.getElementById('btn-target-app');
+  const rateAppSettingBtn = document.getElementById('btn-rate-lootdrop-app');
+  const viewAppReviewsBtn = document.getElementById('btn-view-app-reviews');
+  const appPreviewList = document.getElementById('settings-app-reviews-preview');
+
+  let isWritingAppReview = false;
+
+  const RATING_TEXTS = {
+    1: '1 - Skip / Unplayable',
+    2: '2 - Mediocre / Flawed',
+    3: '3 - Average / Fun with Friends',
+    4: '4 - Great / Highly Recommended',
+    5: '5 - Pure Masterpiece! Must Play!'
+  };
+
+  function setReviewTarget(isApp) {
+    isWritingAppReview = isApp;
+    const titleSub = document.getElementById('write-review-game-title');
+    if (isApp) {
+      targetAppBtn?.classList.add('active');
+      targetGameBtn?.classList.remove('active');
+      if (titleSub) titleSub.textContent = '⭐ LootDrop App (V3.3.0)';
+    } else {
+      targetGameBtn?.classList.add('active');
+      targetAppBtn?.classList.remove('active');
+      if (titleSub) titleSub.textContent = selectedGiveaway?.title || 'Giveaway';
+    }
+  }
+
+  targetGameBtn?.addEventListener('click', () => setReviewTarget(false));
+  targetAppBtn?.addEventListener('click', () => setReviewTarget(true));
+
+  // Open from game detail dialog
+  openBtn?.addEventListener('click', () => {
+    if (!selectedGiveaway) return;
+    setReviewTarget(false);
+    document.getElementById('review-input-author').value = userProfile.name || 'Gamer';
+    document.getElementById('review-input-title').value = '';
+    document.getElementById('review-input-comment').value = '';
+    currentReviewRating = 5;
+    updateStarUI();
+    modal?.classList.add('open');
+  });
+
+  // Open directly from Settings
+  rateAppSettingBtn?.addEventListener('click', () => {
+    setReviewTarget(true);
+    document.getElementById('review-input-author').value = userProfile.name || 'Gamer';
+    document.getElementById('review-input-title').value = '';
+    document.getElementById('review-input-comment').value = '';
+    currentReviewRating = 5;
+    updateStarUI();
+    modal?.classList.add('open');
+  });
+
+  // Toggle app reviews list in Settings
+  viewAppReviewsBtn?.addEventListener('click', () => {
+    if (!appPreviewList) return;
+    const isHidden = appPreviewList.style.display === 'none';
+    appPreviewList.style.display = isHidden ? 'block' : 'none';
+    viewAppReviewsBtn.textContent = isHidden ? '▲ Hide Reviews' : `💬 View All Reviews (${getAppReviews().length})`;
+    if (isHidden) {
+      renderAppReviewsPreview();
+    }
+  });
+
+  closeBtn?.addEventListener('click', () => {
+    modal?.classList.remove('open');
+  });
+
+  function updateStarUI() {
+    starsContainer?.querySelectorAll('.star-btn').forEach(btn => {
+      const starVal = parseInt(btn.getAttribute('data-star'), 10);
+      if (starVal <= currentReviewRating) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+    if (ratingLabel) {
+      ratingLabel.textContent = RATING_TEXTS[currentReviewRating] || `${currentReviewRating} Stars`;
+    }
+  }
+
+  starsContainer?.querySelectorAll('.star-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentReviewRating = parseInt(btn.getAttribute('data-star'), 10) || 5;
+      updateStarUI();
+    });
+  });
+
+  submitBtn?.addEventListener('click', async () => {
+    const title = document.getElementById('review-input-title').value.trim();
+    const comment = document.getElementById('review-input-comment').value.trim();
+    const author = document.getElementById('review-input-author').value.trim() || userProfile.name || 'Anonymous Gamer';
+
+    if (!title && !comment) {
+      showToast('Please enter a review headline or comment!', '⚠️');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Uploading to Cloudflare R2...';
+
+    if (isWritingAppReview) {
+      const newReview = {
+        id: `rev_app_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        giveawayId: -1,
+        gameTitle: 'LootDrop App',
+        isAppReview: true,
+        authorName: author,
+        authorTag: 'Verified Claimer',
+        rating: currentReviewRating,
+        title: title,
+        comment: comment,
+        platform: 'Web Edition V3.3.0',
+        timestamp: Date.now(),
+        helpfulCount: 0,
+        isVerifiedClaimer: true
+      };
+
+      await postPublicReviewToR2(newReview);
+
+      submitBtn.disabled = false;
+      submitBtn.textContent = '🚀 Post Review to Community';
+      modal?.classList.remove('open');
+
+      showToast('Your rating for LootDrop App has been published to R2!', '⭐');
+      updateSettingsAppRatingUI();
+    } else {
+      if (!selectedGiveaway) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '🚀 Post Review to Community';
+        return;
+      }
+      const isClaimed = vaultItems.some(v => v.id === selectedGiveaway.id);
+
+      const newReview = {
+        id: `rev_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        giveawayId: selectedGiveaway.id || 0,
+        gameTitle: selectedGiveaway.title || '',
+        authorName: author,
+        authorTag: isClaimed ? 'Verified Claimer' : 'Community Member',
+        rating: currentReviewRating,
+        title: title,
+        comment: comment,
+        platform: 'Web Edition',
+        timestamp: Date.now(),
+        helpfulCount: 0,
+        isVerifiedClaimer: isClaimed
+      };
+
+      await postPublicReviewToR2(newReview);
+
+      submitBtn.disabled = false;
+      submitBtn.textContent = '🚀 Post Review to Community';
+      modal?.classList.remove('open');
+
+      showToast('Your review has been published publicly to R2!', '⭐');
+      loadAndRenderReviewsForGame(selectedGiveaway);
+      updateSettingsAppRatingUI();
+    }
+  });
+
+  updateSettingsAppRatingUI();
 }

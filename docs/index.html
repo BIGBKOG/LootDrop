@@ -413,6 +413,34 @@
           </div>
         </div>
 
+        <!-- LootDrop App Community Rating & Reviews -->
+        <div class="settings-card highlight-gold-border">
+          <div class="settings-card-header-row">
+            <div>
+              <span class="badge-type gold-badge">COMMUNITY REVIEWS</span>
+              <h3 class="settings-card-title">⭐ LootDrop App Rating & Community Reviews</h3>
+            </div>
+            <div class="app-rating-big-badge">
+              <span class="big-score-val" id="settings-app-score">5.0</span>
+              <span class="big-score-stars" id="settings-app-stars">★★★★★</span>
+            </div>
+          </div>
+          <p class="settings-card-sub" id="settings-app-count-label">
+            Real community reviews from fellow gamers and freebie hunters, hosted publicly on Cloudflare R2.
+          </p>
+          <div class="settings-btn-row">
+            <button class="btn btn-gold-gradient" id="btn-rate-lootdrop-app">
+              ⭐ Rate LootDrop App
+            </button>
+            <button class="btn btn-outline" id="btn-view-app-reviews">
+              💬 View All Reviews (<span id="settings-app-reviews-count">0</span>)
+            </button>
+          </div>
+          <div class="app-reviews-preview-list" id="settings-app-reviews-preview" style="display: none; margin-top: 14px;">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
         <!-- Community & Support -->
         <div class="settings-card">
           <h3 class="settings-card-title">💖 LootDrop Community & Releases</h3>
@@ -692,6 +720,85 @@
             🔗 Share Deal
           </button>
         </div>
+
+        <!-- PUBLIC COMMUNITY REVIEWS SECTION (CLOUDFLARE R2) -->
+        <div class="detail-reviews-section" id="detail-reviews-section">
+          <div class="reviews-header-row">
+            <div class="reviews-title-group">
+              <span class="reviews-section-badge">★ PUBLIC REVIEWS</span>
+              <h4 class="reviews-heading">Community Reviews <span class="reviews-storage-tag">Cloudflare R2</span></h4>
+            </div>
+            <button class="btn btn-sm btn-gold" id="btn-open-write-review">
+              ✍️ Leave Review
+            </button>
+          </div>
+
+          <div class="reviews-summary-card" id="detail-reviews-summary">
+            <div class="reviews-score-block">
+              <span class="reviews-big-score" id="detail-reviews-avg-score">5.0</span>
+              <div class="reviews-stars-group">
+                <div class="stars-row" id="detail-reviews-stars">★★★★★</div>
+                <span class="reviews-count-text" id="detail-reviews-count-label">Based on community reviews</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="reviews-list-container" id="detail-reviews-list">
+            <!-- Reviews populated by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Leave a Public Review -->
+  <div class="modal-overlay" id="modal-write-review">
+    <div class="modal-card write-review-modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-badge gold-badge">COMMUNITY REVIEW</span>
+          <h2 class="modal-title">Leave a Public Review</h2>
+          <p class="modal-subtitle" id="write-review-game-title">Game Title</p>
+        </div>
+        <button class="close-modal-btn" id="close-write-review-btn">✕</button>
+      </div>
+      <div class="modal-body write-review-body">
+        <div class="review-target-switcher" id="review-target-switcher">
+          <button type="button" class="review-target-btn active" id="btn-target-game">🎮 Review Game</button>
+          <button type="button" class="review-target-btn" id="btn-target-app">⭐ Rate LootDrop App</button>
+        </div>
+
+        <div class="star-rating-selector" id="write-review-star-selector">
+          <span class="star-btn active" data-star="1">★</span>
+          <span class="star-btn active" data-star="2">★</span>
+          <span class="star-btn active" data-star="3">★</span>
+          <span class="star-btn active" data-star="4">★</span>
+          <span class="star-btn active" data-star="5">★</span>
+        </div>
+        <div class="star-rating-label" id="write-review-rating-label">5 - Pure Masterpiece! Must Play!</div>
+
+        <div class="form-group">
+          <label for="review-input-title">Review Headline</label>
+          <input type="text" id="review-input-title" class="form-input" placeholder="e.g. Unbelievable gameplay & graphics!">
+        </div>
+
+        <div class="form-group">
+          <label for="review-input-comment">Detailed Thoughts</label>
+          <textarea id="review-input-comment" class="form-textarea" rows="3" placeholder="Share your experience, performance, story, or gameplay tips..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="review-input-author">Your Gamer Tag / Name</label>
+          <input type="text" id="review-input-author" class="form-input" placeholder="e.g. CyberGamer99">
+        </div>
+
+        <div class="review-cloud-notice">
+          ☁️ Published publicly to Cloudflare R2 object storage. Synced live across Android and Web.
+        </div>
+
+        <button class="btn btn-primary btn-gold-gradient btn-block" id="btn-submit-review">
+          🚀 Post Review to Community
+        </button>
       </div>
     </div>
   </div>

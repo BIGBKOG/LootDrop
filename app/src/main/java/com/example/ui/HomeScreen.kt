@@ -224,6 +224,7 @@ fun HomeScreen(
     val userProfile by viewModel.userProfile.collectAsState()
     val inAppBrowserUrl by viewModel.inAppBrowserUrl.collectAsState()
     val inAppBrowserTitle by viewModel.inAppBrowserTitle.collectAsState()
+    val publicReviews by viewModel.publicReviews.collectAsState()
 
     val borderBeamAngle = rememberAnimatedBeamAngle(enabled = isAnimationsEnabled && !isLowEndOptimization)
 
@@ -568,7 +569,18 @@ fun HomeScreen(
                             onQuickSteamSync = { viewModel.syncSteamLibrary() },
                             onOpenAchievements = { viewModel.openGameAchievements(it) },
                             onExploreAllFreebies = { viewModel.selectTab(MainTab.DISCOVER) },
-                            onViewVault = { viewModel.selectTab(MainTab.CLAIMED) }
+                            onViewVault = { viewModel.selectTab(MainTab.CLAIMED) },
+                            publicReviews = publicReviews,
+                            defaultAuthorName = userProfile.name,
+                            onPostAppReview = { rating, title, comment ->
+                                viewModel.postAppReview(rating = rating, title = title, comment = comment)
+                            },
+                            onVoteHelpful = { reviewId ->
+                                viewModel.voteReviewHelpful(reviewId)
+                            },
+                            hasVotedHelpful = { reviewId ->
+                                viewModel.hasVotedHelpful(reviewId)
+                            }
                         )
                     }
                     MainTab.DISCOVER -> {
@@ -757,9 +769,14 @@ fun HomeScreen(
         val ownershipStatus = remember(item, filteredSteamGames) {
             viewModel.checkOwnership(item)
         }
+        val gameReviews = remember(item, publicReviews) {
+            viewModel.getReviewsForGame(item.id, item.title)
+        }
         GiveawayDetailDialog(
             item = item,
             ownershipStatus = ownershipStatus,
+            reviews = gameReviews,
+            defaultAuthorName = userProfile.name,
             onDismiss = { viewModel.closeDetail() },
             onClaimClick = {
                 if (item.hasMultipleLaunchers) {
@@ -775,7 +792,20 @@ fun HomeScreen(
             onToggleClaimed = { viewModel.toggleClaimed(item) },
             onToggleWishlist = { viewModel.toggleWishlist(item) },
             onPlayStatusChange = { status -> viewModel.updatePlayStatus(item, status) },
-            onUpdateManualStorage = { sizeGb -> viewModel.setGiveawayManualStorage(item.id, sizeGb) }
+            onUpdateManualStorage = { sizeGb -> viewModel.setGiveawayManualStorage(item.id, sizeGb) },
+            onPostReview = { rating, title, comment ->
+                viewModel.postPublicReview(item.id, item.title, rating, title, comment) { success, msg ->
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                }
+            },
+            onVoteHelpful = { reviewId ->
+                viewModel.voteReviewHelpful(reviewId) { success, msg ->
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                }
+            },
+            hasVotedHelpful = { reviewId ->
+                viewModel.hasVotedHelpful(reviewId)
+            }
         )
     }
 
