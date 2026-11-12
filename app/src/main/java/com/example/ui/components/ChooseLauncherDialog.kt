@@ -76,6 +76,7 @@ import com.example.ui.theme.TextSecondary
 @Composable
 fun ChooseLauncherDialog(
     item: GiveawayItem,
+    ownershipStatus: com.example.ui.GiveawaysViewModel.OwnershipStatus? = null,
     onDismiss: () -> Unit,
     onLauncherClaimed: (url: String, launcherName: String) -> Unit,
     launchers: List<LauncherOption> = item.availableLaunchers
@@ -232,6 +233,53 @@ fun ChooseLauncherDialog(
                                     fontSize = 11.sp,
                                     color = TextMuted,
                                     textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Prominent Ownership Banner Pill: Check Vault and Steam Library
+                if (ownershipStatus?.isOwned == true) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFF10B981).copy(alpha = 0.2f))
+                            .border(1.2.dp, Color(0xFF10B981), RoundedCornerShape(10.dp))
+                            .padding(horizontal = 12.dp, vertical = 9.dp)
+                            .testTag("choose_launcher_ownership_pill")
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = if (ownershipStatus.inSteam) "🎮" else "💎",
+                                fontSize = 16.sp
+                            )
+                            Column {
+                                Text(
+                                    text = "YOU ALREADY HAVE THIS",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color(0xFF10B981),
+                                    letterSpacing = 0.5.sp
+                                )
+                                val sourceText = when {
+                                    ownershipStatus.inVault && ownershipStatus.inSteam ->
+                                        "In your Vault & Steam Library"
+                                    ownershipStatus.inVault ->
+                                        "Already saved in your Vault"
+                                    else ->
+                                        "Already in your Steam Library"
+                                }
+                                Text(
+                                    text = sourceText,
+                                    fontSize = 10.sp,
+                                    color = Color(0xFFD1FAE5),
+                                    fontWeight = FontWeight.Medium
                                 )
                             }
                         }

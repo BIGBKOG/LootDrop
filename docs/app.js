@@ -1,5 +1,5 @@
 /**
- * LootDrop V3.2.0 - Complete Client Application
+ * LootDrop V3.3.0 - Complete Client Application
  * 1-to-1 Web Edition with 19 Accent Themes & Comprehensive Website Alerts
  */
 
@@ -332,7 +332,7 @@ function triggerWebsiteAlert(title, message, url = '#', icon = '🎁') {
 function initNotificationsList() {
   if (notificationsList.length === 0) {
     notificationsList = [
-      { id: 1, title: '🎉 LootDrop V3.2.0 Web Live!', desc: '1-to-1 Web client running directly on GitHub Pages with 19 themes.', timestamp: Date.now(), unread: true },
+      { id: 1, title: '🎉 LootDrop V3.3.0 Web Live!', desc: '1-to-1 Web client running directly on GitHub Pages with 19 themes.', timestamp: Date.now(), unread: true },
       { id: 2, title: '🏆 Weekly 3×3 Challenge Ready', desc: 'Complete challenge tiles this week to unlock exclusive themes.', timestamp: Date.now() - 3600000, unread: true },
       { id: 3, title: '❤️ Support on Patreon', desc: 'Help sustain servers and track upcoming F-Droid release.', timestamp: Date.now() - 7200000, unread: false }
     ];
@@ -898,6 +898,48 @@ function openGiveawayDetail(g) {
   const isSaved = vaultItems.some(v => v.id === g.id);
   const vaultBtn = document.getElementById('detail-vault-toggle');
   vaultBtn.textContent = isSaved ? '💎 Remove from Vault' : '📥 Add to Vault';
+
+  // Check Vault & Steam Ownership
+  const ownershipBanner = document.getElementById('detail-ownership-banner');
+  const ownershipIcon = document.getElementById('detail-ownership-icon');
+  const ownershipTitle = document.getElementById('detail-ownership-title');
+  const ownershipSubtitle = document.getElementById('detail-ownership-subtitle');
+
+  const inVault = isSaved;
+  const steamGames = JSON.parse(localStorage.getItem('lootdrop_steam_games') || '[]');
+  const cleanTitle = (g.title || '').trim().toLowerCase();
+  
+  const matchedSteam = steamGames.find(sg => {
+    const sName = (sg.name || '').trim().toLowerCase();
+    return sName === cleanTitle || (cleanTitle.length > 5 && sName.includes(cleanTitle)) || (sName.length > 5 && cleanTitle.includes(sName));
+  });
+
+  const inSteam = !!matchedSteam;
+
+  if (inVault || inSteam) {
+    if (ownershipBanner) {
+      ownershipBanner.style.display = 'flex';
+    }
+    if (ownershipIcon) {
+      ownershipIcon.textContent = inSteam ? '🎮' : '💎';
+    }
+    if (ownershipTitle) {
+      ownershipTitle.textContent = 'YOU ALREADY HAVE THIS';
+    }
+    if (ownershipSubtitle) {
+      if (inVault && inSteam) {
+        ownershipSubtitle.textContent = 'Saved in your LootDrop Vault and found in your Steam Library!';
+      } else if (inVault) {
+        ownershipSubtitle.textContent = 'Already saved in your LootDrop Vault.';
+      } else {
+        ownershipSubtitle.textContent = `Found in your linked Steam library as "${matchedSteam.name}".`;
+      }
+    }
+  } else {
+    if (ownershipBanner) {
+      ownershipBanner.style.display = 'none';
+    }
+  }
 
   modal.classList.add('open');
 }
@@ -1647,7 +1689,7 @@ function setupEventListeners() {
   // Backup Export
   document.getElementById('btn-export-backup')?.addEventListener('click', () => {
     const backupData = {
-      version: '3.2.0',
+      version: '3.3.0',
       timestamp: Date.now(),
       vault: vaultItems,
       profile: userProfile,

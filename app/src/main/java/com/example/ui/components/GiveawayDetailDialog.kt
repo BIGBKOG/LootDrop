@@ -108,6 +108,7 @@ import com.example.ui.theme.TextSecondary
 @Composable
 fun GiveawayDetailDialog(
     item: GiveawayItem,
+    ownershipStatus: com.example.ui.GiveawaysViewModel.OwnershipStatus? = null,
     onDismiss: () -> Unit,
     onClaimClick: () -> Unit,
     onToggleBookmark: () -> Unit,
@@ -527,6 +528,85 @@ fun GiveawayDetailDialog(
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.SemiBold,
                                         color = Color(cat.colorHex)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Prominent Ownership Banner Pill: Check Vault and Steam Library
+                    if (ownershipStatus?.isOwned == true) {
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(
+                                    Brush.horizontalGradient(
+                                        listOf(
+                                            Color(0xFF10B981).copy(alpha = 0.22f),
+                                            Color(0xFF06B6D4).copy(alpha = 0.18f)
+                                        )
+                                    )
+                                )
+                                .border(
+                                    1.5.dp,
+                                    Brush.horizontalGradient(
+                                        listOf(
+                                            Color(0xFF10B981),
+                                            Color(0xFF06B6D4)
+                                        )
+                                    ),
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .padding(horizontal = 14.dp, vertical = 11.dp)
+                                .testTag("ownership_pill_banner")
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF10B981).copy(alpha = 0.25f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = if (ownershipStatus.inSteam) "🎮" else "💎",
+                                        fontSize = 17.sp
+                                    )
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = "YOU ALREADY HAVE THIS",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = Color(0xFF10B981),
+                                            letterSpacing = 0.6.sp
+                                        )
+                                    }
+                                    val sourceText = when {
+                                        ownershipStatus.inVault && ownershipStatus.inSteam ->
+                                            "Saved in your LootDrop Vault and found in your Steam Library!"
+                                        ownershipStatus.inVault ->
+                                            "Already saved in your LootDrop Vault."
+                                        ownershipStatus.inSteam && ownershipStatus.matchedSteamGameName != null ->
+                                            "Found in your linked Steam library as '${ownershipStatus.matchedSteamGameName}'."
+                                        else ->
+                                            "Found in your linked Steam library."
+                                    }
+                                    Text(
+                                        text = sourceText,
+                                        fontSize = 11.sp,
+                                        color = Color(0xFFD1FAE5),
+                                        fontWeight = FontWeight.Medium
                                     )
                                 }
                             }

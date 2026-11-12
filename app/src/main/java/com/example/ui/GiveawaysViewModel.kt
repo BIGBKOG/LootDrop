@@ -22,6 +22,7 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import com.example.preferences.AccentTheme
+import com.example.util.MetacriticCatalog
 import com.example.preferences.AppPreferences
 import com.example.preferences.BackgroundTheme
 import com.example.preferences.CardDensity
@@ -1980,6 +1981,54 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                 _detailItem.value = item
             }
         }
+    }
+
+    data class OwnershipStatus(
+        val isOwned: Boolean = false,
+        val inVault: Boolean = false,
+        val inSteam: Boolean = false,
+        val matchedSteamGameName: String? = null,
+        val badgeLabel: String = ""
+    )
+
+    fun checkOwnership(item: GiveawayItem): OwnershipStatus {
+        val inVault = item.isClaimed || (item.playStatus != null && item.playStatus != PlayStatus.NOT_STARTED)
+        val steamGamesList = allSteamGames.value
+        val matchedSteam = if (steamGamesList.isNotEmpty()) {
+            // Check direct steamAppId, extract from URL, or normalize title matching
+            steamGamesList.firstOrNull { steamGame ->
+                (item.steamAppId != null && item.steamAppId > 0 && item.steamAppId == steamGame.appId) ||
+                (SteamApiClient.extractSteamAppId(item.openGiveawayUrl ?: "") == steamGame.appId) ||
+                item.availableLaunchers.any { SteamApiClient.extractSteamAppId(it.url) == steamGame.appId } ||
+                SteamApiClient.normalizeGameTitle(item.title).let { normItem ->
+                    normItem.length >= 3 && SteamApiClient.normalizeGameTitle(steamGame.name) == normItem
+                } ||
+                MetacriticCatalog.cleanTitle(item.title).lowercase().let { cleanItem ->
+                    val cleanSteam = MetacriticCatalog.cleanTitle(steamGame.name).lowercase()
+                    cleanItem == cleanSteam ||
+                    (cleanItem.length > 5 && cleanSteam.contains(cleanItem)) ||
+                    (cleanSteam.length > 5 && cleanItem.contains(cleanSteam))
+                }
+            }
+        } else null
+
+        val inSteam = matchedSteam != null
+        val isOwned = inVault || inSteam
+
+        val label = when {
+            inVault && inSteam -> "ALREADY IN YOUR VAULT & STEAM"
+            inVault -> "ALREADY IN YOUR VAULT"
+            inSteam -> "ALREADY IN YOUR STEAM LIBRARY"
+            else -> ""
+        }
+
+        return OwnershipStatus(
+            isOwned = isOwned,
+            inVault = inVault,
+            inSteam = inSteam,
+            matchedSteamGameName = matchedSteam?.name,
+            badgeLabel = label
+        )
     }
 
     fun getLauncherOptionsFor(item: GiveawayItem): List<LauncherOption> {

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   LootDrop V3.2.0 - Complete Material 3 Styling
+   LootDrop V3.3.0 - Complete Material 3 Styling
    Matches Jetpack Compose Android UI with 19 Themes & Website Alerts
    ========================================================================== */
 
@@ -2024,6 +2024,49 @@ input:checked + .switch-slider:before {
   font-size: 13px;
   color: var(--color-text-main);
   line-height: 1.5;
+}
+
+/* Prominent Ownership Banner Pill */
+.ownership-pill-banner {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.16), rgba(6, 182, 212, 0.12));
+  border: 1.5px solid #10B981;
+  border-radius: var(--radius-lg);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: pulse-border 2.5s infinite;
+}
+
+.ownership-pill-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.ownership-pill-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ownership-pill-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #10B981;
+  letter-spacing: 0.6px;
+}
+
+.ownership-pill-subtitle {
+  font-size: 11px;
+  color: #D1FAE5;
+  font-weight: 500;
 }
 
 .detail-actions-bar {

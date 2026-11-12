@@ -691,12 +691,16 @@ class ExampleRobolectricTest {
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.1.2", "3.1.1"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.2.0", "3.1.2"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.2.0", "3.1.2"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.3.0", "3.2.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.3.0", "3.2.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.2.0", "3.3.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.2.0", "3.3.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.3.0", "3.3.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.3.0", "3.3.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.3.1", "3.3.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.3.1", "3.3.0"))
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.1.2", "3.2.0"))
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.1.2", "3.2.0"))
-        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.2.0", "3.2.0"))
-        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.2.0", "3.2.0"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.2.1", "3.2.0"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.2.1", "3.2.0"))
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.1.1", "3.1.2"))
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.1.1", "3.1.2"))
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.1.0", "3.1.1"))
@@ -1404,25 +1408,25 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `version 3 2 0 is configured and recognized as modern release stream`() {
-        assertEquals("3.2.0", BuildConfig.VERSION_NAME)
-        assertEquals(47, BuildConfig.VERSION_CODE)
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("3.2.0"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v3.2.0"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("V3.2.0"))
+    fun `version 3 3 0 is configured and recognized as modern release stream`() {
+        assertEquals("3.3.0", BuildConfig.VERSION_NAME)
+        assertEquals(48, BuildConfig.VERSION_CODE)
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("3.3.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v3.3.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("V3.3.0"))
     }
 
     @Test
-    fun `github release pull and installer resolution operates with v3 2 0 conventions`() {
+    fun `github release pull and installer resolution operates with v3 3 0 conventions`() {
         val client = com.example.data.remote.GithubReleaseClient(ApplicationProvider.getApplicationContext())
         val apkUrl = client.resolveApkUrl(
             com.example.data.remote.GithubReleaseClient.DEFAULT_OWNER,
             com.example.data.remote.GithubReleaseClient.DEFAULT_REPO,
-            "V3.2.0"
+            "V3.3.0"
         )
         println("RESOLVED APK URL: $apkUrl")
         assertNotNull(apkUrl)
-        assertTrue(apkUrl!!.contains("V3.2.0", ignoreCase = true))
+        assertTrue(apkUrl!!.contains("V3.3.0", ignoreCase = true))
         assertTrue(apkUrl!!.endsWith(".apk", ignoreCase = true))
 
         // Verify installer handles missing APK gracefully without crashing

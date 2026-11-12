@@ -412,7 +412,7 @@ object SteamApiClient {
         return regex.find(url)?.groupValues?.getOrNull(1)?.toIntOrNull()
     }
 
-    private fun normalizeGameTitle(title: String): String {
+    fun normalizeGameTitle(title: String): String {
         return title
             .replace(Regex("[™®©]"), "")
             .replace(Regex("\\([^)]*\\)"), "")

@@ -754,8 +754,12 @@ fun HomeScreen(
 
     // Detail Dialog
     detailItem?.let { item ->
+        val ownershipStatus = remember(item, filteredSteamGames) {
+            viewModel.checkOwnership(item)
+        }
         GiveawayDetailDialog(
             item = item,
+            ownershipStatus = ownershipStatus,
             onDismiss = { viewModel.closeDetail() },
             onClaimClick = {
                 if (item.hasMultipleLaunchers) {
@@ -777,8 +781,12 @@ fun HomeScreen(
 
     // Choose Launcher Popup Menu (when a game has multiple launchers at 100% off)
     launcherChooserItem?.let { item ->
+        val launcherOwnership = remember(item, filteredSteamGames) {
+            viewModel.checkOwnership(item)
+        }
         ChooseLauncherDialog(
             item = item,
+            ownershipStatus = launcherOwnership,
             launchers = viewModel.getLauncherOptionsFor(item),
             onDismiss = { launcherChooserItem = null },
             onLauncherClaimed = { targetUrl, launcherName ->
