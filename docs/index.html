@@ -172,6 +172,19 @@
         <div class="loading-spinner-wrap"><div class="spinner"></div><p>Scanning giveaway feeds...</p></div>
       </div>
 
+      <!-- Steam Library DLC Recommendations Section -->
+      <div class="section-header" id="home-dlc-header">
+        <div class="section-title-wrap">
+          <span class="section-badge dlc-badge">FOR YOUR STEAM GAMES</span>
+          <h2 class="section-title">🧩 DLC Picks for Owned Games</h2>
+        </div>
+        <div class="dlc-header-actions">
+          <button class="btn btn-sm btn-outline" id="btn-home-dlc-scan" style="display: none;">🔄 Scan</button>
+          <button class="link-btn" id="btn-home-dlc-see-all" style="display: none;">See All ➔</button>
+        </div>
+      </div>
+      <div id="home-dlc-container" class="home-dlc-container"></div>
+
       <!-- Fresh Drops Section -->
       <div class="section-header">
         <div class="section-title-wrap">
@@ -283,13 +296,21 @@
           </div>
 
           <div class="vault-secondary-actions">
+            <button class="btn btn-sm btn-dlc" id="btn-open-dlc-hub">
+              🧩 DLC Picks <span class="dlc-count-pill" id="vault-dlc-count" style="display: none;">0</span>
+            </button>
             <button class="btn btn-sm btn-outline" id="btn-sync-steam">
-              🔄 Sync Steam 64 ID
+              🔄 Sync Steam
             </button>
             <button class="btn btn-sm btn-outline" id="btn-spin-roulette">
               🎲 Roulette
             </button>
           </div>
+        </div>
+
+        <div class="vault-mode-tabs" id="vault-mode-tabs">
+          <button class="vault-mode-btn active" data-mode="vault">💎 Claimed Vault</button>
+          <button class="vault-mode-btn" data-mode="steam">🎮 Steam Library (<span id="vault-steam-count">0</span>)</button>
         </div>
       </div>
 
@@ -869,6 +890,43 @@
           </div>
           <div class="trophy-showcase-grid" id="profile-trophies-container"></div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Steam DLC Recommender Hub -->
+  <div class="modal-overlay" id="modal-dlc-hub">
+    <div class="modal-card dlc-hub-modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-badge dlc-modal-badge">OWNED STEAM LIBRARY</span>
+          <h2 class="modal-title" id="dlc-hub-title">🧩 Steam DLC Recommender</h2>
+          <p class="modal-subtitle" id="dlc-hub-subtitle">Matched to games you already own in Steam</p>
+        </div>
+        <div class="dlc-modal-top-actions">
+          <button class="btn btn-sm btn-outline" id="btn-dlc-hub-refresh" title="Scan Steam Library for DLCs">🔄 Scan</button>
+          <button class="close-modal-btn" id="close-dlc-hub-btn">✕</button>
+        </div>
+      </div>
+      <div class="modal-body dlc-hub-body">
+        <div class="dlc-hub-controls">
+          <div class="filter-chips-scroll" id="dlc-hub-filter-chips">
+            <button class="filter-chip active" data-dlc-filter="all">All Picks</button>
+            <button class="filter-chip" data-dlc-filter="free">Free DLCs</button>
+            <button class="filter-chip" data-dlc-filter="sale">On Sale</button>
+            <button class="filter-chip" data-dlc-filter="top">Top Expansions</button>
+          </div>
+          <select id="dlc-hub-game-select" class="custom-select dlc-game-select">
+            <option value="all">All Owned Steam Games</option>
+          </select>
+        </div>
+
+        <div class="dlc-scan-status-bar" id="dlc-hub-status-bar" style="display: none;">
+          <div class="spinner dlc-mini-spinner" id="dlc-hub-spinner"></div>
+          <span id="dlc-hub-status-text">Scanning Steam Storefront...</span>
+        </div>
+
+        <div class="dlc-hub-list" id="dlc-hub-list"></div>
       </div>
     </div>
   </div>

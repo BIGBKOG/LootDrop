@@ -62,9 +62,11 @@ import com.example.util.RestoreSummary
 import com.example.data.model.BacklogChallengeGrid
 import com.example.data.model.BacklogMilestoneReward
 import com.example.data.model.PublicReview
+import com.example.data.model.SteamDlcRecommendation
 import com.example.data.model.UnifiedLibraryItem
 import com.example.util.BacklogChallengeManager
 import com.example.util.PublicReviewsManager
+import com.example.util.SteamDlcRecommender
 import com.example.util.UserProfileManager
 
 enum class MainTab {
@@ -979,6 +981,57 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     private val _publicReviews = MutableStateFlow<List<PublicReview>>(emptyList())
     val publicReviews: StateFlow<List<PublicReview>> = _publicReviews.asStateFlow()
 
+    // --- Steam Library DLC Recommender ---
+    private val _storeDlcRecommendations = MutableStateFlow(SteamDlcRecommender.loadCachedDlcs(preferences))
+    private val _dismissedDlcIds = MutableStateFlow(
+        preferences.dismissedDlcAppIds.mapNotNull { it.toIntOrNull() }.toSet()
+    )
+    private val _isLoadingSteamDlcs = MutableStateFlow(false)
+    val isLoadingSteamDlcs: StateFlow<Boolean> = _isLoadingSteamDlcs.asStateFlow()
+
+    private val _steamDlcScanStatus = MutableStateFlow<String?>(null)
+    val steamDlcScanStatus: StateFlow<String?> = _steamDlcScanStatus.asStateFlow()
+
+    private val _selectedGameForDlcs = MutableStateFlow<SteamGameEntity?>(null)
+    val selectedGameForDlcs: StateFlow<SteamGameEntity?> = _selectedGameForDlcs.asStateFlow()
+
+    private val _selectedGameDlcs = MutableStateFlow<List<SteamDlcRecommendation>>(emptyList())
+    val selectedGameDlcs: StateFlow<List<SteamDlcRecommendation>> = _selectedGameDlcs.asStateFlow()
+
+    private val _isLoadingGameDlcs = MutableStateFlow(false)
+    val isLoadingGameDlcs: StateFlow<Boolean> = _isLoadingGameDlcs.asStateFlow()
+
+    val steamDlcRecommendations: StateFlow<List<SteamDlcRecommendation>> = combine(
+        allGiveaways,
+        allSteamGames,
+        _storeDlcRecommendations,
+        _dismissedDlcIds
+    ) { giveaways, steamGames, storeDlcs, dismissedIds ->
+        if (steamGames.isEmpty()) {
+            emptyList()
+        } else {
+            val ownedAppIds = steamGames.map { it.appId }.toSet()
+            val freeGiveawayMatches = SteamDlcRecommender.findFreeDlcGiveawaysForSteamLibrary(
+                giveaways = giveaways,
+                steamGames = steamGames
+            )
+            val filteredStore = storeDlcs.filter { dlc ->
+                dlc.dlcAppId !in ownedAppIds &&
+                    dlc.dlcAppId !in dismissedIds &&
+                    dlc.parentAppId in ownedAppIds
+            }
+            val giveawayAppIds = freeGiveawayMatches.map { it.dlcAppId }.toSet()
+            val combined = freeGiveawayMatches + filteredStore.filter { it.dlcAppId !in giveawayAppIds }
+            combined
+                .filter { it.dlcAppId !in dismissedIds }
+                .sortedWith(
+                    compareByDescending<SteamDlcRecommendation> { it.isFromFreeGiveaway }
+                        .thenBy { it.isSoundtrackOrCosmetic }
+                        .thenByDescending { it.relevanceScore }
+                )
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     init {
         runCatching { refreshGiveaways() }
         runCatching { updateStorageFootprint() }
@@ -998,8 +1051,118 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                 if (_steamUserId.value.isBlank()) {
                     database.steamGameDao().clearAll()
                     database.steamAchievementDao().clearAll()
+                } else if (!SteamDlcRecommender.isCacheFresh(preferences)) {
+                    val savedGames = database.steamGameDao().getAllSteamGamesList()
+                    if (savedGames.isNotEmpty()) {
+                        refreshSteamDlcRecommendations(forceRefresh = false)
+                    }
                 }
             }
+        }
+    }
+
+    fun refreshSteamDlcRecommendations(forceRefresh: Boolean = true) {
+        if (_isLoadingSteamDlcs.value) return
+        viewModelScope.launch(Dispatchers.IO) {
+            if (!forceRefresh && SteamDlcRecommender.isCacheFresh(preferences)) {
+                _storeDlcRecommendations.value = SteamDlcRecommender.loadCachedDlcs(preferences)
+                return@launch
+            }
+            val ownedGames = database.steamGameDao().getAllSteamGamesList()
+            if (ownedGames.isEmpty()) {
+                _steamDlcScanStatus.value = "Sync your Steam library first to discover DLCs."
+                return@launch
+            }
+            _isLoadingSteamDlcs.value = true
+            _steamDlcScanStatus.value = "Scanning Steam Store for DLCs matching your library..."
+            try {
+                val dismissed = _dismissedDlcIds.value
+                val fetched = SteamDlcRecommender.fetchRecommendationsForLibrary(
+                    steamGames = ownedGames,
+                    dismissedIds = dismissed,
+                    onProgress = { msg -> _steamDlcScanStatus.value = msg }
+                )
+                if (fetched.isNotEmpty()) {
+                    _storeDlcRecommendations.value = fetched
+                    SteamDlcRecommender.saveCachedDlcs(preferences, fetched)
+                    _steamDlcScanStatus.value = "Found ${fetched.size} Steam DLC recommendations for your library!"
+                } else {
+                    _steamDlcScanStatus.value = "Scan complete — no additional Steam DLCs found."
+                }
+            } catch (e: Exception) {
+                _steamDlcScanStatus.value = "Could not scan Steam DLCs: ${e.message}"
+            } finally {
+                _isLoadingSteamDlcs.value = false
+            }
+        }
+    }
+
+    fun openGameDlcExplorer(game: SteamGameEntity) {
+        _selectedGameForDlcs.value = game
+        val existingCached = steamDlcRecommendations.value.filter { it.parentAppId == game.appId }
+        _selectedGameDlcs.value = existingCached
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoadingGameDlcs.value = true
+            try {
+                val ownedIds = database.steamGameDao().getAllSteamGamesList().map { it.appId }.toSet()
+                val dismissed = _dismissedDlcIds.value
+                val freeMatches = SteamDlcRecommender.findFreeDlcGiveawaysForSteamLibrary(
+                    giveaways = allGiveaways.value,
+                    steamGames = listOf(game)
+                )
+                val storeDlcs = SteamDlcRecommender.fetchDlcsForSingleGame(
+                    parentGame = game,
+                    ownedAppIds = ownedIds,
+                    dismissedIds = dismissed
+                )
+                val freeIds = freeMatches.map { it.dlcAppId }.toSet()
+                val combined = (freeMatches + storeDlcs.filter { it.dlcAppId !in freeIds })
+                    .filter { it.dlcAppId !in dismissed }
+                    .sortedWith(
+                        compareByDescending<SteamDlcRecommendation> { it.isFromFreeGiveaway }
+                            .thenBy { it.isSoundtrackOrCosmetic }
+                            .thenByDescending { it.relevanceScore }
+                    )
+                _selectedGameDlcs.value = combined
+                if (storeDlcs.isNotEmpty()) {
+                    val mergedStore = (_storeDlcRecommendations.value + storeDlcs)
+                        .distinctBy { it.dlcAppId }
+                        .take(50)
+                    _storeDlcRecommendations.value = mergedStore
+                    SteamDlcRecommender.saveCachedDlcs(preferences, mergedStore)
+                }
+            } finally {
+                _isLoadingGameDlcs.value = false
+            }
+        }
+    }
+
+    fun closeGameDlcExplorer() {
+        _selectedGameForDlcs.value = null
+        _selectedGameDlcs.value = emptyList()
+        _isLoadingGameDlcs.value = false
+    }
+
+    fun dismissDlcRecommendation(dlcAppId: Int) {
+        preferences.dismissDlcAppId(dlcAppId)
+        _dismissedDlcIds.value = _dismissedDlcIds.value + dlcAppId
+        _selectedGameDlcs.value = _selectedGameDlcs.value.filterNot { it.dlcAppId == dlcAppId }
+    }
+
+    fun openDlcRecommendation(context: Context, dlc: SteamDlcRecommendation) {
+        val giveawayId = dlc.matchedGiveawayId
+        if (giveawayId != null) {
+            val matchedGiveaway = allGiveaways.value.firstOrNull { it.id == giveawayId }
+            if (matchedGiveaway != null) {
+                openDetail(matchedGiveaway)
+                return
+            }
+        }
+        val url = dlc.storeUrl.ifBlank { "https://store.steampowered.com/app/${dlc.dlcAppId}" }
+        if (_isUseInAppBrowser.value) {
+            openInAppBrowser(url, dlc.name)
+        } else {
+            launchExternalBrowser(context, url)
         }
     }
 
@@ -2063,6 +2226,9 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                     "Synced ${ownedGames.size} Steam games into All+Paid ($matchedCount claimed matched)$trophyMsg$wishlistMsg!"
                 } else {
                     "Synced wishlist ($wishlistMatchCount matches found)!"
+                }
+                if (ownedGames.isNotEmpty()) {
+                    refreshSteamDlcRecommendations(forceRefresh = true)
                 }
             } catch (e: Exception) {
                 _steamSyncStatus.value = "Steam sync failed: ${e.message}"

@@ -30,9 +30,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material3.Button
@@ -91,6 +92,7 @@ fun SteamGameCard(
     onStatusChange: (PlayStatus) -> Unit,
     onUpdateManualStorage: ((Float?) -> Unit)? = null,
     onOpenAchievements: ((SteamGameEntity) -> Unit)? = null,
+    onOpenDlcs: ((SteamGameEntity) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -484,12 +486,12 @@ fun SteamGameCard(
                     }
                 }
 
-                // Action Buttons Row: Launch Game & Store Link
+                // Action Buttons Row: Launch Game, DLCs & Store Link
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
@@ -509,7 +511,7 @@ fun SteamGameCard(
                         },
                         modifier = Modifier
                             .weight(1f)
-                            .height(38.dp)
+                            .height(40.dp)
                             .testTag("steam_launch_btn_${game.appId}"),
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(
@@ -525,10 +527,40 @@ fun SteamGameCard(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Play Game",
+                            text = "Play",
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1
                         )
+                    }
+
+                    if (onOpenDlcs != null) {
+                        OutlinedButton(
+                            onClick = { onOpenDlcs(game) },
+                            modifier = Modifier
+                                .height(40.dp)
+                                .testTag("steam_dlc_btn_${game.appId}"),
+                            shape = RoundedCornerShape(10.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA855F7).copy(alpha = 0.7f)),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = Color(0xFF231936),
+                                contentColor = Color(0xFFE9D5FF)
+                            ),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Extension,
+                                contentDescription = "View DLCs for ${game.name}",
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "DLCs",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                        }
                     }
 
                     OutlinedButton(
@@ -539,7 +571,7 @@ fun SteamGameCard(
                             context.startActivity(intent)
                         },
                         modifier = Modifier
-                            .height(38.dp)
+                            .height(40.dp)
                             .testTag("steam_store_btn_${game.appId}"),
                         shape = RoundedCornerShape(10.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2A475E)),
@@ -549,15 +581,16 @@ fun SteamGameCard(
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.OpenInNew,
-                            contentDescription = "Store",
+                            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                            contentDescription = "Open ${game.name} on Steam Store",
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "Store",
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1
                         )
                     }
                 }

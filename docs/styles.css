@@ -2905,6 +2905,411 @@ body.bg-light .floating-nav-bar {
   box-shadow: 0 2px 10px rgba(245, 158, 11, 0.35);
 }
 
+/* ==========================================================================
+   STEAM LIBRARY DLC RECOMMENDER STYLING
+   ========================================================================== */
+.dlc-badge,
+.dlc-modal-badge {
+  color: #C084FC !important;
+  border-color: rgba(168, 85, 247, 0.45) !important;
+  background: rgba(168, 85, 247, 0.14) !important;
+}
+
+.dlc-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-dlc {
+  background: rgba(168, 85, 247, 0.18);
+  border: 1px solid rgba(168, 85, 247, 0.6);
+  color: #E9D5FF;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-dlc:hover {
+  background: rgba(168, 85, 247, 0.3);
+  border-color: #A855F7;
+  color: #FFFFFF;
+}
+
+.dlc-count-pill {
+  background: #A855F7;
+  color: #FFFFFF;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+.home-dlc-container {
+  margin-bottom: 24px;
+}
+
+.dlc-link-steam-card {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.12), rgba(20, 22, 34, 0.92));
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  border-radius: var(--radius-xl);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dlc-link-steam-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dlc-link-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(168, 85, 247, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.dlc-link-copy h4 {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--color-text-main);
+  margin-bottom: 3px;
+}
+
+.dlc-link-copy p {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
+
+.dlc-carousel {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scroll-snap-type: x mandatory;
+}
+
+.dlc-carousel-card {
+  min-width: 270px;
+  max-width: 270px;
+  background: var(--color-surface-card);
+  border: 1.2px solid rgba(168, 85, 247, 0.45);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  scroll-snap-align: start;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.dlc-carousel-card:hover {
+  transform: translateY(-3px);
+  border-color: #C084FC;
+}
+
+.dlc-carousel-card.is-free {
+  border-color: rgba(16, 185, 129, 0.6);
+}
+
+.dlc-carousel-card.is-sale {
+  border-color: rgba(245, 158, 11, 0.6);
+}
+
+.dlc-thumb-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 460 / 215;
+  background: #0E1118;
+  overflow: hidden;
+}
+
+.dlc-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dlc-thumb-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2), rgba(11, 15, 25, 0.9));
+}
+
+.dlc-reason-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(11, 15, 25, 0.9);
+  border: 1px solid #A855F7;
+  color: #E9D5FF;
+}
+
+.dlc-reason-badge.free {
+  border-color: #10B981;
+  color: #34D399;
+}
+
+.dlc-reason-badge.sale {
+  border-color: #F59E0B;
+  color: #FBBF24;
+}
+
+.dlc-dismiss-btn {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.72);
+  color: #E2E8F0;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dlc-dismiss-btn:hover {
+  background: #EF4444;
+  color: #FFF;
+}
+
+.dlc-parent-pill {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #66C0F4;
+  background: rgba(23, 26, 33, 0.88);
+  border: 1px solid rgba(102, 192, 244, 0.55);
+  border-radius: 6px;
+  padding: 3px 7px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dlc-card-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.dlc-card-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dlc-card-reason {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dlc-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.dlc-price-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dlc-price-strike {
+  font-size: 11px;
+  color: var(--color-text-dim);
+  text-decoration: line-through;
+}
+
+.dlc-price-pill {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text-main);
+}
+
+.dlc-price-pill.free {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34D399;
+}
+
+.dlc-price-pill.sale {
+  background: rgba(245, 158, 11, 0.2);
+  color: #FBBF24;
+}
+
+/* Vault Mode Tabs (Claimed Vault vs Steam Library) */
+.vault-mode-tabs {
+  display: flex;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  margin-top: 10px;
+}
+
+.vault-mode-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.vault-mode-btn.active {
+  background: var(--color-primary);
+  color: #000;
+  font-weight: 800;
+}
+
+/* DLC Hub Modal */
+.dlc-hub-modal-card {
+  max-width: 680px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.dlc-modal-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dlc-hub-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.dlc-hub-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dlc-game-select {
+  width: 100%;
+}
+
+.dlc-scan-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: rgba(168, 85, 247, 0.14);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  font-size: 12px;
+  color: #E9D5FF;
+}
+
+.dlc-mini-spinner {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+  flex-shrink: 0;
+}
+
+.dlc-hub-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dlc-detail-card {
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.dlc-detail-card.is-free {
+  border-color: rgba(16, 185, 129, 0.55);
+}
+
+.dlc-detail-card.is-sale {
+  border-color: rgba(245, 158, 11, 0.55);
+}
+
+.dlc-detail-desc {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
+
+.dlc-meta-chips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--color-text-dim);
+}
+
+.dlc-meta-pill {
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(0, 240, 255, 0.12);
+  color: #22D3EE;
+  font-weight: 700;
+}
+
+.dlc-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+
 
 
 

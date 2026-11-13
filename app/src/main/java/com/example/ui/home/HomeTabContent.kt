@@ -84,7 +84,9 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.data.local.SteamGameEntity
 import com.example.data.model.GiveawayItem
+import com.example.data.model.SteamDlcRecommendation
 import com.example.ui.UiStats
+import com.example.ui.components.HomeDlcRecommendationsSection
 import com.example.ui.density.ScreenDensityInfo
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGreen
@@ -120,6 +122,14 @@ fun HomeTabContent(
     onPostAppReview: (Int, String, String) -> Unit = { _, _, _ -> },
     onVoteHelpful: (String) -> Unit = {},
     hasVotedHelpful: (String) -> Boolean = { false },
+    dlcRecommendations: List<SteamDlcRecommendation> = emptyList(),
+    hasSteamGames: Boolean = false,
+    isScanningDlcs: Boolean = false,
+    dlcScanStatus: String? = null,
+    onRefreshDlcs: () -> Unit = {},
+    onOpenAllDlcs: () -> Unit = {},
+    onSelectDlc: (SteamDlcRecommendation) -> Unit = {},
+    onDismissDlc: (Int) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val pullRefreshState = rememberPullToRefreshState()
@@ -178,6 +188,22 @@ fun HomeTabContent(
                     onQuickSteamSync = onQuickSteamSync,
                     onOpenAchievements = onOpenAchievements,
                     isAnimationsEnabled = isAnimationsEnabled
+                )
+            }
+
+            // Section 2.5: Personalized DLC Recommendations for Owned Steam Games
+            item(key = "home_dlc_recommendations_section") {
+                HomeDlcRecommendationsSection(
+                    recommendations = dlcRecommendations,
+                    steamUserId = steamUserId,
+                    hasSteamGames = hasSteamGames || recentSteamGames.isNotEmpty() || dlcRecommendations.isNotEmpty(),
+                    isScanning = isScanningDlcs,
+                    scanStatus = dlcScanStatus,
+                    onOpenSteamDialog = onOpenSteamDialog,
+                    onRefreshDlcs = onRefreshDlcs,
+                    onOpenAllDlcs = onOpenAllDlcs,
+                    onSelectDlc = onSelectDlc,
+                    onDismissDlc = onDismissDlc
                 )
             }
 

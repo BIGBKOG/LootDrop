@@ -162,8 +162,10 @@ import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 import com.example.data.model.UnifiedLibraryItem
+import com.example.data.model.SteamDlcRecommendation
 import com.example.ui.components.BacklogRouletteDialog
 import com.example.ui.components.BacklogChallengeGridDialog
+import com.example.ui.components.SteamDlcHubDialog
 import android.widget.Toast
 import java.util.Locale
 
@@ -225,6 +227,12 @@ fun HomeScreen(
     val inAppBrowserUrl by viewModel.inAppBrowserUrl.collectAsState()
     val inAppBrowserTitle by viewModel.inAppBrowserTitle.collectAsState()
     val publicReviews by viewModel.publicReviews.collectAsState()
+    val steamDlcRecommendations by viewModel.steamDlcRecommendations.collectAsState()
+    val isLoadingSteamDlcs by viewModel.isLoadingSteamDlcs.collectAsState()
+    val steamDlcScanStatus by viewModel.steamDlcScanStatus.collectAsState()
+    val selectedGameForDlcs by viewModel.selectedGameForDlcs.collectAsState()
+    val selectedGameDlcs by viewModel.selectedGameDlcs.collectAsState()
+    val isLoadingGameDlcs by viewModel.isLoadingGameDlcs.collectAsState()
 
     val borderBeamAngle = rememberAnimatedBeamAngle(enabled = isAnimationsEnabled && !isLowEndOptimization)
 
@@ -234,6 +242,7 @@ fun HomeScreen(
     var launcherChooserItem by remember { mutableStateOf<GiveawayItem?>(null) }
     var showSteamDialog by remember { mutableStateOf(false) }
     var showBacklogChallengeDialog by remember { mutableStateOf(false) }
+    var showDlcHubDialog by remember { mutableStateOf(false) }
     val isBacklogChallengeDialogVisibleFromVm by viewModel.isBacklogChallengeDialogVisible.collectAsState()
     val backlogChallengeGrid by viewModel.backlogChallengeGrid.collectAsState()
 
@@ -580,7 +589,18 @@ fun HomeScreen(
                             },
                             hasVotedHelpful = { reviewId ->
                                 viewModel.hasVotedHelpful(reviewId)
-                            }
+                            },
+                            dlcRecommendations = steamDlcRecommendations,
+                            hasSteamGames = uiStats.steamTotalCount > 0 || recentPlayedSteamGames.isNotEmpty(),
+                            isScanningDlcs = isLoadingSteamDlcs,
+                            dlcScanStatus = steamDlcScanStatus,
+                            onRefreshDlcs = { viewModel.refreshSteamDlcRecommendations(forceRefresh = true) },
+                            onOpenAllDlcs = {
+                                viewModel.closeGameDlcExplorer()
+                                showDlcHubDialog = true
+                            },
+                            onSelectDlc = { dlc -> viewModel.openDlcRecommendation(context, dlc) },
+                            onDismissDlc = { dlcId -> viewModel.dismissDlcRecommendation(dlcId) }
                         )
                     }
                     MainTab.DISCOVER -> {
@@ -687,7 +707,15 @@ fun HomeScreen(
                             rarestAchievements = rarestAchievements,
                             closestToHundredGames = closestToHundredGames,
                             onOpenAchievements = { viewModel.openGameAchievements(it) },
-                            onOpenBacklogChallenge = { showBacklogChallengeDialog = true }
+                            onOpenBacklogChallenge = { showBacklogChallengeDialog = true },
+                            dlcRecommendationsCount = steamDlcRecommendations.size,
+                            onOpenDlcHub = {
+                                viewModel.closeGameDlcExplorer()
+                                showDlcHubDialog = true
+                            },
+                            onOpenGameDlcs = { game ->
+                                viewModel.openGameDlcExplorer(game)
+                            }
                         )
                     }
                     MainTab.CALENDAR -> {
@@ -968,6 +996,26 @@ fun HomeScreen(
         )
     }
 
+    // Steam DLC Recommendations Hub & Per-Game DLC Explorer Dialog
+    if (showDlcHubDialog || selectedGameForDlcs != null) {
+        SteamDlcHubDialog(
+            recommendations = steamDlcRecommendations,
+            selectedGame = selectedGameForDlcs,
+            selectedGameDlcs = selectedGameDlcs,
+            isLoadingLibraryDlcs = isLoadingSteamDlcs,
+            isLoadingGameDlcs = isLoadingGameDlcs,
+            scanStatus = steamDlcScanStatus,
+            onClearSelectedGame = { viewModel.closeGameDlcExplorer() },
+            onRefreshLibraryDlcs = { viewModel.refreshSteamDlcRecommendations(forceRefresh = true) },
+            onOpenDlc = { dlc -> viewModel.openDlcRecommendation(context, dlc) },
+            onDismissDlc = { dlcId -> viewModel.dismissDlcRecommendation(dlcId) },
+            onDismiss = {
+                showDlcHubDialog = false
+                viewModel.closeGameDlcExplorer()
+            }
+        )
+    }
+
     // Custom In-App Mythic Achievement Toast / Popup
     val mythicNotification by viewModel.mythicAchievementNotification.collectAsState()
     com.example.ui.components.MythicAchievementToast(
@@ -1188,6 +1236,9 @@ fun GiveawaysTabContent(
     closestToHundredGames: List<SteamGameEntity> = emptyList(),
     onOpenAchievements: ((SteamGameEntity) -> Unit)? = null,
     onOpenBacklogChallenge: (() -> Unit)? = null,
+    dlcRecommendationsCount: Int = 0,
+    onOpenDlcHub: (() -> Unit)? = null,
+    onOpenGameDlcs: ((SteamGameEntity) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val isAllPaidMode = tab == MainTab.CLAIMED && libraryViewMode == LibraryViewMode.ALL_PAID
@@ -1259,7 +1310,9 @@ fun GiveawaysTabContent(
             onOpenFilterSheet = onOpenFilterSheet,
             onResetFilters = onResetFilters,
             onRollRandomBacklog = { showBacklogRoulette = true },
-            onOpenBacklogChallenge = onOpenBacklogChallenge
+            onOpenBacklogChallenge = onOpenBacklogChallenge,
+            dlcRecommendationsCount = dlcRecommendationsCount,
+            onOpenDlcHub = onOpenDlcHub
         )
     }
 
@@ -1532,6 +1585,7 @@ fun GiveawaysTabContent(
                                             onStatusChange = { newStatus -> onSteamPlayStatusChange?.invoke(item.game, newStatus) },
                                             onUpdateManualStorage = { sizeGb -> onSteamManualStorageChange?.invoke(item.game, sizeGb) },
                                             onOpenAchievements = { onOpenAchievements?.invoke(item.game) },
+                                            onOpenDlcs = onOpenGameDlcs,
                                             modifier = if (isAnimationsEnabled && !isLowEndOptimization) Modifier.animateItem() else Modifier
                                         )
                                     }
@@ -1582,6 +1636,7 @@ fun GiveawaysTabContent(
                                             onStatusChange = { newStatus -> onSteamPlayStatusChange?.invoke(item.game, newStatus) },
                                             onUpdateManualStorage = { sizeGb -> onSteamManualStorageChange?.invoke(item.game, sizeGb) },
                                             onOpenAchievements = { onOpenAchievements?.invoke(item.game) },
+                                            onOpenDlcs = onOpenGameDlcs,
                                             modifier = if (isAnimationsEnabled && !isLowEndOptimization) Modifier.animateItem() else Modifier
                                         )
                                     }
@@ -1919,6 +1974,8 @@ private fun InLibraryTopMenus(
     onResetFilters: () -> Unit,
     onRollRandomBacklog: (() -> Unit)? = null,
     onOpenBacklogChallenge: (() -> Unit)? = null,
+    dlcRecommendationsCount: Int = 0,
+    onOpenDlcHub: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -1960,6 +2017,8 @@ private fun InLibraryTopMenus(
             selectedStorage = selectedStorageFilter,
             onStorageSelect = onStorageFilterSelect,
             trophyCount = trophyCount,
+            dlcRecommendationsCount = dlcRecommendationsCount,
+            onOpenDlcHub = onOpenDlcHub,
             onRollRandomBacklog = onRollRandomBacklog,
             onOpenBacklogChallenge = onOpenBacklogChallenge
         )

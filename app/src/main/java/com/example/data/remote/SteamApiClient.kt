@@ -578,4 +578,133 @@ object SteamApiClient {
             PlayStatus.PLAYING
         }
     }
+
+    data class SteamStoreDlcInfo(
+        val dlcAppId: Int,
+        val name: String,
+        val shortDescription: String = "",
+        val headerImageUrl: String = "",
+        val isFree: Boolean = false,
+        val discountPercent: Int = 0,
+        val priceFormatted: String = "",
+        val initialPriceFormatted: String = "",
+        val recommendationsCount: Int = 0,
+        val releaseDate: String = "",
+        val metacriticScore: Int? = null,
+        val comingSoon: Boolean = false,
+        val type: String = "dlc"
+    )
+
+    /**
+     * Fetches the list of official DLC App IDs associated with a Steam base game
+     * via the Steam Storefront appdetails API.
+     */
+    suspend fun getAppDlcIds(appId: Int): List<Int> = withContext(Dispatchers.IO) {
+        if (appId <= 0) return@withContext emptyList()
+        val url = "https://store.steampowered.com/api/appdetails?appids=$appId&l=english&cc=us"
+        try {
+            val request = Request.Builder()
+                .url(url)
+                .header("User-Agent", "LootDrop-Android/${BuildConfig.VERSION_NAME}")
+                .build()
+            getClient().newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext emptyList()
+                val body = response.body?.string() ?: return@withContext emptyList()
+                val root = JSONObject(body)
+                val appObj = root.optJSONObject(appId.toString()) ?: return@withContext emptyList()
+                if (!appObj.optBoolean("success", false)) return@withContext emptyList()
+                val data = appObj.optJSONObject("data") ?: return@withContext emptyList()
+                val dlcArray = data.optJSONArray("dlc") ?: return@withContext emptyList()
+                val result = mutableListOf<Int>()
+                for (i in 0 until dlcArray.length()) {
+                    val dlcId = dlcArray.optInt(i, 0)
+                    if (dlcId > 0) result.add(dlcId)
+                }
+                result
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to fetch DLC IDs for appId=$appId: ${e.message}")
+            emptyList()
+        }
+    }
+
+    /**
+     * Fetches Storefront metadata (title, pricing, discount, review count, description)
+     * for a specific Steam DLC App ID.
+     */
+    suspend fun getDlcStoreDetails(dlcAppId: Int): SteamStoreDlcInfo? = withContext(Dispatchers.IO) {
+        if (dlcAppId <= 0) return@withContext null
+        val url = "https://store.steampowered.com/api/appdetails?appids=$dlcAppId&l=english&cc=us"
+        try {
+            val request = Request.Builder()
+                .url(url)
+                .header("User-Agent", "LootDrop-Android/${BuildConfig.VERSION_NAME}")
+                .build()
+            getClient().newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext null
+                val body = response.body?.string() ?: return@withContext null
+                val root = JSONObject(body)
+                val appObj = root.optJSONObject(dlcAppId.toString()) ?: return@withContext null
+                if (!appObj.optBoolean("success", false)) return@withContext null
+                val data = appObj.optJSONObject("data") ?: return@withContext null
+
+                val name = data.optString("name", "").trim()
+                if (name.isBlank()) return@withContext null
+
+                val type = data.optString("type", "dlc")
+                val rawDesc = data.optString("short_description", "")
+                val cleanDesc = rawDesc
+                    .replace(Regex("<[^>]*>"), " ")
+                    .replace("&amp;", "&")
+                    .replace("&quot;", "\"")
+                    .replace("&#39;", "'")
+                    .replace("&nbsp;", " ")
+                    .replace(Regex("\\s+"), " ")
+                    .trim()
+
+                val headerImage = data.optString("header_image", "")
+                    .ifBlank { "https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/$dlcAppId/header.jpg" }
+
+                val isFree = data.optBoolean("is_free", false)
+                val priceObj = data.optJSONObject("price_overview")
+                val discountPercent = priceObj?.optInt("discount_percent", 0) ?: 0
+                val finalFormatted = priceObj?.optString("final_formatted", "") ?: ""
+                val initialFormatted = priceObj?.optString("initial_formatted", "") ?: ""
+                val resolvedPrice = when {
+                    isFree -> "Free"
+                    finalFormatted.isNotBlank() -> finalFormatted
+                    else -> ""
+                }
+
+                val recsObj = data.optJSONObject("recommendations")
+                val recommendationsCount = recsObj?.optInt("total", 0) ?: 0
+
+                val metacriticObj = data.optJSONObject("metacritic")
+                val metacriticScore = metacriticObj?.optInt("score", 0)?.takeIf { it > 0 }
+
+                val releaseObj = data.optJSONObject("release_date")
+                val comingSoon = releaseObj?.optBoolean("coming_soon", false) ?: false
+                val releaseDate = releaseObj?.optString("date", "") ?: ""
+
+                SteamStoreDlcInfo(
+                    dlcAppId = dlcAppId,
+                    name = name,
+                    shortDescription = cleanDesc,
+                    headerImageUrl = headerImage,
+                    isFree = isFree || (priceObj?.optInt("final", -1) == 0),
+                    discountPercent = discountPercent,
+                    priceFormatted = resolvedPrice,
+                    initialPriceFormatted = initialFormatted,
+                    recommendationsCount = recommendationsCount,
+                    releaseDate = releaseDate,
+                    metacriticScore = metacriticScore,
+                    comingSoon = comingSoon,
+                    type = type
+                )
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to fetch DLC store details for dlcAppId=$dlcAppId: ${e.message}")
+            null
+        }
+    }
 }

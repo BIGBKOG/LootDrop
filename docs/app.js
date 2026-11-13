@@ -46,6 +46,9 @@ const STORAGE_KEYS = {
   THEME: 'lootdrop_accent_theme',
   BG_MODE: 'lootdrop_bg_mode',
   STEAM_ID: 'lootdrop_steam_id',
+  STEAM_GAMES: 'lootdrop_steam_games',
+  DLC_CACHE: 'lootdrop_steam_dlc_cache',
+  DLC_DISMISSED: 'lootdrop_dismissed_dlcs',
   NOTIFICATIONS: 'lootdrop_notifications',
   ALERT_SETTINGS: 'lootdrop_alert_settings'
 };
@@ -225,6 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateStats();
   fetchPublicReviewsFromR2();
   initReviewsModal();
+  initSteamAndDlcFeatures();
 });
 
 // ==========================================
@@ -565,6 +569,7 @@ function renderHome() {
   recentContainer.innerHTML = recent.map(g => createGiveawayCardHtml(g, false)).join('');
 
   attachCardEvents();
+  renderHomeDlcSection();
 }
 
 // ==========================================
@@ -707,6 +712,64 @@ function renderVault() {
   if (savedVal) savedVal.textContent = `$${totalWorth.toFixed(2)}`;
   if (beatenVal) beatenVal.textContent = beatenCount;
 
+  const steamCountEl = document.getElementById('vault-steam-count');
+  if (steamCountEl) steamCountEl.textContent = steamGamesList.length;
+
+  if (vaultViewMode === 'steam') {
+    if (steamGamesList.length === 0) {
+      container.innerHTML = `
+        <div style="grid-column: 1 / -1; padding: 48px; text-align: center; background: var(--color-surface); border: 1px dashed var(--color-border); border-radius: var(--radius-xl);">
+          <span style="font-size: 40px; display: block; margin-bottom: 12px;">🎮</span>
+          <h3>No Synced Steam Games Yet</h3>
+          <p style="color: var(--color-text-muted); font-size: 14px; margin-top: 6px; margin-bottom: 16px;">
+            Link your public Steam 64 ID or Vanity URL in Settings to browse your Steam games and find matching DLCs!
+          </p>
+          <button class="btn btn-primary" onclick="switchTab('pane-settings')">Link Steam Account ➔</button>
+        </div>
+      `;
+      return;
+    }
+
+    const sortedSteam = [...steamGamesList].sort((a, b) => (b.playtime2WeeksMinutes || 0) - (a.playtime2WeeksMinutes || 0) || (b.playtimeMinutes || 0) - (a.playtimeMinutes || 0));
+    container.innerHTML = sortedSteam.map(sg => {
+      const hours = ((sg.playtimeMinutes || 0) / 60).toFixed(1);
+      const headerImg = `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${sg.appId}/header.jpg`;
+      const fallbackImg = sg.headerImageUrl || headerImg;
+      const storeUrl = sg.storeUrl || `https://store.steampowered.com/app/${sg.appId}`;
+      return `
+        <div class="giveaway-card steam-library-card" data-appid="${sg.appId}">
+          <div class="giveaway-card-thumb-wrap">
+            <img src="${headerImg}" onerror="this.onerror=null;this.src='${fallbackImg}';" alt="${escapeHtml(sg.name)}" class="giveaway-card-thumb" loading="lazy">
+            <div class="card-top-badges">
+              <span class="badge-platform">🎮 STEAM</span>
+            </div>
+            <div class="badge-price">${sg.playtimeMinutes > 0 ? `${hours}h played` : 'Unplayed'}</div>
+          </div>
+          <div class="giveaway-card-body">
+            <h3 class="giveaway-card-title">${escapeHtml(sg.name)}</h3>
+            <div class="card-actions-row">
+              <button class="btn btn-sm btn-dlc open-game-dlcs-btn" data-appid="${sg.appId}" style="flex:1;">
+                🧩 DLCs
+              </button>
+              <a href="${storeUrl}" target="_blank" rel="noopener" class="btn btn-sm btn-outline" onclick="event.stopPropagation()">
+                Store ↗
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    container.querySelectorAll('.open-game-dlcs-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const appId = parseInt(btn.dataset.appid, 10);
+        if (appId > 0) openDlcHubModal(appId);
+      });
+    });
+    return;
+  }
+
   const activeStatusChip = document.querySelector('#vault-status-chips .filter-chip.active')?.dataset.status || 'all';
   let displayed = vaultItems;
 
@@ -720,7 +783,7 @@ function renderVault() {
         <span style="font-size: 40px; display: block; margin-bottom: 12px;">💎</span>
         <h3>Your Vault is Ready</h3>
         <p style="color: var(--color-text-muted); font-size: 14px; margin-top: 6px;">
-          Bookmark free giveaways from the Radar or sync your Steam 64 ID to track backlog & achievements!
+          Bookmark free giveaways from the Radar or sync your Steam 64 ID to track backlog & discover DLCs!
         </p>
       </div>
     `;
@@ -829,11 +892,7 @@ function createGiveawayCardHtml(g, isFeatured = false) {
 function attachCardEvents() {
   document.querySelectorAll('.claim-deal-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      if (isUseInAppBrowser) {
-        e.preventDefault();
-        e.stopPropagation();
-        openDealBrowser(btn.dataset.url, btn.dataset.title);
-      }
+      e.stopPropagation();
     });
   });
 
@@ -890,12 +949,7 @@ function openGiveawayDetail(g) {
   document.getElementById('detail-description').textContent = g.description || '';
   const claimLink = document.getElementById('detail-claim-link');
   claimLink.href = g.open_giveaway_url || '#';
-  claimLink.onclick = (e) => {
-    if (isUseInAppBrowser && g.open_giveaway_url) {
-      e.preventDefault();
-      openDealBrowser(g.open_giveaway_url, g.title);
-    }
-  };
+  claimLink.onclick = null;
 
   const isSaved = vaultItems.some(v => v.id === g.id);
   const vaultBtn = document.getElementById('detail-vault-toggle');
@@ -1674,9 +1728,7 @@ function setupEventListeners() {
       showToast('Please enter a Steam 64 ID or Vanity URL', '⚠️');
       return;
     }
-    localStorage.setItem(STORAGE_KEYS.STEAM_ID, input);
-    document.getElementById('steam-status-hint').textContent = `Linked Steam ID: ${input} (Ready to sync)`;
-    showToast('Steam 64 ID saved!', '🎮');
+    syncWebSteamLibrary(input);
   });
 
   document.getElementById('btn-sync-steam')?.addEventListener('click', () => {
@@ -1686,7 +1738,7 @@ function setupEventListeners() {
       showToast('Enter your Steam 64 ID in Settings first!', 'ℹ️');
       return;
     }
-    showToast('Synchronizing Steam backlog & achievements...', '🔄');
+    syncWebSteamLibrary(savedId);
   });
 
   // Backup Export
@@ -2297,3 +2349,854 @@ function initReviewsModal() {
 
   updateSettingsAppRatingUI();
 }
+
+// ==========================================
+// Steam Library Sync & DLC Recommender Engine (Web)
+// ==========================================
+const DLC_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+const COSMETIC_OR_OST_REGEX = /\b(soundtrack|ost|original score|art\s*book|digital art|wallpaper|music pack|digital extras|comic book|ringtones)\b/i;
+const DLC_GIVEAWAY_REGEX = /\b(dlc|expansion|season pass|starter pack|booster pack|add-on|addon|bundle|chapter|pass|cosmetic|skin|pack)\b/i;
+
+let steamGamesList = [];
+let storeDlcRecommendations = [];
+let dismissedDlcIds = new Set();
+let isScanningDlcs = false;
+let dlcScanStatus = '';
+let vaultViewMode = 'vault';
+let activeDlcHubFilter = 'all';
+let selectedDlcParentAppId = 'all';
+let selectedGameDlcsList = [];
+let isLoadingGameDlcs = false;
+
+function initSteamAndDlcFeatures() {
+  try {
+    steamGamesList = JSON.parse(localStorage.getItem(STORAGE_KEYS.STEAM_GAMES) || '[]');
+  } catch (_) {
+    steamGamesList = [];
+  }
+  try {
+    const cache = JSON.parse(localStorage.getItem(STORAGE_KEYS.DLC_CACHE) || '{}');
+    storeDlcRecommendations = Array.isArray(cache.items) ? cache.items : [];
+  } catch (_) {
+    storeDlcRecommendations = [];
+  }
+  try {
+    const dismissed = JSON.parse(localStorage.getItem(STORAGE_KEYS.DLC_DISMISSED) || '[]');
+    dismissedDlcIds = new Set(Array.isArray(dismissed) ? dismissed.map(Number) : []);
+  } catch (_) {
+    dismissedDlcIds = new Set();
+  }
+
+  const savedSteamId = localStorage.getItem(STORAGE_KEYS.STEAM_ID) || '';
+  const steamInput = document.getElementById('steam-id-input');
+  const steamHint = document.getElementById('steam-status-hint');
+  if (steamInput && savedSteamId) steamInput.value = savedSteamId;
+  if (steamHint) {
+    if (steamGamesList.length > 0) {
+      steamHint.textContent = `Synced ${steamGamesList.length} Steam games${savedSteamId ? ` (${savedSteamId})` : ''}`;
+    } else if (savedSteamId) {
+      steamHint.textContent = `Linked Steam ID: ${savedSteamId} (Click Save & Sync to load games)`;
+    }
+  }
+
+  // Vault Mode Tabs (Vault vs Steam Library)
+  document.querySelectorAll('#vault-mode-tabs .vault-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#vault-mode-tabs .vault-mode-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      vaultViewMode = btn.dataset.mode || 'vault';
+      const statusChips = document.getElementById('vault-status-chips');
+      if (statusChips) statusChips.style.display = vaultViewMode === 'vault' ? 'flex' : 'none';
+      renderVault();
+    });
+  });
+
+  // Home & Vault DLC Buttons
+  document.getElementById('btn-home-dlc-scan')?.addEventListener('click', () => {
+    refreshWebSteamDlcRecommendations(true);
+  });
+  document.getElementById('btn-home-dlc-see-all')?.addEventListener('click', () => {
+    openDlcHubModal('all');
+  });
+  document.getElementById('btn-open-dlc-hub')?.addEventListener('click', () => {
+    openDlcHubModal('all');
+  });
+  document.getElementById('btn-dlc-hub-refresh')?.addEventListener('click', () => {
+    if (selectedDlcParentAppId !== 'all') {
+      fetchDlcsForSingleGameWeb(parseInt(selectedDlcParentAppId, 10));
+    } else {
+      refreshWebSteamDlcRecommendations(true);
+    }
+  });
+  document.getElementById('close-dlc-hub-btn')?.addEventListener('click', () => {
+    document.getElementById('modal-dlc-hub')?.classList.remove('open');
+  });
+  document.getElementById('modal-dlc-hub')?.addEventListener('click', (e) => {
+    if (e.target && e.target.id === 'modal-dlc-hub') {
+      document.getElementById('modal-dlc-hub')?.classList.remove('open');
+    }
+  });
+
+  // DLC Hub filter chips
+  document.querySelectorAll('#dlc-hub-filter-chips .filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('#dlc-hub-filter-chips .filter-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      activeDlcHubFilter = chip.dataset.dlcFilter || 'all';
+      renderDlcHubList();
+    });
+  });
+
+  // DLC Hub per-game selector
+  document.getElementById('dlc-hub-game-select')?.addEventListener('change', (e) => {
+    const val = e.target.value;
+    selectedDlcParentAppId = val;
+    if (val === 'all') {
+      selectedGameDlcsList = [];
+      updateDlcHubHeader();
+      renderDlcHubList();
+    } else {
+      fetchDlcsForSingleGameWeb(parseInt(val, 10));
+    }
+  });
+
+  updateDlcBadges();
+  renderHomeDlcSection();
+
+  if (steamGamesList.length > 0 && !isDlcCacheFresh()) {
+    refreshWebSteamDlcRecommendations(false);
+  }
+}
+
+async function fetchWithCorsFallback(targetUrl) {
+  const candidates = [
+    targetUrl,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`,
+    `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`
+  ];
+  let lastErr = null;
+  for (const url of candidates) {
+    try {
+      const resp = await fetch(url);
+      if (resp && resp.ok) {
+        return resp;
+      }
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr || new Error('Request blocked or network unavailable');
+}
+
+function parseSteamIdentifier(rawInput) {
+  let clean = (rawInput || '').trim().split('?')[0].split('#')[0];
+  const idMatch = clean.match(/\b(7656119\d{10}|\d{17})\b/);
+  if (idMatch) return { type: 'steam64', value: idMatch[1] };
+
+  if (clean.includes('/id/')) {
+    clean = clean.split('/id/')[1].split('/')[0].trim();
+  } else if (clean.includes('/profiles/')) {
+    clean = clean.split('/profiles/')[1].split('/')[0].trim();
+  } else {
+    clean = clean.replace(/^https?:\/\/(www\.)?steamcommunity\.com\//i, '').replace(/^\/+|\/+$/g, '');
+  }
+  if (/^\d{17}$/.test(clean)) return { type: 'steam64', value: clean };
+  return { type: 'vanity', value: clean };
+}
+
+async function syncWebSteamLibrary(rawInput) {
+  const parsed = parseSteamIdentifier(rawInput);
+  if (!parsed.value) {
+    showToast('Please enter a valid Steam 64 ID or Custom URL', '⚠️');
+    return;
+  }
+
+  localStorage.setItem(STORAGE_KEYS.STEAM_ID, rawInput.trim());
+  const hint = document.getElementById('steam-status-hint');
+  if (hint) hint.textContent = `Syncing public Steam library for "${parsed.value}"...`;
+  showToast('Connecting to Steam profile...', '🔄');
+
+  const xmlUrl = parsed.type === 'steam64'
+    ? `https://steamcommunity.com/profiles/${encodeURIComponent(parsed.value)}/games?tab=all&xml=1`
+    : `https://steamcommunity.com/id/${encodeURIComponent(parsed.value)}/games?tab=all&xml=1`;
+
+  try {
+    const resp = await fetchWithCorsFallback(xmlUrl);
+    const xmlText = await resp.text();
+    const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
+    const errorNode = doc.querySelector('response > error');
+    if (errorNode) {
+      throw new Error(errorNode.textContent || 'Steam profile private or not found');
+    }
+
+    const gameNodes = Array.from(doc.querySelectorAll('games > game'));
+    if (gameNodes.length === 0) {
+      throw new Error('No games returned. Ensure Steam Profile & Game Details are Public.');
+    }
+
+    const parsedGames = gameNodes.map(node => {
+      const appId = parseInt(node.querySelector('appID')?.textContent || '0', 10);
+      const name = (node.querySelector('name')?.textContent || '').trim();
+      const hoursOnRecord = parseFloat((node.querySelector('hoursOnRecord')?.textContent || '0').replace(/,/g, '')) || 0;
+      const hoursLast2Weeks = parseFloat((node.querySelector('hoursLast2Weeks')?.textContent || '0').replace(/,/g, '')) || 0;
+      const logo = (node.querySelector('logo')?.textContent || '').trim();
+      if (!appId || !name) return null;
+      return {
+        appId,
+        name,
+        playtimeMinutes: Math.round(hoursOnRecord * 60),
+        playtime2WeeksMinutes: Math.round(hoursLast2Weeks * 60),
+        headerImageUrl: logo || `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appId}/header.jpg`,
+        storeUrl: `https://store.steampowered.com/app/${appId}`
+      };
+    }).filter(Boolean);
+
+    steamGamesList = parsedGames;
+    localStorage.setItem(STORAGE_KEYS.STEAM_GAMES, JSON.stringify(steamGamesList));
+
+    if (hint) {
+      hint.textContent = `Synced ${steamGamesList.length} Steam games! Scanning DLCs next...`;
+    }
+    showToast(`Synced ${steamGamesList.length} Steam games! Scanning DLCs...`, '🎮');
+
+    updateDlcBadges();
+    renderVault();
+    renderHomeDlcSection();
+    await refreshWebSteamDlcRecommendations(true);
+
+    if (hint) {
+      hint.textContent = `Synced ${steamGamesList.length} Steam games • ${getCombinedDlcRecommendations().length} DLC picks ready`;
+    }
+  } catch (err) {
+    console.warn('Steam sync error:', err);
+    if (hint) hint.textContent = `Sync failed: ${err.message}`;
+    showToast(`Steam sync failed: ${err.message}`, '⚠️');
+  }
+}
+
+function isDlcCacheFresh() {
+  try {
+    const cache = JSON.parse(localStorage.getItem(STORAGE_KEYS.DLC_CACHE) || '{}');
+    return cache.timestamp && (Date.now() - cache.timestamp) < DLC_CACHE_TTL_MS && Array.isArray(cache.items) && cache.items.length > 0;
+  } catch (_) {
+    return false;
+  }
+}
+
+function saveDlcCache(items) {
+  localStorage.setItem(STORAGE_KEYS.DLC_CACHE, JSON.stringify({
+    timestamp: Date.now(),
+    items
+  }));
+}
+
+function normalizeGameMatchTitle(title) {
+  return (title || '')
+    .replace(/[™®©:]/g, ' ')
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/\[[^\]]*\]/g, ' ')
+    .replace(/[^a-zA-Z0-9 ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function escapeRegExp(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function findFreeDlcGiveawaysForSteamLibraryWeb(giveaways, steamGames) {
+  if (!Array.isArray(giveaways) || !Array.isArray(steamGames) || steamGames.length === 0) return [];
+  const indexedOwned = steamGames
+    .map(g => ({ clean: normalizeGameMatchTitle(g.name), game: g }))
+    .filter(x => x.clean.length >= 4)
+    .sort((a, b) => b.clean.length - a.clean.length);
+
+  if (indexedOwned.length === 0) return [];
+
+  const matches = [];
+  for (const g of giveaways) {
+    if (g.status && g.status.toLowerCase() !== 'active') continue;
+    const typeLower = (g.type || '').toLowerCase();
+    const isDlc = typeLower.includes('dlc') || typeLower.includes('loot') || DLC_GIVEAWAY_REGEX.test(g.title || '');
+    if (!isDlc) continue;
+
+    const gNorm = normalizeGameMatchTitle(g.title);
+    if (!gNorm) continue;
+
+    const matched = indexedOwned.find(({ clean }) => {
+      if (gNorm === clean) return false;
+      const rx = new RegExp(`(?:^|\\s)${escapeRegExp(clean)}(?:\\s|$)`);
+      return rx.test(gNorm);
+    });
+    if (!matched) continue;
+
+    const parent = matched.game;
+    const steamAppMatch = (g.open_giveaway_url || '').match(/store\.steampowered\.com\/app\/(\d+)/i);
+    const dlcAppId = steamAppMatch ? parseInt(steamAppMatch[1], 10) : (9000000 + (g.id || 0));
+    const isClaimed = vaultItems.some(v => v.id === g.id);
+    const playtimeHrs = ((parent.playtimeMinutes || 0) / 60).toFixed(1);
+
+    matches.push({
+      dlcAppId,
+      name: g.title,
+      parentAppId: parent.appId,
+      parentGameName: parent.name,
+      parentPlaytimeMinutes: parent.playtimeMinutes || 0,
+      headerImageUrl: g.image || g.thumbnail || parent.headerImageUrl,
+      shortDescription: g.description || '',
+      isFree: true,
+      discountPercent: 100,
+      priceFormatted: 'FREE',
+      initialPriceFormatted: g.worth && g.worth !== 'N/A' ? g.worth : '',
+      recommendationsCount: parseInt(g.users || '0', 10) || 0,
+      releaseDate: g.published_date || '',
+      reasonBadge: isClaimed ? '✓ Claimed Free DLC' : '🎁 Free DLC Drop',
+      recommendationReason: `100% Free giveaway for ${parent.name} (${parent.playtimeMinutes > 0 ? `${playtimeHrs}h played` : 'Owned in Steam'})`,
+      storeUrl: g.open_giveaway_url || `https://store.steampowered.com/app/${parent.appId}`,
+      matchedGiveawayId: g.id,
+      isSoundtrackOrCosmetic: false,
+      relevanceScore: 1500 + Math.min(Math.floor((parent.playtimeMinutes || 0) / 10), 300) + (isClaimed ? 0 : 300)
+    });
+  }
+  return matches.sort((a, b) => b.relevanceScore - a.relevanceScore);
+}
+
+function selectCandidateGamesForDlcScanWeb(steamGames, maxGames = 6) {
+  return [...steamGames]
+    .filter(g => g.appId > 0 && g.name)
+    .sort((a, b) => {
+      const scoreA = (a.playtime2WeeksMinutes > 0 ? 10000 : 0) + Math.min(a.playtimeMinutes || 0, 10000);
+      const scoreB = (b.playtime2WeeksMinutes > 0 ? 10000 : 0) + Math.min(b.playtimeMinutes || 0, 10000);
+      return scoreB - scoreA;
+    })
+    .slice(0, maxGames);
+}
+
+async function fetchSteamStoreAppDetailsWeb(appId) {
+  const url = `https://store.steampowered.com/api/appdetails?appids=${appId}&l=english&cc=us`;
+  const resp = await fetchWithCorsFallback(url);
+  const json = await resp.json();
+  const entry = json?.[String(appId)];
+  if (!entry || !entry.success || !entry.data) return null;
+  return entry.data;
+}
+
+function buildDlcRecommendationFromStoreData(dlcAppId, data, parentGame) {
+  if (!data || !data.name || data.release_date?.coming_soon) return null;
+  const isCosmeticOrOst = COSMETIC_OR_OST_REGEX.test(data.name);
+  const priceObj = data.price_overview || null;
+  const isFree = Boolean(data.is_free) || (priceObj && priceObj.final === 0);
+  const discountPercent = priceObj?.discount_percent || 0;
+  const priceFormatted = isFree ? 'Free' : (priceObj?.final_formatted || 'View Price');
+  const initialPriceFormatted = priceObj?.initial_formatted || '';
+  const recsCount = data.recommendations?.total || 0;
+  const metacriticScore = data.metacritic?.score || null;
+
+  let score = 0;
+  if (isFree) score += 600;
+  if (discountPercent > 0) score += discountPercent * 5;
+  score += Math.min(Math.floor(recsCount / 15), 500);
+  score += Math.min(Math.floor((parentGame.playtimeMinutes || 0) / 15), 300);
+  if ((parentGame.playtime2WeeksMinutes || 0) > 0) score += 220;
+  if (metacriticScore && metacriticScore > 65) score += (metacriticScore - 65) * 4;
+  if (isCosmeticOrOst) score -= 450;
+
+  const hours = ((parentGame.playtimeMinutes || 0) / 60).toFixed(1);
+  const playtimeText = (parentGame.playtimeMinutes || 0) > 0 ? `${hours}h played` : 'In Steam Library';
+
+  let reasonBadge = '🧩 DLC Expansion';
+  if (isFree) reasonBadge = '🎁 Free DLC';
+  else if (discountPercent >= 50) reasonBadge = `🔥 -${discountPercent}% Deal`;
+  else if (discountPercent > 0) reasonBadge = `🏷️ -${discountPercent}% Off`;
+  else if (isCosmeticOrOst) reasonBadge = '🎵 Soundtrack / Extra';
+  else if (recsCount >= 5000) reasonBadge = '⭐ Fan Favorite';
+  else if ((parentGame.playtime2WeeksMinutes || 0) > 0) reasonBadge = '🎮 Recently Played';
+  else if ((parentGame.playtimeMinutes || 0) >= 1200) reasonBadge = '🏆 Top Game Pick';
+
+  let recommendationReason = `Official expansion for ${parentGame.name} (${playtimeText})`;
+  if (isFree) recommendationReason = `Free add-on for ${parentGame.name} (${playtimeText})`;
+  else if (discountPercent > 0) recommendationReason = `On sale (-${discountPercent}%) for ${parentGame.name} • ${playtimeText}`;
+  else if (recsCount >= 1000) recommendationReason = `Popular expansion for ${parentGame.name} (${playtimeText})`;
+  else if ((parentGame.playtimeMinutes || 0) > 0) recommendationReason = `Recommended from your ${playtimeText} in ${parentGame.name}`;
+
+  const cleanDesc = (data.short_description || '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return {
+    dlcAppId,
+    name: data.name.trim(),
+    parentAppId: parentGame.appId,
+    parentGameName: parentGame.name,
+    parentPlaytimeMinutes: parentGame.playtimeMinutes || 0,
+    headerImageUrl: data.header_image || `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${dlcAppId}/header.jpg`,
+    shortDescription: cleanDesc,
+    isFree,
+    discountPercent,
+    priceFormatted,
+    initialPriceFormatted,
+    recommendationsCount: recsCount,
+    releaseDate: data.release_date?.date || '',
+    metacriticScore,
+    reasonBadge,
+    recommendationReason,
+    storeUrl: `https://store.steampowered.com/app/${dlcAppId}`,
+    matchedGiveawayId: null,
+    isSoundtrackOrCosmetic: isCosmeticOrOst,
+    relevanceScore: score
+  };
+}
+
+function getCombinedDlcRecommendations() {
+  const ownedIds = new Set(steamGamesList.map(g => g.appId));
+  const freeMatches = findFreeDlcGiveawaysForSteamLibraryWeb(allGiveaways, steamGamesList)
+    .filter(d => !dismissedDlcIds.has(d.dlcAppId));
+
+  const freeIds = new Set(freeMatches.map(d => d.dlcAppId));
+  const filteredStore = storeDlcRecommendations.filter(d =>
+    !ownedIds.has(d.dlcAppId) &&
+    !dismissedDlcIds.has(d.dlcAppId) &&
+    ownedIds.has(d.parentAppId) &&
+    !freeIds.has(d.dlcAppId)
+  );
+
+  return [...freeMatches, ...filteredStore].sort((a, b) => {
+    const aFreeG = a.matchedGiveawayId != null ? 1 : 0;
+    const bFreeG = b.matchedGiveawayId != null ? 1 : 0;
+    if (bFreeG !== aFreeG) return bFreeG - aFreeG;
+    if (a.isSoundtrackOrCosmetic !== b.isSoundtrackOrCosmetic) return a.isSoundtrackOrCosmetic ? 1 : -1;
+    return b.relevanceScore - a.relevanceScore;
+  });
+}
+
+async function refreshWebSteamDlcRecommendations(force = true) {
+  if (isScanningDlcs) return;
+  if (steamGamesList.length === 0) {
+    renderHomeDlcSection();
+    return;
+  }
+  if (!force && isDlcCacheFresh()) return;
+
+  isScanningDlcs = true;
+  dlcScanStatus = 'Scanning Steam Storefront for DLCs matching your library...';
+  renderHomeDlcSection();
+  updateDlcHubStatusUI();
+
+  try {
+    const candidates = selectCandidateGamesForDlcScanWeb(steamGamesList, 6);
+    const ownedIds = new Set(steamGamesList.map(g => g.appId));
+    const seenDlcIds = new Set();
+    const collected = [];
+
+    for (const game of candidates) {
+      dlcScanStatus = `Checking DLCs for ${game.name}...`;
+      updateDlcHubStatusUI();
+
+      try {
+        const gameData = await fetchSteamStoreAppDetailsWeb(game.appId);
+        const dlcIds = Array.isArray(gameData?.dlc)
+          ? gameData.dlc.filter(id => id > 0 && !ownedIds.has(id) && !dismissedDlcIds.has(id) && !seenDlcIds.has(id) && seenDlcIds.add(id))
+          : [];
+        if (dlcIds.length === 0) continue;
+
+        const sampled = [
+          ...dlcIds.slice(-4).reverse(),
+          ...(dlcIds.length > 4 ? [dlcIds[0]] : [])
+        ].slice(0, 5);
+
+        for (const dlcId of sampled) {
+          try {
+            const dlcData = await fetchSteamStoreAppDetailsWeb(dlcId);
+            const rec = buildDlcRecommendationFromStoreData(dlcId, dlcData, game);
+            if (rec) collected.push(rec);
+          } catch (_) {
+            // Skip single DLC failure gracefully
+          }
+        }
+      } catch (_) {
+        // Skip single parent game failure gracefully
+      }
+    }
+
+    storeDlcRecommendations = collected.sort((a, b) => {
+      if (a.isSoundtrackOrCosmetic !== b.isSoundtrackOrCosmetic) return a.isSoundtrackOrCosmetic ? 1 : -1;
+      return b.relevanceScore - a.relevanceScore;
+    }).slice(0, 30);
+
+    saveDlcCache(storeDlcRecommendations);
+    dlcScanStatus = collected.length > 0
+      ? `Found ${collected.length} Steam DLC recommendations!`
+      : 'Scan complete — no additional store DLCs returned.';
+  } catch (err) {
+    dlcScanStatus = `Could not finish Steam DLC scan: ${err.message}`;
+  } finally {
+    isScanningDlcs = false;
+    updateDlcBadges();
+    renderHomeDlcSection();
+    updateDlcHubStatusUI();
+    renderDlcHubList();
+  }
+}
+
+async function fetchDlcsForSingleGameWeb(appId) {
+  const parentGame = steamGamesList.find(g => g.appId === appId);
+  if (!parentGame) return;
+
+  selectedDlcParentAppId = String(appId);
+  isLoadingGameDlcs = true;
+  dlcScanStatus = `Fetching official Steam DLCs for ${parentGame.name}...`;
+  selectedGameDlcsList = getCombinedDlcRecommendations().filter(d => d.parentAppId === appId);
+  updateDlcHubHeader();
+  updateDlcHubStatusUI();
+  renderDlcHubList();
+
+  try {
+    const ownedIds = new Set(steamGamesList.map(g => g.appId));
+    const gameData = await fetchSteamStoreAppDetailsWeb(appId);
+    const dlcIds = Array.isArray(gameData?.dlc)
+      ? gameData.dlc.filter(id => id > 0 && !ownedIds.has(id) && !dismissedDlcIds.has(id))
+      : [];
+
+    const targets = Array.from(new Set([
+      ...dlcIds.slice(-6).reverse(),
+      ...dlcIds.slice(0, 4)
+    ])).slice(0, 10);
+
+    const fetchedStore = [];
+    for (const dlcId of targets) {
+      try {
+        const info = await fetchSteamStoreAppDetailsWeb(dlcId);
+        const rec = buildDlcRecommendationFromStoreData(dlcId, info, parentGame);
+        if (rec) fetchedStore.push(rec);
+      } catch (_) {}
+    }
+
+    if (fetchedStore.length > 0) {
+      const mergedMap = new Map();
+      [...storeDlcRecommendations, ...fetchedStore].forEach(d => mergedMap.set(d.dlcAppId, d));
+      storeDlcRecommendations = Array.from(mergedMap.values());
+      saveDlcCache(storeDlcRecommendations);
+    }
+
+    const freeMatches = findFreeDlcGiveawaysForSteamLibraryWeb(allGiveaways, [parentGame])
+      .filter(d => !dismissedDlcIds.has(d.dlcAppId));
+    const freeIds = new Set(freeMatches.map(d => d.dlcAppId));
+    selectedGameDlcsList = [
+      ...freeMatches,
+      ...fetchedStore.filter(d => !freeIds.has(d.dlcAppId))
+    ].sort((a, b) => {
+      if (a.isSoundtrackOrCosmetic !== b.isSoundtrackOrCosmetic) return a.isSoundtrackOrCosmetic ? 1 : -1;
+      return b.relevanceScore - a.relevanceScore;
+    });
+
+    dlcScanStatus = '';
+  } catch (err) {
+    dlcScanStatus = `Could not fetch DLCs for ${parentGame.name}: ${err.message}`;
+  } finally {
+    isLoadingGameDlcs = false;
+    updateDlcBadges();
+    updateDlcHubStatusUI();
+    renderDlcHubList();
+  }
+}
+
+function updateDlcBadges() {
+  const recs = getCombinedDlcRecommendations();
+  const countPill = document.getElementById('vault-dlc-count');
+  if (countPill) {
+    countPill.textContent = recs.length;
+    countPill.style.display = recs.length > 0 ? 'inline-block' : 'none';
+  }
+  const steamCountEl = document.getElementById('vault-steam-count');
+  if (steamCountEl) steamCountEl.textContent = steamGamesList.length;
+}
+
+function renderHomeDlcSection() {
+  updateDlcBadges();
+  const container = document.getElementById('home-dlc-container');
+  const scanBtn = document.getElementById('btn-home-dlc-scan');
+  const seeAllBtn = document.getElementById('btn-home-dlc-see-all');
+  if (!container) return;
+
+  const recs = getCombinedDlcRecommendations();
+  const hasSteam = steamGamesList.length > 0;
+
+  if (scanBtn) scanBtn.style.display = hasSteam ? 'inline-flex' : 'none';
+  if (seeAllBtn) seeAllBtn.style.display = (hasSteam && recs.length > 0) ? 'inline-flex' : 'none';
+
+  if (!hasSteam) {
+    container.innerHTML = `
+      <div class="dlc-link-steam-card">
+        <div class="dlc-link-steam-top">
+          <div class="dlc-link-icon">🧩</div>
+          <div class="dlc-link-copy">
+            <h4>Discover DLCs for Games You Already Own</h4>
+            <p>Link your public Steam ID in Settings to automatically spot free DLC drops, expansion sales, and top-rated add-ons for your Steam library.</p>
+          </div>
+        </div>
+        <div>
+          <button class="btn btn-sm btn-dlc" id="btn-home-dlc-link-steam">🎮 Link Steam Library ➔</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('btn-home-dlc-link-steam')?.addEventListener('click', () => switchTab('pane-settings'));
+    return;
+  }
+
+  if (isScanningDlcs && recs.length === 0) {
+    container.innerHTML = `
+      <div class="dlc-scan-status-bar">
+        <div class="spinner dlc-mini-spinner"></div>
+        <span>${escapeHtml(dlcScanStatus || 'Scanning Steam Storefront for DLCs matching your library...')}</span>
+      </div>
+    `;
+    return;
+  }
+
+  if (recs.length === 0) {
+    container.innerHTML = `
+      <div class="dlc-link-steam-card">
+        <div class="dlc-link-steam-top">
+          <div class="dlc-link-icon">✨</div>
+          <div class="dlc-link-copy">
+            <h4>${steamGamesList.length} Steam Games Synced</h4>
+            <p>${escapeHtml(dlcScanStatus || 'Click Scan Now to check the Steam Store for expansions, deals, and free DLC drops for games you own.')}</p>
+          </div>
+        </div>
+        <div>
+          <button class="btn btn-sm btn-dlc" id="btn-home-dlc-empty-scan">🔄 Scan Library for DLCs</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('btn-home-dlc-empty-scan')?.addEventListener('click', () => refreshWebSteamDlcRecommendations(true));
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="dlc-carousel">
+      ${recs.slice(0, 10).map(dlc => {
+        const badgeCls = dlc.isFree ? 'free' : (dlc.discountPercent > 0 ? 'sale' : '');
+        const cardCls = dlc.isFree ? 'is-free' : (dlc.discountPercent > 0 ? 'is-sale' : '');
+        const hours = ((dlc.parentPlaytimeMinutes || 0) / 60).toFixed(1);
+        const parentLabel = dlc.parentPlaytimeMinutes > 0 ? `${dlc.parentGameName} • ${hours}h` : dlc.parentGameName;
+        return `
+          <div class="dlc-carousel-card ${cardCls}" data-dlcid="${dlc.dlcAppId}">
+            <div class="dlc-thumb-wrap">
+              <img src="${dlc.headerImageUrl}" onerror="this.onerror=null;this.src='https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${dlc.parentAppId}/header.jpg';" alt="${escapeHtml(dlc.name)}" class="dlc-thumb-img" loading="lazy">
+              <div class="dlc-thumb-scrim"></div>
+              <span class="dlc-reason-badge ${badgeCls}">${escapeHtml(dlc.reasonBadge)}</span>
+              <button class="dlc-dismiss-btn" data-dismiss-dlcid="${dlc.dlcAppId}" title="Hide recommendation">✕</button>
+              <div class="dlc-parent-pill">For: ${escapeHtml(parentLabel)}</div>
+            </div>
+            <div class="dlc-card-body">
+              <div class="dlc-card-title">${escapeHtml(dlc.name)}</div>
+              <div class="dlc-card-reason">${escapeHtml(dlc.recommendationReason)}</div>
+              <div class="dlc-card-footer">
+                <div class="dlc-price-group">
+                  ${dlc.initialPriceFormatted && dlc.initialPriceFormatted !== dlc.priceFormatted ? `<span class="dlc-price-strike">${escapeHtml(dlc.initialPriceFormatted)}</span>` : ''}
+                  <span class="dlc-price-pill ${badgeCls}">${dlc.isFree ? 'FREE' : escapeHtml(dlc.priceFormatted)}</span>
+                </div>
+                <button class="btn btn-sm ${dlc.isFree ? 'btn-primary' : 'btn-dlc'} open-dlc-action-btn" data-dlcid="${dlc.dlcAppId}">
+                  ${dlc.matchedGiveawayId != null ? 'Claim Free' : 'View DLC'}
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+
+  container.querySelectorAll('.dlc-carousel-card').forEach(card => {
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.dlc-dismiss-btn')) return;
+      const dlcId = parseInt(card.dataset.dlcid, 10);
+      const dlc = getCombinedDlcRecommendations().find(d => d.dlcAppId === dlcId);
+      if (dlc) openDlcRecommendationWeb(dlc);
+    });
+  });
+
+  container.querySelectorAll('.dlc-dismiss-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dismissDlcWeb(parseInt(btn.dataset.dismissDlcid, 10));
+    });
+  });
+}
+
+function openDlcHubModal(gameAppId = 'all') {
+  const modal = document.getElementById('modal-dlc-hub');
+  if (!modal) return;
+
+  const gameSelect = document.getElementById('dlc-hub-game-select');
+  if (gameSelect) {
+    const sorted = [...steamGamesList].sort((a, b) => (b.playtimeMinutes || 0) - (a.playtimeMinutes || 0));
+    gameSelect.innerHTML = `<option value="all">All Owned Steam Games (${steamGamesList.length})</option>` +
+      sorted.map(g => `<option value="${g.appId}">${escapeHtml(g.name)} (${((g.playtimeMinutes || 0) / 60).toFixed(1)}h)</option>`).join('');
+    gameSelect.value = String(gameAppId);
+  }
+
+  selectedDlcParentAppId = String(gameAppId);
+  modal.classList.add('open');
+
+  if (gameAppId !== 'all') {
+    fetchDlcsForSingleGameWeb(parseInt(gameAppId, 10));
+  } else {
+    selectedGameDlcsList = [];
+    updateDlcHubHeader();
+    updateDlcHubStatusUI();
+    renderDlcHubList();
+  }
+}
+
+function updateDlcHubHeader() {
+  const titleEl = document.getElementById('dlc-hub-title');
+  const subEl = document.getElementById('dlc-hub-subtitle');
+  if (!titleEl || !subEl) return;
+
+  if (selectedDlcParentAppId === 'all') {
+    titleEl.textContent = '🧩 Steam DLC Recommender';
+    subEl.textContent = 'Matched to games you already own in Steam';
+  } else {
+    const game = steamGamesList.find(g => String(g.appId) === String(selectedDlcParentAppId));
+    titleEl.textContent = game ? `🧩 DLCs for ${game.name}` : '🧩 Game DLC Explorer';
+    subEl.textContent = game ? `${((game.playtimeMinutes || 0) / 60).toFixed(1)}h played on Steam` : 'Official Steam Storefront expansions';
+  }
+}
+
+function updateDlcHubStatusUI() {
+  const bar = document.getElementById('dlc-hub-status-bar');
+  const textEl = document.getElementById('dlc-hub-status-text');
+  const spinnerEl = document.getElementById('dlc-hub-spinner');
+  if (!bar || !textEl) return;
+
+  const busy = isScanningDlcs || isLoadingGameDlcs;
+  if (busy) {
+    bar.style.display = 'flex';
+    if (spinnerEl) spinnerEl.style.display = 'block';
+    textEl.textContent = dlcScanStatus || 'Fetching DLC metadata from Steam Storefront...';
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function renderDlcHubList() {
+  const listEl = document.getElementById('dlc-hub-list');
+  if (!listEl) return;
+
+  const source = selectedDlcParentAppId === 'all' ? getCombinedDlcRecommendations() : selectedGameDlcsList;
+  let filtered = [...source];
+  if (activeDlcHubFilter === 'free') {
+    filtered = filtered.filter(d => d.isFree);
+  } else if (activeDlcHubFilter === 'sale') {
+    filtered = filtered.filter(d => d.discountPercent > 0 || d.isFree);
+  } else if (activeDlcHubFilter === 'top') {
+    filtered = filtered.filter(d => !d.isSoundtrackOrCosmetic).sort((a, b) => (b.recommendationsCount || 0) - (a.recommendationsCount || 0));
+  }
+
+  if (filtered.length === 0) {
+    if (isScanningDlcs || isLoadingGameDlcs) {
+      listEl.innerHTML = '';
+      return;
+    }
+    listEl.innerHTML = `
+      <div style="text-align:center; padding: 36px 20px; color: var(--color-text-muted);">
+        <span style="font-size: 38px; display:block; margin-bottom:10px;">🧩</span>
+        <h4>${steamGamesList.length === 0 ? 'No Steam Library Synced Yet' : 'No Matching DLC Recommendations'}</h4>
+        <p style="font-size:12px; margin-top:6px; margin-bottom:14px;">
+          ${steamGamesList.length === 0
+            ? 'Link your Steam 64 ID in Settings so LootDrop can recommend DLCs for games you own.'
+            : 'Try switching filters or clicking Scan to fetch fresh Steam Storefront DLC deals.'}
+        </p>
+        ${steamGamesList.length === 0
+          ? `<button class="btn btn-sm btn-primary" onclick="document.getElementById('modal-dlc-hub').classList.remove('open'); switchTab('pane-settings');">Link Steam Account</button>`
+          : `<button class="btn btn-sm btn-dlc" onclick="document.getElementById('btn-dlc-hub-refresh').click();">🔄 Scan Library Now</button>`
+        }
+      </div>
+    `;
+    return;
+  }
+
+  listEl.innerHTML = filtered.map(dlc => {
+    const badgeCls = dlc.isFree ? 'free' : (dlc.discountPercent > 0 ? 'sale' : '');
+    const cardCls = dlc.isFree ? 'is-free' : (dlc.discountPercent > 0 ? 'is-sale' : '');
+    const hours = ((dlc.parentPlaytimeMinutes || 0) / 60).toFixed(1);
+    const recsText = dlc.recommendationsCount > 0 ? `${dlc.recommendationsCount.toLocaleString()} reviews` : '';
+
+    return `
+      <div class="dlc-detail-card ${cardCls}">
+        <div class="dlc-thumb-wrap">
+          <img src="${dlc.headerImageUrl}" onerror="this.onerror=null;this.src='https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${dlc.parentAppId}/header.jpg';" alt="${escapeHtml(dlc.name)}" class="dlc-thumb-img" loading="lazy">
+          <div class="dlc-thumb-scrim"></div>
+          <span class="dlc-reason-badge ${badgeCls}">${escapeHtml(dlc.reasonBadge)}</span>
+          <div class="dlc-parent-pill">🎮 ${escapeHtml(dlc.parentGameName)}${dlc.parentPlaytimeMinutes > 0 ? ` • ${hours}h played` : ''}</div>
+        </div>
+        <div class="dlc-card-body">
+          <div class="dlc-card-footer" style="margin-top:0; padding-top:0;">
+            <strong style="font-size:15px; color:var(--color-text-main);">${escapeHtml(dlc.name)}</strong>
+            <div class="dlc-price-group">
+              ${dlc.initialPriceFormatted && dlc.initialPriceFormatted !== dlc.priceFormatted ? `<span class="dlc-price-strike">${escapeHtml(dlc.initialPriceFormatted)}</span>` : ''}
+              <span class="dlc-price-pill ${badgeCls}">${dlc.isFree ? 'FREE' : escapeHtml(dlc.priceFormatted)}</span>
+            </div>
+          </div>
+          <div style="font-size:12px; font-weight:700; color:#D8B4FE;">${escapeHtml(dlc.recommendationReason)}</div>
+          ${dlc.shortDescription ? `<p class="dlc-detail-desc">${escapeHtml(dlc.shortDescription)}</p>` : ''}
+          <div class="dlc-meta-chips">
+            ${recsText ? `<span class="dlc-meta-pill">👍 ${recsText}</span>` : ''}
+            ${dlc.metacriticScore ? `<span class="dlc-meta-pill" style="background:rgba(16,185,129,0.16); color:#34D399;">MC ${dlc.metacriticScore}</span>` : ''}
+            ${dlc.releaseDate ? `<span>${escapeHtml(dlc.releaseDate)}</span>` : ''}
+          </div>
+          <div class="dlc-detail-actions">
+            <button class="btn btn-sm btn-outline hub-dismiss-dlc-btn" data-dlcid="${dlc.dlcAppId}">Hide</button>
+            <button class="btn btn-sm ${dlc.isFree ? 'btn-primary' : 'btn-dlc'} hub-open-dlc-btn" data-dlcid="${dlc.dlcAppId}" style="flex:1;">
+              ${dlc.matchedGiveawayId != null ? '🎁 Claim Free DLC' : 'Open Steam Store ↗'}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  listEl.querySelectorAll('.hub-dismiss-dlc-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      dismissDlcWeb(parseInt(btn.dataset.dlcid, 10));
+    });
+  });
+
+  listEl.querySelectorAll('.hub-open-dlc-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const dlcId = parseInt(btn.dataset.dlcid, 10);
+      const dlc = source.find(d => d.dlcAppId === dlcId);
+      if (dlc) openDlcRecommendationWeb(dlc);
+    });
+  });
+}
+
+function dismissDlcWeb(dlcAppId) {
+  dismissedDlcIds.add(dlcAppId);
+  localStorage.setItem(STORAGE_KEYS.DLC_DISMISSED, JSON.stringify(Array.from(dismissedDlcIds)));
+  selectedGameDlcsList = selectedGameDlcsList.filter(d => d.dlcAppId !== dlcAppId);
+  updateDlcBadges();
+  renderHomeDlcSection();
+  renderDlcHubList();
+  showToast('DLC recommendation hidden', '👁️');
+}
+
+function openDlcRecommendationWeb(dlc) {
+  if (dlc.matchedGiveawayId != null) {
+    const giveaway = allGiveaways.find(g => g.id === dlc.matchedGiveawayId);
+    if (giveaway) {
+      document.getElementById('modal-dlc-hub')?.classList.remove('open');
+      openGiveawayDetail(giveaway);
+      return;
+    }
+  }
+  const target = dlc.storeUrl || `https://store.steampowered.com/app/${dlc.dlcAppId}`;
+  openDealBrowser(target, dlc.name);
+}
+

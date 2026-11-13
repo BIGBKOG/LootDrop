@@ -102,6 +102,8 @@ fun LibraryPlayFilterChips(
     selectedStorage: StorageFilter = StorageFilter.ALL,
     onStorageSelect: (StorageFilter) -> Unit = {},
     trophyCount: Int = 0,
+    dlcRecommendationsCount: Int = 0,
+    onOpenDlcHub: (() -> Unit)? = null,
     onRollRandomBacklog: (() -> Unit)? = null,
     onOpenBacklogChallenge: (() -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -338,6 +340,7 @@ fun LibraryPlayFilterChips(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
                     .padding(vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -389,6 +392,52 @@ fun LibraryPlayFilterChips(
                                     fontWeight = FontWeight.ExtraBold,
                                     color = Color(0xFF0F1420)
                                 )
+                            }
+                        }
+                    }
+                }
+
+                // DLC Picks Hub Button
+                if (onOpenDlcHub != null && (viewMode == LibraryViewMode.ALL_PAID || uiStats.steamTotalCount > 0 || steamUserId.isNotBlank())) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFF231836))
+                            .border(
+                                width = 1.dp,
+                                color = Color(0xFFA855F7).copy(alpha = 0.65f),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .clickable { onOpenDlcHub() }
+                            .padding(horizontal = 10.dp, vertical = 7.dp)
+                            .testTag("open_dlc_hub_button"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Text("🧩", fontSize = 12.sp)
+                            Text(
+                                text = "DLC Picks",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFE9D5FF)
+                            )
+                            if (dlcRecommendationsCount > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(CircleShape)
+                                        .background(Color(0xFFA855F7))
+                                        .padding(horizontal = 5.dp, vertical = 1.dp)
+                                ) {
+                                    Text(
+                                        text = "$dlcRecommendationsCount",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color.White
+                                    )
+                                }
                             }
                         }
                     }
@@ -456,10 +505,22 @@ fun LibraryPlayFilterChips(
                     }
                 }
 
+                if (!isFilterActive) {
+                    Text(
+                        text = if (viewMode == LibraryViewMode.ALL_PAID) "${uiStats.steamTotalCount + uiStats.claimedCount} total" else "${uiStats.claimedCount} claimed",
+                        fontSize = 11.sp,
+                        color = TextSecondary,
+                        maxLines = 1,
+                        modifier = Modifier.padding(start = 2.dp)
+                    )
+                }
+            }
+
+            if (isFilterActive) {
                 // Active filter tags horizontally scrollable with tap-to-remove
                 Row(
                     modifier = Modifier
-                        .weight(1f)
+                        .fillMaxWidth()
                         .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -483,31 +544,21 @@ fun LibraryPlayFilterChips(
                         )
                     }
 
-                    if (isFilterActive) {
-                        Text(
-                            text = "Reset",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = NeonCyan,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .clickable {
-                                    onFilterSelect(LibraryPlayFilter.ALL)
-                                    onPlayabilitySelect(PlayabilityFilter.ALL)
-                                    onStorageSelect(StorageFilter.ALL)
-                                }
-                                .padding(horizontal = 6.dp, vertical = 4.dp)
-                                .testTag("vault_filter_quick_reset")
-                        )
-                    } else {
-                        Text(
-                            text = if (viewMode == LibraryViewMode.ALL_PAID) "All ${uiStats.steamTotalCount + uiStats.claimedCount} games • Vault & Steam • Tap filters" else "All ${uiStats.claimedCount} claimed games • Tap filters",
-                            fontSize = 11.sp,
-                            color = TextSecondary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                    Text(
+                        text = "Reset",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = NeonCyan,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable {
+                                onFilterSelect(LibraryPlayFilter.ALL)
+                                onPlayabilitySelect(PlayabilityFilter.ALL)
+                                onStorageSelect(StorageFilter.ALL)
+                            }
+                            .padding(horizontal = 6.dp, vertical = 4.dp)
+                            .testTag("vault_filter_quick_reset")
+                    )
                 }
             }
 

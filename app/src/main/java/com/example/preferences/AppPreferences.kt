@@ -777,4 +777,27 @@ class AppPreferences(context: Context) {
     var lastActiveBacklogWeekKey: String
         get() = prefs.getString("KEY_LAST_ACTIVE_BACKLOG_WEEK_KEY", "") ?: ""
         set(value) = prefs.edit().putString("KEY_LAST_ACTIVE_BACKLOG_WEEK_KEY", value).apply()
+
+    // --- Steam DLC Recommendations Cache & Dismissals ---
+    var steamDlcCacheJson: String
+        get() = prefs.getString("KEY_STEAM_DLC_CACHE_JSON", "") ?: ""
+        set(value) = prefs.edit().putString("KEY_STEAM_DLC_CACHE_JSON", value).apply()
+
+    var steamDlcCacheTimestamp: Long
+        get() = prefs.getLong("KEY_STEAM_DLC_CACHE_TIMESTAMP", 0L)
+        set(value) = prefs.edit().putLong("KEY_STEAM_DLC_CACHE_TIMESTAMP", value).apply()
+
+    var dismissedDlcAppIds: Set<String>
+        get() = prefs.getStringSet("KEY_DISMISSED_DLC_APP_IDS", emptySet()) ?: emptySet()
+        set(value) = prefs.edit().putStringSet("KEY_DISMISSED_DLC_APP_IDS", value).apply()
+
+    fun dismissDlcAppId(dlcAppId: Int) {
+        val updated = dismissedDlcAppIds.toMutableSet()
+        updated.add(dlcAppId.toString())
+        dismissedDlcAppIds = updated
+    }
+
+    fun clearDismissedDlcs() {
+        dismissedDlcAppIds = emptySet()
+    }
 }
