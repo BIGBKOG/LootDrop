@@ -20,6 +20,7 @@ import com.example.data.local.NotificationHistoryEntity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.widget.Toast
 import com.example.preferences.AccentTheme
 import com.example.util.MetacriticCatalog
@@ -1414,6 +1415,8 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         _isAutoCheckGithubUpdates.value = enabled
     }
 
+    private var pendingInstallAfterPermissionGrant: Boolean = false
+
     fun setUpdateDialogVisible(visible: Boolean) {
         _isUpdateDialogVisible.value = visible
     }
@@ -1428,11 +1431,28 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun startInAppUpdateDownload(updateInfo: AppUpdateInfo, context: Context? = null) {
+        val currentState = _updateDownloadState.value
+        if (currentState is UpdateDownloadState.Downloading) return
+
+        val installContext = context ?: getApplication()
+
+        // If this exact version is already downloaded and valid, install immediately in 1 tap
+        if (currentState is UpdateDownloadState.ReadyToInstall &&
+            currentState.versionTag == updateInfo.latestVersion &&
+            currentState.apkFile.exists() &&
+            currentState.apkFile.length() >= 50_000L
+        ) {
+            triggerInstallWithAutoResume(installContext, currentState.apkFile)
+            return
+        }
+
         val targetUrl = updateInfo.downloadUrl ?: updateInfo.releaseUrl
         if (targetUrl.isBlank()) {
             _updateDownloadState.value = UpdateDownloadState.Error("No download URL found for this release")
             return
         }
+
+        pendingInstallAfterPermissionGrant = false
 
         viewModelScope.launch {
             _updateDownloadState.value = UpdateDownloadState.Downloading(
@@ -1461,11 +1481,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                     versionTag = updateInfo.latestVersion
                 )
                 // Automatically prompt installation immediately on completion
-                context?.let { ctx ->
-                    AppUpdateInstaller.installApk(ctx, apkFile)
-                } ?: run {
-                    AppUpdateInstaller.installApk(getApplication(), apkFile)
-                }
+                triggerInstallWithAutoResume(installContext, apkFile)
             } else {
                 val err = result.exceptionOrNull()?.localizedMessage ?: "Download failed"
                 _updateDownloadState.value = UpdateDownloadState.Error(err)
@@ -1473,14 +1489,38 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun installDownloadedApk(context: Context) {
+    private fun triggerInstallWithAutoResume(context: Context, apkFile: java.io.File) {
+        val needsUnknownSourcesGrant =
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+                !context.packageManager.canRequestPackageInstalls()
+        val launched = AppUpdateInstaller.installApk(context, apkFile)
+        pendingInstallAfterPermissionGrant = !launched && needsUnknownSourcesGrant
+    }
+
+    fun resumePendingUpdateInstallIfPermitted(context: Context) {
+        if (!pendingInstallAfterPermissionGrant) return
         val state = _updateDownloadState.value
-        if (state is UpdateDownloadState.ReadyToInstall) {
+        if (state !is UpdateDownloadState.ReadyToInstall) {
+            pendingInstallAfterPermissionGrant = false
+            return
+        }
+        val canInstall = Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
+            context.packageManager.canRequestPackageInstalls()
+        if (canInstall && state.apkFile.exists()) {
+            pendingInstallAfterPermissionGrant = false
             AppUpdateInstaller.installApk(context, state.apkFile)
         }
     }
 
+    fun installDownloadedApk(context: Context) {
+        val state = _updateDownloadState.value
+        if (state is UpdateDownloadState.ReadyToInstall) {
+            triggerInstallWithAutoResume(context, state.apkFile)
+        }
+    }
+
     fun resetUpdateDownloadState() {
+        pendingInstallAfterPermissionGrant = false
         _updateDownloadState.value = UpdateDownloadState.Idle
     }
 

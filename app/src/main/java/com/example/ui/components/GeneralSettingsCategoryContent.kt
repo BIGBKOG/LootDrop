@@ -811,51 +811,80 @@ fun GeneralSettingsCategoryContent(
                 }
 
                 else -> {
-                    if (appUpdateInfo?.hasUpdate == true) {
-                        Button(
-                            onClick = { viewModel.setUpdateDialogVisible(true) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("view_update_dialog_button"),
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = NeonGreen)
+                    val info = appUpdateInfo
+                    if (info?.hasUpdate == true) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.CloudDownload,
-                                contentDescription = null,
-                                tint = Color.Black,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Update Inside App (${appUpdateInfo?.latestVersion})",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.Black
-                            )
+                            Button(
+                                onClick = { viewModel.startInAppUpdateDownload(info, context) },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("view_update_dialog_button"),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = NeonGreen)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SystemUpdate,
+                                    contentDescription = null,
+                                    tint = Color.Black,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Update & Install (${info.latestVersion})",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.Black
+                                )
+                            }
+                            OutlinedButton(
+                                onClick = { viewModel.setUpdateDialogVisible(true) },
+                                modifier = Modifier.testTag("view_update_notes_dialog_button"),
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                            ) {
+                                Text("Notes", fontSize = 11.sp)
+                            }
                         }
-                    } else if (appUpdateInfo != null && appUpdateInfo?.isApkAvailable == true) {
-                        Button(
-                            onClick = { viewModel.setUpdateDialogVisible(true) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("redownload_update_dialog_button"),
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    } else if (info != null && info.isApkAvailable) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.CloudDownload,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Download / Reinstall APK (${appUpdateInfo?.latestVersion})",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
+                            Button(
+                                onClick = { viewModel.startInAppUpdateDownload(info, context) },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("redownload_update_dialog_button"),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SystemUpdate,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Update & Reinstall (${info.latestVersion})",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                            }
+                            OutlinedButton(
+                                onClick = { viewModel.setUpdateDialogVisible(true) },
+                                modifier = Modifier.testTag("view_update_notes_dialog_button"),
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                            ) {
+                                Text("Notes", fontSize = 11.sp)
+                            }
                         }
                     }
                 }

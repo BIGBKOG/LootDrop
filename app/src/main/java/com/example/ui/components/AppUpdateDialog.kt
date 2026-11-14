@@ -429,7 +429,7 @@ fun AppUpdateDialog(
                             colors = ButtonDefaults.buttonColors(disabledContainerColor = Color(0xFF26334D))
                         ) {
                             Text(
-                                text = "Downloading Update In App...",
+                                text = "Downloading & Preparing Installer...",
                                 fontWeight = FontWeight.Bold,
                                 color = TextMuted,
                                 fontSize = 13.sp
@@ -471,10 +471,10 @@ fun AppUpdateDialog(
                                 .height(46.dp)
                                 .testTag("download_update_button"),
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = themePrimary)
+                            colors = ButtonDefaults.buttonColors(containerColor = if (updateInfo.hasUpdate) NeonGreen else themePrimary)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.CloudDownload,
+                                imageVector = Icons.Default.SystemUpdate,
                                 contentDescription = null,
                                 tint = Color.Black,
                                 modifier = Modifier.size(18.dp)
@@ -482,11 +482,11 @@ fun AppUpdateDialog(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = when {
-                                    downloadState is UpdateDownloadState.Error -> "Retry In-App Download"
-                                    !updateInfo.hasUpdate -> "Download & Reinstall APK (${updateInfo.latestVersion})"
-                                    else -> "Download & Install Inside App"
+                                    downloadState is UpdateDownloadState.Error -> "Retry Update & Install"
+                                    !updateInfo.hasUpdate -> "Update & Reinstall (${updateInfo.latestVersion})"
+                                    else -> "Update & Install (${updateInfo.latestVersion})"
                                 },
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.Black,
                                 color = Color.Black,
                                 fontSize = 13.sp
                             )

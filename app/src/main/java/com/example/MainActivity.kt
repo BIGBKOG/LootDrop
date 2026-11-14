@@ -136,6 +136,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        runCatching { viewModel.resumePendingUpdateInstallIfPermitted(this) }
         runCatching { viewModel.checkNewGamesOnAppReopen() }
         runCatching { viewModel.checkAndTriggerAutoBackupIfNeeded(this) }
         runCatching { viewModel.checkAndTriggerCloudAutoBackupIfNeeded(this) }

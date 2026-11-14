@@ -526,6 +526,29 @@ fun HomeScreen(
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
+                            if (appUpdateInfo?.hasUpdate == true) {
+                                Box(
+                                    modifier = Modifier
+                                        .padding(end = 6.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(NeonGreen)
+                                        .clickable {
+                                            appUpdateInfo?.let { info ->
+                                                viewModel.startInAppUpdateDownload(info, context)
+                                                viewModel.setUpdateDialogVisible(true)
+                                            }
+                                        }
+                                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                                        .testTag("banner_one_tap_update_button")
+                                ) {
+                                    Text(
+                                        text = "Update",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = Color.Black
+                                    )
+                                }
+                            }
                             IconButton(
                                 onClick = { viewModel.clearReopenStatusMessage() },
                                 modifier = Modifier.size(24.dp)
