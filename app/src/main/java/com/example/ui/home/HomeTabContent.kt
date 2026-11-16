@@ -159,7 +159,7 @@ fun HomeTabContent(
                 start = 16.dp,
                 end = 16.dp,
                 top = 10.dp,
-                bottom = 96.dp
+                bottom = 104.dp
             ),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
@@ -225,18 +225,27 @@ fun HomeTabContent(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = null,
-                            tint = Color(0xFFFFD700),
-                            modifier = Modifier.size(20.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(22.dp)
+                                .clip(RoundedCornerShape(7.dp))
+                                .background(Color(0xFFFFD700).copy(alpha = 0.16f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = null,
+                                tint = Color(0xFFFFB800),
+                                modifier = Modifier.size(13.dp)
+                            )
+                        }
                         Text(
                             text = "LOOTDROP APP RATING & REVIEWS",
+                            style = MaterialTheme.typography.titleSmall,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFFFD700),
-                            letterSpacing = 0.8.sp
+                            color = MaterialTheme.colorScheme.onBackground,
+                            letterSpacing = 0.6.sp
                         )
                     }
                     com.example.ui.components.LootDropAppRatingCard(
@@ -264,11 +273,11 @@ private fun HomeQuickStatsStrip(
         modifier = modifier
             .fillMaxWidth()
             .testTag("home_quick_stats_strip"),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF161922)
+            containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF282D3D))
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f))
     ) {
         Row(
             modifier = Modifier
@@ -284,7 +293,7 @@ private fun HomeQuickStatsStrip(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
                     .expressivePressScale(exploreInteraction, pressedScale = 0.94f)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(10.dp))
                     .clickable(
                         interactionSource = exploreInteraction,
                         indication = null
@@ -311,7 +320,7 @@ private fun HomeQuickStatsStrip(
                         text = "$availableCount Available",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "Explore Free ➔",
@@ -326,7 +335,7 @@ private fun HomeQuickStatsStrip(
                 modifier = Modifier
                     .width(1.dp)
                     .height(30.dp)
-                    .background(Color(0xFF2B3042))
+                    .background(MaterialTheme.colorScheme.outlineVariant)
             )
 
             // Saved Worth / Vault
@@ -336,7 +345,7 @@ private fun HomeQuickStatsStrip(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
                     .expressivePressScale(vaultInteraction, pressedScale = 0.94f)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(10.dp))
                     .clickable(
                         interactionSource = vaultInteraction,
                         indication = null
@@ -369,7 +378,7 @@ private fun HomeQuickStatsStrip(
                         text = "Claimed Vault ➔",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = TextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -413,44 +422,45 @@ private fun HomeBestFreeGamesSection(
             Column {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(7.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(18.dp)
-                            .clip(CircleShape)
-                            .background(NeonGreen.copy(alpha = 0.2f)),
+                            .size(22.dp)
+                            .clip(RoundedCornerShape(7.dp))
+                            .background(NeonGreen.copy(alpha = 0.16f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Star,
                             contentDescription = null,
                             tint = NeonGreen,
-                            modifier = Modifier.size(12.dp)
+                            modifier = Modifier.size(13.dp)
                         )
                     }
                     Text(
                         text = "BEST 3 FREE GAMES TODAY",
+                        style = MaterialTheme.typography.titleSmall,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Black,
-                        color = TextPrimary,
+                        color = MaterialTheme.colorScheme.onBackground,
                         letterSpacing = 0.5.sp
                     )
                 }
                 Text(
                     text = "Top-rated 100% free drops • Swipe cards",
                     fontSize = 11.sp,
-                    color = TextMuted
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             if (items.isNotEmpty()) {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF1E222D))
-                        .border(1.dp, Color(0xFF2C3244), RoundedCornerShape(12.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     AnimatedContent(
                         targetState = pagerState.currentPage + 1,
@@ -473,9 +483,9 @@ private fun HomeBestFreeGamesSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(180.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF141720)),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF262B3B))
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f))
             ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -493,7 +503,7 @@ private fun HomeBestFreeGamesSection(
                         Text(
                             text = "Loading today's best free games...",
                             fontSize = 12.sp,
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -549,7 +559,7 @@ private fun HomeBestFreeGamesSection(
                                 .height(6.dp)
                                 .width(dotWidth.dp)
                                 .clip(CircleShape)
-                                .background(if (isSelected) NeonGreen else Color(0xFF32384A))
+                                .background(if (isSelected) NeonGreen else MaterialTheme.colorScheme.outline)
                                 .clickable {
                                     coroutineScope.launch {
                                         pagerState.animateScrollToPage(
@@ -581,22 +591,23 @@ private fun BestFreeGameCard(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val cardInteraction = remember { MutableInteractionSource() }
+    val cardSurface = MaterialTheme.colorScheme.surface
 
     Card(
         modifier = modifier
             .fillMaxWidth()
             .expressivePressScale(cardInteraction, enabled = !isReducedMotion, pressedScale = 0.97f)
-            .clip(RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(20.dp))
             .clickable(
                 interactionSource = cardInteraction,
                 indication = null
             ) { onClick() }
             .testTag("home_top_free_card_$index"),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF151821)
+            containerColor = cardSurface
         ),
-        border = androidx.compose.foundation.BorderStroke(1.2.dp, Color(0xFF282E40))
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f))
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // Header Image with Gradient & Floating Badges
@@ -615,7 +626,7 @@ private fun BestFreeGameCard(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // Dark Bottom Gradient
+                // Smooth Gradient blending cover artwork seamlessly into the card surface
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -623,8 +634,8 @@ private fun BestFreeGameCard(
                             Brush.verticalGradient(
                                 colors = listOf(
                                     Color.Transparent,
-                                    Color(0x800D0F14),
-                                    Color(0xFF151821)
+                                    cardSurface.copy(alpha = 0.45f),
+                                    cardSurface
                                 )
                             )
                         )
@@ -752,9 +763,10 @@ private fun BestFreeGameCard(
             ) {
                 Text(
                     text = game.title,
+                    style = MaterialTheme.typography.titleMedium,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -763,7 +775,7 @@ private fun BestFreeGameCard(
                     Text(
                         text = game.description,
                         fontSize = 12.sp,
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         lineHeight = 16.sp
@@ -788,9 +800,9 @@ private fun BestFreeGameCard(
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = NeonGreen,
-                            contentColor = Color.Black
+                            contentColor = Color(0xFF0B0F19)
                         ),
-                        shape = RoundedCornerShape(10.dp)
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -818,11 +830,11 @@ private fun BestFreeGameCard(
                             .height(40.dp)
                             .testTag("home_top_free_details_btn_$index"),
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                        shape = RoundedCornerShape(10.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF384055)),
+                        shape = RoundedCornerShape(12.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = Color(0x22151821),
-                            contentColor = TextSecondary
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.55f),
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     ) {
                         Text(
@@ -859,10 +871,10 @@ private fun BestFreeGameCard(
                             .size(40.dp)
                             .testTag("home_top_free_share_btn_$index"),
                         contentPadding = PaddingValues(0.dp),
-                        shape = RoundedCornerShape(10.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF384055)),
+                        shape = RoundedCornerShape(12.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = Color(0x22151821),
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.55f),
                             contentColor = NeonCyan
                         )
                     ) {
@@ -908,34 +920,35 @@ private fun HomeRecentSteamGamesSection(
             Column {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(7.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(18.dp)
-                            .clip(CircleShape)
-                            .background(NeonCyan.copy(alpha = 0.2f)),
+                            .size(22.dp)
+                            .clip(RoundedCornerShape(7.dp))
+                            .background(NeonCyan.copy(alpha = 0.16f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.SportsEsports,
                             contentDescription = null,
                             tint = NeonCyan,
-                            modifier = Modifier.size(12.dp)
+                            modifier = Modifier.size(13.dp)
                         )
                     }
                     Text(
                         text = "RECENT STEAM ACTIVITY",
+                        style = MaterialTheme.typography.titleSmall,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Black,
-                        color = TextPrimary,
+                        color = MaterialTheme.colorScheme.onBackground,
                         letterSpacing = 0.5.sp
                     )
                 }
                 Text(
                     text = "Your 3 most recent played games & achievements",
                     fontSize = 11.sp,
-                    color = TextMuted
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -953,10 +966,11 @@ private fun HomeRecentSteamGamesSection(
                     } else {
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFF1E222D))
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(10.dp))
                                 .clickable { onQuickSteamSync() }
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .padding(horizontal = 9.dp, vertical = 5.dp)
                                 .testTag("home_steam_quick_sync_btn")
                         ) {
                             Row(
@@ -988,9 +1002,9 @@ private fun HomeRecentSteamGamesSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("home_steam_connect_card"),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF151822)),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF282E40))
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f))
             ) {
                 Column(
                     modifier = Modifier
@@ -1018,7 +1032,7 @@ private fun HomeRecentSteamGamesSection(
                         text = if (steamUserId.isBlank()) "Connect Your Steam Account" else "No Steam Games Synced",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         textAlign = TextAlign.Center
                     )
 
@@ -1029,7 +1043,7 @@ private fun HomeRecentSteamGamesSection(
                             "Sync your Steam library to import your playtime, recently played games, and achievements."
                         },
                         fontSize = 12.sp,
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                         lineHeight = 16.sp
                     )
@@ -1097,11 +1111,11 @@ private fun HomeRecentSteamGameCard(
         modifier = modifier
             .fillMaxWidth()
             .testTag("home_recent_steam_card_${game.appId}"),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF161923)
+            containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF282E42))
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f))
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // Top Row: Thumbnail + Title & Playtime
@@ -1117,8 +1131,8 @@ private fun HomeRecentSteamGameCard(
                     modifier = Modifier
                         .width(100.dp)
                         .aspectRatio(16f / 9f)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFF0F1117))
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerLowest)
                 ) {
                     AsyncImage(
                         model = ImageRequest.Builder(context)
@@ -1140,7 +1154,7 @@ private fun HomeRecentSteamGameCard(
                         text = game.name,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -1174,7 +1188,7 @@ private fun HomeRecentSteamGameCard(
                         Text(
                             text = "$formattedRecent past 2 weeks",
                             fontSize = 11.sp,
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -1184,7 +1198,8 @@ private fun HomeRecentSteamGameCard(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF222736))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
                         .clickable {
                             try {
                                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(game.launchUri))
@@ -1211,7 +1226,7 @@ private fun HomeRecentSteamGameCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFF12141C))
+                    .background(MaterialTheme.colorScheme.surfaceContainerLow)
                     .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
                 if (game.achievementsTotal > 0) {
@@ -1244,7 +1259,7 @@ private fun HomeRecentSteamGameCard(
                                     text = "Achievements: ${game.achievementsUnlocked}/${game.achievementsTotal}",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = TextPrimary
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = "• View Guides ➔",
@@ -1269,7 +1284,7 @@ private fun HomeRecentSteamGameCard(
                                 .height(5.dp)
                                 .clip(RoundedCornerShape(3.dp)),
                             color = if (game.achievementsPercentage == 100) NeonGreen else NeonCyan,
-                            trackColor = Color(0xFF232838)
+                            trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
                         )
                     }
                 } else {
@@ -1288,20 +1303,20 @@ private fun HomeRecentSteamGameCard(
                             Icon(
                                 imageVector = Icons.Default.EmojiEvents,
                                 contentDescription = null,
-                                tint = TextMuted,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(13.dp)
                             )
                             Text(
                                 text = "No Steam Achievements for this title",
                                 fontSize = 11.sp,
-                                color = TextMuted
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
 
                         Text(
                             text = "Unsynced",
                             fontSize = 10.sp,
-                            color = TextMuted,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Medium
                         )
                     }

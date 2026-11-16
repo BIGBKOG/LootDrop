@@ -58,6 +58,7 @@ import com.example.data.model.StorageTier
 import com.example.data.model.UserProfile
 import com.example.util.BackupRestoreManager
 import com.example.util.BackupSummary
+import com.example.util.CustomFontHelper
 import com.example.util.CloudBackupManager
 import com.example.util.RestoreSummary
 import com.example.data.model.BacklogChallengeGrid
@@ -266,6 +267,23 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _lightBackgroundTheme = MutableStateFlow(preferences.lightBackgroundTheme)
     val lightBackgroundTheme: StateFlow<BackgroundTheme> = _lightBackgroundTheme.asStateFlow()
+
+    private val _customFontPath = MutableStateFlow(
+        preferences.customFontPath.takeIf { path ->
+            path.isNotBlank() && java.io.File(path).exists()
+        }.also { validPath ->
+            if (preferences.customFontPath.isNotBlank() && validPath == null) {
+                preferences.customFontPath = ""
+                preferences.customFontName = ""
+            }
+        } ?: ""
+    )
+    val customFontPath: StateFlow<String> = _customFontPath.asStateFlow()
+
+    private val _customFontName = MutableStateFlow(
+        if (_customFontPath.value.isNotBlank()) preferences.customFontName else ""
+    )
+    val customFontName: StateFlow<String> = _customFontName.asStateFlow()
 
     private val _cardDensity = MutableStateFlow(preferences.cardDensity)
     val cardDensity: StateFlow<CardDensity> = _cardDensity.asStateFlow()
@@ -1694,6 +1712,38 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     fun setLightBackgroundTheme(theme: BackgroundTheme) {
         preferences.lightBackgroundTheme = theme
         _lightBackgroundTheme.value = theme
+    }
+
+    fun importCustomFont(
+        context: Context,
+        uri: Uri,
+        onResult: (Boolean, String) -> Unit
+    ) {
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                CustomFontHelper.importFontFromUri(context, uri)
+            }
+            when (result) {
+                is CustomFontHelper.ImportResult.Success -> {
+                    preferences.customFontPath = result.filePath
+                    preferences.customFontName = result.displayName
+                    _customFontPath.value = result.filePath
+                    _customFontName.value = result.displayName
+                    onResult(true, "Applied custom font: ${result.displayName}")
+                }
+                is CustomFontHelper.ImportResult.Error -> {
+                    onResult(false, result.message)
+                }
+            }
+        }
+    }
+
+    fun resetCustomFont(context: Context) {
+        CustomFontHelper.clearCustomFonts(context)
+        preferences.customFontPath = ""
+        preferences.customFontName = ""
+        _customFontPath.value = ""
+        _customFontName.value = ""
     }
 
     fun setCardDensity(density: CardDensity) {

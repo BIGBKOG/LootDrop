@@ -42,6 +42,7 @@ class MainActivity : ComponentActivity() {
             val accentTheme by viewModel.accentTheme.collectAsState()
             val darkBgTheme by viewModel.darkBackgroundTheme.collectAsState()
             val lightBgTheme by viewModel.lightBackgroundTheme.collectAsState()
+            val customFontPath by viewModel.customFontPath.collectAsState()
             val targetFrameRate by viewModel.targetFrameRate.collectAsState()
             val isDpiOptimizationEnabled by viewModel.isDpiOptimizationEnabled.collectAsState()
             val dpiScaleMode by viewModel.dpiScaleMode.collectAsState()
@@ -79,7 +80,8 @@ class MainActivity : ComponentActivity() {
                     themeMode = themeMode,
                     accentTheme = accentTheme,
                     darkBackgroundTheme = darkBgTheme,
-                    lightBackgroundTheme = lightBgTheme
+                    lightBackgroundTheme = lightBgTheme,
+                    customFontPath = customFontPath
                 ) {
                     HomeScreen(viewModel = viewModel)
                 }

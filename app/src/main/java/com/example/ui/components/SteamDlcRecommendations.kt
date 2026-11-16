@@ -115,28 +115,29 @@ fun HomeDlcRecommendationsSection(
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(18.dp)
-                            .clip(CircleShape)
-                            .background(DlcPurple.copy(alpha = 0.22f)),
+                            .size(22.dp)
+                            .clip(RoundedCornerShape(7.dp))
+                            .background(DlcPurple.copy(alpha = 0.16f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Extension,
                             contentDescription = null,
                             tint = DlcPurple,
-                            modifier = Modifier.size(12.dp)
+                            modifier = Modifier.size(13.dp)
                         )
                     }
                     Text(
                         text = "DLC FOR YOUR STEAM GAMES",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Black,
-                        color = TextPrimary,
-                        letterSpacing = 0.5.sp
+                        style = MaterialTheme.typography.titleSmall,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        letterSpacing = 0.6.sp
                     )
                 }
                 Text(
@@ -145,8 +146,8 @@ fun HomeDlcRecommendationsSection(
                     } else {
                         "Personalized DLC picks & free add-ons for your Steam library"
                     },
-                    fontSize = 11.sp,
-                    color = TextMuted
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -164,10 +165,15 @@ fun HomeDlcRecommendationsSection(
                     } else {
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFF1E222D))
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                .border(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f),
+                                    RoundedCornerShape(10.dp)
+                                )
                                 .clickable { onRefreshDlcs() }
-                                .padding(horizontal = 8.dp, vertical = 5.dp)
+                                .padding(horizontal = 9.dp, vertical = 5.dp)
                                 .testTag("home_dlc_scan_btn")
                         ) {
                             Row(
@@ -193,9 +199,9 @@ fun HomeDlcRecommendationsSection(
                     if (recommendations.isNotEmpty()) {
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(DlcPurple.copy(alpha = 0.16f))
-                                .border(1.dp, DlcPurple.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(DlcPurple.copy(alpha = 0.14f))
+                                .border(1.dp, DlcPurple.copy(alpha = 0.45f), RoundedCornerShape(10.dp))
                                 .clickable { onOpenAllDlcs() }
                                 .padding(horizontal = 9.dp, vertical = 5.dp)
                                 .testTag("home_dlc_see_all_btn")
@@ -204,7 +210,7 @@ fun HomeDlcRecommendationsSection(
                                 text = "See All ➔",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFFD8B4FE)
+                                color = DlcPurple
                             )
                         }
                     }
@@ -218,8 +224,8 @@ fun HomeDlcRecommendationsSection(
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("home_dlc_link_steam_card"),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF151822)),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, DlcPurple.copy(alpha = 0.35f))
                 ) {
                     Column(
@@ -236,13 +242,13 @@ fun HomeDlcRecommendationsSection(
                                 modifier = Modifier
                                     .size(38.dp)
                                     .clip(CircleShape)
-                                    .background(DlcPurple.copy(alpha = 0.18f)),
+                                    .background(DlcPurple.copy(alpha = 0.16f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.AutoAwesome,
                                     contentDescription = null,
-                                    tint = Color(0xFFD8B4FE),
+                                    tint = DlcPurple,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -251,12 +257,12 @@ fun HomeDlcRecommendationsSection(
                                     text = "Discover DLCs for Games You Own",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = TextPrimary
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = "Link your Steam ID to automatically spot free DLC drops, expansion sales, and top-rated add-ons for your library.",
                                     fontSize = 12.sp,
-                                    color = TextSecondary,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     lineHeight = 16.sp
                                 )
                             }
@@ -267,7 +273,7 @@ fun HomeDlcRecommendationsSection(
                                 .fillMaxWidth()
                                 .minimumInteractiveComponentSize()
                                 .testTag("home_dlc_connect_steam_btn"),
-                            shape = RoundedCornerShape(10.dp),
+                            shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = DlcPurple,
                                 contentColor = Color.White
@@ -292,8 +298,8 @@ fun HomeDlcRecommendationsSection(
             isScanning && recommendations.isEmpty() -> {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF151822)),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, DlcPurple.copy(alpha = 0.35f))
                 ) {
                     Row(
@@ -313,12 +319,12 @@ fun HomeDlcRecommendationsSection(
                                 text = "Scanning Steam Store DLCs...",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = TextPrimary
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = scanStatus ?: "Finding expansions & deals for your owned games",
                                 fontSize = 11.sp,
-                                color = TextSecondary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -330,9 +336,9 @@ fun HomeDlcRecommendationsSection(
             recommendations.isEmpty() -> {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF151822)),
-                    border = BorderStroke(1.dp, Color(0xFF282D3D))
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f))
                 ) {
                     Row(
                         modifier = Modifier
@@ -346,17 +352,17 @@ fun HomeDlcRecommendationsSection(
                                 text = "Ready to Scan Your Steam Library",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = TextPrimary
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = scanStatus ?: "Tap Scan to find expansions, sales & free DLCs for your games.",
                                 fontSize = 11.sp,
-                                color = TextSecondary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Button(
                             onClick = onRefreshDlcs,
-                            shape = RoundedCornerShape(10.dp),
+                            shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = DlcPurple,
                                 contentColor = Color.White
@@ -400,7 +406,7 @@ private fun HomeDlcCarouselCard(
     val borderColor = when {
         dlc.isFree -> NeonGreen.copy(alpha = 0.65f)
         dlc.isOnSale -> DlcGold.copy(alpha = 0.65f)
-        else -> DlcPurple.copy(alpha = 0.5f)
+        else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.65f)
     }
 
     Card(
@@ -408,9 +414,9 @@ private fun HomeDlcCarouselCard(
             .width(278.dp)
             .clickable { onClick() }
             .testTag("home_dlc_card_${dlc.dlcAppId}"),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF161A25)),
-        border = BorderStroke(1.2.dp, borderColor)
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, borderColor)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // Artwork Header
@@ -418,7 +424,7 @@ private fun HomeDlcCarouselCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(460f / 215f)
-                    .background(Color(0xFF0E1118))
+                    .background(MaterialTheme.colorScheme.surfaceContainerLow)
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(context)
@@ -435,7 +441,7 @@ private fun HomeDlcCarouselCard(
                         .fillMaxSize()
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(Color(0x44000000), Color(0xDD0E1118)),
+                                colors = listOf(Color(0x33000000), MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)),
                                 startY = 40f
                             )
                         )
@@ -522,7 +528,7 @@ private fun HomeDlcCarouselCard(
                     text = dlc.name,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -530,7 +536,7 @@ private fun HomeDlcCarouselCard(
                 Text(
                     text = dlc.recommendationReason,
                     fontSize = 11.sp,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     lineHeight = 15.sp
@@ -552,7 +558,7 @@ private fun HomeDlcCarouselCard(
                             Text(
                                 text = dlc.initialPriceFormatted,
                                 fontSize = 11.sp,
-                                color = TextMuted,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                 textDecoration = TextDecoration.LineThrough
                             )
                         }
@@ -562,7 +568,7 @@ private fun HomeDlcCarouselCard(
                                 .background(
                                     if (dlc.isFree) NeonGreen.copy(alpha = 0.16f)
                                     else if (dlc.isOnSale) DlcGold.copy(alpha = 0.18f)
-                                    else Color(0xFF232838)
+                                    else MaterialTheme.colorScheme.surfaceContainerHigh
                                 )
                                 .padding(horizontal = 8.dp, vertical = 3.dp)
                         ) {
@@ -570,14 +576,14 @@ private fun HomeDlcCarouselCard(
                                 text = if (dlc.isFree) "FREE" else dlc.priceFormatted,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = if (dlc.isFree) NeonGreen else if (dlc.isOnSale) DlcGold else TextPrimary
+                                color = if (dlc.isFree) NeonGreen else if (dlc.isOnSale) DlcGold else MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
 
                     Button(
                         onClick = onClick,
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(10.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                         modifier = Modifier.height(34.dp),
                         colors = ButtonDefaults.buttonColors(
@@ -648,8 +654,8 @@ fun SteamDlcHubDialog(
                 .widthIn(max = 620.dp)
                 .testTag("steam_dlc_hub_dialog"),
             shape = RoundedCornerShape(22.dp),
-            color = Color(0xFF0E131F),
-            border = BorderStroke(1.2.dp, DlcPurple.copy(alpha = 0.5f))
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, DlcPurple.copy(alpha = 0.45f))
         ) {
             Column(
                 modifier = Modifier
@@ -695,7 +701,7 @@ fun SteamDlcHubDialog(
                                 },
                                 fontSize = 17.sp,
                                 fontWeight = FontWeight.Black,
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -706,7 +712,7 @@ fun SteamDlcHubDialog(
                                     "Matched to games you already own in Steam"
                                 },
                                 fontSize = 12.sp,
-                                color = Color(0xFFD8B4FE)
+                                color = DlcPurple
                             )
                         }
                     }
@@ -723,7 +729,7 @@ fun SteamDlcHubDialog(
                                 Icon(
                                     imageVector = Icons.Default.Refresh,
                                     contentDescription = "Scan Steam DLCs",
-                                    tint = NeonCyan
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
@@ -736,7 +742,7 @@ fun SteamDlcHubDialog(
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Close DLC Recommender",
-                                tint = TextSecondary
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -747,9 +753,9 @@ fun SteamDlcHubDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFF181F30))
-                            .border(1.dp, DlcPurple.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                            .border(1.dp, DlcPurple.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
                             .clickable { onClearSelectedGame() }
                             .padding(horizontal = 12.dp, vertical = 8.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -759,7 +765,7 @@ fun SteamDlcHubDialog(
                             text = "Showing DLCs for ${selectedGame.name}",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.weight(1f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -768,7 +774,7 @@ fun SteamDlcHubDialog(
                             text = "View All Library (${recommendations.size}) ➔",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFD8B4FE)
+                            color = DlcPurple
                         )
                     }
                 }
@@ -793,8 +799,8 @@ fun SteamDlcHubDialog(
                                 )
                             },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = DlcPurple.copy(alpha = 0.25f),
-                                selectedLabelColor = Color(0xFFE9D5FF)
+                                selectedContainerColor = DlcPurple.copy(alpha = 0.2f),
+                                selectedLabelColor = DlcPurple
                             ),
                             modifier = Modifier.testTag("dlc_filter_${mode.name.lowercase()}")
                         )
@@ -806,9 +812,9 @@ fun SteamDlcHubDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(DlcPurple.copy(alpha = 0.14f))
-                            .border(1.dp, DlcPurple.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(DlcPurple.copy(alpha = 0.12f))
+                            .border(1.dp, DlcPurple.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
                             .padding(horizontal = 12.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -821,7 +827,7 @@ fun SteamDlcHubDialog(
                         Text(
                             text = scanStatus ?: "Fetching DLC metadata from Steam Store...",
                             fontSize = 12.sp,
-                            color = Color(0xFFE9D5FF),
+                            color = DlcPurple,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -844,7 +850,7 @@ fun SteamDlcHubDialog(
                             Icon(
                                 imageVector = Icons.Default.Extension,
                                 contentDescription = null,
-                                tint = TextMuted,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(44.dp)
                             )
                             Text(
@@ -857,7 +863,7 @@ fun SteamDlcHubDialog(
                                 },
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = TextPrimary
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = if (activeFilter != DlcFilterMode.ALL) {
@@ -868,7 +874,7 @@ fun SteamDlcHubDialog(
                                     "Tap Scan Library to check your owned Steam games for expansions, sales, and free add-ons."
                                 },
                                 fontSize = 12.sp,
-                                color = TextSecondary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
                             if (selectedGame == null) {
@@ -917,7 +923,7 @@ private fun SteamDlcDetailCard(
     val borderColor = when {
         dlc.isFree -> NeonGreen.copy(alpha = 0.65f)
         dlc.isOnSale -> DlcGold.copy(alpha = 0.65f)
-        else -> Color(0xFF283044)
+        else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.65f)
     }
 
     Card(
@@ -925,8 +931,8 @@ private fun SteamDlcDetailCard(
             .fillMaxWidth()
             .clickable { onOpenDlc() }
             .testTag("dlc_detail_card_${dlc.dlcAppId}"),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF151B2B)),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         border = BorderStroke(1.dp, borderColor)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -934,7 +940,7 @@ private fun SteamDlcDetailCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(460f / 190f)
-                    .background(Color(0xFF0E1118))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(context)
@@ -950,7 +956,7 @@ private fun SteamDlcDetailCard(
                         .fillMaxSize()
                         .background(
                             Brush.verticalGradient(
-                                listOf(Color(0x33000000), Color(0xDF0E1118))
+                                listOf(Color(0x33000000), MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.92f))
                             )
                         )
                 )
@@ -1047,7 +1053,7 @@ private fun SteamDlcDetailCard(
                                 .background(
                                     if (dlc.isFree) NeonGreen.copy(alpha = 0.16f)
                                     else if (dlc.isOnSale) DlcGold.copy(alpha = 0.18f)
-                                    else Color(0xFF232838)
+                                    else MaterialTheme.colorScheme.surfaceContainerHigh
                                 )
                                 .padding(horizontal = 8.dp, vertical = 3.dp)
                         ) {
@@ -1055,7 +1061,7 @@ private fun SteamDlcDetailCard(
                                 text = if (dlc.isFree) "FREE" else dlc.priceFormatted,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = if (dlc.isFree) NeonGreen else if (dlc.isOnSale) DlcGold else TextPrimary
+                                color = if (dlc.isFree) NeonGreen else if (dlc.isOnSale) DlcGold else MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
@@ -1065,14 +1071,14 @@ private fun SteamDlcDetailCard(
                     text = dlc.recommendationReason,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFFD8B4FE)
+                    color = DlcPurple
                 )
 
                 if (dlc.shortDescription.isNotBlank()) {
                     Text(
                         text = dlc.shortDescription,
                         fontSize = 12.sp,
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         lineHeight = 16.sp
@@ -1089,7 +1095,7 @@ private fun SteamDlcDetailCard(
                         Row(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(NeonCyan.copy(alpha = 0.1f))
+                                .background(NeonCyan.copy(alpha = 0.12f))
                                 .padding(horizontal = 7.dp, vertical = 3.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -1097,14 +1103,14 @@ private fun SteamDlcDetailCard(
                             Icon(
                                 imageVector = Icons.Default.ThumbUp,
                                 contentDescription = null,
-                                tint = NeonCyan,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(11.dp)
                             )
                             Text(
                                 text = dlc.formattedRecommendations,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = NeonCyan
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
@@ -1127,7 +1133,7 @@ private fun SteamDlcDetailCard(
                         Text(
                             text = dlc.releaseDate,
                             fontSize = 10.sp,
-                            color = TextMuted
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -1146,8 +1152,8 @@ private fun SteamDlcDetailCard(
                             .minimumInteractiveComponentSize()
                             .testTag("dlc_dismiss_btn_${dlc.dlcAppId}"),
                         shape = RoundedCornerShape(10.dp),
-                        border = BorderStroke(1.dp, Color(0xFF2E3548)),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
                     ) {
                         Text("Hide", fontSize = 12.sp)
                     }

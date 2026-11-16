@@ -136,15 +136,20 @@ fun PublicReviewsSection(
 
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(Color(0xFF20293A))
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f),
+                        RoundedCornerShape(8.dp)
+                    )
                     .padding(horizontal = 8.dp, vertical = 3.dp)
             ) {
                 Text(
                     text = "Cloudflare R2",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                    color = NeonCyan
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -153,17 +158,18 @@ fun PublicReviewsSection(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
+                .clip(RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surface)
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xFF131B2B),
-                            GamingDarkSurfaceVariant
+                            StarGold.copy(alpha = 0.08f),
+                            MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.65f)
                         )
                     )
                 )
-                .border(1.2.dp, StarGold.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
-                .padding(14.dp)
+                .border(1.dp, StarGold.copy(alpha = 0.4f), RoundedCornerShape(20.dp))
+                .padding(16.dp)
                 .testTag("reviews_overview_card")
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -189,7 +195,7 @@ fun PublicReviewsSection(
                                     Icon(
                                         imageVector = if (i <= roundedScore) Icons.Default.Star else Icons.Default.StarBorder,
                                         contentDescription = null,
-                                        tint = if (i <= roundedScore) StarGold else TextMuted,
+                                        tint = if (i <= roundedScore) StarGold else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f),
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
@@ -197,7 +203,7 @@ fun PublicReviewsSection(
                             Text(
                                 text = if (reviewCount == 1) "1 review from players" else "$reviewCount reviews from players",
                                 fontSize = 11.sp,
-                                color = TextSecondary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -248,9 +254,9 @@ fun PublicReviewsSection(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFF0F1522))
-                    .border(1.dp, GamingCardBorder, RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
                     .padding(20.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -262,12 +268,12 @@ fun PublicReviewsSection(
                         text = "🎮 Be the first to leave a review!",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "Share your rating and thoughts with the community. Reviews sync publicly to our R2 cloud.",
                         fontSize = 12.sp,
-                        color = TextMuted,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(4.dp))
@@ -318,12 +324,16 @@ fun ReviewCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (review.isForApp) Color(0xFF141A29) else Color(0xFF0F1522))
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                if (review.isForApp) MaterialTheme.colorScheme.surface
+                else MaterialTheme.colorScheme.surfaceContainerLow
+            )
             .border(
                 1.dp,
-                if (review.isForApp) StarGold.copy(alpha = 0.45f) else GamingCardBorder,
-                RoundedCornerShape(12.dp)
+                if (review.isForApp) StarGold.copy(alpha = 0.45f)
+                else MaterialTheme.colorScheme.outline.copy(alpha = 0.65f),
+                RoundedCornerShape(16.dp)
             )
             .padding(14.dp)
             .testTag("review_card_${review.id}")
@@ -373,7 +383,7 @@ fun ReviewCard(
                                 text = displayAuthorName,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = TextPrimary,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -418,7 +428,7 @@ fun ReviewCard(
                         Text(
                             text = if (review.isForApp) "LootDrop App • $timeAgo" else "${review.platform} • $timeAgo",
                             fontSize = 10.sp,
-                            color = TextMuted
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -432,7 +442,7 @@ fun ReviewCard(
                         Icon(
                             imageVector = if (i <= review.rating) Icons.Default.Star else Icons.Default.StarBorder,
                             contentDescription = null,
-                            tint = if (i <= review.rating) StarGold else TextMuted,
+                            tint = if (i <= review.rating) StarGold else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f),
                             modifier = Modifier.size(14.dp)
                         )
                     }
@@ -448,7 +458,7 @@ fun ReviewCard(
                     text = cleanCardTitle,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
 
@@ -460,7 +470,7 @@ fun ReviewCard(
                 Text(
                     text = cleanCardComment,
                     fontSize = 12.sp,
-                    color = Color(0xFFCBD5E1),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 18.sp
                 )
             }
@@ -473,12 +483,16 @@ fun ReviewCard(
             ) {
                 Row(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (hasVoted) NeonCyan.copy(alpha = 0.15f) else Color(0xFF1E293B))
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            if (hasVoted) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+                            else MaterialTheme.colorScheme.surfaceContainerHigh
+                        )
                         .border(
                             1.dp,
-                            if (hasVoted) NeonCyan.copy(alpha = 0.5f) else Color(0xFF334155),
-                            RoundedCornerShape(6.dp)
+                            if (hasVoted) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                            else MaterialTheme.colorScheme.outlineVariant,
+                            RoundedCornerShape(8.dp)
                         )
                         .clickable(enabled = !hasVoted) { onVoteHelpful() }
                         .padding(horizontal = 10.dp, vertical = 5.dp)
@@ -489,14 +503,14 @@ fun ReviewCard(
                     Icon(
                         imageVector = Icons.Default.ThumbUp,
                         contentDescription = "Helpful",
-                        tint = if (hasVoted) NeonCyan else TextMuted,
+                        tint = if (hasVoted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(13.dp)
                     )
                     Text(
                         text = "Helpful (${review.helpfulCount})",
                         fontSize = 11.sp,
                         fontWeight = if (hasVoted) FontWeight.Bold else FontWeight.Medium,
-                        color = if (hasVoted) NeonCyan else TextSecondary
+                        color = if (hasVoted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -504,7 +518,7 @@ fun ReviewCard(
                     Text(
                         text = "🏷️ ${review.authorTag}",
                         fontSize = 10.sp,
-                        color = TextMuted
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -537,9 +551,9 @@ fun LootDropAppRatingCard(
         modifier = modifier
             .fillMaxWidth()
             .testTag("lootdrop_app_rating_card"),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = androidx.compose.foundation.BorderStroke(1.2.dp, StarGold.copy(alpha = 0.4f))
+        border = androidx.compose.foundation.BorderStroke(1.dp, StarGold.copy(alpha = 0.45f))
     ) {
         Column(
             modifier = Modifier
@@ -592,15 +606,20 @@ fun LootDropAppRatingCard(
 
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(Color(0xFF20293A))
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .border(
+                            1.dp,
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f),
+                            RoundedCornerShape(8.dp)
+                        )
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
                         text = "V${BuildConfig.VERSION_NAME}",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = NeonCyan
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -609,8 +628,13 @@ fun LootDropAppRatingCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFF0F1522))
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                        RoundedCornerShape(14.dp)
+                    )
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -632,7 +656,7 @@ fun LootDropAppRatingCard(
                                 Icon(
                                     imageVector = if (i <= roundedScore) Icons.Default.Star else Icons.Default.StarBorder,
                                     contentDescription = null,
-                                    tint = if (i <= roundedScore) StarGold else TextMuted,
+                                    tint = if (i <= roundedScore) StarGold else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
@@ -640,7 +664,7 @@ fun LootDropAppRatingCard(
                         Text(
                             text = "$count player ${if (count == 1) "rating" else "ratings"} & reviews",
                             fontSize = 11.sp,
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -663,7 +687,7 @@ fun LootDropAppRatingCard(
                     modifier = Modifier
                         .weight(1f)
                         .testTag("rate_lootdrop_app_btn"),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = StarGold,
                         contentColor = Color(0xFF0F172A)
@@ -683,7 +707,7 @@ fun LootDropAppRatingCard(
                     modifier = Modifier
                         .weight(1f)
                         .testTag("browse_community_reviews_btn"),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(12.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
                     Text("All Reviews (${reviews.size})", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
@@ -756,9 +780,9 @@ fun WriteReviewDialog(
                 .fillMaxWidth(0.94f)
                 .padding(16.dp)
                 .testTag("write_review_dialog"),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF101726)),
-            border = androidx.compose.foundation.BorderStroke(1.2.dp, StarGold.copy(alpha = 0.5f))
+            shape = RoundedCornerShape(22.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = androidx.compose.foundation.BorderStroke(1.dp, StarGold.copy(alpha = 0.5f))
         ) {
             Column(
                 modifier = Modifier
@@ -777,13 +801,13 @@ fun WriteReviewDialog(
                             text = if (isAppReview) "Rate LootDrop App" else "Leave a Public Review",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Black,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = if (isAppReview) "LootDrop V${BuildConfig.VERSION_NAME} • Free Game Tracker" else gameTitle,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
-                            color = if (isAppReview) StarGold else NeonCyan,
+                            color = if (isAppReview) StarGold else MaterialTheme.colorScheme.primary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -795,7 +819,7 @@ fun WriteReviewDialog(
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close",
-                            tint = TextMuted
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -805,8 +829,8 @@ fun WriteReviewDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFF0F1522))
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainerLow)
                             .padding(4.dp),
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
@@ -814,7 +838,7 @@ fun WriteReviewDialog(
                             modifier = Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(if (!isAppReview) NeonCyan.copy(alpha = 0.2f) else Color.Transparent)
+                                .background(if (!isAppReview) MaterialTheme.colorScheme.primary.copy(alpha = 0.18f) else Color.Transparent)
                                 .clickable { isAppReview = false }
                                 .padding(vertical = 6.dp),
                             contentAlignment = Alignment.Center
@@ -823,7 +847,7 @@ fun WriteReviewDialog(
                                 text = "🎮 Game Review",
                                 fontSize = 11.sp,
                                 fontWeight = if (!isAppReview) FontWeight.Bold else FontWeight.Medium,
-                                color = if (!isAppReview) NeonCyan else TextMuted
+                                color = if (!isAppReview) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
 
@@ -840,7 +864,7 @@ fun WriteReviewDialog(
                                 text = "⭐ Rate LootDrop",
                                 fontSize = 11.sp,
                                 fontWeight = if (isAppReview) FontWeight.Bold else FontWeight.Medium,
-                                color = if (isAppReview) StarGold else TextMuted
+                                color = if (isAppReview) StarGold else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -861,7 +885,7 @@ fun WriteReviewDialog(
                             Icon(
                                 imageVector = if (isSelected) Icons.Default.Star else Icons.Default.StarBorder,
                                 contentDescription = "$i Stars",
-                                tint = if (isSelected) StarGold else TextMuted,
+                                tint = if (isSelected) StarGold else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                 modifier = Modifier
                                     .size(38.dp)
                                     .clip(CircleShape)
@@ -896,14 +920,14 @@ fun WriteReviewDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("review_title_input"),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = StarGold,
-                        unfocusedBorderColor = Color(0xFF334155),
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                         focusedLabelColor = StarGold,
-                        unfocusedLabelColor = TextMuted
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 )
 
@@ -925,14 +949,14 @@ fun WriteReviewDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("review_comment_input"),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = StarGold,
-                        unfocusedBorderColor = Color(0xFF334155),
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                         focusedLabelColor = StarGold,
-                        unfocusedLabelColor = TextMuted
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 )
 
@@ -948,21 +972,21 @@ fun WriteReviewDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("review_author_input"),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = NeonCyan,
-                        unfocusedBorderColor = Color(0xFF334155),
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
-                        focusedLabelColor = NeonCyan,
-                        unfocusedLabelColor = TextMuted
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 )
 
                 Text(
                     text = "☁️ Reviews are uploaded publicly to our Cloudflare R2 bucket and visible to all gamers on Android & Web. Respectful language only (no swears, slurs, addresses, or phone numbers).",
                     fontSize = 10.sp,
-                    color = TextMuted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 14.sp
                 )
 
@@ -971,8 +995,8 @@ fun WriteReviewDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFF3B1219))
-                            .border(1.dp, Color(0xFFEF4444).copy(alpha = 0.7f), RoundedCornerShape(10.dp))
+                            .background(MaterialTheme.colorScheme.errorContainer)
+                            .border(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.7f), RoundedCornerShape(10.dp))
                             .padding(horizontal = 12.dp, vertical = 10.dp)
                             .testTag("review_moderation_error"),
                         verticalAlignment = Alignment.CenterVertically,
@@ -981,14 +1005,14 @@ fun WriteReviewDialog(
                         Icon(
                             imageVector = Icons.Default.Warning,
                             contentDescription = "Moderation Warning",
-                            tint = Color(0xFFFCA5A5),
+                            tint = MaterialTheme.colorScheme.onErrorContainer,
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
                             text = moderationError.orEmpty(),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFFFEE2E2),
+                            color = MaterialTheme.colorScheme.onErrorContainer,
                             lineHeight = 16.sp
                         )
                     }
@@ -1020,8 +1044,8 @@ fun WriteReviewDialog(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = StarGold,
                         contentColor = Color(0xFF0F172A),
-                        disabledContainerColor = Color(0xFF334155),
-                        disabledContentColor = TextMuted
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 ) {
                     if (isSubmitting) {
@@ -1076,9 +1100,9 @@ fun AllCommunityReviewsDialog(
                 .height(640.dp)
                 .padding(12.dp)
                 .testTag("all_community_reviews_dialog"),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF0B0F19)),
-            border = androidx.compose.foundation.BorderStroke(1.2.dp, StarGold.copy(alpha = 0.5f))
+            shape = RoundedCornerShape(22.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = androidx.compose.foundation.BorderStroke(1.dp, StarGold.copy(alpha = 0.5f))
         ) {
             Column(
                 modifier = Modifier
@@ -1110,18 +1134,18 @@ fun AllCommunityReviewsDialog(
                                 text = "COMMUNITY REVIEWS",
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Black,
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = "Synced via Cloudflare R2",
                                 fontSize = 11.sp,
-                                color = NeonCyan
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
 
                     IconButton(onClick = onDismiss) {
-                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = TextMuted)
+                        Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
 
@@ -1140,8 +1164,8 @@ fun AllCommunityReviewsDialog(
                             val isSelected = selectedFilter == key
                             Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(if (isSelected) StarGold else Color(0xFF1E293B))
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(if (isSelected) StarGold else MaterialTheme.colorScheme.surfaceContainerHigh)
                                     .clickable { selectedFilter = key }
                                     .padding(horizontal = 10.dp, vertical = 6.dp)
                             ) {
@@ -1149,7 +1173,7 @@ fun AllCommunityReviewsDialog(
                                     text = label,
                                     fontSize = 11.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) Color(0xFF0F172A) else TextPrimary
+                                    color = if (isSelected) Color(0xFF0F172A) else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -1157,7 +1181,7 @@ fun AllCommunityReviewsDialog(
 
                     OutlinedButton(
                         onClick = { isWriteDialogOpen = true },
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = StarGold),
                         border = androidx.compose.foundation.BorderStroke(1.dp, StarGold.copy(alpha = 0.6f)),
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp)
@@ -1177,7 +1201,7 @@ fun AllCommunityReviewsDialog(
                         Text(
                             text = "No reviews found in this category yet.",
                             fontSize = 13.sp,
-                            color = TextMuted
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 } else {

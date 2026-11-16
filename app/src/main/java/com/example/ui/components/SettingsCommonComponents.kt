@@ -34,14 +34,23 @@ fun SectionHeader(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(16.dp)
-        )
+        Box(
+            modifier = Modifier
+                .size(22.dp)
+                .clip(RoundedCornerShape(7.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(13.dp)
+            )
+        }
         Text(
             text = title,
+            style = MaterialTheme.typography.labelMedium,
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
@@ -59,6 +68,7 @@ fun SettingToggleRow(
     enabled: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
+    val mutedText = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -82,12 +92,12 @@ fun SettingToggleRow(
                     text = title,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
-                    color = if (enabled) MaterialTheme.colorScheme.onSurface else TextMuted
+                    color = if (enabled) MaterialTheme.colorScheme.onSurface else mutedText
                 )
                 Text(
                     text = subtitle,
                     fontSize = 11.sp,
-                    color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else TextMuted
+                    color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else mutedText
                 )
             }
         }
@@ -97,7 +107,7 @@ fun SettingToggleRow(
             enabled = enabled,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = MaterialTheme.colorScheme.background,
+                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
                 checkedTrackColor = MaterialTheme.colorScheme.primary
             )
         )

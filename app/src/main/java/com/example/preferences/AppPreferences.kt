@@ -381,6 +381,8 @@ class AppPreferences(context: Context) {
         private const val KEY_LAST_AUTO_BACKUP_STATUS = "key_last_auto_backup_status"
         private const val KEY_HAS_CUSTOM_TROPHY_SELECTION = "key_has_custom_trophy_selection"
         private const val KEY_DISPLAYED_TROPHY_KEYS = "key_displayed_trophy_keys"
+        private const val KEY_CUSTOM_FONT_PATH = "key_custom_font_path"
+        private const val KEY_CUSTOM_FONT_NAME = "key_custom_font_name"
     }
 
     var themeMode: ThemeMode
@@ -426,6 +428,14 @@ class AppPreferences(context: Context) {
             }
         }
         set(value) = prefs.edit().putString(KEY_BG_THEME_LIGHT, value.name).apply()
+
+    var customFontPath: String
+        get() = prefs.getString(KEY_CUSTOM_FONT_PATH, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_CUSTOM_FONT_PATH, value).apply()
+
+    var customFontName: String
+        get() = prefs.getString(KEY_CUSTOM_FONT_NAME, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_CUSTOM_FONT_NAME, value).apply()
 
     var cardDensity: CardDensity
         get() {

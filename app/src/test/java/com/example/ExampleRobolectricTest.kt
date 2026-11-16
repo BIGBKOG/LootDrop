@@ -2907,7 +2907,89 @@ class ExampleRobolectricTest {
         viewModel.claimAndLaunch(context, testItem, targetUrl = "https://store.epicgames.com/deal")
         assertNull(viewModel.inAppBrowserUrl.value)
     }
+
+    @Test
+    fun `mainActivity launches and creates GiveawaysViewModel with Room AppDatabase_Impl`() {
+        val controller = org.robolectric.Robolectric.buildActivity(MainActivity::class.java)
+            .create()
+            .start()
+            .resume()
+        val activity = controller.get()
+        assertNotNull(activity)
+        val vm = androidx.lifecycle.ViewModelProvider(activity)[com.example.ui.GiveawaysViewModel::class.java]
+        assertNotNull(vm)
+        val db = AppDatabase.getInstance(activity)
+        assertNotNull(db)
+        assertEquals("com.example.data.local.AppDatabase_Impl", db.javaClass.name)
+    }
+
+    @Test
+    fun `custom font helper validates ttf otf ttc headers and rejects invalid files`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val fontDir = com.example.util.CustomFontHelper.getFontDir(context)
+
+        val validTtf = java.io.File(fontDir, "valid_ttf.ttf").apply {
+            writeBytes(byteArrayOf(0x00, 0x01, 0x00, 0x00, 0, 1, 2, 3, 4, 5, 6, 7, 8))
+        }
+        assertTrue(com.example.util.CustomFontHelper.hasValidFontHeader(validTtf))
+
+        val validOtf = java.io.File(fontDir, "valid_otf.otf").apply {
+            writeBytes(byteArrayOf('O'.code.toByte(), 'T'.code.toByte(), 'T'.code.toByte(), 'O'.code.toByte(), 0, 1, 2, 3, 4, 5, 6, 7))
+        }
+        assertTrue(com.example.util.CustomFontHelper.hasValidFontHeader(validOtf))
+
+        val validTtc = java.io.File(fontDir, "valid_ttc.ttc").apply {
+            writeBytes(byteArrayOf('t'.code.toByte(), 't'.code.toByte(), 'c'.code.toByte(), 'f'.code.toByte(), 0, 1, 2, 3, 4, 5, 6, 7))
+        }
+        assertTrue(com.example.util.CustomFontHelper.hasValidFontHeader(validTtc))
+
+        val invalidFile = java.io.File(fontDir, "not_a_font.txt").apply {
+            writeBytes("<html>not a font</html>".toByteArray())
+        }
+        assertFalse(com.example.util.CustomFontHelper.hasValidFontHeader(invalidFile))
+
+        assertEquals(
+            androidx.compose.ui.text.font.FontFamily.Default,
+            com.example.util.CustomFontHelper.loadComposeFontFamily("")
+        )
+        assertEquals(
+            androidx.compose.ui.text.font.FontFamily.Default,
+            com.example.util.CustomFontHelper.loadComposeFontFamily(invalidFile.absolutePath)
+        )
+
+        com.example.util.CustomFontHelper.clearCustomFonts(context)
+    }
+
+    @Test
+    fun `custom font typography assigns font family across all styles and preferences persist`() {
+        val context = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val prefs = AppPreferences(context)
+
+        val customFamily = androidx.compose.ui.text.font.FontFamily.Serif
+        val typo = com.example.ui.theme.createLootDropTypography(customFamily)
+        assertEquals(customFamily, typo.displayLarge.fontFamily)
+        assertEquals(customFamily, typo.headlineMedium.fontFamily)
+        assertEquals(customFamily, typo.titleLarge.fontFamily)
+        assertEquals(customFamily, typo.bodyLarge.fontFamily)
+        assertEquals(customFamily, typo.bodyMedium.fontFamily)
+        assertEquals(customFamily, typo.labelSmall.fontFamily)
+
+        // Create an existing dummy file so ViewModel init keeps the preference until reset
+        val fontDir = com.example.util.CustomFontHelper.getFontDir(context)
+        val dummyFile = java.io.File(fontDir, "test_custom_font.ttf").apply {
+            writeBytes(byteArrayOf(0x00, 0x01, 0x00, 0x00, 0, 1, 2, 3, 4, 5, 6, 7, 8))
+        }
+        prefs.customFontPath = dummyFile.absolutePath
+        prefs.customFontName = "MyCustomFont.ttf"
+
+        val viewModel = com.example.ui.GiveawaysViewModel(context)
+        assertEquals(dummyFile.absolutePath, viewModel.customFontPath.value)
+        assertEquals("MyCustomFont.ttf", viewModel.customFontName.value)
+
+        viewModel.resetCustomFont(context)
+        assertEquals("", viewModel.customFontPath.value)
+        assertEquals("", viewModel.customFontName.value)
+        assertEquals("", prefs.customFontPath)
+        assertEquals("", prefs.customFontName)
+    }
 }
-
-
-

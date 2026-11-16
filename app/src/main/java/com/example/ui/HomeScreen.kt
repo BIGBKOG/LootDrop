@@ -351,6 +351,15 @@ fun HomeScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                MaterialTheme.colorScheme.background.copy(alpha = 0.72f),
+                                MaterialTheme.colorScheme.background.copy(alpha = 0.96f)
+                            )
+                        )
+                    )
                     .navigationBarsPadding()
                     .padding(horizontal = 20.dp, vertical = 10.dp),
                 contentAlignment = Alignment.Center
@@ -371,7 +380,7 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(top = innerPadding.calculateTopPadding())
                 .nestedScroll(collapsibleTopBarConnection)
         ) {
                     // Collapsible Top Chrome (Top App Bar + Reopen Banner) that slides up on scroll
@@ -413,22 +422,29 @@ fun HomeScreen(
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(
                                             text = "Loot",
-                                            fontSize = 19.sp,
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontSize = 20.sp,
                                             fontWeight = FontWeight.Black,
-                                            color = TextPrimary
+                                            color = MaterialTheme.colorScheme.onBackground
                                         )
                                         Text(
                                             text = "Drop",
-                                            fontSize = 19.sp,
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontSize = 20.sp,
                                             fontWeight = FontWeight.Black,
                                             color = MaterialTheme.colorScheme.primary
                                         )
-                                        Spacer(modifier = Modifier.width(5.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
                                         Box(
                                             modifier = Modifier
-                                                .clip(RoundedCornerShape(4.dp))
-                                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
-                                                .padding(horizontal = 5.dp, vertical = 1.5.dp)
+                                                .clip(CircleShape)
+                                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f))
+                                                .border(
+                                                    width = 0.8.dp,
+                                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
+                                                    shape = CircleShape
+                                                )
+                                                .padding(horizontal = 7.dp, vertical = 2.dp)
                                         ) {
                                             AnimatedContent(
                                                 targetState = when (currentTab) {
@@ -445,7 +461,8 @@ fun HomeScreen(
                                                     text = tabBadgeText,
                                                     fontSize = 9.sp,
                                                     fontWeight = FontWeight.ExtraBold,
-                                                    color = MaterialTheme.colorScheme.primary
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    letterSpacing = 0.5.sp
                                                 )
                                             }
                                         }
@@ -464,8 +481,8 @@ fun HomeScreen(
                                         Text(
                                             text = subtitleText,
                                             fontSize = 9.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (currentTab == MainTab.SETTINGS || currentTab == MainTab.CALENDAR) MaterialTheme.colorScheme.primary else NeonGreen,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             letterSpacing = 0.8.sp,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
@@ -601,24 +618,33 @@ fun HomeScreen(
                             OutlinedTextField(
                                 value = searchQuery,
                                 onValueChange = { viewModel.updateSearchQuery(it) },
-                                placeholder = { Text("Search by game name, store, genre...", color = TextMuted) },
+                                placeholder = {
+                                    Text(
+                                        "Search by game name, store, genre...",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                },
                                 singleLine = true,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .testTag("search_text_input"),
-                                shape = RoundedCornerShape(12.dp),
+                                shape = RoundedCornerShape(16.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = MaterialTheme.colorScheme.primary,
                                     unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                                    focusedTextColor = TextPrimary,
-                                    unfocusedTextColor = TextPrimary,
+                                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                                     focusedContainerColor = MaterialTheme.colorScheme.surface,
                                     unfocusedContainerColor = MaterialTheme.colorScheme.surface
                                 ),
                                 trailingIcon = {
                                     if (searchQuery.isNotEmpty()) {
                                         IconButton(onClick = { viewModel.updateSearchQuery("") }) {
-                                            Icon(Icons.Default.Close, contentDescription = "Clear", tint = TextMuted)
+                                            Icon(
+                                                Icons.Default.Close,
+                                                contentDescription = "Clear",
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
                                         }
                                     }
                                 }
@@ -1156,17 +1182,18 @@ fun ClaimedSavingsBanner(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surface)
             .background(
                 Brush.horizontalGradient(
                     colors = listOf(
-                        Color(0xFF0B2816),
-                        Color(0xFF113820),
-                        Color(0xFF0D2218)
+                        NeonGreen.copy(alpha = 0.14f),
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.45f)
                     )
                 )
             )
-            .border(1.dp, NeonGreen.copy(alpha = borderAlpha), RoundedCornerShape(16.dp))
+            .border(1.dp, NeonGreen.copy(alpha = borderAlpha * 0.6f), RoundedCornerShape(20.dp))
             .padding(16.dp)
             .testTag("claimed_savings_banner")
     ) {
@@ -1212,9 +1239,10 @@ fun ClaimedSavingsBanner(
                     val formattedVal = String.format(Locale.US, "$%.2f", animatedSavings)
                     Text(
                         text = formattedVal,
+                        style = MaterialTheme.typography.displayMedium,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "SAVED",
@@ -1235,7 +1263,7 @@ fun ClaimedSavingsBanner(
                         "Claim games to track your savings backlog"
                     },
                     fontSize = 12.sp,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 if (totalStorageGb > 0f) {
@@ -1541,7 +1569,7 @@ fun GiveawaysTabContent(
                         Text(
                             text = if (isAllPaidMode) "Loading Steam library games..." else "Scanning PC & Console for Free Loot...",
                             fontSize = 14.sp,
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 } else if (isListEmpty) {
@@ -1553,7 +1581,7 @@ fun GiveawaysTabContent(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(32.dp),
+                            .padding(start = 32.dp, end = 32.dp, top = 32.dp, bottom = 112.dp),
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
@@ -1576,7 +1604,7 @@ fun GiveawaysTabContent(
                                     else -> Icons.Default.SportsEsports
                                 },
                                 contentDescription = null,
-                                tint = if (hasError) MaterialTheme.colorScheme.error else TextMuted,
+                                tint = if (hasError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(32.dp)
                             )
                         }
@@ -1593,7 +1621,7 @@ fun GiveawaysTabContent(
                             },
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = MaterialTheme.colorScheme.onSurface
                         )
 
                         Spacer(modifier = Modifier.height(6.dp))
@@ -1607,7 +1635,7 @@ fun GiveawaysTabContent(
                                 else -> "Currently no active giveaways reported. Pull down to refresh or check back soon!"
                             },
                             fontSize = 13.sp,
-                            color = TextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             lineHeight = 18.sp,
                             textAlign = TextAlign.Center
                         )
@@ -1681,7 +1709,7 @@ fun GiveawaysTabContent(
                                 start = screenDensityInfo.adaptiveHorizontalPadding,
                                 end = screenDensityInfo.adaptiveHorizontalPadding,
                                 top = 6.dp,
-                                bottom = 24.dp
+                                bottom = 104.dp
                             ),
                             horizontalArrangement = Arrangement.spacedBy(screenDensityInfo.adaptiveCardSpacing),
                             verticalArrangement = Arrangement.spacedBy(screenDensityInfo.adaptiveCardSpacing)
@@ -1743,7 +1771,7 @@ fun GiveawaysTabContent(
                                 start = screenDensityInfo.adaptiveHorizontalPadding,
                                 end = screenDensityInfo.adaptiveHorizontalPadding,
                                 top = 6.dp,
-                                bottom = 24.dp
+                                bottom = 104.dp
                             ),
                             verticalArrangement = Arrangement.spacedBy(screenDensityInfo.adaptiveCardSpacing)
                         ) {
@@ -1807,7 +1835,7 @@ fun GiveawaysTabContent(
                                 start = screenDensityInfo.adaptiveHorizontalPadding,
                                 end = screenDensityInfo.adaptiveHorizontalPadding,
                                 top = 6.dp,
-                                bottom = 24.dp
+                                bottom = 104.dp
                             ),
                             horizontalArrangement = Arrangement.spacedBy(screenDensityInfo.adaptiveCardSpacing),
                             verticalArrangement = Arrangement.spacedBy(screenDensityInfo.adaptiveCardSpacing)
@@ -1854,7 +1882,7 @@ fun GiveawaysTabContent(
                                 start = screenDensityInfo.adaptiveHorizontalPadding,
                                 end = screenDensityInfo.adaptiveHorizontalPadding,
                                 top = 6.dp,
-                                bottom = 24.dp
+                                bottom = 104.dp
                             ),
                             verticalArrangement = Arrangement.spacedBy(
                                 when (cardDensity) {
@@ -2044,11 +2072,11 @@ private fun ActiveFiltersSummaryPill(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
                 .clickable { onOpenFilterSheet() }
-                .padding(horizontal = 10.dp, vertical = 5.dp)
+                .padding(horizontal = 10.dp, vertical = 6.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.Tune,
@@ -2080,7 +2108,7 @@ private fun ActiveFiltersSummaryPill(
                 },
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = TextPrimary
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
 
@@ -2169,11 +2197,12 @@ private fun InLibraryTopMenus(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFF0E291A))
-                    .border(1.dp, NeonGreen.copy(alpha = 0.45f), RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .background(NeonGreen.copy(alpha = 0.12f))
+                    .border(1.dp, NeonGreen.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
                     .clickable { isCompactHeader = false }
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -2198,7 +2227,7 @@ private fun InLibraryTopMenus(
                     text = "Expand",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

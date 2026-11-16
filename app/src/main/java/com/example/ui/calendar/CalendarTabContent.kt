@@ -192,7 +192,7 @@ fun CalendarTabContent(
     ) {
         LazyColumn(
             state = listState,
-            contentPadding = PaddingValues(top = 6.dp, bottom = 100.dp),
+            contentPadding = PaddingValues(top = 6.dp, bottom = 104.dp),
             modifier = Modifier
                 .fillMaxSize()
                 .testTag("calendar_timeline_list")
@@ -374,9 +374,10 @@ fun CalendarTabContent(
                         )
                         Text(
                             text = headerTitle,
+                            style = MaterialTheme.typography.titleSmall,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     }
 
@@ -384,7 +385,7 @@ fun CalendarTabContent(
                         text = "${filteredTimelineItems.size} games",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = TextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -456,7 +457,7 @@ fun CalendarTabContent(
                                         text = "Value: ${item.worth}",
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Medium,
-                                        color = TextMuted
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -491,8 +492,8 @@ fun CalendarTabContent(
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surface
                         ),
-                        shape = RoundedCornerShape(14.dp),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f))
                     ) {
                         Column(
                             modifier = Modifier
@@ -521,12 +522,12 @@ fun CalendarTabContent(
                                             text = "Ongoing Giveaways (${ongoingGiveaways.size})",
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = TextPrimary
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Text(
                                             text = "Active promotions available until publisher keys run out",
                                             fontSize = 11.sp,
-                                            color = TextMuted
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
@@ -614,13 +615,14 @@ private fun CalendarHeroBanner(
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary
     val secondaryColor = MaterialTheme.colorScheme.secondary
+    val surfaceHigh = MaterialTheme.colorScheme.surfaceContainerHigh
 
-    val bannerBrush = remember(primaryColor, secondaryColor) {
+    val bannerBrush = remember(primaryColor, secondaryColor, surfaceHigh) {
         Brush.horizontalGradient(
             listOf(
-                primaryColor.copy(alpha = 0.20f),
-                secondaryColor.copy(alpha = 0.10f),
-                Color(0xFF1E2538)
+                primaryColor.copy(alpha = 0.14f),
+                secondaryColor.copy(alpha = 0.08f),
+                surfaceHigh.copy(alpha = 0.45f)
             )
         )
     }
@@ -637,15 +639,15 @@ private fun CalendarHeroBanner(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .testTag("calendar_hero_banner"),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF161A24)),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, primaryColor.copy(alpha = 0.35f))
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(bannerBrush)
-                .padding(horizontal = 12.dp, vertical = if (isCompact) 7.dp else 9.dp)
+                .padding(horizontal = 14.dp, vertical = if (isCompact) 8.dp else 11.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -660,8 +662,8 @@ private fun CalendarHeroBanner(
                     Box(
                         modifier = Modifier
                             .size(if (isCompact) 26.dp else 32.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(primaryColor.copy(alpha = 0.22f)),
+                            .clip(RoundedCornerShape(9.dp))
+                            .background(primaryColor.copy(alpha = 0.18f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -681,7 +683,7 @@ private fun CalendarHeroBanner(
                                 text = "EXPIRING GAMES RADAR",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Black,
-                                color = TextPrimary,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 letterSpacing = 0.5.sp
                             )
                             if (urgentCount > 0) {
@@ -709,7 +711,7 @@ private fun CalendarHeroBanner(
                             Text(
                                 text = "$totalExpiringCount game${if (totalExpiringCount != 1) "s" else ""} expiring in next 14 days",
                                 fontSize = 11.sp,
-                                color = TextSecondary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -774,7 +776,7 @@ private fun CalendarDayChip(
             isSelected -> primaryColor
             isUrgent -> NeonAmber.copy(alpha = 0.8f)
             expiringCount > 0 -> primaryColor.copy(alpha = 0.45f)
-            else -> Color(0xFF2A3245)
+            else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.65f)
         },
         animationSpec = ExpressiveMotion.effectsDefault(reducedMotion),
         label = "calendar_chip_border"
@@ -782,9 +784,9 @@ private fun CalendarDayChip(
 
     val containerColor by animateColorAsState(
         targetValue = when {
-            isSelected -> primaryColor.copy(alpha = 0.22f)
+            isSelected -> primaryColor.copy(alpha = 0.18f)
             isUrgent -> NeonAmber.copy(alpha = 0.12f)
-            else -> Color(0xFF1A1F2C)
+            else -> MaterialTheme.colorScheme.surface
         },
         animationSpec = ExpressiveMotion.effectsDefault(reducedMotion),
         label = "calendar_chip_container"
@@ -833,7 +835,7 @@ private fun CalendarDayChip(
                 text = label,
                 fontSize = 9.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = if (isSelected) primaryColor else if (isUrgent) NeonAmber else TextMuted,
+                color = if (isSelected) primaryColor else if (isUrgent) NeonAmber else MaterialTheme.colorScheme.onSurfaceVariant,
                 letterSpacing = 0.5.sp
             )
 
@@ -843,7 +845,7 @@ private fun CalendarDayChip(
                 text = dateNumber,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Black,
-                color = if (isSelected) primaryColor else TextPrimary
+                color = if (isSelected) primaryColor else MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(modifier = Modifier.height(2.dp))
@@ -860,7 +862,7 @@ private fun CalendarDayChip(
                         text = "$expiringCount",
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Black,
-                        color = Color(0xFF0B0F19)
+                        color = if (isUrgent) Color(0xFF0B0F19) else MaterialTheme.colorScheme.onPrimary
                     )
                 }
             } else {
@@ -868,7 +870,7 @@ private fun CalendarDayChip(
                     text = month,
                     fontSize = 8.sp,
                     fontWeight = FontWeight.Medium,
-                    color = TextMuted
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -888,9 +890,9 @@ private fun CalendarEmptyState(
             .fillMaxWidth()
             .padding(16.dp)
             .testTag("calendar_empty_state_card"),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF161A24)),
-        border = BorderStroke(1.dp, Color(0xFF2A3245))
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f))
     ) {
         Column(
             modifier = Modifier
@@ -919,7 +921,7 @@ private fun CalendarEmptyState(
                 text = if (selectedDate != null) "No Expirations on this Date" else "No Expirations in Selected Range",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center
             )
 
@@ -932,7 +934,7 @@ private fun CalendarEmptyState(
                     "No giveaways have scheduled end dates in this window. Games may be ongoing until keys are exhausted."
                 },
                 fontSize = 12.sp,
-                color = TextMuted,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
                 lineHeight = 17.sp
             )
@@ -941,14 +943,16 @@ private fun CalendarEmptyState(
 
             Button(
                 onClick = onResetFilter,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                shape = RoundedCornerShape(10.dp)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Text(
                     text = "View All 14 Days",
                     fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF0B0F19)
+                    fontWeight = FontWeight.Bold
                 )
             }
         }

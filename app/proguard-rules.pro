@@ -20,6 +20,15 @@
 -keep class com.example.data.local.** { *; }
 -dontwarn androidx.room.paging.**
 
+# ViewModels & AndroidViewModel reflection instantiation (ViewModelProvider)
+-keepclassmembers class * extends androidx.lifecycle.AndroidViewModel {
+    public <init>(android.app.Application);
+}
+-keepclassmembers class * extends androidx.lifecycle.ViewModel {
+    public <init>();
+}
+-keep class com.example.ui.GiveawaysViewModel { *; }
+
 # Retrofit & OkHttp
 -dontwarn retrofit2.**
 -keep class retrofit2.** { *; }

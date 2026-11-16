@@ -99,24 +99,30 @@ fun StatsBanner(
         label = "animatedCount"
     )
 
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val secondaryColor = MaterialTheme.colorScheme.secondary
+    val baseSurface = MaterialTheme.colorScheme.surface
+    val variantSurface = MaterialTheme.colorScheme.surfaceContainerHigh
+
     Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(20.dp))
+            .background(baseSurface)
             .background(
                 Brush.horizontalGradient(
                     colors = listOf(
-                        Color(0xFF131B2E),
-                        Color(0xFF16233B),
-                        Color(0xFF121826)
+                        primaryColor.copy(alpha = 0.14f),
+                        secondaryColor.copy(alpha = 0.08f),
+                        variantSurface.copy(alpha = 0.45f)
                     )
                 )
             )
             .border(
                 1.dp,
-                MaterialTheme.colorScheme.primary.copy(alpha = borderAlpha * 0.7f),
-                RoundedCornerShape(16.dp)
+                primaryColor.copy(alpha = borderAlpha * 0.55f),
+                RoundedCornerShape(20.dp)
             )
             .padding(16.dp)
             .testTag("stats_banner")
@@ -163,9 +169,10 @@ fun StatsBanner(
                     val formattedVal = String.format(Locale.US, "$%.2f", animatedWorth)
                     Text(
                         text = formattedVal,
+                        style = MaterialTheme.typography.displayMedium,
                         fontSize = 26.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "FREE",
@@ -185,7 +192,7 @@ fun StatsBanner(
                     Text(
                         text = "${animatedCount.toInt()} active freebies",
                         fontSize = 12.sp,
-                        color = TextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     AnimatedVisibility(
                         visible = !effectiveDismissed && stats.newFreebiesCount > 0,
@@ -282,7 +289,7 @@ fun StatsBanner(
                 Icon(
                     imageVector = Icons.Default.Refresh,
                     contentDescription = "Refresh Freebies",
-                    tint = if (isRefreshing) MaterialTheme.colorScheme.primary else TextPrimary,
+                    tint = if (isRefreshing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                     modifier = if (isRefreshing && refreshAngle != 0f) {
                         Modifier.graphicsLayer { rotationZ = refreshAngle }
                     } else Modifier

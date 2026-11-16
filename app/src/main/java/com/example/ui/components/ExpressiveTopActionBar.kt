@@ -84,10 +84,11 @@ fun ExpressiveTopActionBar(
     val barShape = RoundedCornerShape(22.dp)
 
     val themePrimary = MaterialTheme.colorScheme.primary
-    val themeSecondary = MaterialTheme.colorScheme.secondary
+    val chromeSurface = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f)
+    val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f)
 
     val outerBorderColor by animateColorAsState(
-        targetValue = themePrimary.copy(alpha = 0.38f),
+        targetValue = themePrimary.copy(alpha = 0.30f),
         animationSpec = if (isLowEndOptimization) tween(100) else spring(stiffness = Spring.StiffnessMediumLow),
         label = "top_bar_outer_border"
     )
@@ -101,10 +102,10 @@ fun ExpressiveTopActionBar(
                     Modifier.shadow(elevation = 3.dp, shape = barShape)
                 } else {
                     Modifier.shadow(
-                        elevation = 8.dp,
+                        elevation = 10.dp,
                         shape = barShape,
-                        spotColor = themePrimary.copy(alpha = 0.28f),
-                        ambientColor = Color(0x40000000)
+                        spotColor = themePrimary.copy(alpha = 0.22f),
+                        ambientColor = Color(0x33000000)
                     )
                 }
             )
@@ -115,8 +116,8 @@ fun ExpressiveTopActionBar(
             )
             .testTag("top_action_bar"),
         shape = barShape,
-        color = Color(0xFF1B1E26),
-        tonalElevation = if (isLowEndOptimization) 0.dp else 6.dp
+        color = chromeSurface,
+        tonalElevation = if (isLowEndOptimization) 0.dp else 4.dp
     ) {
         Row(
             modifier = Modifier
@@ -142,7 +143,7 @@ fun ExpressiveTopActionBar(
                 modifier = Modifier
                     .width(1.dp)
                     .height(20.dp)
-                    .background(Color(0xFF2C3240))
+                    .background(dividerColor)
             )
 
             // 2. Filters Action Button
@@ -162,7 +163,7 @@ fun ExpressiveTopActionBar(
                 modifier = Modifier
                     .width(1.dp)
                     .height(20.dp)
-                    .background(Color(0xFF2C3240))
+                    .background(dividerColor)
             )
 
             // 3. Notifications Action Button
@@ -221,7 +222,7 @@ private fun TopCornerActionItem(
     )
 
     val contentColor by animateColorAsState(
-        targetValue = if (isActive) activeColor else Color(0xFFCAD0DD),
+        targetValue = if (isActive) activeColor else MaterialTheme.colorScheme.onSurfaceVariant,
         animationSpec = ExpressiveMotion.effectsDefault(reducedMotion = isLowEndOptimization),
         label = "corner_item_color_$testTag"
     )
@@ -323,7 +324,7 @@ private fun TopCornerActionItem(
                             text = badgeText,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFF0B0F19)
+                            color = if (badgeColor != null) Color(0xFF0B0F19) else MaterialTheme.colorScheme.onPrimary
                         )
                     }
                 }

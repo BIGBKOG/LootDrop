@@ -117,8 +117,8 @@ fun SteamGameCard(
         targetValue = when (game.playStatus) {
             PlayStatus.BEATEN -> NeonGreen.copy(alpha = 0.7f)
             PlayStatus.PLAYING -> NeonCyan.copy(alpha = 0.7f)
-            PlayStatus.NOT_STARTED -> MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
-            PlayStatus.DROPPED -> Color(0xFFEF4444).copy(alpha = 0.5f)
+            PlayStatus.NOT_STARTED -> MaterialTheme.colorScheme.outline.copy(alpha = 0.65f)
+            PlayStatus.DROPPED -> Color(0xFFEF4444).copy(alpha = 0.55f)
         },
         animationSpec = ExpressiveMotion.effectsDefault(reducedMotion),
         label = "steam_card_border"
@@ -128,11 +128,14 @@ fun SteamGameCard(
         modifier = modifier
             .fillMaxWidth()
             .testTag("steam_game_card_${game.appId}"),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = androidx.compose.foundation.BorderStroke(1.2.dp, cardBorderColor)
+        border = androidx.compose.foundation.BorderStroke(
+            if (game.playStatus == PlayStatus.NOT_STARTED) 1.dp else 1.4.dp,
+            cardBorderColor
+        )
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // Header Image Box with Overlays
@@ -353,7 +356,7 @@ fun SteamGameCard(
                                 Text(
                                     text = "Achievements: ${game.achievementsUnlocked}/${game.achievementsTotal}",
                                     fontSize = 11.sp,
-                                    color = TextSecondary
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 if (onOpenAchievements != null) {
                                     Text(
@@ -561,10 +564,10 @@ fun SteamGameCard(
                                 .expressivePressScale(dlcInteraction, enabled = !reducedMotion, pressedScale = 0.94f)
                                 .testTag("steam_dlc_btn_${game.appId}"),
                             shape = RoundedCornerShape(10.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA855F7).copy(alpha = 0.7f)),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA855F7).copy(alpha = 0.55f)),
                             colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = Color(0xFF231936),
-                                contentColor = Color(0xFFE9D5FF)
+                                containerColor = Color(0xFFA855F7).copy(alpha = 0.14f),
+                                contentColor = Color(0xFFA855F7)
                             ),
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp)
                         ) {
@@ -596,9 +599,10 @@ fun SteamGameCard(
                             .expressivePressScale(storeInteraction, enabled = !reducedMotion, pressedScale = 0.94f)
                             .testTag("steam_store_btn_${game.appId}"),
                         shape = RoundedCornerShape(10.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2A475E)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color(0xFFC7D5E0)
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.55f),
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         ),
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp)
                     ) {
@@ -665,7 +669,7 @@ fun SteamGameCard(
                             Text(
                                 text = game.name,
                                 fontSize = 12.sp,
-                                color = TextSecondary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -675,7 +679,7 @@ fun SteamGameCard(
                     Text(
                         text = "Track the exact install size on your Steam Deck, ROG Ally, or PC drive. Enter manual gigabytes (GB) or reset to restore estimated size (${hardware.estimatedSizeGb} GB).",
                         fontSize = 13.sp,
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         lineHeight = 18.sp
                     )
 

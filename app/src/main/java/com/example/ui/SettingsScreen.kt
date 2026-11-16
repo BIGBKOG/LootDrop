@@ -106,9 +106,10 @@ fun SettingsScreen(
             Column {
                 Text(
                     text = "Settings & Customization",
+                    style = MaterialTheme.typography.headlineMedium,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     text = "Personalize theme modes, alert rules & app preferences",
@@ -262,7 +263,7 @@ fun SettingsScreen(
         // App Info Footer - Always visible at bottom of all settings tabs
         SettingsFooter()
 
-        Spacer(modifier = Modifier.height(30.dp))
+        Spacer(modifier = Modifier.height(104.dp))
     }
 
     // Confirmation Dialogs

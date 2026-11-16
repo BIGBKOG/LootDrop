@@ -163,15 +163,16 @@ fun GiveawayCard(
     }
 
     val themePrimary = MaterialTheme.colorScheme.primary
-    val themeSecondary = MaterialTheme.colorScheme.secondary
+    val calmRestingBorder = MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)
+    val isHighlightedCard = item.isWishlisted || item.isClaimed || item.isNew || item.isBookmarked || isPressed
 
-    // Expressive M3 popping outlines: dynamically synced to the user's chosen theme!
+    // Expressive M3 popping outlines for highlighted/interactive cards; calm hairline outline at rest
     val expressiveBorderColor = when {
         item.isWishlisted -> Color(0xFFFF2D87) // Wishlist gets prominent magenta/pink outline!
         item.isClaimed -> NeonGreen
         item.isNew -> Color(0xFFFF9100)
-        item.isBookmarked -> themePrimary
-        else -> themePrimary
+        item.isBookmarked || isPressed -> themePrimary
+        else -> calmRestingBorder
     }
 
     val cardBorderColor = if (isAnimationsEnabled && !isLowEndOptimization) {
@@ -183,11 +184,12 @@ fun GiveawayCard(
         anim
     } else expressiveBorderColor
 
-    val cardBorderWidth = if (item.isWishlisted || item.isClaimed || item.isNew || item.isBookmarked || isPressed) 2.2.dp else 1.8.dp
+    val cardBorderWidth = if (isHighlightedCard) 1.8.dp else 1.dp
+    val showBorderBeam = isHighlightedCard && isAnimationsEnabled && !isLowEndOptimization
 
     when (cardDensity) {
         CardDensity.MINIMAL_LIST -> {
-            // Minimal Streamlined List Card (~72dp) with expressive popping outline & moving bright beam
+            // Minimal Streamlined List Card (~72dp)
             Card(
                 modifier = modifier
                     .fillMaxWidth()
@@ -203,10 +205,10 @@ fun GiveawayCard(
                         cornerRadius = 16.dp,
                         borderColor = cardBorderColor,
                         beamAngleProvider = { (beamAngle + cardAngleOffset) % 360f },
-                        isAnimated = isAnimationsEnabled && !isLowEndOptimization
+                        isAnimated = showBorderBeam
                     )
                     .testTag("giveaway_card_minimal_${item.id}"),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF141924)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Row(
@@ -380,7 +382,7 @@ fun GiveawayCard(
                                 .testTag("claim_minimal_${item.id}"),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.background
+                                contentColor = MaterialTheme.colorScheme.onPrimary
                             ),
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 0.dp)
@@ -413,10 +415,10 @@ fun GiveawayCard(
                         cornerRadius = 16.dp,
                         borderColor = cardBorderColor,
                         beamAngleProvider = { (beamAngle + cardAngleOffset) % 360f },
-                        isAnimated = isAnimationsEnabled && !isLowEndOptimization
+                        isAnimated = showBorderBeam
                     )
                     .testTag("giveaway_card_compact_${item.id}"),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF141924)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Row(
@@ -583,7 +585,7 @@ fun GiveawayCard(
                                     .testTag("claim_compact_${item.id}"),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.background
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
                                 ),
                                 shape = RoundedCornerShape(8.dp),
                                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 0.dp)
@@ -627,10 +629,10 @@ fun GiveawayCard(
                         cornerRadius = 20.dp,
                         borderColor = cardBorderColor,
                         beamAngleProvider = { (beamAngle + cardAngleOffset) % 360f },
-                        isAnimated = isAnimationsEnabled && !isLowEndOptimization
+                        isAnimated = showBorderBeam
                     )
                     .testTag("giveaway_card_${item.id}"),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF141924)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(20.dp)
             ) {
                 Column {
@@ -1210,7 +1212,7 @@ fun GiveawayCard(
                                     .testTag("claim_button_${item.id}"),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.background
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
                                 ),
                                 shape = RoundedCornerShape(10.dp)
                             ) {
@@ -1370,7 +1372,7 @@ fun PlayStatusBadge(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
                 modifier = Modifier
-                    .background(Color(0xFF1E293B))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                     .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
             ) {
                 PlayStatus.values().forEach { option ->
@@ -1394,7 +1396,7 @@ fun PlayStatusBadge(
                                 Text(
                                     text = option.label,
                                     fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isCurrent) optColor else Color.White,
+                                    color = if (isCurrent) optColor else MaterialTheme.colorScheme.onSurface,
                                     fontSize = 13.sp
                                 )
                             }
@@ -1421,9 +1423,9 @@ fun SteamTelemetryBadge(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(5.dp),
         modifier = modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(Color(0xFF1B2838))
-            .border(1.dp, Color(0xFF66C0F4).copy(alpha = 0.45f), RoundedCornerShape(6.dp))
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color(0xFF66C0F4).copy(alpha = 0.12f))
+            .border(1.dp, Color(0xFF66C0F4).copy(alpha = 0.4f), RoundedCornerShape(8.dp))
             .padding(horizontal = 7.dp, vertical = 3.dp)
     ) {
         Text(
@@ -1435,25 +1437,25 @@ fun SteamTelemetryBadge(
         Text(
             text = "•",
             fontSize = 9.sp,
-            color = Color(0xFF8F98A0)
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
             text = "⏱ ${item.steamPlaytimeHours}",
             fontSize = 10.sp,
             fontWeight = FontWeight.SemiBold,
-            color = Color(0xFFC7D5E0)
+            color = MaterialTheme.colorScheme.onSurface
         )
         if (item.steamAchievementsTotal > 0) {
             Text(
                 text = "•",
                 fontSize = 9.sp,
-                color = Color(0xFF8F98A0)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
                 text = "🏆 ${item.steamAchievementsUnlocked}/${item.steamAchievementsTotal} (${item.steamAchievementsPercentage}%)",
                 fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = if (item.steamAchievementsPercentage == 100) NeonGreen else Color(0xFFC7D5E0)
+                color = if (item.steamAchievementsPercentage == 100) NeonGreen else MaterialTheme.colorScheme.onSurface
             )
         }
     }

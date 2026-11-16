@@ -81,6 +81,7 @@ fun ExpressiveFloatingNavBar(
 
     val themePrimary = MaterialTheme.colorScheme.primary
     val themeSecondary = MaterialTheme.colorScheme.secondary
+    val chromeSurface = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f)
 
     val animatedIndex by animateFloatAsState(
         targetValue = targetIndex.toFloat(),
@@ -98,20 +99,20 @@ fun ExpressiveFloatingNavBar(
     val activePillBrush = remember(themePrimary, themeSecondary) {
         Brush.horizontalGradient(
             listOf(
-                themePrimary.copy(alpha = 0.35f),
-                themeSecondary.copy(alpha = 0.22f)
+                themePrimary.copy(alpha = 0.24f),
+                themeSecondary.copy(alpha = 0.16f)
             )
         )
     }
 
     val activePillBorderColor by animateColorAsState(
-        targetValue = themePrimary.copy(alpha = 0.75f),
+        targetValue = themePrimary.copy(alpha = 0.60f),
         animationSpec = ExpressiveMotion.effectsDefault(reducedMotion = isLowEndOptimization),
         label = "nav_pill_border_color"
     )
 
     val outerBorderColor by animateColorAsState(
-        targetValue = themePrimary.copy(alpha = 0.32f),
+        targetValue = themePrimary.copy(alpha = 0.30f),
         animationSpec = ExpressiveMotion.effectsDefault(reducedMotion = isLowEndOptimization),
         label = "nav_outer_border_color"
     )
@@ -125,10 +126,10 @@ fun ExpressiveFloatingNavBar(
                     Modifier.shadow(elevation = 4.dp, shape = RoundedCornerShape(36.dp))
                 } else {
                     Modifier.shadow(
-                        elevation = 16.dp,
+                        elevation = 14.dp,
                         shape = RoundedCornerShape(36.dp),
-                        spotColor = themePrimary.copy(alpha = 0.25f),
-                        ambientColor = Color(0x40000000)
+                        spotColor = themePrimary.copy(alpha = 0.22f),
+                        ambientColor = Color(0x33000000)
                     )
                 }
             )
@@ -139,8 +140,8 @@ fun ExpressiveFloatingNavBar(
             )
             .testTag("bottom_nav_bar"),
         shape = RoundedCornerShape(36.dp),
-        color = Color(0xFF1B1E26),
-        tonalElevation = if (isLowEndOptimization) 0.dp else 8.dp
+        color = chromeSurface,
+        tonalElevation = if (isLowEndOptimization) 0.dp else 4.dp
     ) {
         BoxWithConstraints(
             modifier = Modifier
@@ -278,7 +279,7 @@ private fun ExpressiveNavTab(
     )
 
     val contentColor by animateColorAsState(
-        targetValue = if (isSelected) activeColor else Color(0xFF9E9FA7),
+        targetValue = if (isSelected) activeColor else MaterialTheme.colorScheme.onSurfaceVariant,
         animationSpec = ExpressiveMotion.effectsDefault(reducedMotion = isLowEndOptimization),
         label = "nav_tab_content_${tab.name}"
     )
@@ -307,7 +308,7 @@ private fun ExpressiveNavTab(
                     badge = {
                         Badge(
                             containerColor = activeColor,
-                            contentColor = Color(0xFF0B0F19),
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.padding(bottom = 2.dp)
                         ) {
                             AnimatedContent(

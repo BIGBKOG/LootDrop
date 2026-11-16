@@ -222,7 +222,7 @@ fun LibraryPlayFilterChips(
                             text = "🎁 Vault",
                             fontSize = 11.sp,
                             fontWeight = if (isVaultSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isVaultSelected) MaterialTheme.colorScheme.onPrimary else TextSecondary
+                            color = if (isVaultSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Box(
                             modifier = Modifier
@@ -234,7 +234,7 @@ fun LibraryPlayFilterChips(
                                 text = "${uiStats.claimedCount}",
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isVaultSelected) MaterialTheme.colorScheme.onPrimary else TextSecondary
+                                color = if (isVaultSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -261,7 +261,7 @@ fun LibraryPlayFilterChips(
                             text = "🎮 All+Paid",
                             fontSize = 11.sp,
                             fontWeight = if (isAllPaidSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isAllPaidSelected) Color(0xFF0B0F19) else TextSecondary
+                            color = if (isAllPaidSelected) Color(0xFF0B0F19) else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Box(
                             modifier = Modifier
@@ -300,7 +300,7 @@ fun LibraryPlayFilterChips(
                             text = "🏆 Trophies",
                             fontSize = 11.sp,
                             fontWeight = if (isAchievementsSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isAchievementsSelected) Color(0xFF0F1420) else TextSecondary
+                            color = if (isAchievementsSelected) Color(0xFF0F1420) else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         if (trophyCount > 0) {
                             Box(
@@ -473,27 +473,27 @@ fun LibraryPlayFilterChips(
                         Icon(
                             imageVector = Icons.Default.Tune,
                             contentDescription = "Filters",
-                            tint = if (isFilterActive) NeonCyan else TextPrimary,
+                            tint = if (isFilterActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(15.dp)
                         )
                         Text(
                             text = if (viewMode == LibraryViewMode.ALL_PAID) "Steam Filters" else "Vault Filters",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isFilterActive) NeonCyan else TextPrimary
+                            color = if (isFilterActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                         )
                         if (activeFilterCount > 0) {
                             Box(
                                 modifier = Modifier
                                     .clip(CircleShape)
-                                    .background(NeonCyan)
+                                    .background(MaterialTheme.colorScheme.primary)
                                     .padding(horizontal = 5.dp, vertical = 1.dp)
                             ) {
                                 Text(
                                     text = "$activeFilterCount",
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.ExtraBold,
-                                    color = Color(0xFF0F1420)
+                                    color = MaterialTheme.colorScheme.onPrimary
                                 )
                             }
                         }
@@ -517,8 +517,8 @@ fun LibraryPlayFilterChips(
                             .expressivePressScale(compactInteraction, enabled = !reducedMotion, pressedScale = 0.93f)
                             .clip(RoundedCornerShape(compactCorner))
                             .background(
-                                if (isCompactHeader) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.75f)
+                                if (isCompactHeader) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+                                else MaterialTheme.colorScheme.surfaceContainerHigh
                             )
                             .border(
                                 width = 1.dp,
@@ -537,7 +537,7 @@ fun LibraryPlayFilterChips(
                             text = if (isCompactHeader) "▾ Show Banners" else "▴ Hide Banners",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isCompactHeader) MaterialTheme.colorScheme.primary else TextSecondary
+                            color = if (isCompactHeader) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -556,10 +556,10 @@ fun LibraryPlayFilterChips(
                         modifier = Modifier
                             .expressivePressScale(dlcInteraction, enabled = !reducedMotion, pressedScale = 0.93f)
                             .clip(RoundedCornerShape(dlcCorner))
-                            .background(Color(0xFF231836))
+                            .background(Color(0xFFA855F7).copy(alpha = 0.14f))
                             .border(
                                 width = 1.dp,
-                                color = Color(0xFFA855F7).copy(alpha = 0.65f),
+                                color = Color(0xFFA855F7).copy(alpha = 0.55f),
                                 shape = RoundedCornerShape(dlcCorner)
                             )
                             .clickable(
@@ -579,7 +579,7 @@ fun LibraryPlayFilterChips(
                                 text = "DLC Picks",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFFE9D5FF)
+                                color = Color(0xFFA855F7)
                             )
                             if (dlcRecommendationsCount > 0) {
                                 Box(
@@ -614,10 +614,10 @@ fun LibraryPlayFilterChips(
                         modifier = Modifier
                             .expressivePressScale(gridInteraction, enabled = !reducedMotion, pressedScale = 0.93f)
                             .clip(RoundedCornerShape(gridCorner))
-                            .background(Color(0xFF1E293B))
+                            .background(Color(0xFFF59E0B).copy(alpha = 0.14f))
                             .border(
                                 width = 1.dp,
-                                color = Color(0xFFF59E0B).copy(alpha = 0.6f),
+                                color = Color(0xFFF59E0B).copy(alpha = 0.55f),
                                 shape = RoundedCornerShape(gridCorner)
                             )
                             .clickable(
@@ -637,7 +637,7 @@ fun LibraryPlayFilterChips(
                                 text = "3×3 Challenge",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFFFBBF24)
+                                color = Color(0xFFF59E0B)
                             )
                         }
                     }
@@ -657,10 +657,10 @@ fun LibraryPlayFilterChips(
                         modifier = Modifier
                             .expressivePressScale(rollInteraction, enabled = !reducedMotion, pressedScale = 0.93f)
                             .clip(RoundedCornerShape(rollCorner))
-                            .background(Color(0xFF261E38))
+                            .background(Color(0xFFA855F7).copy(alpha = 0.14f))
                             .border(
                                 width = 1.dp,
-                                color = Color(0xFFA855F7).copy(alpha = 0.6f),
+                                color = Color(0xFFA855F7).copy(alpha = 0.55f),
                                 shape = RoundedCornerShape(rollCorner)
                             )
                             .clickable(
@@ -680,7 +680,7 @@ fun LibraryPlayFilterChips(
                                 text = "Roll Backlog",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFFD8B4FE)
+                                color = Color(0xFFA855F7)
                             )
                         }
                     }
@@ -690,7 +690,7 @@ fun LibraryPlayFilterChips(
                     Text(
                         text = if (viewMode == LibraryViewMode.ALL_PAID) "${uiStats.steamTotalCount + uiStats.claimedCount} total" else "${uiStats.claimedCount} claimed",
                         fontSize = 11.sp,
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         modifier = Modifier.padding(start = 2.dp)
                     )
@@ -768,18 +768,18 @@ private fun ActiveFilterPill(
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFF1B2436))
-            .border(1.dp, NeonCyan.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.45f), RoundedCornerShape(8.dp))
             .clickable { onRemove() }
             .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Text(text = label, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+        Text(text = label, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
         Icon(
             imageVector = Icons.Default.Close,
             contentDescription = "Remove filter",
-            tint = NeonCyan,
+            tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(12.dp)
         )
     }
@@ -806,10 +806,10 @@ private fun SteamTrackerBanner(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF171A21)) // Steam brand dark slate
-            .border(1.dp, Color(0xFF2A475E), RoundedCornerShape(12.dp))
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, Color(0xFF66C0F4).copy(alpha = 0.45f), RoundedCornerShape(16.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -824,15 +824,15 @@ private fun SteamTrackerBanner(
             Box(
                 modifier = Modifier
                     .size(36.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFF1B2838))
-                    .border(1.dp, Color(0xFF66C0F4).copy(alpha = 0.5f), RoundedCornerShape(8.dp)),
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFF66C0F4).copy(alpha = 0.14f))
+                    .border(1.dp, Color(0xFF66C0F4).copy(alpha = 0.45f), RoundedCornerShape(10.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.SportsEsports,
                     contentDescription = "Steam",
-                    tint = Color(0xFF66C0F4), // Steam light blue
+                    tint = Color(0xFF66C0F4),
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -840,18 +840,18 @@ private fun SteamTrackerBanner(
             Column {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
                     Text(
                         text = "Steam Game Tracker",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
-                            .background(Color(0xFF66C0F4).copy(alpha = 0.2f))
+                            .background(Color(0xFF66C0F4).copy(alpha = 0.16f))
                             .padding(horizontal = 4.dp, vertical = 1.dp)
                     ) {
                         Text(
@@ -869,7 +869,7 @@ private fun SteamTrackerBanner(
                         "Tap to link Steam ID & auto-sort library"
                     },
                     fontSize = 11.sp,
-                    color = Color(0xFFC7D5E0),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -878,7 +878,7 @@ private fun SteamTrackerBanner(
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             // Quick sync button
             IconButton(
@@ -893,13 +893,14 @@ private fun SteamTrackerBanner(
                 modifier = Modifier
                     .size(34.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF2A475E).copy(alpha = 0.6f))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
                     .testTag("steam_quick_sync_button")
             ) {
                 Icon(
                     imageVector = Icons.Default.Sync,
                     contentDescription = "Sync Steam",
-                    tint = if (isSyncing) NeonCyan else Color.White,
+                    tint = if (isSyncing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier
                         .size(16.dp)
                         .then(if (isSyncing) Modifier.rotate(spinAngle) else Modifier)
@@ -912,13 +913,14 @@ private fun SteamTrackerBanner(
                 modifier = Modifier
                     .size(34.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF2A475E).copy(alpha = 0.6f))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
                     .testTag("steam_settings_button")
             ) {
                 Icon(
                     imageVector = Icons.Default.Settings,
                     contentDescription = "Steam Settings",
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(16.dp)
                 )
             }

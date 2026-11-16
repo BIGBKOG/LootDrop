@@ -39,7 +39,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -236,7 +236,7 @@ fun GeneralSettingsCategoryContent(
             )
         }
 
-        Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
 
         Row(
             modifier = Modifier
@@ -269,7 +269,7 @@ fun GeneralSettingsCategoryContent(
             )
         }
 
-        Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
 
         Row(
             modifier = Modifier
@@ -302,7 +302,7 @@ fun GeneralSettingsCategoryContent(
             )
         }
 
-        Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
 
         Row(
             modifier = Modifier
@@ -336,7 +336,7 @@ fun GeneralSettingsCategoryContent(
             )
         }
 
-        Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
 
         Row(
             modifier = Modifier
@@ -370,7 +370,7 @@ fun GeneralSettingsCategoryContent(
             )
         }
 
-        Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
 
         Row(
             modifier = Modifier
@@ -404,7 +404,7 @@ fun GeneralSettingsCategoryContent(
             )
         }
 
-        Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
 
         Row(
             modifier = Modifier

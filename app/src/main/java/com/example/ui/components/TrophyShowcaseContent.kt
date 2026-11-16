@@ -127,7 +127,7 @@ fun TrophyShowcaseContent(
             .fillMaxSize()
             .testTag("trophy_showcase_list"),
         verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 96.dp)
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 104.dp)
     ) {
         // 0. Top Menus (Slides up on scroll)
         if (topHeader != null) {
@@ -175,24 +175,39 @@ fun TrophyShowcaseContent(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        Box(
+                            modifier = Modifier
+                                .size(22.dp)
+                                .clip(RoundedCornerShape(7.dp))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.EmojiEvents,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(13.dp)
+                            )
+                        }
                         Text(
-                            text = "🎯 CLOSEST TO 100% TRACKER",
+                            text = "CLOSEST TO 100% TRACKER",
+                            style = MaterialTheme.typography.titleSmall,
                             fontSize = 13.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = NeonCyan,
-                            letterSpacing = 0.8.sp
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            letterSpacing = 0.6.sp
                         )
                         Box(
                             modifier = Modifier
                                 .clip(CircleShape)
-                                .background(NeonCyan.copy(alpha = 0.2f))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f))
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = "${closestGames.count { it.achievementsPercentage in 80..99 }} near 100%",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = NeonCyan
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
@@ -200,8 +215,8 @@ fun TrophyShowcaseContent(
 
                 Text(
                     text = "Spotlight games on the verge of 100% completion for easy Mythical Trophies.",
-                    fontSize = 12.sp,
-                    color = TextSecondary
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 // Filter chips
@@ -238,16 +253,16 @@ fun TrophyShowcaseContent(
                                 )
                             },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = NeonCyan.copy(alpha = 0.2f),
-                                selectedLabelColor = NeonCyan,
-                                containerColor = Color(0xFF141926),
-                                labelColor = TextSecondary
+                                selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                                selectedLabelColor = MaterialTheme.colorScheme.primary,
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                             ),
                             border = FilterChipDefaults.filterChipBorder(
                                 enabled = true,
                                 selected = isSelected,
-                                borderColor = Color(0xFF243048),
-                                selectedBorderColor = NeonCyan,
+                                borderColor = MaterialTheme.colorScheme.outlineVariant,
+                                selectedBorderColor = MaterialTheme.colorScheme.primary,
                                 borderWidth = 1.dp
                             ),
                             shape = RoundedCornerShape(chipCorner)
@@ -269,7 +284,7 @@ fun TrophyShowcaseContent(
                     Text(
                         text = "No games found in this category. Sync your Steam library to rank games by completion!",
                         fontSize = 13.sp,
-                        color = TextMuted,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 }
@@ -319,17 +334,18 @@ private fun TrophyOverviewHeader(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surface)
             .background(
                 Brush.horizontalGradient(
                     colors = listOf(
-                        Color(0xFF1E1233), // Deep Royal Purple
-                        Color(0xFF141B33),
-                        Color(0xFF0F1A24)
+                        Color(0xFFE040FB).copy(alpha = 0.14f),
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.4f)
                     )
                 )
             )
-            .border(1.2.dp, Color(0xFFE040FB).copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+            .border(1.dp, Color(0xFFE040FB).copy(alpha = 0.45f), RoundedCornerShape(20.dp))
             .padding(16.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -346,8 +362,8 @@ private fun TrophyOverviewHeader(
                     Box(
                         modifier = Modifier
                             .size(32.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFFE040FB).copy(alpha = 0.25f)),
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFFE040FB).copy(alpha = 0.18f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -368,24 +384,25 @@ private fun TrophyOverviewHeader(
                         Text(
                             text = if (steamUserId.isNotBlank()) "Linked: $steamUserId" else "Tap Sync to link Steam",
                             fontSize = 11.sp,
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     IconButton(
                         onClick = onSyncClick,
                         enabled = !isSyncing,
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(34.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF28254A))
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Sync,
                             contentDescription = "Sync Achievements",
-                            tint = if (isSyncing) Color(0xFFE040FB) else Color.White,
+                            tint = if (isSyncing) Color(0xFFE040FB) else MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier
                                 .size(16.dp)
                                 .then(if (isSyncing) Modifier.rotate(spinAngle) else Modifier)
@@ -395,14 +412,15 @@ private fun TrophyOverviewHeader(
                     IconButton(
                         onClick = onOpenSteamSettings,
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(34.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF28254A))
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = "Steam Settings",
-                            tint = Color.White,
+                            tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -460,9 +478,9 @@ private fun StatPill(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(Color(0xFF0F1420).copy(alpha = 0.8f))
-            .border(1.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.88f))
+            .border(1.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
             .padding(vertical = 8.dp, horizontal = 4.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -472,9 +490,9 @@ private fun StatPill(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(text = icon, fontSize = 11.sp)
-                Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
             }
-            Text(text = label, fontSize = 9.sp, fontWeight = FontWeight.Medium, color = TextSecondary, maxLines = 1)
+            Text(text = label, fontSize = 9.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
         }
     }
 }
@@ -499,27 +517,42 @@ private fun TrophyWallSection(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(22.dp)
+                        .clip(RoundedCornerShape(7.dp))
+                        .background(Color(0xFFFFD700).copy(alpha = 0.16f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.EmojiEvents,
+                        contentDescription = null,
+                        tint = Color(0xFFFFB800),
+                        modifier = Modifier.size(13.dp)
+                    )
+                }
                 Text(
-                    text = "🏆 TROPHY WALL: RAREST UNLOCKED",
+                    text = "TROPHY WALL: RAREST UNLOCKED",
+                    style = MaterialTheme.typography.titleSmall,
                     fontSize = 13.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color(0xFFFFD700),
-                    letterSpacing = 0.8.sp
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    letterSpacing = 0.6.sp
                 )
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(4.dp))
-                        .background(Color(0xFFFFD700).copy(alpha = 0.2f))
+                        .background(Color(0xFFFFB800).copy(alpha = 0.18f))
                         .padding(horizontal = 5.dp, vertical = 1.dp)
                 ) {
-                    Text(text = "GLOBAL RARITY", fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFFFD700))
+                    Text(text = "RARITY", fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFFFB800))
                 }
             }
 
             Text(
                 text = "${trophies.size} trophies",
                 fontSize = 11.sp,
-                color = TextSecondary
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -528,15 +561,16 @@ private fun TrophyWallSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 20.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFF141926))
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
                     .padding(16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "No unlocked trophies found yet. Link your Steam account to showcase your rarest achievements!",
                     fontSize = 12.sp,
-                    color = TextMuted,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
             }
@@ -569,12 +603,12 @@ private fun TrophyWallCard(
     Box(
         modifier = Modifier
             .width(220.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(Color(0xFF141928))
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface)
             .border(
                 width = if (isMythic) 1.5.dp else 1.dp,
                 color = if (isMythic) tierColor.copy(alpha = 0.8f) else tierColor.copy(alpha = 0.4f),
-                shape = RoundedCornerShape(14.dp)
+                shape = RoundedCornerShape(16.dp)
             )
             .clickable(onClick = onClick)
             .padding(12.dp)
@@ -590,7 +624,7 @@ private fun TrophyWallCard(
                     text = trophy.gameName,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
@@ -620,9 +654,9 @@ private fun TrophyWallCard(
                 Box(
                     modifier = Modifier
                         .size(36.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(tierColor.copy(alpha = 0.2f))
-                        .border(1.dp, tierColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp)),
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(tierColor.copy(alpha = 0.16f))
+                        .border(1.dp, tierColor.copy(alpha = 0.45f), RoundedCornerShape(10.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(text = tier.iconEmoji, fontSize = 18.sp)
@@ -633,7 +667,7 @@ private fun TrophyWallCard(
                         text = trophy.displayName,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = TextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -650,7 +684,7 @@ private fun TrophyWallCard(
             Text(
                 text = trophy.description.ifBlank { "Unlocked in ${trophy.gameName}" },
                 fontSize = 11.sp,
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 lineHeight = 15.sp,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
@@ -675,11 +709,13 @@ private fun ClosestGameCard(
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .testTag("closest_game_card_${game.appId}"),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF141926)),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = androidx.compose.foundation.BorderStroke(
             1.dp,
-            if (isMastered) NeonGreen.copy(alpha = 0.6f) else if (isNearHundred) NeonCyan.copy(alpha = 0.6f) else Color(0xFF222C3F)
+            if (isMastered) NeonGreen.copy(alpha = 0.6f)
+            else if (isNearHundred) NeonCyan.copy(alpha = 0.6f)
+            else MaterialTheme.colorScheme.outline.copy(alpha = 0.65f)
         )
     ) {
         Column {
@@ -705,7 +741,7 @@ private fun ClosestGameCard(
                         .fillMaxSize()
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color(0xFF141926))
+                                colors = listOf(Color.Transparent, MaterialTheme.colorScheme.surface)
                             )
                         )
                 )
@@ -764,7 +800,7 @@ private fun ClosestGameCard(
                         text = game.name,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
@@ -774,7 +810,7 @@ private fun ClosestGameCard(
                         text = "${game.achievementsUnlocked} / ${game.achievementsTotal} ($percent%)",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = if (isMastered) NeonGreen else NeonCyan
+                        color = if (isMastered) NeonGreen else MaterialTheme.colorScheme.primary
                     )
                 }
 
@@ -785,8 +821,8 @@ private fun ClosestGameCard(
                         .fillMaxWidth()
                         .height(6.dp)
                         .clip(RoundedCornerShape(3.dp)),
-                    color = if (isMastered) NeonGreen else NeonCyan,
-                    trackColor = Color(0xFF222C3F)
+                    color = if (isMastered) NeonGreen else MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceContainerHigh
                 )
 
                 // Bottom row: Playtime + Explore Walkthroughs button
@@ -798,7 +834,7 @@ private fun ClosestGameCard(
                     Text(
                         text = "⏱️ ${game.playtimeHours} playtime • ${game.playStatus.label}",
                         fontSize = 11.sp,
-                        color = TextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Row(
@@ -809,12 +845,12 @@ private fun ClosestGameCard(
                             text = if (isMastered) "View Trophies" else "View Walkthroughs",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = NeonCyan
+                            color = MaterialTheme.colorScheme.primary
                         )
                         Icon(
                             imageVector = Icons.Default.ChevronRight,
                             contentDescription = null,
-                            tint = NeonCyan,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp)
                         )
                     }

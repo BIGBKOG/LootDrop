@@ -140,7 +140,7 @@ fun MetacriticDetailBadge(
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFF0B101D))
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .border(1.dp, tier.badgeColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
             .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
             .padding(horizontal = 8.dp, vertical = 4.dp)
@@ -173,7 +173,7 @@ fun MetacriticDetailBadge(
                     text = "METASCORE",
                     fontSize = 9.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     letterSpacing = 0.8.sp
                 )
                 if (info.score >= 90) {
@@ -211,9 +211,9 @@ fun MetacriticDetailSection(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(Color(0xFF0F1522))
-            .border(1.2.dp, tier.badgeColor.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .border(1.dp, tier.badgeColor.copy(alpha = 0.45f), RoundedCornerShape(16.dp))
             .padding(14.dp)
             .testTag("metacritic_info_section")
     ) {
@@ -249,7 +249,7 @@ fun MetacriticDetailSection(
                             text = "METACRITIC SCORE",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            color = TextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                             letterSpacing = 1.sp
                         )
                         Spacer(modifier = Modifier.width(6.dp))
@@ -282,7 +282,7 @@ fun MetacriticDetailSection(
         Text(
             text = "Accurate critic consensus verified through CheapShark & GamerPower APIs from top editorial review publications worldwide.",
             fontSize = 11.sp,
-            color = TextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             lineHeight = 16.sp
         )
 
@@ -304,8 +304,8 @@ fun MetacriticDetailSection(
                 .fillMaxWidth()
                 .height(38.dp)
                 .testTag("open_metacritic_review_button"),
-            shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+            shape = RoundedCornerShape(10.dp),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
             border = androidx.compose.foundation.BorderStroke(1.dp, tier.badgeColor.copy(alpha = 0.6f))
         ) {
             Row(
@@ -322,7 +322,7 @@ fun MetacriticDetailSection(
                     text = "View '$gameTitle' on Metacritic",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
