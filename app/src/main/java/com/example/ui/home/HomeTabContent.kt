@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -13,6 +14,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.util.lerp
+import com.example.ui.theme.ExpressiveMotion
+import com.example.ui.theme.expressivePressScale
+import kotlin.math.absoluteValue
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -271,12 +278,17 @@ private fun HomeQuickStatsStrip(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Active Freebies
+            val exploreInteraction = remember { MutableInteractionSource() }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
+                    .expressivePressScale(exploreInteraction, pressedScale = 0.94f)
                     .clip(RoundedCornerShape(8.dp))
-                    .clickable { onExploreAllFreebies() }
+                    .clickable(
+                        interactionSource = exploreInteraction,
+                        indication = null
+                    ) { onExploreAllFreebies() }
                     .padding(4.dp)
             ) {
                 Box(
@@ -318,12 +330,17 @@ private fun HomeQuickStatsStrip(
             )
 
             // Saved Worth / Vault
+            val vaultInteraction = remember { MutableInteractionSource() }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
+                    .expressivePressScale(vaultInteraction, pressedScale = 0.94f)
                     .clip(RoundedCornerShape(8.dp))
-                    .clickable { onViewVault() }
+                    .clickable(
+                        interactionSource = vaultInteraction,
+                        indication = null
+                    ) { onViewVault() }
                     .padding(4.dp)
             ) {
                 Box(
@@ -379,6 +396,7 @@ private fun HomeBestFreeGamesSection(
         pageCount = { items.size.coerceAtLeast(1) }
     )
     val coroutineScope = rememberCoroutineScope()
+    val reducedMotion = !isAnimationsEnabled || isLowEndOptimization
 
     Column(
         modifier = modifier
@@ -434,12 +452,18 @@ private fun HomeBestFreeGamesSection(
                         .border(1.dp, Color(0xFF2C3244), RoundedCornerShape(12.dp))
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
-                    Text(
-                        text = "${pagerState.currentPage + 1} of ${items.size}",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = NeonGreen
-                    )
+                    AnimatedContent(
+                        targetState = pagerState.currentPage + 1,
+                        transitionSpec = { ExpressiveMotion.popNumberTransform(reducedMotion) },
+                        label = "carousel_page_badge"
+                    ) { pageNum ->
+                        Text(
+                            text = "$pageNum of ${items.size}",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = NeonGreen
+                        )
+                    }
                 }
             }
         }
@@ -475,7 +499,7 @@ private fun HomeBestFreeGamesSection(
                 }
             }
         } else {
-            // Swipeable Carousel Pager
+            // Swipeable Carousel Pager with M3 Expressive depth & spring transitions
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier
@@ -484,15 +508,26 @@ private fun HomeBestFreeGamesSection(
                 pageSpacing = 12.dp
             ) { page ->
                 val game = items[page]
+                val pageOffset = ((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction)
+                    .absoluteValue.coerceIn(0f, 1f)
                 BestFreeGameCard(
                     game = game,
                     index = page,
                     onClick = { onItemClick(game) },
-                    onClaimClick = { onClaimClick(game) }
+                    onClaimClick = { onClaimClick(game) },
+                    isReducedMotion = reducedMotion,
+                    modifier = Modifier.graphicsLayer {
+                        if (!reducedMotion && pageOffset > 0.001f) {
+                            val scale = lerp(1f, 0.93f, pageOffset)
+                            scaleX = scale
+                            scaleY = scale
+                            alpha = lerp(1f, 0.65f, pageOffset)
+                        }
+                    }
                 )
             }
 
-            // Indicator Dots
+            // Indicator Dots with expressive spring width & bounce
             if (items.size > 1) {
                 Row(
                     modifier = Modifier
@@ -504,8 +539,8 @@ private fun HomeBestFreeGamesSection(
                     items.indices.forEach { index ->
                         val isSelected = pagerState.currentPage == index
                         val dotWidth by animateFloatAsState(
-                            targetValue = if (isSelected) 22f else 6f,
-                            animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                            targetValue = if (isSelected) 24f else 6f,
+                            animationSpec = ExpressiveMotion.spatialFast(reducedMotion),
                             label = "carousel_dot_width_$index"
                         )
                         Box(
@@ -517,7 +552,10 @@ private fun HomeBestFreeGamesSection(
                                 .background(if (isSelected) NeonGreen else Color(0xFF32384A))
                                 .clickable {
                                     coroutineScope.launch {
-                                        pagerState.animateScrollToPage(index)
+                                        pagerState.animateScrollToPage(
+                                            page = index,
+                                            animationSpec = ExpressiveMotion.spatialDefault<Float>(reducedMotion)
+                                        )
                                     }
                                 }
                         )
@@ -537,16 +575,22 @@ private fun BestFreeGameCard(
     index: Int,
     onClick: () -> Unit,
     onClaimClick: () -> Unit,
+    isReducedMotion: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val cardInteraction = remember { MutableInteractionSource() }
 
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .expressivePressScale(cardInteraction, enabled = !isReducedMotion, pressedScale = 0.97f)
             .clip(RoundedCornerShape(18.dp))
-            .clickable { onClick() }
+            .clickable(
+                interactionSource = cardInteraction,
+                indication = null
+            ) { onClick() }
             .testTag("home_top_free_card_$index"),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(

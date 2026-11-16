@@ -1,13 +1,17 @@
 package com.example.ui.calendar
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,10 +33,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.EventAvailable
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.WarningAmber
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.graphics.graphicsLayer
+import com.example.ui.theme.ExpressiveMotion
+import com.example.ui.theme.ExpressivePlacementSpec
+import com.example.ui.theme.expressivePressScale
+import com.example.ui.theme.rememberExpressiveCornerRadius
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -105,10 +116,13 @@ fun CalendarTabContent(
         ExpirationCalendarUtils.getUpcomingCalendarDays(today, daysCount = 15)
     }
 
+    val reducedMotion = !isAnimationsEnabled || isLowEndOptimization
+
     // Selected day from day-strip picker: null means "All Days in scope"
     var selectedCalendarDate by remember { mutableStateOf<LocalDate?>(null) }
     var selectedScope by remember { mutableStateOf(CalendarFilterScope.NEXT_14_DAYS) }
     var showOngoingGiveaways by remember { mutableStateOf(false) }
+    var isCalendarHeaderCompact by rememberSaveable { mutableStateOf(false) }
 
     // Map each day to the count of giveaways expiring on that day
     val dayExpiringCountMap = remember(giveaways, today) {
@@ -178,28 +192,35 @@ fun CalendarTabContent(
     ) {
         LazyColumn(
             state = listState,
-            contentPadding = PaddingValues(top = 10.dp, bottom = 100.dp),
+            contentPadding = PaddingValues(top = 6.dp, bottom = 100.dp),
             modifier = Modifier
                 .fillMaxSize()
                 .testTag("calendar_timeline_list")
         ) {
-            // Header: Calendar Expiration Summary Hero Card
+            // Header: Calendar Expiration Summary Hero Card (scrolls away cleanly AND can be tucked compactly)
             item(key = "calendar_hero_banner") {
                 CalendarHeroBanner(
                     totalExpiringCount = totalExpiringIn14Days,
                     totalValueUsd = totalValueExpiring14Days,
                     urgentCount = urgentCount,
-                    isLowEndOptimization = isLowEndOptimization
+                    isCompact = isCalendarHeaderCompact,
+                    onToggleCompact = { isCalendarHeaderCompact = !isCalendarHeaderCompact },
+                    reducedMotion = reducedMotion
                 )
             }
 
             // Interactive Horizontal Day-Strip Calendar Bar
             item(key = "calendar_day_strip") {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp)
+                AnimatedVisibility(
+                    visible = !isCalendarHeaderCompact,
+                    enter = ExpressiveMotion.expressiveExpandEnter(reducedMotion),
+                    exit = ExpressiveMotion.expressiveCollapseExit(reducedMotion)
                 ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp)
+                    ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -244,6 +265,7 @@ fun CalendarTabContent(
                                 month = "RANGE",
                                 expiringCount = totalExpiringIn14Days,
                                 isSelected = selectedCalendarDate == null,
+                                reducedMotion = reducedMotion,
                                 onClick = { selectedCalendarDate = null }
                             )
                         }
@@ -266,18 +288,24 @@ fun CalendarTabContent(
                                 expiringCount = count,
                                 isSelected = selectedCalendarDate == day,
                                 isUrgent = daysBetween <= 1L && count > 0,
+                                reducedMotion = reducedMotion,
                                 onClick = {
                                     selectedCalendarDate = if (selectedCalendarDate == day) null else day
                                 }
                             )
                         }
                     }
+                    }
                 }
             }
 
             // Scope filter chips (when viewing all upcoming days)
-            if (selectedCalendarDate == null) {
-                item(key = "calendar_scope_chips") {
+            item(key = "calendar_scope_chips") {
+                AnimatedVisibility(
+                    visible = selectedCalendarDate == null,
+                    enter = ExpressiveMotion.expressiveExpandEnter(reducedMotion),
+                    exit = ExpressiveMotion.expressiveCollapseExit(reducedMotion)
+                ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -286,6 +314,12 @@ fun CalendarTabContent(
                     ) {
                         CalendarFilterScope.values().forEach { scope ->
                             val isSelected = selectedScope == scope
+                            val chipCorner = rememberExpressiveCornerRadius(
+                                isSelected = isSelected,
+                                baseRadius = 10.dp,
+                                selectedRadius = 16.dp,
+                                enabled = !reducedMotion
+                            )
                             FilterChip(
                                 selected = isSelected,
                                 onClick = { selectedScope = scope },
@@ -304,7 +338,7 @@ fun CalendarTabContent(
                                     width = if (isSelected) 1.5.dp else 1.dp,
                                     color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                                 ),
-                                shape = RoundedCornerShape(10.dp),
+                                shape = RoundedCornerShape(chipCorner),
                                 modifier = Modifier.testTag("calendar_scope_${scope.name.lowercase()}")
                             )
                         }
@@ -367,7 +401,7 @@ fun CalendarTabContent(
                     )
                 }
             } else {
-                // Render Giveaway cards for expiring games
+                // Render Giveaway cards for expiring games with M3 Expressive placement springs
                 items(
                     items = filteredTimelineItems,
                     key = { "cal_giveaway_${it.id}" }
@@ -375,6 +409,15 @@ fun CalendarTabContent(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .then(
+                                if (!reducedMotion) {
+                                    Modifier.animateItem(
+                                        fadeInSpec = ExpressiveMotion.effectsDefault(),
+                                        placementSpec = ExpressivePlacementSpec,
+                                        fadeOutSpec = ExpressiveMotion.effectsFast()
+                                    )
+                                } else Modifier
+                            )
                             .padding(horizontal = 16.dp, vertical = 5.dp)
                     ) {
                         Column {
@@ -488,12 +531,30 @@ fun CalendarTabContent(
                                     }
                                 }
 
-                                Text(
-                                    text = if (showOngoingGiveaways) "Hide" else "Show",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
+                                val chevronRotation by animateFloatAsState(
+                                    targetValue = if (showOngoingGiveaways) 180f else 0f,
+                                    animationSpec = ExpressiveMotion.spatialFast(reducedMotion),
+                                    label = "ongoing_chevron"
                                 )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = if (showOngoingGiveaways) "Hide" else "Show",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.KeyboardArrowDown,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier
+                                            .size(18.dp)
+                                            .graphicsLayer { rotationZ = chevronRotation }
+                                    )
+                                }
                             }
                         }
                     }
@@ -507,6 +568,15 @@ fun CalendarTabContent(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .then(
+                                    if (!reducedMotion) {
+                                        Modifier.animateItem(
+                                            fadeInSpec = ExpressiveMotion.effectsDefault(),
+                                            placementSpec = ExpressivePlacementSpec,
+                                            fadeOutSpec = ExpressiveMotion.effectsFast()
+                                        )
+                                    } else Modifier
+                                )
                                 .padding(horizontal = 16.dp, vertical = 5.dp)
                         ) {
                             GiveawayCard(
@@ -538,7 +608,9 @@ private fun CalendarHeroBanner(
     totalExpiringCount: Int,
     totalValueUsd: Double,
     urgentCount: Int,
-    isLowEndOptimization: Boolean
+    isCompact: Boolean,
+    onToggleCompact: () -> Unit,
+    reducedMotion: Boolean
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary
     val secondaryColor = MaterialTheme.colorScheme.secondary
@@ -553,7 +625,14 @@ private fun CalendarHeroBanner(
         )
     }
 
+    val chevronRot by animateFloatAsState(
+        targetValue = if (isCompact) 0f else 180f,
+        animationSpec = ExpressiveMotion.spatialFast(reducedMotion),
+        label = "cal_hero_chevron"
+    )
+
     Card(
+        onClick = onToggleCompact,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -566,7 +645,7 @@ private fun CalendarHeroBanner(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(bannerBrush)
-                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .padding(horizontal = 12.dp, vertical = if (isCompact) 7.dp else 9.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -580,7 +659,7 @@ private fun CalendarHeroBanner(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(if (isCompact) 26.dp else 32.dp)
                             .clip(RoundedCornerShape(8.dp))
                             .background(primaryColor.copy(alpha = 0.22f)),
                         contentAlignment = Alignment.Center
@@ -589,7 +668,7 @@ private fun CalendarHeroBanner(
                             imageVector = Icons.Default.CalendarMonth,
                             contentDescription = null,
                             tint = primaryColor,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(if (isCompact) 15.dp else 18.dp)
                         )
                     }
 
@@ -622,29 +701,49 @@ private fun CalendarHeroBanner(
                                 }
                             }
                         }
-                        Text(
-                            text = "$totalExpiringCount game${if (totalExpiringCount != 1) "s" else ""} expiring in next 14 days",
-                            fontSize = 11.sp,
-                            color = TextSecondary
-                        )
+                        AnimatedVisibility(
+                            visible = !isCompact,
+                            enter = ExpressiveMotion.expressiveExpandEnter(reducedMotion),
+                            exit = ExpressiveMotion.expressiveCollapseExit(reducedMotion)
+                        ) {
+                            Text(
+                                text = "$totalExpiringCount game${if (totalExpiringCount != 1) "s" else ""} expiring in next 14 days",
+                                fontSize = 11.sp,
+                                color = TextSecondary
+                            )
+                        }
                     }
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // Total Value Expiring Pill
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(NeonGreen.copy(alpha = 0.15f))
-                        .border(0.8.dp, NeonGreen.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text(
-                        text = String.format(Locale.US, "$%.2f FREE", totalValueUsd),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = NeonGreen
+                    // Total Value Expiring Pill
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(NeonGreen.copy(alpha = 0.15f))
+                            .border(0.8.dp, NeonGreen.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = String.format(Locale.US, "$%.2f FREE", totalValueUsd),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = NeonGreen
+                        )
+                    }
+
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = if (isCompact) "Show calendar strip" else "Hide calendar strip",
+                        tint = primaryColor,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .graphicsLayer { rotationZ = chevronRot }
                     )
                 }
             }
@@ -663,9 +762,13 @@ private fun CalendarDayChip(
     expiringCount: Int,
     isSelected: Boolean,
     isUrgent: Boolean = false,
+    reducedMotion: Boolean = false,
     onClick: () -> Unit
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
     val borderColor by animateColorAsState(
         targetValue = when {
             isSelected -> primaryColor
@@ -673,24 +776,52 @@ private fun CalendarDayChip(
             expiringCount > 0 -> primaryColor.copy(alpha = 0.45f)
             else -> Color(0xFF2A3245)
         },
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        animationSpec = ExpressiveMotion.effectsDefault(reducedMotion),
         label = "calendar_chip_border"
     )
 
-    val containerColor = when {
-        isSelected -> primaryColor.copy(alpha = 0.22f)
-        isUrgent -> NeonAmber.copy(alpha = 0.12f)
-        else -> Color(0xFF1A1F2C)
-    }
+    val containerColor by animateColorAsState(
+        targetValue = when {
+            isSelected -> primaryColor.copy(alpha = 0.22f)
+            isUrgent -> NeonAmber.copy(alpha = 0.12f)
+            else -> Color(0xFF1A1F2C)
+        },
+        animationSpec = ExpressiveMotion.effectsDefault(reducedMotion),
+        label = "calendar_chip_container"
+    )
+
+    val chipScale by animateFloatAsState(
+        targetValue = when {
+            isPressed -> 0.91f
+            isSelected -> 1.04f
+            else -> 1f
+        },
+        animationSpec = ExpressiveMotion.spatialFast(reducedMotion),
+        label = "calendar_chip_scale"
+    )
+
+    val chipCorner = rememberExpressiveCornerRadius(
+        isSelected = isSelected,
+        isPressed = isPressed,
+        baseRadius = 12.dp,
+        selectedRadius = 17.dp,
+        pressedRadius = 20.dp,
+        enabled = !reducedMotion
+    )
 
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
+        interactionSource = interactionSource,
+        shape = RoundedCornerShape(chipCorner),
         color = containerColor,
         border = BorderStroke(if (isSelected) 1.8.dp else 1.dp, borderColor),
         modifier = Modifier
             .width(62.dp)
             .height(78.dp)
+            .graphicsLayer {
+                scaleX = chipScale
+                scaleY = chipScale
+            }
             .testTag("calendar_chip_${label.lowercase()}_$dateNumber")
     ) {
         Column(

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   LootDrop V3.3.0 - Complete Material 3 Styling
+   LootDrop V3.4.0 - Complete Material 3 Styling
    Matches Jetpack Compose Android UI with 19 Themes & Website Alerts
    ========================================================================== */
 
@@ -894,6 +894,17 @@ body.bg-light .challenge-widget-card {
 }
 
 /* Giveaway Card Component */
+@keyframes hotPickBorderPulse {
+  0%, 100% {
+    border-color: rgba(var(--color-primary-rgb), 0.45);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 12px rgba(var(--color-primary-rgb), 0.16);
+  }
+  50% {
+    border-color: rgba(var(--color-secondary-rgb), 0.85);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.42), 0 0 18px rgba(var(--color-secondary-rgb), 0.28);
+  }
+}
+
 .giveaway-card {
   background: var(--color-surface-card);
   border: 1px solid var(--color-border);
@@ -901,15 +912,45 @@ body.bg-light .challenge-widget-card {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+              border-color 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, border-color;
   position: relative;
   cursor: pointer;
 }
 
 .giveaway-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-4px) scale(1.02);
+  border-color: var(--color-primary);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.52), 0 0 18px rgba(var(--color-primary-rgb), 0.24);
+}
+
+.giveaway-card.featured {
   border-color: rgba(var(--color-primary-rgb), 0.5);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  animation: hotPickBorderPulse 3.2s ease-in-out infinite;
+}
+
+.giveaway-card.featured:hover {
+  animation-play-state: paused;
+  transform: translateY(-4px) scale(1.02);
+  border-color: var(--color-secondary);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.56), 0 0 24px rgba(var(--color-secondary-rgb), 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .giveaway-card {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .giveaway-card:hover {
+    transform: none;
+  }
+  .giveaway-card.featured {
+    animation: none;
+  }
+  .giveaway-card.featured:hover {
+    transform: none;
+  }
 }
 
 .giveaway-card-thumb-wrap {

@@ -78,6 +78,8 @@ import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
+import com.example.ui.theme.ExpressiveMotion
+import com.example.ui.theme.expressivePressScale
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.SdStorage
 import androidx.compose.material3.OutlinedTextField
@@ -93,6 +95,8 @@ fun SteamGameCard(
     onUpdateManualStorage: ((Float?) -> Unit)? = null,
     onOpenAchievements: ((SteamGameEntity) -> Unit)? = null,
     onOpenDlcs: ((SteamGameEntity) -> Unit)? = null,
+    isAnimationsEnabled: Boolean = true,
+    isLowEndOptimization: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -102,14 +106,23 @@ fun SteamGameCard(
         mutableStateOf(game.manualInstallSizeGb?.toString() ?: "")
     }
 
+    val reducedMotion = !isAnimationsEnabled || isLowEndOptimization
     val hardware = game.hardwareProfile
-    val statusColor = Color(game.playStatus.badgeColorHex)
-    val cardBorderColor = when (game.playStatus) {
-        PlayStatus.BEATEN -> NeonGreen.copy(alpha = 0.7f)
-        PlayStatus.PLAYING -> NeonCyan.copy(alpha = 0.7f)
-        PlayStatus.NOT_STARTED -> MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
-        PlayStatus.DROPPED -> Color(0xFFEF4444).copy(alpha = 0.5f)
-    }
+    val statusColor by animateColorAsState(
+        targetValue = Color(game.playStatus.badgeColorHex),
+        animationSpec = ExpressiveMotion.effectsDefault(reducedMotion),
+        label = "steam_status_color"
+    )
+    val cardBorderColor by animateColorAsState(
+        targetValue = when (game.playStatus) {
+            PlayStatus.BEATEN -> NeonGreen.copy(alpha = 0.7f)
+            PlayStatus.PLAYING -> NeonCyan.copy(alpha = 0.7f)
+            PlayStatus.NOT_STARTED -> MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+            PlayStatus.DROPPED -> Color(0xFFEF4444).copy(alpha = 0.5f)
+        },
+        animationSpec = ExpressiveMotion.effectsDefault(reducedMotion),
+        label = "steam_card_border"
+    )
 
     Card(
         modifier = modifier
@@ -487,6 +500,9 @@ fun SteamGameCard(
                 }
 
                 // Action Buttons Row: Launch Game, DLCs & Store Link
+                val playInteraction = remember { MutableInteractionSource() }
+                val dlcInteraction = remember { MutableInteractionSource() }
+                val storeInteraction = remember { MutableInteractionSource() }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -509,9 +525,11 @@ fun SteamGameCard(
                                 context.startActivity(storeIntent)
                             }
                         },
+                        interactionSource = playInteraction,
                         modifier = Modifier
                             .weight(1f)
                             .height(40.dp)
+                            .expressivePressScale(playInteraction, enabled = !reducedMotion, pressedScale = 0.94f)
                             .testTag("steam_launch_btn_${game.appId}"),
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(
@@ -537,8 +555,10 @@ fun SteamGameCard(
                     if (onOpenDlcs != null) {
                         OutlinedButton(
                             onClick = { onOpenDlcs(game) },
+                            interactionSource = dlcInteraction,
                             modifier = Modifier
                                 .height(40.dp)
+                                .expressivePressScale(dlcInteraction, enabled = !reducedMotion, pressedScale = 0.94f)
                                 .testTag("steam_dlc_btn_${game.appId}"),
                             shape = RoundedCornerShape(10.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA855F7).copy(alpha = 0.7f)),
@@ -570,8 +590,10 @@ fun SteamGameCard(
                             }
                             context.startActivity(intent)
                         },
+                        interactionSource = storeInteraction,
                         modifier = Modifier
                             .height(40.dp)
+                            .expressivePressScale(storeInteraction, enabled = !reducedMotion, pressedScale = 0.94f)
                             .testTag("steam_store_btn_${game.appId}"),
                         shape = RoundedCornerShape(10.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2A475E)),

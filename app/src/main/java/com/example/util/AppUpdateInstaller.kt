@@ -1,7 +1,10 @@
 package com.example.util
 
+import android.content.ActivityNotFoundException
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -15,13 +18,14 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.io.InputStream
 import java.util.concurrent.TimeUnit
 
 object AppUpdateInstaller {
 
     private const val TAG = "AppUpdateInstaller"
+    internal const val MIN_VALID_APK_BYTES = 50_000L
 
     // Dedicated clean unbuffered download client (independent of GamerPower HTTP cache and network interceptors)
     private val httpClient: OkHttpClient by lazy {
@@ -33,9 +37,27 @@ object AppUpdateInstaller {
             .build()
     }
 
+    internal fun isZipMagicHeader(b0: Byte, b1: Byte): Boolean {
+        return b0 == 0x50.toByte() && b1 == 0x4B.toByte()
+    }
+
+    internal fun hasValidApkFile(file: File, minBytes: Long = MIN_VALID_APK_BYTES): Boolean {
+        if (!file.exists() || file.length() < minBytes) return false
+        return try {
+            FileInputStream(file).use { input ->
+                val header = ByteArray(2)
+                val read = input.read(header)
+                read == 2 && isZipMagicHeader(header[0], header[1])
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     /**
      * Downloads an APK file inside the app, updating progress via callback.
-     * Validates headers and APK binary integrity so corrupt or HTML files are not downloaded.
+     * Downloads to a temporary file, closes all streams cleanly, and validates APK ZIP magic bytes
+     * before promoting to the final `.apk` file.
      */
     suspend fun downloadApk(
         context: Context,
@@ -43,10 +65,12 @@ object AppUpdateInstaller {
         versionTag: String,
         onProgress: (progress: Float, downloaded: Long, total: Long) -> Unit
     ): Result<File> = withContext(Dispatchers.IO) {
+        var tempFile: File? = null
         try {
             var actualUrl = downloadUrl.trim()
+            val cleanUrlPath = actualUrl.substringBefore("?").substringBefore("#")
             // If downloadUrl is a web release link, resolve the direct APK asset URL
-            if (!actualUrl.endsWith(".apk", ignoreCase = true)) {
+            if (!cleanUrlPath.endsWith(".apk", ignoreCase = true)) {
                 val resolved = GithubReleaseClient(context).resolveApkUrl(
                     GithubReleaseClient.DEFAULT_OWNER,
                     GithubReleaseClient.DEFAULT_REPO,
@@ -65,82 +89,117 @@ object AppUpdateInstaller {
                 .header("Accept", "application/octet-stream, application/vnd.android.package-archive, */*")
                 .build()
 
-            val response = httpClient.newCall(request).execute()
-            if (!response.isSuccessful) {
-                return@withContext Result.failure(Exception("HTTP error ${response.code} downloading update from GitHub"))
-            }
+            httpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@withContext Result.failure(
+                        Exception("HTTP error ${response.code} downloading update from GitHub")
+                    )
+                }
 
-            val body = response.body
-                ?: return@withContext Result.failure(Exception("Empty response body from update download"))
+                val body = response.body
+                    ?: return@withContext Result.failure(Exception("Empty response body from update download"))
 
-            val totalBytes = body.contentLength()
-            val targetDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
-                ?: File(context.cacheDir, "updates")
-            targetDir.mkdirs()
+                val totalBytes = body.contentLength()
+                val targetDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+                    ?: File(context.cacheDir, "updates")
+                targetDir.mkdirs()
 
-            val cleanTag = versionTag.replace("[^a-zA-Z0-9.-]".toRegex(), "_")
-            val targetFile = File(targetDir, "lootdrop_$cleanTag.apk")
+                val cleanTag = versionTag.replace("[^a-zA-Z0-9.-]".toRegex(), "_")
+                val targetFile = File(targetDir, "lootdrop_$cleanTag.apk")
+                val stagingFile = File(targetDir, "lootdrop_$cleanTag.apk.tmp")
+                tempFile = stagingFile
 
-            if (targetFile.exists()) {
-                targetFile.delete()
-            }
+                if (stagingFile.exists()) {
+                    stagingFile.delete()
+                }
 
-            var inputStream: InputStream? = null
-            var outputStream: FileOutputStream? = null
+                var promoted = false
+                try {
+                    body.byteStream().use { inputStream ->
+                        FileOutputStream(stagingFile).use { outputStream ->
+                            val buffer = ByteArray(32 * 1024)
+                            var bytesRead: Int
+                            var downloadedBytes = 0L
+                            var lastProgressUpdate = System.currentTimeMillis()
+                            var verifiedHeader = false
+                            var pendingFirstByte: Byte? = null
 
-            try {
-                inputStream = body.byteStream()
-                outputStream = FileOutputStream(targetFile)
+                            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                                if (bytesRead <= 0) continue
 
-                val buffer = ByteArray(32 * 1024)
-                var bytesRead: Int
-                var downloadedBytes: Long = 0
-                var lastProgressUpdate = System.currentTimeMillis()
-                var verifiedHeader = false
+                                if (!verifiedHeader) {
+                                    if (downloadedBytes == 0L && bytesRead >= 2) {
+                                        if (!isZipMagicHeader(buffer[0], buffer[1])) {
+                                            val msg = if (buffer[0] == '<'.code.toByte()) {
+                                                "Download URL returned an HTML web page instead of an APK file. Please check GitHub release assets."
+                                            } else {
+                                                "Downloaded file is not a valid Android APK package."
+                                            }
+                                            return@withContext Result.failure(Exception(msg))
+                                        }
+                                        verifiedHeader = true
+                                    } else if (downloadedBytes == 0L && bytesRead == 1) {
+                                        pendingFirstByte = buffer[0]
+                                    } else if (downloadedBytes == 1L && pendingFirstByte != null) {
+                                        val first = pendingFirstByte
+                                        if (!isZipMagicHeader(first, buffer[0])) {
+                                            val msg = if (first == '<'.code.toByte()) {
+                                                "Download URL returned an HTML web page instead of an APK file. Please check GitHub release assets."
+                                            } else {
+                                                "Downloaded file is not a valid Android APK package."
+                                            }
+                                            return@withContext Result.failure(Exception(msg))
+                                        }
+                                        verifiedHeader = true
+                                    }
+                                }
 
-                while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                    if (!verifiedHeader && bytesRead >= 4) {
-                        // Verify that file begins with ZIP magic numbers (PK\x03\x04 or PK\x05\x06)
-                        val isZip = buffer[0] == 0x50.toByte() && buffer[1] == 0x4B.toByte()
-                        if (!isZip) {
-                            if (buffer[0] == '<'.code.toByte()) {
-                                targetFile.delete()
-                                return@withContext Result.failure(
-                                    Exception("Download URL returned an HTML web page instead of an APK file. Please check GitHub release assets.")
-                                )
+                                outputStream.write(buffer, 0, bytesRead)
+                                downloadedBytes += bytesRead
+
+                                val now = System.currentTimeMillis()
+                                if (now - lastProgressUpdate >= 60 || (totalBytes > 0 && downloadedBytes == totalBytes)) {
+                                    lastProgressUpdate = now
+                                    val progress = if (totalBytes > 0) {
+                                        (downloadedBytes.toFloat() / totalBytes.toFloat()).coerceIn(0f, 1f)
+                                    } else 0f
+                                    onProgress(progress, downloadedBytes, totalBytes)
+                                }
                             }
+
+                            outputStream.flush()
+                            onProgress(1f, downloadedBytes, totalBytes)
                         }
-                        verifiedHeader = true
                     }
 
-                    outputStream.write(buffer, 0, bytesRead)
-                    downloadedBytes += bytesRead
+                    if (!hasValidApkFile(stagingFile)) {
+                        val actualLen = stagingFile.length()
+                        return@withContext Result.failure(
+                            Exception("Downloaded APK file is incomplete or corrupt ($actualLen bytes)")
+                        )
+                    }
 
-                    val now = System.currentTimeMillis()
-                    if (now - lastProgressUpdate >= 60 || downloadedBytes == totalBytes) {
-                        lastProgressUpdate = now
-                        val progress = if (totalBytes > 0) {
-                            (downloadedBytes.toFloat() / totalBytes.toFloat()).coerceIn(0f, 1f)
-                        } else 0f
-                        onProgress(progress, downloadedBytes, totalBytes)
+                    if (targetFile.exists()) {
+                        targetFile.delete()
+                    }
+                    if (!stagingFile.renameTo(targetFile)) {
+                        stagingFile.copyTo(targetFile, overwrite = true)
+                    }
+                    promoted = true
+
+                    Log.d(
+                        TAG,
+                        "Update APK successfully downloaded to: ${targetFile.absolutePath} (${targetFile.length()} bytes)"
+                    )
+                    Result.success(targetFile)
+                } finally {
+                    if (!promoted || stagingFile.exists()) {
+                        stagingFile.delete()
                     }
                 }
-
-                outputStream.flush()
-                onProgress(1f, downloadedBytes, totalBytes)
-
-                if (targetFile.length() < 50_000) {
-                    targetFile.delete()
-                    return@withContext Result.failure(Exception("Downloaded APK file is incomplete (${targetFile.length()} bytes)"))
-                }
-
-                Log.d(TAG, "Update APK successfully downloaded to: ${targetFile.absolutePath} ($downloadedBytes bytes)")
-                Result.success(targetFile)
-            } finally {
-                inputStream?.close()
-                outputStream?.close()
             }
         } catch (e: Exception) {
+            tempFile?.delete()
             Log.e(TAG, "Failed downloading update APK", e)
             Result.failure(e)
         }
@@ -151,10 +210,14 @@ object AppUpdateInstaller {
      */
     fun installApk(context: Context, apkFile: File): Boolean {
         return try {
-            if (!apkFile.exists() || apkFile.length() <= 0) {
-                Log.e(TAG, "Cannot install: APK file does not exist or is empty")
+            if (!hasValidApkFile(apkFile)) {
+                Log.e(TAG, "Cannot install: APK file is missing, incomplete, or corrupt (${apkFile.absolutePath})")
                 try {
-                    Toast.makeText(context, "APK file not found. Please download again.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        "APK file is missing or incomplete. Please download again.",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 } catch (_: Exception) {}
                 return false
             }
@@ -172,7 +235,7 @@ object AppUpdateInstaller {
                         context.startActivity(manageUnknownSourcesIntent)
                         Toast.makeText(
                             context,
-                            "Allow LootDrop to install unknown apps, then tap Install Update again.",
+                            "Allow LootDrop to install unknown apps — installation will resume automatically when you return.",
                             Toast.LENGTH_LONG
                         ).show()
                     } catch (e: Exception) {
@@ -195,6 +258,7 @@ object AppUpdateInstaller {
 
             val installIntent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(apkUri, "application/vnd.android.package-archive")
+                clipData = ClipData.newRawUri("LootDrop Update APK", apkUri)
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
                 putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true)
             }
@@ -203,7 +267,7 @@ object AppUpdateInstaller {
             try {
                 val resolvedActivities = context.packageManager.queryIntentActivities(
                     installIntent,
-                    android.content.pm.PackageManager.MATCH_DEFAULT_ONLY
+                    PackageManager.MATCH_DEFAULT_ONLY
                 )
                 for (resolveInfo in resolvedActivities) {
                     val packageName = resolveInfo.activityInfo.packageName
@@ -213,6 +277,12 @@ object AppUpdateInstaller {
 
             context.startActivity(installIntent)
             true
+        } catch (e: ActivityNotFoundException) {
+            Log.e(TAG, "No package installer activity available", e)
+            try {
+                Toast.makeText(context, "No package installer found on this device.", Toast.LENGTH_SHORT).show()
+            } catch (_: Exception) {}
+            false
         } catch (e: Exception) {
             Log.e(TAG, "Failed to launch package installer", e)
             try {

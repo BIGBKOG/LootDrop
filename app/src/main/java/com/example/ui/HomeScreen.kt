@@ -24,8 +24,18 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.util.lerp
 import androidx.compose.foundation.layout.offset
+import com.example.ui.theme.ExpressiveMotion
+import com.example.ui.theme.ExpressivePlacementSpec
+import com.example.ui.theme.collapsibleHeaderLayout
+import com.example.ui.theme.rememberCollapsibleHeaderNestedScrollConnection
+import com.example.ui.theme.rememberCollapsibleHeaderState
+import kotlin.math.absoluteValue
 import com.example.ui.components.OnboardingWalkthroughDialog
 import com.example.ui.components.ProfileAvatarCircle
 import com.example.ui.components.ProfileDialog
@@ -284,8 +294,48 @@ fun HomeScreen(
     val discoverListState = rememberLazyListState()
     val claimedListState = rememberLazyListState()
     val calendarListState = rememberLazyListState()
+    val trophyListState = rememberLazyListState()
     val discoverGridState = rememberLazyGridState()
     val claimedGridState = rememberLazyGridState()
+    val settingsScrollState = rememberScrollState()
+
+    val reducedMotion = !isAnimationsEnabled || isLowEndOptimization
+    val collapsibleHeaderState = rememberCollapsibleHeaderState(reducedMotion = reducedMotion)
+
+    val currentTab = tabs[pagerState.currentPage]
+    val canCollapseCurrentTab = when (currentTab) {
+        MainTab.HOME -> homeListState.canScrollForward || homeListState.canScrollBackward
+        MainTab.DISCOVER -> if (screenDensityInfo.gridColumns > 1) {
+            discoverGridState.canScrollForward || discoverGridState.canScrollBackward
+        } else {
+            discoverListState.canScrollForward || discoverListState.canScrollBackward
+        }
+        MainTab.CALENDAR -> calendarListState.canScrollForward || calendarListState.canScrollBackward
+        MainTab.CLAIMED -> {
+            if (libraryViewMode == LibraryViewMode.ACHIEVEMENTS) {
+                trophyListState.canScrollForward || trophyListState.canScrollBackward
+            } else if (screenDensityInfo.gridColumns > 1) {
+                claimedGridState.canScrollForward || claimedGridState.canScrollBackward
+            } else {
+                claimedListState.canScrollForward || claimedListState.canScrollBackward
+            }
+        }
+        MainTab.SETTINGS -> settingsScrollState.maxValue > 0
+    }
+
+    LaunchedEffect(currentTab, isSearchExpanded) {
+        collapsibleHeaderState.expandAnimated()
+    }
+    LaunchedEffect(canCollapseCurrentTab) {
+        if (!canCollapseCurrentTab) {
+            collapsibleHeaderState.expandAnimated()
+        }
+    }
+
+    val collapsibleTopBarConnection = rememberCollapsibleHeaderNestedScrollConnection(
+        state = collapsibleHeaderState,
+        canCollapseProvider = { !isSearchExpanded && canCollapseCurrentTab }
+    )
 
     BackHandler(enabled = selectedTab != MainTab.HOME) {
         viewModel.selectTab(MainTab.HOME)
@@ -318,175 +368,147 @@ fun HomeScreen(
             }
         }
     ) { innerPadding ->
-        val currentTab = tabs[pagerState.currentPage]
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .nestedScroll(collapsibleTopBarConnection)
         ) {
-                    // Top App Bar Header: Branding on Left + Floating Pill Bar on Right
-                    Row(
+                    // Collapsible Top Chrome (Top App Bar + Reopen Banner) that slides up on scroll
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .statusBarsPadding()
-                            .padding(horizontal = 16.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                            .collapsibleHeaderLayout(collapsibleHeaderState)
                     ) {
+                        // Top App Bar Header: Branding on Left + Floating Pill Bar on Right
                         Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .statusBarsPadding()
+                                .padding(horizontal = 16.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.weight(1f, fill = false)
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            if (currentTab == MainTab.HOME) {
-                                ProfileAvatarCircle(
-                                    profile = userProfile,
-                                    size = 36.dp,
-                                    onClick = { showProfileDialog = true }
-                                )
-                            } else {
-                                Image(
-                                    painter = painterResource(id = R.drawable.ic_app_logo),
-                                    contentDescription = "LootDrop Logo",
-                                    modifier = Modifier
-                                        .size(34.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                )
-                            }
-                            Column {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = "Loot",
-                                        fontSize = 19.sp,
-                                        fontWeight = FontWeight.Black,
-                                        color = TextPrimary
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.weight(1f, fill = false)
+                            ) {
+                                if (currentTab == MainTab.HOME) {
+                                    ProfileAvatarCircle(
+                                        profile = userProfile,
+                                        size = 36.dp,
+                                        onClick = { showProfileDialog = true }
                                     )
-                                    Text(
-                                        text = "Drop",
-                                        fontSize = 19.sp,
-                                        fontWeight = FontWeight.Black,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                    Spacer(modifier = Modifier.width(5.dp))
-                                    Box(
+                                } else {
+                                    Image(
+                                        painter = painterResource(id = R.drawable.ic_app_logo),
+                                        contentDescription = "LootDrop Logo",
                                         modifier = Modifier
-                                            .clip(RoundedCornerShape(4.dp))
-                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
-                                            .padding(horizontal = 5.dp, vertical = 1.5.dp)
-                                    ) {
+                                            .size(34.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                    )
+                                }
+                                Column {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(
-                                            text = when (currentTab) {
-                                                MainTab.HOME -> "HOME"
-                                                MainTab.SETTINGS -> "SETTINGS"
-                                                MainTab.CALENDAR -> "CALENDAR"
-                                                MainTab.CLAIMED -> "VAULT"
-                                                MainTab.DISCOVER -> "RADAR"
-                                            },
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.ExtraBold,
+                                            text = "Loot",
+                                            fontSize = 19.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = TextPrimary
+                                        )
+                                        Text(
+                                            text = "Drop",
+                                            fontSize = 19.sp,
+                                            fontWeight = FontWeight.Black,
                                             color = MaterialTheme.colorScheme.primary
+                                        )
+                                        Spacer(modifier = Modifier.width(5.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                                                .padding(horizontal = 5.dp, vertical = 1.5.dp)
+                                        ) {
+                                            AnimatedContent(
+                                                targetState = when (currentTab) {
+                                                    MainTab.HOME -> "HOME"
+                                                    MainTab.SETTINGS -> "SETTINGS"
+                                                    MainTab.CALENDAR -> "CALENDAR"
+                                                    MainTab.CLAIMED -> "VAULT"
+                                                    MainTab.DISCOVER -> "RADAR"
+                                                },
+                                                transitionSpec = { ExpressiveMotion.popNumberTransform(reducedMotion) },
+                                                label = "top_tab_badge"
+                                            ) { tabBadgeText ->
+                                                Text(
+                                                    text = tabBadgeText,
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        }
+                                    }
+                                    AnimatedContent(
+                                        targetState = when (currentTab) {
+                                            MainTab.HOME -> if (userProfile.name.isNotBlank()) "WELCOME, ${userProfile.name.uppercase()}" else "RECENT ACTIVITY & TOP PICKS"
+                                            MainTab.SETTINGS -> "APP PREFERENCES & CONTROLS"
+                                            MainTab.CALENDAR -> "EXPIRATION RADAR & TIMELINE"
+                                            MainTab.CLAIMED -> "MY CLAIMED GAME VAULT"
+                                            MainTab.DISCOVER -> "PC & CONSOLE FREE RADAR"
+                                        },
+                                        transitionSpec = { ExpressiveMotion.popNumberTransform(reducedMotion) },
+                                        label = "top_tab_subtitle"
+                                    ) { subtitleText ->
+                                        Text(
+                                            text = subtitleText,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (currentTab == MainTab.SETTINGS || currentTab == MainTab.CALENDAR) MaterialTheme.colorScheme.primary else NeonGreen,
+                                            letterSpacing = 0.8.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
                                 }
-                                Text(
-                                    text = when (currentTab) {
-                                        MainTab.HOME -> if (userProfile.name.isNotBlank()) "WELCOME, ${userProfile.name.uppercase()}" else "RECENT ACTIVITY & TOP PICKS"
-                                        MainTab.SETTINGS -> "APP PREFERENCES & CONTROLS"
-                                        MainTab.CALENDAR -> "EXPIRATION RADAR & TIMELINE"
-                                        MainTab.CLAIMED -> "MY CLAIMED GAME VAULT"
-                                        MainTab.DISCOVER -> "PC & CONSOLE FREE RADAR"
-                                    },
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (currentTab == MainTab.SETTINGS || currentTab == MainTab.CALENDAR) MaterialTheme.colorScheme.primary else NeonGreen,
-                                    letterSpacing = 0.8.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
                             }
+
+                            // Floating Pill Bar in Top Right Corner (Search, Filters, Notifications)
+                            ExpressiveTopActionBar(
+                                isSearchExpanded = isSearchExpanded && currentTab != MainTab.SETTINGS && currentTab != MainTab.HOME,
+                                searchQuery = searchQuery,
+                                onToggleSearch = {
+                                    if (currentTab == MainTab.SETTINGS || currentTab == MainTab.HOME) {
+                                        viewModel.selectTab(MainTab.DISCOVER)
+                                        isSearchExpanded = true
+                                    } else {
+                                        isSearchExpanded = !isSearchExpanded
+                                    }
+                                },
+                                activeFilterCount = activeFilterCount,
+                                onFilterClick = {
+                                    if (currentTab == MainTab.SETTINGS || currentTab == MainTab.HOME) {
+                                        viewModel.selectTab(MainTab.DISCOVER)
+                                    }
+                                    viewModel.setFilterSheetOpen(true)
+                                },
+                                unreadNotificationCount = unreadNotificationCount,
+                                onNotificationClick = {
+                                    viewModel.setNotificationHistorySheetOpen(true)
+                                },
+                                isAnimationsEnabled = isAnimationsEnabled,
+                                isLowEndOptimization = isLowEndOptimization
+                            )
                         }
 
-                        // Floating Pill Bar in Top Right Corner (Search, Filters, Notifications)
-                        ExpressiveTopActionBar(
-                            isSearchExpanded = isSearchExpanded && currentTab != MainTab.SETTINGS && currentTab != MainTab.HOME,
-                            searchQuery = searchQuery,
-                            onToggleSearch = {
-                                if (currentTab == MainTab.SETTINGS || currentTab == MainTab.HOME) {
-                                    viewModel.selectTab(MainTab.DISCOVER)
-                                    isSearchExpanded = true
-                                } else {
-                                    isSearchExpanded = !isSearchExpanded
-                                }
-                            },
-                            activeFilterCount = activeFilterCount,
-                            onFilterClick = {
-                                if (currentTab == MainTab.SETTINGS || currentTab == MainTab.HOME) {
-                                    viewModel.selectTab(MainTab.DISCOVER)
-                                }
-                                viewModel.setFilterSheetOpen(true)
-                            },
-                            unreadNotificationCount = unreadNotificationCount,
-                            onNotificationClick = {
-                                viewModel.setNotificationHistorySheetOpen(true)
-                            },
-                            isAnimationsEnabled = isAnimationsEnabled,
-                            isLowEndOptimization = isLowEndOptimization
-                        )
-                    }
-
-                    // Expandable Search Bar with fluid spring animation
-                    AnimatedVisibility(
-                        visible = isSearchExpanded && currentTab != MainTab.SETTINGS,
-                        enter = fadeIn(tween(200)) + expandVertically(
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioLowBouncy,
-                                stiffness = Spring.StiffnessMediumLow
-                            )
-                        ),
-                        exit = fadeOut(tween(160)) + shrinkVertically(
-                            animationSpec = tween(180, easing = FastOutSlowInEasing)
-                        )
-                    ) {
-                        Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 6.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = searchQuery,
-                            onValueChange = { viewModel.updateSearchQuery(it) },
-                            placeholder = { Text("Search by game name, store, genre...", color = TextMuted) },
-                            singleLine = true,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("search_text_input"),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                                focusedTextColor = TextPrimary,
-                                unfocusedTextColor = TextPrimary,
-                                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                            ),
-                            trailingIcon = {
-                                if (searchQuery.isNotEmpty()) {
-                                    IconButton(onClick = { viewModel.updateSearchQuery("") }) {
-                                        Icon(Icons.Default.Close, contentDescription = "Clear", tint = TextMuted)
-                                    }
-                                }
-                            }
-                        )
-                    }
-                }
-
-                // Reopen Auto-Check Notification Banner
-                AnimatedVisibility(
-                    visible = reopenStatusMessage != null && currentTab != MainTab.SETTINGS,
-                    enter = fadeIn() + expandVertically(),
-                    exit = fadeOut() + shrinkVertically()
-                ) {
-                    reopenStatusMessage?.let { msg ->
+                        // Reopen Auto-Check Notification Banner
+                        AnimatedVisibility(
+                            visible = reopenStatusMessage != null && currentTab != MainTab.SETTINGS,
+                            enter = ExpressiveMotion.expressiveExpandEnter(reducedMotion),
+                            exit = ExpressiveMotion.expressiveCollapseExit(reducedMotion)
+                        ) {
+                            reopenStatusMessage?.let { msg ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -562,11 +584,49 @@ fun HomeScreen(
                             }
                         }
                     }
-                }
+                    }
+                    }
 
+                    // Expandable Search Bar (pinned visible whenever actively searching)
+                    AnimatedVisibility(
+                        visible = isSearchExpanded && currentTab != MainTab.SETTINGS,
+                        enter = ExpressiveMotion.expressiveExpandEnter(reducedMotion),
+                        exit = ExpressiveMotion.expressiveCollapseExit(reducedMotion)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = searchQuery,
+                                onValueChange = { viewModel.updateSearchQuery(it) },
+                                placeholder = { Text("Search by game name, store, genre...", color = TextMuted) },
+                                singleLine = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("search_text_input"),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                    focusedTextColor = TextPrimary,
+                                    unfocusedTextColor = TextPrimary,
+                                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                                ),
+                                trailingIcon = {
+                                    if (searchQuery.isNotEmpty()) {
+                                        IconButton(onClick = { viewModel.updateSearchQuery("") }) {
+                                            Icon(Icons.Default.Close, contentDescription = "Clear", tint = TextMuted)
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    }
 
-
-            // HorizontalPager allowing fluid swiping right and left between all tabs
+            // HorizontalPager allowing fluid swiping right and left between all tabs with M3 Expressive page depth
             HorizontalPager(
                 state = pagerState,
                 beyondViewportPageCount = if (isLowEndOptimization) 0 else 1,
@@ -575,6 +635,21 @@ fun HomeScreen(
                     .weight(1f)
                     .testTag("main_horizontal_pager")
             ) { page ->
+                val pageOffset = ((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction)
+                    .absoluteValue.coerceIn(0f, 1f)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            if (!reducedMotion && pageOffset > 0.001f) {
+                                val pageScale = lerp(1f, 0.95f, pageOffset)
+                                scaleX = pageScale
+                                scaleY = pageScale
+                                alpha = lerp(1f, 0.72f, pageOffset)
+                                translationY = lerp(0f, 14f, pageOffset)
+                            }
+                        }
+                ) {
                 when (tabs[page]) {
                     MainTab.HOME -> {
                         com.example.ui.home.HomeTabContent(
@@ -738,7 +813,8 @@ fun HomeScreen(
                             },
                             onOpenGameDlcs = { game ->
                                 viewModel.openGameDlcExplorer(game)
-                            }
+                            },
+                            trophyListState = trophyListState
                         )
                     }
                     MainTab.CALENDAR -> {
@@ -771,9 +847,11 @@ fun HomeScreen(
                     MainTab.SETTINGS -> {
                         SettingsScreen(
                             viewModel = viewModel,
+                            scrollState = settingsScrollState,
                             modifier = Modifier.fillMaxSize()
                         )
                     }
+                }
                 }
             }
         }
@@ -1262,6 +1340,7 @@ fun GiveawaysTabContent(
     dlcRecommendationsCount: Int = 0,
     onOpenDlcHub: (() -> Unit)? = null,
     onOpenGameDlcs: ((SteamGameEntity) -> Unit)? = null,
+    trophyListState: LazyListState = rememberLazyListState(),
     modifier: Modifier = Modifier
 ) {
     val isAllPaidMode = tab == MainTab.CLAIMED && libraryViewMode == LibraryViewMode.ALL_PAID
@@ -1302,8 +1381,34 @@ fun GiveawaysTabContent(
         }
     }
 
+    val reducedMotion = !isAnimationsEnabled || isLowEndOptimization
     val isListEmpty = if (isAllPaidMode) allPaidCombinedItems.isEmpty() else giveaways.isEmpty()
     val showLibraryTopMenusInline = tab == MainTab.CLAIMED && !isListEmpty
+    val showDiscoverTopHeaderInline = tab == MainTab.DISCOVER && !isListEmpty
+
+    val discoverTopHeaderContent: @Composable () -> Unit = {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            StatsBanner(
+                stats = uiStats,
+                isRefreshing = isLoading,
+                onRefresh = onRefresh,
+                isNewTodayDismissed = isNewTodayDismissed,
+                onDismissNewToday = onDismissNewToday,
+                onNewTodayClick = onNewTodayClick,
+                isAnimationsEnabled = isAnimationsEnabled && !isLowEndOptimization
+            )
+            if (activeFilterCount > 0) {
+                ActiveFiltersSummaryPill(
+                    selectedLaunchers = selectedLaunchers,
+                    selectedTypeFilter = selectedTypeFilter,
+                    selectedCategories = selectedCategories,
+                    selectedSort = selectedSort,
+                    onOpenFilterSheet = onOpenFilterSheet,
+                    onResetFilters = onResetFilters
+                )
+            }
+        }
+    }
 
     val libraryTopMenusContent: @Composable () -> Unit = {
         InLibraryTopMenus(
@@ -1340,28 +1445,9 @@ fun GiveawaysTabContent(
     }
 
     Column(modifier = modifier.fillMaxSize()) {
-        // Stats Banner on Discover
-        if (tab == MainTab.DISCOVER) {
-            StatsBanner(
-                stats = uiStats,
-                isRefreshing = isLoading,
-                onRefresh = onRefresh,
-                isNewTodayDismissed = isNewTodayDismissed,
-                onDismissNewToday = onDismissNewToday,
-                onNewTodayClick = onNewTodayClick,
-                isAnimationsEnabled = isAnimationsEnabled && !isLowEndOptimization
-            )
-            // Active Filters Summary Pill on Discover (if any non-defaults are selected)
-            if (activeFilterCount > 0) {
-                ActiveFiltersSummaryPill(
-                    selectedLaunchers = selectedLaunchers,
-                    selectedTypeFilter = selectedTypeFilter,
-                    selectedCategories = selectedCategories,
-                    selectedSort = selectedSort,
-                    onOpenFilterSheet = onOpenFilterSheet,
-                    onResetFilters = onResetFilters
-                )
-            }
+        // On Discover: Only pin StatsBanner statically when list is empty/loading; otherwise scroll it inline so TOTAL FREE VALUE slides up!
+        if (tab == MainTab.DISCOVER && !showDiscoverTopHeaderInline) {
+            discoverTopHeaderContent()
         }
 
         // On In Library: When list is empty, display the top menus statically so the user can interact with filters/sync
@@ -1382,6 +1468,9 @@ fun GiveawaysTabContent(
                 topHeader = if (showLibraryTopMenusInline) {
                     { libraryTopMenusContent() }
                 } else null,
+                listState = trophyListState,
+                isAnimationsEnabled = isAnimationsEnabled,
+                isLowEndOptimization = isLowEndOptimization,
                 modifier = Modifier.fillMaxSize()
             )
         } else {
@@ -1609,7 +1698,13 @@ fun GiveawaysTabContent(
                                             onUpdateManualStorage = { sizeGb -> onSteamManualStorageChange?.invoke(item.game, sizeGb) },
                                             onOpenAchievements = { onOpenAchievements?.invoke(item.game) },
                                             onOpenDlcs = onOpenGameDlcs,
-                                            modifier = if (isAnimationsEnabled && !isLowEndOptimization) Modifier.animateItem() else Modifier
+                                            isAnimationsEnabled = isAnimationsEnabled,
+                                            isLowEndOptimization = isLowEndOptimization,
+                                            modifier = if (!reducedMotion) Modifier.animateItem(
+                                                fadeInSpec = ExpressiveMotion.effectsDefault(),
+                                                placementSpec = ExpressivePlacementSpec,
+                                                fadeOutSpec = ExpressiveMotion.effectsFast()
+                                            ) else Modifier
                                         )
                                     }
                                     is UnifiedLibraryItem.Vault -> {
@@ -1626,7 +1721,11 @@ fun GiveawaysTabContent(
                                             isAnimationsEnabled = isAnimationsEnabled,
                                             isLowEndOptimization = isLowEndOptimization,
                                             beamAngle = beamAngle,
-                                            modifier = if (isAnimationsEnabled && !isLowEndOptimization) Modifier.animateItem() else Modifier
+                                            modifier = if (!reducedMotion) Modifier.animateItem(
+                                                fadeInSpec = ExpressiveMotion.effectsDefault(),
+                                                placementSpec = ExpressivePlacementSpec,
+                                                fadeOutSpec = ExpressiveMotion.effectsFast()
+                                            ) else Modifier
                                         )
                                     }
                                 }
@@ -1660,7 +1759,13 @@ fun GiveawaysTabContent(
                                             onUpdateManualStorage = { sizeGb -> onSteamManualStorageChange?.invoke(item.game, sizeGb) },
                                             onOpenAchievements = { onOpenAchievements?.invoke(item.game) },
                                             onOpenDlcs = onOpenGameDlcs,
-                                            modifier = if (isAnimationsEnabled && !isLowEndOptimization) Modifier.animateItem() else Modifier
+                                            isAnimationsEnabled = isAnimationsEnabled,
+                                            isLowEndOptimization = isLowEndOptimization,
+                                            modifier = if (!reducedMotion) Modifier.animateItem(
+                                                fadeInSpec = ExpressiveMotion.effectsDefault(),
+                                                placementSpec = ExpressivePlacementSpec,
+                                                fadeOutSpec = ExpressiveMotion.effectsFast()
+                                            ) else Modifier
                                         )
                                     }
                                     is UnifiedLibraryItem.Vault -> {
@@ -1677,7 +1782,11 @@ fun GiveawaysTabContent(
                                             isAnimationsEnabled = isAnimationsEnabled,
                                             isLowEndOptimization = isLowEndOptimization,
                                             beamAngle = beamAngle,
-                                            modifier = if (isAnimationsEnabled && !isLowEndOptimization) Modifier.animateItem() else Modifier
+                                            modifier = if (!reducedMotion) Modifier.animateItem(
+                                                fadeInSpec = ExpressiveMotion.effectsDefault(),
+                                                placementSpec = ExpressivePlacementSpec,
+                                                fadeOutSpec = ExpressiveMotion.effectsFast()
+                                            ) else Modifier
                                         )
                                     }
                                 }
@@ -1701,6 +1810,11 @@ fun GiveawaysTabContent(
                             horizontalArrangement = Arrangement.spacedBy(screenDensityInfo.adaptiveCardSpacing),
                             verticalArrangement = Arrangement.spacedBy(screenDensityInfo.adaptiveCardSpacing)
                         ) {
+                            if (showDiscoverTopHeaderInline) {
+                                item(key = "discover_top_header", span = { GridItemSpan(maxLineSpan) }) {
+                                    discoverTopHeaderContent()
+                                }
+                            }
                             if (showLibraryTopMenusInline) {
                                 item(key = "in_library_top_menus", span = { GridItemSpan(maxLineSpan) }) {
                                     libraryTopMenusContent()
@@ -1720,7 +1834,11 @@ fun GiveawaysTabContent(
                                     isAnimationsEnabled = isAnimationsEnabled,
                                     isLowEndOptimization = isLowEndOptimization,
                                     beamAngle = beamAngle,
-                                    modifier = if (isAnimationsEnabled && !isLowEndOptimization) Modifier.animateItem() else Modifier
+                                    modifier = if (!reducedMotion) Modifier.animateItem(
+                                        fadeInSpec = ExpressiveMotion.effectsDefault(),
+                                        placementSpec = ExpressivePlacementSpec,
+                                        fadeOutSpec = ExpressiveMotion.effectsFast()
+                                    ) else Modifier
                                 )
                             }
                         }
@@ -1744,6 +1862,11 @@ fun GiveawaysTabContent(
                                 }
                             )
                         ) {
+                            if (showDiscoverTopHeaderInline) {
+                                item(key = "discover_top_header") {
+                                    discoverTopHeaderContent()
+                                }
+                            }
                             if (showLibraryTopMenusInline) {
                                 item(key = "in_library_top_menus") {
                                     libraryTopMenusContent()
@@ -1763,7 +1886,11 @@ fun GiveawaysTabContent(
                                     isAnimationsEnabled = isAnimationsEnabled,
                                     isLowEndOptimization = isLowEndOptimization,
                                     beamAngle = beamAngle,
-                                    modifier = if (isAnimationsEnabled && !isLowEndOptimization) Modifier.animateItem() else Modifier
+                                    modifier = if (!reducedMotion) Modifier.animateItem(
+                                        fadeInSpec = ExpressiveMotion.effectsDefault(),
+                                        placementSpec = ExpressivePlacementSpec,
+                                        fadeOutSpec = ExpressiveMotion.effectsFast()
+                                    ) else Modifier
                                 )
                             }
                         }
@@ -2001,25 +2128,77 @@ private fun InLibraryTopMenus(
     onOpenDlcHub: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val reducedMotion = !isAnimationsEnabled || isLowEndOptimization
+    var isCompactHeader by rememberSaveable { mutableStateOf(false) }
+
     Column(modifier = modifier.fillMaxWidth()) {
-        // Total Money Saved Banner on In Library
-        if (libraryViewMode != LibraryViewMode.ACHIEVEMENTS) {
-            val totalStorage = if (libraryViewMode == LibraryViewMode.ALL_PAID) {
-                uiStats.steamTotalStorageGb + uiStats.claimedTotalStorageGb
-            } else {
-                uiStats.claimedTotalStorageGb
-            }
-            val totalCount = if (libraryViewMode == LibraryViewMode.ALL_PAID) {
-                uiStats.steamTotalCount + uiStats.claimedCount
-            } else {
-                uiStats.claimedCount
-            }
+        val totalStorage = if (libraryViewMode == LibraryViewMode.ALL_PAID) {
+            uiStats.steamTotalStorageGb + uiStats.claimedTotalStorageGb
+        } else {
+            uiStats.claimedTotalStorageGb
+        }
+        val totalCount = if (libraryViewMode == LibraryViewMode.ALL_PAID) {
+            uiStats.steamTotalCount + uiStats.claimedCount
+        } else {
+            uiStats.claimedCount
+        }
+
+        // Total Money Saved Banner on In Library (scrolls inline AND collapses on compact toggle)
+        AnimatedVisibility(
+            visible = libraryViewMode != LibraryViewMode.ACHIEVEMENTS && !isCompactHeader,
+            enter = ExpressiveMotion.expressiveExpandEnter(reducedMotion),
+            exit = ExpressiveMotion.expressiveCollapseExit(reducedMotion)
+        ) {
             ClaimedSavingsBanner(
                 savingsUsd = uiStats.claimedTotalSavedUsd,
                 claimedCount = totalCount,
                 totalStorageGb = totalStorage,
-                isAnimationsEnabled = isAnimationsEnabled && !isLowEndOptimization
+                isAnimationsEnabled = !reducedMotion
             )
+        }
+
+        // Ultra-slim summary pill when banners are tucked away
+        AnimatedVisibility(
+            visible = libraryViewMode != LibraryViewMode.ACHIEVEMENTS && isCompactHeader,
+            enter = ExpressiveMotion.expressiveExpandEnter(reducedMotion),
+            exit = ExpressiveMotion.expressiveCollapseExit(reducedMotion)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFF0E291A))
+                    .border(1.dp, NeonGreen.copy(alpha = 0.45f), RoundedCornerShape(10.dp))
+                    .clickable { isCompactHeader = false }
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Savings,
+                        contentDescription = null,
+                        tint = NeonGreen,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        text = "${String.format(Locale.US, "$%.2f", uiStats.claimedTotalSavedUsd)} Saved • $totalCount games",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = NeonGreen
+                    )
+                }
+                Text(
+                    text = "Expand",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextSecondary
+                )
+            }
         }
 
         // Interactive Library Play Filter Chips & Steam Game Tracker
@@ -2043,7 +2222,11 @@ private fun InLibraryTopMenus(
             dlcRecommendationsCount = dlcRecommendationsCount,
             onOpenDlcHub = onOpenDlcHub,
             onRollRandomBacklog = onRollRandomBacklog,
-            onOpenBacklogChallenge = onOpenBacklogChallenge
+            onOpenBacklogChallenge = onOpenBacklogChallenge,
+            isAnimationsEnabled = isAnimationsEnabled,
+            isLowEndOptimization = isLowEndOptimization,
+            isCompactHeader = isCompactHeader,
+            onToggleCompactHeader = { isCompactHeader = !isCompactHeader }
         )
 
         // Active Filters Summary Pill (if any non-defaults are selected in Vault / All Paid)

@@ -2340,13 +2340,13 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     )
 
     fun checkOwnership(item: GiveawayItem): OwnershipStatus {
-        val inVault = item.isClaimed || (item.playStatus != null && item.playStatus != PlayStatus.NOT_STARTED)
+        val inVault = item.isClaimed || item.playStatus != PlayStatus.NOT_STARTED
         val steamGamesList = allSteamGames.value
         val matchedSteam = if (steamGamesList.isNotEmpty()) {
             // Check direct steamAppId, extract from URL, or normalize title matching
             steamGamesList.firstOrNull { steamGame ->
                 (item.steamAppId != null && item.steamAppId > 0 && item.steamAppId == steamGame.appId) ||
-                (SteamApiClient.extractSteamAppId(item.openGiveawayUrl ?: "") == steamGame.appId) ||
+                (SteamApiClient.extractSteamAppId(item.openGiveawayUrl) == steamGame.appId) ||
                 item.availableLaunchers.any { SteamApiClient.extractSteamAppId(it.url) == steamGame.appId } ||
                 SteamApiClient.normalizeGameTitle(item.title).let { normItem ->
                     normItem.length >= 3 && SteamApiClient.normalizeGameTitle(steamGame.name) == normItem
@@ -2419,10 +2419,10 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
             }
         }
         val url = targetUrl ?: item.openGiveawayUrl
-        if (_isUseInAppBrowser.value && !url.isNullOrBlank()) {
+        if (_isUseInAppBrowser.value && url.isNotBlank()) {
             openInAppBrowser(url, item.title)
         } else {
-            launchExternalBrowser(context, url ?: "")
+            launchExternalBrowser(context, url)
         }
     }
 

@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -10,6 +11,13 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
+import com.example.ui.theme.ExpressiveMotion
+import com.example.ui.theme.rememberExpressiveCornerRadius
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -198,17 +206,23 @@ private fun TopCornerActionItem(
     val isPressed by interactionSource.collectIsPressedAsState()
 
     val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.88f else 1.0f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMediumLow
-        ),
+        targetValue = if (isPressed) 0.86f else 1.0f,
+        animationSpec = ExpressiveMotion.spatialFast(reducedMotion = isLowEndOptimization),
         label = "corner_item_press_$testTag"
+    )
+
+    val morphedCorner = rememberExpressiveCornerRadius(
+        isSelected = isActive,
+        isPressed = isPressed,
+        baseRadius = 18.dp,
+        selectedRadius = 14.dp,
+        pressedRadius = 11.dp,
+        enabled = !isLowEndOptimization
     )
 
     val contentColor by animateColorAsState(
         targetValue = if (isActive) activeColor else Color(0xFFCAD0DD),
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        animationSpec = ExpressiveMotion.effectsDefault(reducedMotion = isLowEndOptimization),
         label = "corner_item_color_$testTag"
     )
 
@@ -230,14 +244,14 @@ private fun TopCornerActionItem(
                 scaleX = pressScale
                 scaleY = pressScale
             }
-            .clip(RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(morphedCorner))
             .background(activeBackground)
             .then(
                 if (isActive) {
                     Modifier.border(
                         width = 1.dp,
                         color = activeColor.copy(alpha = 0.45f),
-                        shape = RoundedCornerShape(18.dp)
+                        shape = RoundedCornerShape(morphedCorner)
                     )
                 } else Modifier
             )
@@ -250,16 +264,29 @@ private fun TopCornerActionItem(
         contentAlignment = Alignment.Center
     ) {
         Box {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = contentColor,
-                modifier = Modifier
-                    .size(20.dp)
-                    .graphicsLayer {
-                        rotationZ = iconRotation
+            AnimatedContent(
+                targetState = icon,
+                transitionSpec = {
+                    if (isLowEndOptimization) {
+                        fadeIn(tween(100)) togetherWith fadeOut(tween(80))
+                    } else {
+                        (fadeIn(ExpressiveMotion.effectsFast()) + scaleIn(initialScale = 0.7f, animationSpec = ExpressiveMotion.spatialFast()))
+                            .togetherWith(fadeOut(ExpressiveMotion.effectsFast()) + scaleOut(targetScale = 0.7f))
                     }
-            )
+                },
+                label = "corner_icon_swap_$testTag"
+            ) { currentIcon ->
+                Icon(
+                    imageVector = currentIcon,
+                    contentDescription = contentDescription,
+                    tint = contentColor,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .graphicsLayer {
+                            rotationZ = iconRotation
+                        }
+                )
+            }
 
             // Optional dot indicator (e.g. active search query)
             if (hasDotIndicator) {
@@ -287,12 +314,18 @@ private fun TopCornerActionItem(
                         .padding(horizontal = 4.dp, vertical = 0.5.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = if (badgeCount > 99) "99+" else badgeCount.toString(),
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color(0xFF0B0F19)
-                    )
+                    AnimatedContent(
+                        targetState = if (badgeCount > 99) "99+" else badgeCount.toString(),
+                        transitionSpec = { ExpressiveMotion.popNumberTransform(isLowEndOptimization) },
+                        label = "corner_badge_$testTag"
+                    ) { badgeText ->
+                        Text(
+                            text = badgeText,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFF0B0F19)
+                        )
+                    }
                 }
             }
         }

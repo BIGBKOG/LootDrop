@@ -1,8 +1,14 @@
 package com.example.ui
 
 import android.widget.Toast
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +24,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.graphics.graphicsLayer
+import com.example.ui.theme.ExpressiveMotion
+import com.example.ui.theme.rememberExpressiveCornerRadius
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -51,16 +61,20 @@ import com.example.ui.components.StorageSettingsCategoryContent
 @Composable
 fun SettingsScreen(
     viewModel: GiveawaysViewModel,
+    scrollState: ScrollState = rememberScrollState(),
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val isAnimationsEnabled by viewModel.isAnimationsEnabled.collectAsState()
+    val isLowEndOptimization by viewModel.isLowEndOptimization.collectAsState()
+    val reducedMotion = !isAnimationsEnabled || isLowEndOptimization
+
     var selectedCategory by rememberSaveable { mutableStateOf(SettingsCategory.APPEARANCE) }
     var showClearClaimedDialog by remember { mutableStateOf(false) }
     var showResyncDialog by remember { mutableStateOf(false) }
 
-    val scrollState = rememberScrollState()
     LaunchedEffect(selectedCategory) {
-        scrollState.scrollTo(0)
+        scrollState.animateScrollTo(0)
     }
 
     Column(
@@ -115,16 +129,41 @@ fun SettingsScreen(
         ) {
             items(SettingsCategory.values()) { category ->
                 val isSelected = category == selectedCategory
+                val tabInteraction = remember { MutableInteractionSource() }
+                val isPressed by tabInteraction.collectIsPressedAsState()
+                val tabScale by animateFloatAsState(
+                    targetValue = if (isPressed) 0.92f else if (isSelected) 1.02f else 1f,
+                    animationSpec = ExpressiveMotion.spatialFast(reducedMotion),
+                    label = "settings_tab_scale_${category.name}"
+                )
+                val tabCorner = rememberExpressiveCornerRadius(
+                    isSelected = isSelected,
+                    isPressed = isPressed,
+                    baseRadius = 12.dp,
+                    selectedRadius = 16.dp,
+                    pressedRadius = 20.dp,
+                    enabled = !reducedMotion
+                )
+                val tabBg by animateColorAsState(
+                    targetValue = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface,
+                    animationSpec = ExpressiveMotion.effectsDefault(reducedMotion),
+                    label = "settings_tab_bg_${category.name}"
+                )
                 Surface(
                     onClick = { selectedCategory = category },
-                    shape = RoundedCornerShape(12.dp),
-                    color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface,
+                    interactionSource = tabInteraction,
+                    shape = RoundedCornerShape(tabCorner),
+                    color = tabBg,
                     border = BorderStroke(
                         width = if (isSelected) 1.5.dp else 1.dp,
                         color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                     ),
                     modifier = Modifier
                         .height(44.dp)
+                        .graphicsLayer {
+                            scaleX = tabScale
+                            scaleY = tabScale
+                        }
                         .testTag("settings_tab_${category.name.lowercase()}")
                 ) {
                     Row(
@@ -169,35 +208,52 @@ fun SettingsScreen(
                         .clip(RoundedCornerShape(3.dp))
                         .background(MaterialTheme.colorScheme.primary)
                 )
-                Text(
-                    text = selectedCategory.description,
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                AnimatedContent(
+                    targetState = selectedCategory.description,
+                    transitionSpec = { ExpressiveMotion.popNumberTransform(reducedMotion) },
+                    label = "settings_category_desc"
+                ) { desc ->
+                    Text(
+                        text = desc,
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Tab Content
-        when (selectedCategory) {
-            SettingsCategory.APPEARANCE -> {
-                AppearanceSettingsCategoryContent(viewModel = viewModel)
-            }
-            SettingsCategory.ALERTS -> {
-                SectionHeader(title = "PUSH NOTIFICATIONS & FREEBIE ALERTS", icon = Icons.Default.Settings)
-                Spacer(modifier = Modifier.height(8.dp))
-                AlertsSettingsCategoryContent(viewModel = viewModel)
-            }
-            SettingsCategory.GENERAL -> {
-                GeneralSettingsCategoryContent(viewModel = viewModel)
-            }
-            SettingsCategory.STORAGE -> {
-                StorageSettingsCategoryContent(
-                    viewModel = viewModel,
-                    onRequestResyncDialog = { showResyncDialog = true },
-                    onRequestClearClaimedDialog = { showClearClaimedDialog = true }
-                )
+        // Tab Content with directional M3 Expressive slide & fade
+        AnimatedContent(
+            targetState = selectedCategory,
+            transitionSpec = {
+                val forward = targetState.ordinal >= initialState.ordinal
+                ExpressiveMotion.directionalTabSlideTransform(forward = forward, reducedMotion = reducedMotion)
+            },
+            label = "settings_category_content"
+        ) { category ->
+            Column(modifier = Modifier.fillMaxWidth()) {
+                when (category) {
+                    SettingsCategory.APPEARANCE -> {
+                        AppearanceSettingsCategoryContent(viewModel = viewModel)
+                    }
+                    SettingsCategory.ALERTS -> {
+                        SectionHeader(title = "PUSH NOTIFICATIONS & FREEBIE ALERTS", icon = Icons.Default.Settings)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        AlertsSettingsCategoryContent(viewModel = viewModel)
+                    }
+                    SettingsCategory.GENERAL -> {
+                        GeneralSettingsCategoryContent(viewModel = viewModel)
+                    }
+                    SettingsCategory.STORAGE -> {
+                        StorageSettingsCategoryContent(
+                            viewModel = viewModel,
+                            onRequestResyncDialog = { showResyncDialog = true },
+                            onRequestClearClaimedDialog = { showClearClaimedDialog = true }
+                        )
+                    }
+                }
             }
         }
 

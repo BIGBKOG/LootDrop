@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -14,10 +15,16 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.remember
+import com.example.ui.theme.ExpressiveMotion
+import com.example.ui.theme.expressivePressScale
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -82,19 +89,13 @@ fun StatsBanner(
     // Fluid smooth counter animation for total free worth
     val animatedWorth by animateFloatAsState(
         targetValue = stats.totalFreeWorthUsd.toFloat(),
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
+        animationSpec = ExpressiveMotion.spatialSlow(reducedMotion = !isAnimationsEnabled),
         label = "animatedWorth"
     )
 
     val animatedCount by animateFloatAsState(
         targetValue = stats.activeGiveawaysCount.toFloat(),
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioNoBouncy,
-            stiffness = Spring.StiffnessMediumLow
-        ),
+        animationSpec = ExpressiveMotion.effectsDefault(reducedMotion = !isAnimationsEnabled),
         label = "animatedCount"
     )
 
@@ -188,9 +189,14 @@ fun StatsBanner(
                     )
                     AnimatedVisibility(
                         visible = !effectiveDismissed && stats.newFreebiesCount > 0,
-                        enter = fadeIn() + expandHorizontally(),
-                        exit = fadeOut() + shrinkHorizontally()
+                        enter = fadeIn(ExpressiveMotion.effectsDefault(!isAnimationsEnabled)) +
+                            expandHorizontally(ExpressiveMotion.spatialFast(!isAnimationsEnabled)) +
+                            scaleIn(initialScale = 0.85f, animationSpec = ExpressiveMotion.spatialFast(!isAnimationsEnabled)),
+                        exit = fadeOut(ExpressiveMotion.effectsFast(!isAnimationsEnabled)) +
+                            shrinkHorizontally(ExpressiveMotion.effectsFast(!isAnimationsEnabled)) +
+                            scaleOut(targetScale = 0.85f)
                     ) {
+                        val badgeInteraction = remember { MutableInteractionSource() }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
@@ -198,6 +204,7 @@ fun StatsBanner(
                                     scaleX = badgeScale
                                     scaleY = badgeScale
                                 }
+                                .expressivePressScale(badgeInteraction, enabled = isAnimationsEnabled, pressedScale = 0.92f)
                                 .clip(RoundedCornerShape(6.dp))
                                 .background(NeonCyan.copy(alpha = 0.2f))
                                 .border(0.5.dp, NeonCyan.copy(alpha = 0.8f), RoundedCornerShape(6.dp))
@@ -208,6 +215,8 @@ fun StatsBanner(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
                                     .clickable(
+                                        interactionSource = badgeInteraction,
+                                        indication = null,
                                         enabled = onNewTodayClick != null,
                                         onClick = { onNewTodayClick?.invoke() }
                                     )

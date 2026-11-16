@@ -699,6 +699,14 @@ class ExampleRobolectricTest {
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.3.0", "3.3.0"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.3.1", "3.3.0"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.3.1", "3.3.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.4.0", "3.3.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.4.0", "3.3.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.3.0", "3.4.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.3.0", "3.4.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.4.0", "3.4.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.4.0", "3.4.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.4.1", "3.4.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.4.1", "3.4.0"))
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.1.2", "3.2.0"))
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.1.2", "3.2.0"))
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.1.1", "3.1.2"))
@@ -1408,31 +1416,116 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `version 3 3 0 is configured and recognized as modern release stream`() {
-        assertEquals("3.3.0", BuildConfig.VERSION_NAME)
-        assertEquals(48, BuildConfig.VERSION_CODE)
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("3.3.0"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v3.3.0"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("V3.3.0"))
+    fun `version 3 4 0 is configured and recognized as modern release stream`() {
+        assertEquals("3.4.0", BuildConfig.VERSION_NAME)
+        assertEquals(49, BuildConfig.VERSION_CODE)
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("3.4.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v3.4.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("V3.4.0"))
     }
 
     @Test
-    fun `github release pull and installer resolution operates with v3 3 0 conventions`() {
-        val client = com.example.data.remote.GithubReleaseClient(ApplicationProvider.getApplicationContext())
+    fun `github release pull and installer resolution operates with v3 4 0 conventions`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val client = com.example.data.remote.GithubReleaseClient(context)
         val apkUrl = client.resolveApkUrl(
             com.example.data.remote.GithubReleaseClient.DEFAULT_OWNER,
             com.example.data.remote.GithubReleaseClient.DEFAULT_REPO,
-            "V3.3.0"
+            "V3.4.0"
         )
         println("RESOLVED APK URL: $apkUrl")
         assertNotNull(apkUrl)
-        assertTrue(apkUrl!!.contains("V3.3.0", ignoreCase = true))
-        assertTrue(apkUrl!!.endsWith(".apk", ignoreCase = true))
+        assertTrue(apkUrl!!.contains("V3.4.0", ignoreCase = true))
+        assertTrue(apkUrl.endsWith(".apk", ignoreCase = true))
 
-        // Verify installer handles missing APK gracefully without crashing
-        val dummyFile = java.io.File(ApplicationProvider.getApplicationContext<android.content.Context>().cacheDir, "non_existent.apk")
-        val installed = com.example.util.AppUpdateInstaller.installApk(ApplicationProvider.getApplicationContext(), dummyFile)
-        org.junit.Assert.assertFalse(installed)
+        // Verify Atom feed parser picks highest modern version even if an older release appears first
+        val atomXml = """
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <entry>
+                <id>tag:github.com,2008:Repository/12345/V3.3.0</id>
+                <updated>2026-11-14T12:00:00Z</updated>
+                <title>LootDrop V3.3.0</title>
+                <content type="html">&lt;p&gt;Edited older release notes&lt;/p&gt;</content>
+              </entry>
+              <entry>
+                <id>tag:github.com,2008:Repository/12345/V3.4.0</id>
+                <updated>2026-11-15T12:00:00Z</updated>
+                <title>LootDrop V3.4.0</title>
+                <content type="html">&lt;p&gt;Material 3 Expressive &amp;amp; Build 49&lt;/p&gt;</content>
+              </entry>
+              <entry>
+                <id>tag:github.com,2008:Repository/12345/V4.5</id>
+                <updated>2025-01-01T12:00:00Z</updated>
+                <title>Legacy V4.5</title>
+                <content type="html">Old</content>
+              </entry>
+            </feed>
+        """.trimIndent()
+        val parsedAtom = com.example.data.remote.GithubReleaseClient.parseAtomFeedXml(atomXml, "3.3.0")
+        assertNotNull(parsedAtom)
+        assertEquals("V3.4.0", parsedAtom!!.tag)
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion(parsedAtom.tag, "3.3.0"))
+
+        // Verify REST API parser extracts non-blank APK asset URL
+        val restJson = """
+            {
+              "tag_name": "V3.4.0",
+              "name": "LootDrop V3.4.0",
+              "body": "Build 49 release",
+              "html_url": "https://github.com/BIGBKOG/LootDrop/releases/tag/V3.4.0",
+              "published_at": "2026-11-15T12:00:00Z",
+              "assets": [
+                {
+                  "name": "Lootdrop-V3.4.0.apk",
+                  "browser_download_url": "https://github.com/BIGBKOG/LootDrop/releases/download/V3.4.0/Lootdrop-V3.4.0.apk"
+                }
+              ]
+            }
+        """.trimIndent()
+        val parsedRest = com.example.data.remote.GithubReleaseClient.parseRestApiReleaseJson(
+            restJson,
+            "BIGBKOG",
+            "LootDrop",
+            "3.3.0"
+        )
+        assertNotNull(parsedRest)
+        assertTrue(parsedRest!!.hasUpdate)
+        assertTrue(parsedRest.isApkAvailable)
+        assertEquals(
+            "https://github.com/BIGBKOG/LootDrop/releases/download/V3.4.0/Lootdrop-V3.4.0.apk",
+            parsedRest.downloadUrl
+        )
+
+        // Verify expanded_assets HTML extraction supports relative & absolute links
+        val expandedHtml = """
+            <ul>
+              <li><a href="/BIGBKOG/LootDrop/releases/download/V3.4.0/Lootdrop-V3.4.0.apk">Lootdrop-V3.4.0.apk</a></li>
+            </ul>
+        """.trimIndent()
+        val extracted = com.example.data.remote.GithubReleaseClient.extractApkUrlFromExpandedAssetsHtml(
+            expandedHtml,
+            "BIGBKOG",
+            "LootDrop"
+        )
+        assertEquals(
+            "https://github.com/BIGBKOG/LootDrop/releases/download/V3.4.0/Lootdrop-V3.4.0.apk",
+            extracted
+        )
+
+        // Verify installer handles missing and corrupt/HTML files gracefully without crashing
+        val dummyFile = java.io.File(context.cacheDir, "non_existent.apk")
+        org.junit.Assert.assertFalse(com.example.util.AppUpdateInstaller.installApk(context, dummyFile))
+
+        val fakeHtmlApk = java.io.File(context.cacheDir, "fake_html.apk")
+        fakeHtmlApk.writeText("<!DOCTYPE html><html><body>Not an APK</body></html>".repeat(2000))
+        org.junit.Assert.assertFalse(com.example.util.AppUpdateInstaller.hasValidApkFile(fakeHtmlApk))
+        org.junit.Assert.assertFalse(com.example.util.AppUpdateInstaller.installApk(context, fakeHtmlApk))
+        fakeHtmlApk.delete()
+
+        val smallZip = java.io.File(context.cacheDir, "tiny.apk")
+        smallZip.writeBytes(byteArrayOf(0x50, 0x4B, 0x03, 0x04))
+        org.junit.Assert.assertFalse(com.example.util.AppUpdateInstaller.hasValidApkFile(smallZip))
+        smallZip.delete()
     }
 
     @Test

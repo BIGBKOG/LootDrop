@@ -23,8 +23,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import com.example.ui.theme.ExpressiveMotion
+import com.example.ui.theme.ExpressivePlacementSpec
+import com.example.ui.theme.rememberExpressiveCornerRadius
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -98,9 +103,13 @@ fun TrophyShowcaseContent(
     onOpenSteamSettings: () -> Unit,
     onSelectGameForAchievements: (SteamGameEntity) -> Unit,
     topHeader: (@Composable () -> Unit)? = null,
+    listState: LazyListState = rememberLazyListState(),
+    isAnimationsEnabled: Boolean = true,
+    isLowEndOptimization: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val reducedMotion = !isAnimationsEnabled || isLowEndOptimization
     var selectedFilter by remember { mutableStateOf(CompletionFilter.ALMOST_DONE) }
 
     val filteredGames = remember(closestGames, selectedFilter) {
@@ -113,6 +122,7 @@ fun TrophyShowcaseContent(
     }
 
     LazyColumn(
+        state = listState,
         modifier = modifier
             .fillMaxSize()
             .testTag("trophy_showcase_list"),
@@ -211,6 +221,12 @@ fun TrophyShowcaseContent(
                             CompletionFilter.ALL -> closestGames.size
                         }
 
+                        val chipCorner = rememberExpressiveCornerRadius(
+                            isSelected = isSelected,
+                            baseRadius = 10.dp,
+                            selectedRadius = 16.dp,
+                            enabled = !reducedMotion
+                        )
                         FilterChip(
                             selected = isSelected,
                             onClick = { selectedFilter = filter },
@@ -234,7 +250,7 @@ fun TrophyShowcaseContent(
                                 selectedBorderColor = NeonCyan,
                                 borderWidth = 1.dp
                             ),
-                            shape = RoundedCornerShape(10.dp)
+                            shape = RoundedCornerShape(chipCorner)
                         )
                     }
                 }
@@ -263,7 +279,17 @@ fun TrophyShowcaseContent(
                 ClosestGameCard(
                     game = game,
                     onClick = { onSelectGameForAchievements(game) },
-                    modifier = Modifier.padding(horizontal = 16.dp)
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .then(
+                            if (!reducedMotion) {
+                                Modifier.animateItem(
+                                    fadeInSpec = ExpressiveMotion.effectsDefault(),
+                                    placementSpec = ExpressivePlacementSpec,
+                                    fadeOutSpec = ExpressiveMotion.effectsFast()
+                                )
+                            } else Modifier
+                        )
                 )
             }
         }

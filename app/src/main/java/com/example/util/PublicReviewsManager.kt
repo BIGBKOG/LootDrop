@@ -83,7 +83,7 @@ object PublicReviewsManager {
         }
 
         if (!remoteReviews.isNullOrEmpty()) {
-            return@withContext mergeWithSeedReviews(remoteReviews!!)
+            return@withContext mergeWithSeedReviews(remoteReviews)
         }
 
         // Fallback to local cache

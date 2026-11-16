@@ -1,9 +1,13 @@
 package com.example.ui.components
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -13,17 +17,28 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.graphics.graphicsLayer
+import com.example.ui.theme.ExpressiveMotion
+import com.example.ui.theme.expressivePressScale
+import com.example.ui.theme.rememberExpressiveCornerRadius
+import kotlin.math.abs
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -106,152 +121,226 @@ fun LibraryPlayFilterChips(
     onOpenDlcHub: (() -> Unit)? = null,
     onRollRandomBacklog: (() -> Unit)? = null,
     onOpenBacklogChallenge: (() -> Unit)? = null,
+    isAnimationsEnabled: Boolean = true,
+    isLowEndOptimization: Boolean = false,
+    isCompactHeader: Boolean = false,
+    onToggleCompactHeader: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val reducedMotion = !isAnimationsEnabled || isLowEndOptimization
+
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Sub-Tab Segmented Selector: Claimed Vault vs All+Paid (Steam Library)
-        Row(
+        // Sub-Tab Segmented Selector with M3 Expressive sliding pill indicator
+        val selectedModeIndex = when (viewMode) {
+            LibraryViewMode.VAULT -> 0
+            LibraryViewMode.ALL_PAID -> 1
+            LibraryViewMode.ACHIEVEMENTS -> 2
+        }
+        val animatedModeIndex by animateFloatAsState(
+            targetValue = selectedModeIndex.toFloat(),
+            animationSpec = ExpressiveMotion.spatialDefault(reducedMotion),
+            label = "library_mode_slider_idx"
+        )
+        val glideDelta = abs(selectedModeIndex.toFloat() - animatedModeIndex).coerceIn(0f, 1f)
+        val targetIndicatorColor = when (viewMode) {
+            LibraryViewMode.VAULT -> MaterialTheme.colorScheme.primary
+            LibraryViewMode.ALL_PAID -> Color(0xFF66C0F4)
+            LibraryViewMode.ACHIEVEMENTS -> Color(0xFFE040FB)
+        }
+        val animatedIndicatorColor by animateColorAsState(
+            targetValue = targetIndicatorColor,
+            animationSpec = ExpressiveMotion.effectsDefault(reducedMotion),
+            label = "library_mode_indicator_color"
+        )
+        val indicatorCorner by animateDpAsState(
+            targetValue = if (glideDelta > 0.08f) 14.dp else 9.dp,
+            animationSpec = ExpressiveMotion.spatialFast(reducedMotion),
+            label = "library_mode_indicator_corner"
+        )
+
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
+                .height(42.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                .padding(4.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
+                .padding(4.dp)
         ) {
-            val isVaultSelected = viewMode == LibraryViewMode.VAULT
-            val isAllPaidSelected = viewMode == LibraryViewMode.ALL_PAID
-            val isAchievementsSelected = viewMode == LibraryViewMode.ACHIEVEMENTS
+            val segmentWidth = maxWidth / 3
 
+            // Sliding Expressive Pill Indicator
             Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(9.dp))
-                    .background(if (isVaultSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
-                    .clickable { onViewModeChange(LibraryViewMode.VAULT) }
-                    .padding(vertical = 8.dp)
-                    .testTag("tab_claimed_vault"),
-                contentAlignment = Alignment.Center
+                    .offset(x = segmentWidth * animatedModeIndex)
+                    .width(segmentWidth)
+                    .fillMaxHeight()
+                    .graphicsLayer {
+                        if (!reducedMotion && glideDelta > 0.01f) {
+                            scaleX = 1f + glideDelta * 0.10f
+                            scaleY = 1f - glideDelta * 0.05f
+                        }
+                    }
+                    .clip(RoundedCornerShape(indicatorCorner))
+                    .background(animatedIndicatorColor)
+            )
+
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                val isVaultSelected = viewMode == LibraryViewMode.VAULT
+                val isAllPaidSelected = viewMode == LibraryViewMode.ALL_PAID
+                val isAchievementsSelected = viewMode == LibraryViewMode.ACHIEVEMENTS
+
+                val vaultInteraction = remember { MutableInteractionSource() }
+                val allPaidInteraction = remember { MutableInteractionSource() }
+                val trophiesInteraction = remember { MutableInteractionSource() }
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .expressivePressScale(vaultInteraction, enabled = !reducedMotion, pressedScale = 0.93f)
+                        .clip(RoundedCornerShape(9.dp))
+                        .clickable(
+                            interactionSource = vaultInteraction,
+                            indication = null
+                        ) { onViewModeChange(LibraryViewMode.VAULT) }
+                        .testTag("tab_claimed_vault"),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "🎁 Vault",
-                        fontSize = 11.sp,
-                        fontWeight = if (isVaultSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isVaultSelected) MaterialTheme.colorScheme.onPrimary else TextSecondary
-                    )
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(if (isVaultSelected) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface)
-                            .padding(horizontal = 4.dp, vertical = 1.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = "${uiStats.claimedCount}",
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
+                            text = "🎁 Vault",
+                            fontSize = 11.sp,
+                            fontWeight = if (isVaultSelected) FontWeight.Bold else FontWeight.Medium,
                             color = if (isVaultSelected) MaterialTheme.colorScheme.onPrimary else TextSecondary
                         )
-                    }
-                }
-            }
-
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(9.dp))
-                    .background(if (isAllPaidSelected) Color(0xFF66C0F4) else Color.Transparent)
-                    .clickable { onViewModeChange(LibraryViewMode.ALL_PAID) }
-                    .padding(vertical = 8.dp)
-                    .testTag("tab_all_paid"),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = "🎮 All+Paid",
-                        fontSize = 11.sp,
-                        fontWeight = if (isAllPaidSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isAllPaidSelected) Color(0xFF0B0F19) else TextSecondary
-                    )
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(if (isAllPaidSelected) Color(0xFF0B0F19).copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface)
-                            .padding(horizontal = 4.dp, vertical = 1.dp)
-                    ) {
-                        Text(
-                            text = "${uiStats.steamTotalCount + uiStats.claimedCount}",
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isAllPaidSelected) Color(0xFF0B0F19) else Color(0xFF66C0F4)
-                        )
-                    }
-                }
-            }
-
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(9.dp))
-                    .background(if (isAchievementsSelected) Color(0xFFE040FB) else Color.Transparent)
-                    .clickable { onViewModeChange(LibraryViewMode.ACHIEVEMENTS) }
-                    .padding(vertical = 8.dp)
-                    .testTag("tab_trophies_showcase"),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = "🏆 Trophies",
-                        fontSize = 11.sp,
-                        fontWeight = if (isAchievementsSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isAchievementsSelected) Color(0xFF0F1420) else TextSecondary
-                    )
-                    if (trophyCount > 0) {
                         Box(
                             modifier = Modifier
                                 .clip(CircleShape)
-                                .background(if (isAchievementsSelected) Color(0xFF0F1420).copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface)
+                                .background(if (isVaultSelected) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface)
                                 .padding(horizontal = 4.dp, vertical = 1.dp)
                         ) {
                             Text(
-                                text = "$trophyCount",
+                                text = "${uiStats.claimedCount}",
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isAchievementsSelected) Color(0xFF0F1420) else Color(0xFFE040FB)
+                                color = if (isVaultSelected) MaterialTheme.colorScheme.onPrimary else TextSecondary
                             )
+                        }
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .expressivePressScale(allPaidInteraction, enabled = !reducedMotion, pressedScale = 0.93f)
+                        .clip(RoundedCornerShape(9.dp))
+                        .clickable(
+                            interactionSource = allPaidInteraction,
+                            indication = null
+                        ) { onViewModeChange(LibraryViewMode.ALL_PAID) }
+                        .testTag("tab_all_paid"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "🎮 All+Paid",
+                            fontSize = 11.sp,
+                            fontWeight = if (isAllPaidSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isAllPaidSelected) Color(0xFF0B0F19) else TextSecondary
+                        )
+                        Box(
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(if (isAllPaidSelected) Color(0xFF0B0F19).copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface)
+                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                        ) {
+                            Text(
+                                text = "${uiStats.steamTotalCount + uiStats.claimedCount}",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isAllPaidSelected) Color(0xFF0B0F19) else Color(0xFF66C0F4)
+                            )
+                        }
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .expressivePressScale(trophiesInteraction, enabled = !reducedMotion, pressedScale = 0.93f)
+                        .clip(RoundedCornerShape(9.dp))
+                        .clickable(
+                            interactionSource = trophiesInteraction,
+                            indication = null
+                        ) { onViewModeChange(LibraryViewMode.ACHIEVEMENTS) }
+                        .testTag("tab_trophies_showcase"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "🏆 Trophies",
+                            fontSize = 11.sp,
+                            fontWeight = if (isAchievementsSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isAchievementsSelected) Color(0xFF0F1420) else TextSecondary
+                        )
+                        if (trophyCount > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .background(if (isAchievementsSelected) Color(0xFF0F1420).copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface)
+                                    .padding(horizontal = 4.dp, vertical = 1.dp)
+                            ) {
+                                Text(
+                                    text = "$trophyCount",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isAchievementsSelected) Color(0xFF0F1420) else Color(0xFFE040FB)
+                                )
+                            }
                         }
                     }
                 }
             }
         }
 
-        // Steam Game Tracker banner
-        SteamTrackerBanner(
-            isSyncing = isSyncingSteam,
-            steamUserId = steamUserId,
-            onOpenDialog = onOpenSteamDialog,
-            onQuickSync = onQuickSteamSync
-        )
-
+        // Steam Game Tracker banner (tucked smoothly when user switches to Compact Header mode)
+        AnimatedVisibility(
+            visible = !isCompactHeader,
+            enter = ExpressiveMotion.expressiveExpandEnter(reducedMotion),
+            exit = ExpressiveMotion.expressiveCollapseExit(reducedMotion)
+        ) {
+            SteamTrackerBanner(
+                isSyncing = isSyncingSteam,
+                steamUserId = steamUserId,
+                onOpenDialog = onOpenSteamDialog,
+                onQuickSync = onQuickSteamSync
+            )
+        }
 
         // Sync feedback toast/banner if message is present
         AnimatedVisibility(
             visible = steamSyncStatus != null,
-            enter = fadeIn(),
-            exit = fadeOut()
+            enter = ExpressiveMotion.expressiveExpandEnter(reducedMotion),
+            exit = ExpressiveMotion.expressiveCollapseExit(reducedMotion)
         ) {
             steamSyncStatus?.let { status ->
                 val isSuccess = status.contains("Synced", ignoreCase = true)
@@ -346,9 +435,20 @@ fun LibraryPlayFilterChips(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Integrated Filter Button
+                val filterBtnInteraction = remember { MutableInteractionSource() }
+                val isFilterPressed by filterBtnInteraction.collectIsPressedAsState()
+                val filterBtnCorner = rememberExpressiveCornerRadius(
+                    isSelected = isFilterActive,
+                    isPressed = isFilterPressed,
+                    baseRadius = 10.dp,
+                    selectedRadius = 14.dp,
+                    pressedRadius = 18.dp,
+                    enabled = !reducedMotion
+                )
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
+                        .expressivePressScale(filterBtnInteraction, enabled = !reducedMotion, pressedScale = 0.93f)
+                        .clip(RoundedCornerShape(filterBtnCorner))
                         .background(
                             if (isFilterActive) NeonCyan.copy(alpha = 0.2f)
                             else MaterialTheme.colorScheme.surfaceVariant
@@ -356,9 +456,12 @@ fun LibraryPlayFilterChips(
                         .border(
                             width = 1.dp,
                             color = if (isFilterActive) NeonCyan else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
-                            shape = RoundedCornerShape(10.dp)
+                            shape = RoundedCornerShape(filterBtnCorner)
                         )
-                        .clickable { showFilterMenuDialog = true }
+                        .clickable(
+                            interactionSource = filterBtnInteraction,
+                            indication = null
+                        ) { showFilterMenuDialog = true }
                         .padding(horizontal = 12.dp, vertical = 7.dp)
                         .testTag("vault_filter_menu_button"),
                     contentAlignment = Alignment.Center
@@ -397,18 +500,72 @@ fun LibraryPlayFilterChips(
                     }
                 }
 
-                // DLC Picks Hub Button
-                if (onOpenDlcHub != null && (viewMode == LibraryViewMode.ALL_PAID || uiStats.steamTotalCount > 0 || steamUserId.isNotBlank())) {
+                // Quick Compact Header Toggle pill to collapse/expand top banners
+                if (onToggleCompactHeader != null) {
+                    val compactInteraction = remember { MutableInteractionSource() }
+                    val isCompactPressed by compactInteraction.collectIsPressedAsState()
+                    val compactCorner = rememberExpressiveCornerRadius(
+                        isSelected = isCompactHeader,
+                        isPressed = isCompactPressed,
+                        baseRadius = 10.dp,
+                        selectedRadius = 16.dp,
+                        pressedRadius = 18.dp,
+                        enabled = !reducedMotion
+                    )
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
+                            .expressivePressScale(compactInteraction, enabled = !reducedMotion, pressedScale = 0.93f)
+                            .clip(RoundedCornerShape(compactCorner))
+                            .background(
+                                if (isCompactHeader) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.75f)
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = if (isCompactHeader) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                                shape = RoundedCornerShape(compactCorner)
+                            )
+                            .clickable(
+                                interactionSource = compactInteraction,
+                                indication = null
+                            ) { onToggleCompactHeader() }
+                            .padding(horizontal = 10.dp, vertical = 7.dp)
+                            .testTag("toggle_compact_library_header"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (isCompactHeader) "▾ Show Banners" else "▴ Hide Banners",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isCompactHeader) MaterialTheme.colorScheme.primary else TextSecondary
+                        )
+                    }
+                }
+
+                // DLC Picks Hub Button
+                if (onOpenDlcHub != null && (viewMode == LibraryViewMode.ALL_PAID || uiStats.steamTotalCount > 0 || steamUserId.isNotBlank())) {
+                    val dlcInteraction = remember { MutableInteractionSource() }
+                    val isDlcPressed by dlcInteraction.collectIsPressedAsState()
+                    val dlcCorner = rememberExpressiveCornerRadius(
+                        isPressed = isDlcPressed,
+                        baseRadius = 10.dp,
+                        pressedRadius = 18.dp,
+                        enabled = !reducedMotion
+                    )
+                    Box(
+                        modifier = Modifier
+                            .expressivePressScale(dlcInteraction, enabled = !reducedMotion, pressedScale = 0.93f)
+                            .clip(RoundedCornerShape(dlcCorner))
                             .background(Color(0xFF231836))
                             .border(
                                 width = 1.dp,
                                 color = Color(0xFFA855F7).copy(alpha = 0.65f),
-                                shape = RoundedCornerShape(10.dp)
+                                shape = RoundedCornerShape(dlcCorner)
                             )
-                            .clickable { onOpenDlcHub() }
+                            .clickable(
+                                interactionSource = dlcInteraction,
+                                indication = null
+                            ) { onOpenDlcHub() }
                             .padding(horizontal = 10.dp, vertical = 7.dp)
                             .testTag("open_dlc_hub_button"),
                         contentAlignment = Alignment.Center
@@ -445,16 +602,28 @@ fun LibraryPlayFilterChips(
 
                 // 3x3 Backlog Challenge Grid Button
                 if (onOpenBacklogChallenge != null) {
+                    val gridInteraction = remember { MutableInteractionSource() }
+                    val isGridPressed by gridInteraction.collectIsPressedAsState()
+                    val gridCorner = rememberExpressiveCornerRadius(
+                        isPressed = isGridPressed,
+                        baseRadius = 10.dp,
+                        pressedRadius = 18.dp,
+                        enabled = !reducedMotion
+                    )
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
+                            .expressivePressScale(gridInteraction, enabled = !reducedMotion, pressedScale = 0.93f)
+                            .clip(RoundedCornerShape(gridCorner))
                             .background(Color(0xFF1E293B))
                             .border(
                                 width = 1.dp,
                                 color = Color(0xFFF59E0B).copy(alpha = 0.6f),
-                                shape = RoundedCornerShape(10.dp)
+                                shape = RoundedCornerShape(gridCorner)
                             )
-                            .clickable { onOpenBacklogChallenge() }
+                            .clickable(
+                                interactionSource = gridInteraction,
+                                indication = null
+                            ) { onOpenBacklogChallenge() }
                             .padding(horizontal = 10.dp, vertical = 7.dp)
                             .testTag("open_backlog_challenge_button"),
                         contentAlignment = Alignment.Center
@@ -476,16 +645,28 @@ fun LibraryPlayFilterChips(
 
                 // Roll Random Backlog Button in All+Paid mode to beat analysis paralysis
                 if (viewMode == LibraryViewMode.ALL_PAID && onRollRandomBacklog != null) {
+                    val rollInteraction = remember { MutableInteractionSource() }
+                    val isRollPressed by rollInteraction.collectIsPressedAsState()
+                    val rollCorner = rememberExpressiveCornerRadius(
+                        isPressed = isRollPressed,
+                        baseRadius = 10.dp,
+                        pressedRadius = 18.dp,
+                        enabled = !reducedMotion
+                    )
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
+                            .expressivePressScale(rollInteraction, enabled = !reducedMotion, pressedScale = 0.93f)
+                            .clip(RoundedCornerShape(rollCorner))
                             .background(Color(0xFF261E38))
                             .border(
                                 width = 1.dp,
                                 color = Color(0xFFA855F7).copy(alpha = 0.6f),
-                                shape = RoundedCornerShape(10.dp)
+                                shape = RoundedCornerShape(rollCorner)
                             )
-                            .clickable { onRollRandomBacklog() }
+                            .clickable(
+                                interactionSource = rollInteraction,
+                                indication = null
+                            ) { onRollRandomBacklog() }
                             .padding(horizontal = 10.dp, vertical = 7.dp)
                             .testTag("roll_random_backlog_button"),
                         contentAlignment = Alignment.Center

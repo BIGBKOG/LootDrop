@@ -75,7 +75,7 @@ class GithubReleaseClient(private val context: Context) {
 
     /**
      * Tier 1: Parses GitHub releases.atom feed.
-     * Never rate limited, always contains chronological release entries.
+     * Never rate limited, always contains release entries.
      */
     private fun checkReleasesAtomFeed(
         owner: String,
@@ -89,84 +89,25 @@ class GithubReleaseClient(private val context: Context) {
             .header("Accept", "application/atom+xml, text/xml, */*")
             .build()
 
-        val response = httpClient.newCall(request).execute()
-        if (!response.isSuccessful) return null
-        val body = response.body?.string() ?: return null
+        val body = httpClient.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) return null
+            response.body?.string()
+        } ?: return null
 
-        val entryRegex = Pattern.compile("<entry>([\\s\\S]*?)</entry>")
-        val idRegex = Pattern.compile("<id>[^<]*/([^</]+)</id>")
-        val titleRegex = Pattern.compile("<title>([^<]+)</title>")
-        val updatedRegex = Pattern.compile("<updated>([^<]+)</updated>")
-        val contentRegex = Pattern.compile("<content[^>]*>([\\s\\S]*?)</content>")
-
-        val matcher = entryRegex.matcher(body)
-        var selectedTag: String? = null
-        var selectedTitle: String? = null
-        var selectedUpdated: String? = null
-        var selectedNotes: String? = null
-
-        val cleanCurrentVersion = currentVersionName.trim().removePrefix("v").removePrefix("V")
-        val isCurrentModern = isCurrentModernStream(currentVersionName)
-
-        while (matcher.find()) {
-            val entryText = matcher.group(1) ?: continue
-            val idMatch = idRegex.matcher(entryText)
-            val rawTag = if (idMatch.find()) idMatch.group(1)?.trim() else null
-            val tag = rawTag ?: continue
-            val cleanTag = tag.removePrefix("v").removePrefix("V")
-
-            // Filter out old legacy 4.x from before the reset, but preserve all modern versions (1.x, 2.x, 3.x, etc.)
-            if (isCurrentModern && (cleanTag.startsWith("4.") || tag.contains("V4."))) {
-                continue
-            }
-
-            val titleMatch = titleRegex.matcher(entryText)
-            val title = if (titleMatch.find()) titleMatch.group(1)?.trim() ?: "LootDrop $tag" else "LootDrop $tag"
-
-            val updatedMatch = updatedRegex.matcher(entryText)
-            val updated = if (updatedMatch.find()) updatedMatch.group(1)?.trim() else null
-
-            val contentMatch = contentRegex.matcher(entryText)
-            val notes = if (contentMatch.find()) {
-                val rawHtml = contentMatch.group(1) ?: ""
-                try {
-                    android.text.Html.fromHtml(rawHtml, android.text.Html.FROM_HTML_MODE_LEGACY).toString().trim()
-                } catch (_: Exception) {
-                    rawHtml.replace("<[^>]*>".toRegex(), " ").trim()
-                }
-            } else ""
-
-            selectedTag = tag
-            selectedTitle = title
-            selectedUpdated = updated
-            selectedNotes = notes
-            break
-        }
-
-        // If no 1.x tag matched in loop, fallback to the very first tag in feed
-        if (selectedTag == null) {
-            val firstIdMatch = idRegex.matcher(body)
-            if (firstIdMatch.find()) {
-                selectedTag = firstIdMatch.group(1)?.trim()
-                selectedTitle = "LootDrop $selectedTag"
-            }
-        }
-
-        val finalTag = selectedTag ?: return null
-
-        val hasUpdate = isNewerVersion(finalTag, currentVersionName)
-        val apkUrl = resolveApkUrl(owner, repo, finalTag)
-        val htmlUrl = "https://github.com/$owner/$repo/releases/tag/$finalTag"
+        val candidate = parseAtomFeedXml(body, currentVersionName) ?: return null
+        val hasUpdate = isNewerVersion(candidate.tag, currentVersionName)
+        val apkUrl = resolveApkUrl(owner, repo, candidate.tag)
+        val htmlUrl = "https://github.com/$owner/$repo/releases/tag/${candidate.tag}"
 
         return AppUpdateInfo(
             hasUpdate = hasUpdate,
-            latestVersion = finalTag,
+            latestVersion = candidate.tag,
             currentVersion = currentVersionName,
-            releaseTitle = selectedTitle ?: "LootDrop $finalTag",
-            releaseNotes = selectedNotes ?: "",
+            releaseTitle = candidate.title,
+            releaseNotes = candidate.notes,
             releaseUrl = htmlUrl,
             downloadUrl = apkUrl ?: htmlUrl,
-            publishedAt = selectedUpdated,
+            publishedAt = candidate.updated,
             isApkAvailable = apkUrl != null,
             checkedTimestamp = System.currentTimeMillis()
         )
@@ -187,59 +128,14 @@ class GithubReleaseClient(private val context: Context) {
             .header("Accept", "application/vnd.github.v3+json")
             .build()
 
-        val response = httpClient.newCall(request).execute()
-        if (!response.isSuccessful) return null
+        val bodyString = httpClient.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) return null
+            response.body?.string()
+        } ?: return null
 
-        val bodyString = response.body?.string() ?: return null
-        val json = JSONObject(bodyString)
-        val tagName = json.optString("tag_name", "").trim()
-        if (tagName.isBlank()) return null
-
-        val cleanTag = tagName.removePrefix("v").removePrefix("V")
-        val isCurrentModern = isCurrentModernStream(currentVersionName)
-        if (isCurrentModern && (cleanTag.startsWith("4.") || tagName.contains("V4.") || tagName.contains("Loot-Drop-V3."))) {
-            // REST API returned legacy release; return null to allow atom feed to supply active release
-            return null
+        return parseRestApiReleaseJson(bodyString, owner, repo, currentVersionName) { tagName ->
+            resolveApkUrl(owner, repo, tagName)
         }
-
-        val releaseName = json.optString("name", "").ifBlank { "LootDrop $tagName" }
-        val releaseBody = json.optString("body", "").trim()
-        val htmlUrl = json.optString("html_url", "https://github.com/$owner/$repo/releases/tag/$tagName")
-        val publishedAt = json.optString("published_at", "")
-
-        var downloadUrl: String? = null
-        var isApk = false
-        val assetsArray = json.optJSONArray("assets")
-        if (assetsArray != null) {
-            for (i in 0 until assetsArray.length()) {
-                val asset = assetsArray.optJSONObject(i) ?: continue
-                val assetName = asset.optString("name", "")
-                if (assetName.endsWith(".apk", ignoreCase = true)) {
-                    downloadUrl = asset.optString("browser_download_url")
-                    isApk = true
-                    break
-                }
-            }
-        }
-
-        if (downloadUrl == null) {
-            downloadUrl = resolveApkUrl(owner, repo, tagName)
-            if (downloadUrl != null) isApk = true
-        }
-
-        val hasUpdate = isNewerVersion(tagName, currentVersionName)
-        return AppUpdateInfo(
-            hasUpdate = hasUpdate,
-            latestVersion = tagName,
-            currentVersion = currentVersionName,
-            releaseTitle = releaseName,
-            releaseNotes = releaseBody,
-            releaseUrl = htmlUrl,
-            downloadUrl = downloadUrl ?: htmlUrl,
-            publishedAt = publishedAt,
-            isApkAvailable = isApk,
-            checkedTimestamp = System.currentTimeMillis()
-        )
     }
 
     /**
@@ -257,13 +153,20 @@ class GithubReleaseClient(private val context: Context) {
             .header("Accept", "text/html, */*")
             .build()
 
-        val response = httpClient.newCall(request).execute()
-        if (!response.isSuccessful) return null
+        val tag = httpClient.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) return null
+            val finalUrl = response.request.url.toString()
+            if (!finalUrl.contains("/releases/tag/")) return null
+            finalUrl.substringAfter("/releases/tag/")
+                .substringBefore("/")
+                .substringBefore("?")
+                .substringBefore("#")
+                .trim()
+                .takeIf { it.isNotBlank() }
+        } ?: return null
 
-        val finalUrl = response.request.url.toString()
-        val tag = if (finalUrl.contains("/releases/tag/")) {
-            finalUrl.substringAfter("/releases/tag/").substringBefore("/").substringBefore("?")
-        } else {
+        val cleanTag = tag.removePrefix("v").removePrefix("V")
+        if (isCurrentModernStream(currentVersionName) && isLegacyTag(tag, cleanTag)) {
             return null
         }
 
@@ -300,15 +203,12 @@ class GithubReleaseClient(private val context: Context) {
                     .header("Accept", "text/html, */*")
                     .build()
 
-                val response = httpClient.newCall(request).execute()
-                if (response.isSuccessful) {
-                    val html = response.body?.string() ?: ""
-                    val apkRegex = Pattern.compile("href=\"(/$owner/$repo/releases/download/[^\"]+\\.apk)\"", Pattern.CASE_INSENSITIVE)
-                    val m = apkRegex.matcher(html)
-                    if (m.find()) {
-                        val relativePath = m.group(1)
-                        return "https://github.com$relativePath"
-                    }
+                val resolved = httpClient.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) null
+                    else extractApkUrlFromExpandedAssetsHtml(response.body?.string().orEmpty(), owner, repo)
+                }
+                if (resolved != null) {
+                    return resolved
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Failed resolving expanded_assets for $candidate: ${e.message}")
@@ -319,12 +219,172 @@ class GithubReleaseClient(private val context: Context) {
         return "https://github.com/$owner/$repo/releases/download/V$cleanTag/Lootdrop-V$cleanTag.apk"
     }
 
+    internal data class AtomReleaseCandidate(
+        val tag: String,
+        val title: String,
+        val updated: String?,
+        val notes: String
+    )
+
     companion object {
         private const val TAG = "GithubReleaseClient"
         const val DEFAULT_OWNER = "BIGBKOG"
         const val DEFAULT_REPO = "LootDrop"
         const val REPO_URL = "https://github.com/$DEFAULT_OWNER/$DEFAULT_REPO"
         const val RELEASES_URL = "https://github.com/$DEFAULT_OWNER/$DEFAULT_REPO/releases"
+
+        private fun isLegacyTag(rawTag: String, cleanTag: String): Boolean {
+            return cleanTag.startsWith("4.") || rawTag.contains("V4.") || rawTag.contains("Loot-Drop-V3.")
+        }
+
+        internal fun parseAtomFeedXml(xml: String, currentVersionName: String): AtomReleaseCandidate? {
+            val entryRegex = Pattern.compile("<entry>([\\s\\S]*?)</entry>")
+            val idRegex = Pattern.compile("<id>[^<]*/([^</]+)</id>")
+            val titleRegex = Pattern.compile("<title>([^<]+)</title>")
+            val updatedRegex = Pattern.compile("<updated>([^<]+)</updated>")
+            val contentRegex = Pattern.compile("<content[^>]*>([\\s\\S]*?)</content>")
+
+            val matcher = entryRegex.matcher(xml)
+            var bestCandidate: AtomReleaseCandidate? = null
+            var fallbackFirstTag: String? = null
+
+            val isCurrentModern = isCurrentModernStream(currentVersionName)
+
+            while (matcher.find()) {
+                val entryText = matcher.group(1) ?: continue
+                val idMatch = idRegex.matcher(entryText)
+                val tag = if (idMatch.find()) idMatch.group(1)?.trim() else null
+                if (tag.isNullOrBlank()) continue
+                if (fallbackFirstTag == null) fallbackFirstTag = tag
+
+                val cleanTag = tag.removePrefix("v").removePrefix("V")
+                // Filter out old legacy 4.x from before the reset, preserving modern 1.x, 2.x, 3.x releases
+                if (isCurrentModern && isLegacyTag(tag, cleanTag)) {
+                    continue
+                }
+
+                val titleMatch = titleRegex.matcher(entryText)
+                val title = if (titleMatch.find()) titleMatch.group(1)?.trim().orEmpty().ifBlank { "LootDrop $tag" } else "LootDrop $tag"
+
+                val updatedMatch = updatedRegex.matcher(entryText)
+                val updated = if (updatedMatch.find()) updatedMatch.group(1)?.trim() else null
+
+                val contentMatch = contentRegex.matcher(entryText)
+                val notes = if (contentMatch.find()) {
+                    val rawHtml = contentMatch.group(1) ?: ""
+                    try {
+                        android.text.Html.fromHtml(rawHtml, android.text.Html.FROM_HTML_MODE_LEGACY).toString().trim()
+                    } catch (_: Exception) {
+                        rawHtml.replace("<[^>]*>".toRegex(), " ").trim()
+                    }
+                } else ""
+
+                // Select the highest semantic version so editing an older release's notes does not shadow newer releases
+                val previous = bestCandidate
+                if (previous == null || isNewerVersion(tag, previous.tag)) {
+                    bestCandidate = AtomReleaseCandidate(
+                        tag = tag,
+                        title = title,
+                        updated = updated,
+                        notes = notes
+                    )
+                }
+            }
+
+            if (bestCandidate == null && fallbackFirstTag != null) {
+                return AtomReleaseCandidate(
+                    tag = fallbackFirstTag,
+                    title = "LootDrop $fallbackFirstTag",
+                    updated = null,
+                    notes = ""
+                )
+            }
+
+            return bestCandidate
+        }
+
+        internal fun parseRestApiReleaseJson(
+            bodyString: String,
+            owner: String,
+            repo: String,
+            currentVersionName: String,
+            fallbackApkResolver: (String) -> String? = { null }
+        ): AppUpdateInfo? {
+            val json = JSONObject(bodyString)
+            val tagName = json.optString("tag_name", "").trim()
+            if (tagName.isBlank()) return null
+
+            val cleanTag = tagName.removePrefix("v").removePrefix("V")
+            val isCurrentModern = isCurrentModernStream(currentVersionName)
+            if (isCurrentModern && isLegacyTag(tagName, cleanTag)) {
+                // REST API returned legacy release; allow other tiers to supply active release
+                return null
+            }
+
+            val releaseName = json.optString("name", "").ifBlank { "LootDrop $tagName" }
+            val releaseBody = json.optString("body", "").trim()
+            val htmlUrl = json.optString("html_url", "").ifBlank {
+                "https://github.com/$owner/$repo/releases/tag/$tagName"
+            }
+            val publishedAt = json.optString("published_at", "").takeIf { it.isNotBlank() }
+
+            var downloadUrl: String? = null
+            var isApk = false
+            val assetsArray = json.optJSONArray("assets")
+            if (assetsArray != null) {
+                for (i in 0 until assetsArray.length()) {
+                    val asset = assetsArray.optJSONObject(i) ?: continue
+                    val assetName = asset.optString("name", "")
+                    val assetUrl = asset.optString("browser_download_url", "").trim()
+                    if (assetName.endsWith(".apk", ignoreCase = true) && assetUrl.isNotBlank()) {
+                        downloadUrl = assetUrl
+                        isApk = true
+                        if (!assetName.contains("debug", ignoreCase = true)) {
+                            break
+                        }
+                    }
+                }
+            }
+
+            if (downloadUrl == null) {
+                downloadUrl = fallbackApkResolver(tagName)?.takeIf { it.isNotBlank() }
+                if (downloadUrl != null) isApk = true
+            }
+
+            val hasUpdate = isNewerVersion(tagName, currentVersionName)
+            return AppUpdateInfo(
+                hasUpdate = hasUpdate,
+                latestVersion = tagName,
+                currentVersion = currentVersionName,
+                releaseTitle = releaseName,
+                releaseNotes = releaseBody,
+                releaseUrl = htmlUrl,
+                downloadUrl = downloadUrl ?: htmlUrl,
+                publishedAt = publishedAt,
+                isApkAvailable = isApk,
+                checkedTimestamp = System.currentTimeMillis()
+            )
+        }
+
+        internal fun extractApkUrlFromExpandedAssetsHtml(
+            html: String,
+            owner: String,
+            repo: String
+        ): String? {
+            if (html.isBlank()) return null
+            val escapedOwner = Pattern.quote(owner)
+            val escapedRepo = Pattern.quote(repo)
+            val apkRegex = Pattern.compile(
+                "href=\"(?:https://github\\.com)?(/$escapedOwner/$escapedRepo/releases/download/[^\"]+\\.apk)\"",
+                Pattern.CASE_INSENSITIVE
+            )
+            val matcher = apkRegex.matcher(html)
+            if (matcher.find()) {
+                val relativePath = matcher.group(1)?.replace("&amp;", "&") ?: return null
+                return "https://github.com$relativePath"
+            }
+            return null
+        }
 
         fun isCurrentModernStream(version: String): Boolean {
             val clean = version.trim().removePrefix("v").removePrefix("V")
@@ -333,7 +393,7 @@ class GithubReleaseClient(private val context: Context) {
         }
 
         /**
-         * Compares semantic versions (e.g. "3.0.1" vs "3.0.0", "1.5.X" vs "1.5.0").
+         * Compares semantic versions (e.g. "3.4.0" vs "3.3.0", "1.5.X" vs "1.5.0").
          * Returns true if remote is strictly newer than current.
          * Correctly handles wildcard releases ("1.5.X"), and protects against legacy 4.x
          * versions being falsely reported as newer when the app was reset to modern streams.
