@@ -339,7 +339,10 @@ fun ReviewCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    val initial = review.authorName.firstOrNull()?.uppercaseChar()?.toString() ?: "G"
+                    val displayAuthorName = remember(review.id, review.authorName) {
+                        ReviewModerationFilter.sanitizeForDisplay(review.authorName)
+                    }
+                    val initial = displayAuthorName.firstOrNull()?.uppercaseChar()?.toString() ?: "G"
                     Box(
                         modifier = Modifier
                             .size(28.dp)
@@ -367,7 +370,7 @@ fun ReviewCard(
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text(
-                                text = review.authorName,
+                                text = displayAuthorName,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary,
@@ -437,9 +440,12 @@ fun ReviewCard(
             }
 
             // Review Title
-            if (review.title.isNotBlank()) {
+            val cleanCardTitle = remember(review.id, review.title) {
+                ReviewModerationFilter.sanitizeForDisplay(review.title)
+            }
+            if (cleanCardTitle.isNotBlank()) {
                 Text(
-                    text = review.title,
+                    text = cleanCardTitle,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -447,9 +453,12 @@ fun ReviewCard(
             }
 
             // Review Body Comment
-            if (review.comment.isNotBlank()) {
+            val cleanCardComment = remember(review.id, review.comment) {
+                ReviewModerationFilter.sanitizeForDisplay(review.comment)
+            }
+            if (cleanCardComment.isNotBlank()) {
                 Text(
-                    text = review.comment,
+                    text = cleanCardComment,
                     fontSize = 12.sp,
                     color = Color(0xFFCBD5E1),
                     lineHeight = 18.sp
@@ -951,7 +960,7 @@ fun WriteReviewDialog(
                 )
 
                 Text(
-                    text = "☁️ Reviews are uploaded publicly to our Cloudflare R2 bucket and visible to all gamers on Android & Web. Respectful language only (no swears or slurs).",
+                    text = "☁️ Reviews are uploaded publicly to our Cloudflare R2 bucket and visible to all gamers on Android & Web. Respectful language only (no swears, slurs, or restricted slang).",
                     fontSize = 10.sp,
                     color = TextMuted,
                     lineHeight = 14.sp

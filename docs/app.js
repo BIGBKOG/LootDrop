@@ -1907,7 +1907,67 @@ const REVIEW_BLACKLIST_TERMS = [
   'dago(?:s|es)?',
   'polack(?:s)?',
   'kraut(?:s)?',
-  'heeb(?:s)?'
+  'heeb(?:s)?',
+  'cash[\\s._\\-*]+is[\\s._\\-*]+[ck]lay',
+  'cashis[ck]lay',
+  'nuh+',
+  'cuh+(?:z|zz)?',
+  'nut(?:s|t|ted|ting|z)?',
+  'nut[\\s._\\-*]*sack(?:s)?',
+  'deez[\\s._\\-*]*nut(?:s|z)?',
+  'deeznut(?:s|z)?',
+  'c[u*]m+(?:ming|med|mer|mers|shot|shots|slut|sluts|dumpster|dumpsters|stain|stains|rag|rags|s)?',
+  'jizz+(?:ed|ing|er|s)?',
+  'splooge(?:d|ing|s)?',
+  'skeet(?:ed|ing|s)?',
+  'semen',
+  'sperm',
+  'ejaculat(?:e|ed|ing|ion|ions)',
+  'masturbat(?:e|ed|ing|ion)',
+  'fap+(?:ed|ing|s)?',
+  'orgasm(?:s)?',
+  'boner(?:s)?',
+  'horny',
+  'porn(?:o|ography)?',
+  'hentai',
+  'dildo(?:s)?',
+  'penis(?:es)?',
+  'vagina(?:s)?',
+  'clit(?:s|oris)?',
+  'boob(?:s|ies|y)?',
+  'tit(?:s|ty|ties)',
+  'handjob(?:s)?',
+  'blowjob(?:s)?',
+  'rimjob(?:s)?',
+  'footjob(?:s)?',
+  'anal',
+  'anus',
+  'scrotum',
+  'testicle(?:s)?',
+  'ballsack(?:s)?',
+  'buss(?:y|ies)',
+  'gyat+',
+  'goon(?:er|ers|ing)',
+  'skibidi',
+  'thot(?:s)?',
+  'skank(?:s|y)?',
+  'milf(?:s)?',
+  'dilf(?:s)?',
+  'stfu',
+  'gtfo',
+  'fuq',
+  'fck',
+  'shyt+',
+  'shite',
+  'bich(?:es)?',
+  'biatch(?:es)?',
+  'bytch(?:es)?',
+  'azz+',
+  'ashole(?:s)?',
+  'cnt',
+  'dik',
+  'kok',
+  'pusy'
 ];
 
 const REVIEW_DIRECT_WORD_REGEX = new RegExp(`\\b(?:${REVIEW_BLACKLIST_TERMS.join('|')})\\b`, 'gi');
@@ -1984,10 +2044,20 @@ function validateReviewModeration(title, comment, authorName) {
         : `${flagged[0]}, ${flagged[1]}, and ${flagged[2]}`;
     return {
       isAllowed: false,
-      errorMessage: `Blacklisted words detected in your ${joined}. Swears and slurs are not allowed in community reviews.`
+      errorMessage: `Blacklisted words detected in your ${joined}. Swears, slurs, and restricted slang are not allowed in community reviews.`
     };
   }
   return { isAllowed: true, errorMessage: null };
+}
+
+function sanitizeReviewObject(review) {
+  if (!review || typeof review !== 'object') return review;
+  return {
+    ...review,
+    authorName: sanitizeReviewText(review.authorName || ''),
+    title: sanitizeReviewText(review.title || ''),
+    comment: sanitizeReviewText(review.comment || '')
+  };
 }
 
 function maskBlacklistedToken(token) {
@@ -2110,7 +2180,7 @@ async function fetchPublicReviewsFromR2() {
   const cached = localStorage.getItem('lootdrop_public_reviews');
   if (cached) {
     try {
-      publicReviewsList = JSON.parse(cached);
+      publicReviewsList = JSON.parse(cached).map(sanitizeReviewObject);
     } catch (_) {}
   }
 
@@ -2126,7 +2196,7 @@ async function fetchPublicReviewsFromR2() {
       const data = await resp.json();
       if (Array.isArray(data) && data.length > 0) {
         const seedIds = new Set(data.map(d => d.id));
-        const merged = [...data];
+        const merged = [...data.map(sanitizeReviewObject)];
         INITIAL_SEED_REVIEWS.forEach(s => {
           if (!seedIds.has(s.id)) merged.push(s);
         });

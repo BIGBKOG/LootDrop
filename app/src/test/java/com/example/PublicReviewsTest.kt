@@ -91,6 +91,18 @@ class PublicReviewsTest {
         assertTrue(ReviewModerationFilter.containsBlacklistedWords("f.u.c.k this launcher"))
         assertTrue(ReviewModerationFilter.containsBlacklistedWords("sh1t optimizer and n1gg3r"))
         assertTrue(ReviewModerationFilter.containsBlacklistedWords("fuuuuuck this bug"))
+
+        // Requested restricted phrases, sexual slang, and troll/brainrot words
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("cash is clay bro"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("c@sh-is-clay"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("cashisclay"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("nuh dude"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("busted a nut"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("deez nuts"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("cum here"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("c.u.m"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("what up cuh"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("gyatt jizz skibidi"))
     }
 
     @Test
@@ -101,7 +113,8 @@ class PublicReviewsTest {
             "RollerCoaster Tycoon Classic + Peacock support is awesome",
             "Great cocktail of combat, scrap crafting, and compassionate NPCs",
             "Runs smooth at 120 FPS for CyberHunter88!",
-            "S.T.A.L.K.E.R. and F.E.A.R. are must-claim freebies"
+            "S.T.A.L.K.E.R. and F.E.A.R. are must-claim freebies",
+            "Peanut butter vacuum document circumstances and walnut chestnut minute"
         )
         cleanReviews.forEach { text ->
             assertFalse("Unexpectedly flagged clean text: $text", ReviewModerationFilter.containsBlacklistedWords(text))
@@ -128,20 +141,52 @@ class PublicReviewsTest {
         assertTrue(badAuthor.flaggedFields.contains("gamer tag"))
 
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val rejectedResult = PublicReviewsManager.postReview(
+
+        // Game review blocked
+        val rejectedGameResult = PublicReviewsManager.postReview(
             context = context,
             giveawayId = 999L,
             gameTitle = "Test Game",
             authorName = "Tester",
             authorTag = "Gamer",
             rating = 1,
-            title = "Broken crap",
-            comment = "This fucking installer broke",
+            title = "cash is clay",
+            comment = "this nuh nut game",
             platform = "Android",
-            isVerifiedClaimer = false
+            isVerifiedClaimer = false,
+            isAppReview = false
         )
-        assertTrue(rejectedResult.isFailure)
-        assertTrue(rejectedResult.exceptionOrNull()?.message?.contains("Blacklisted", ignoreCase = true) == true)
+        assertTrue(rejectedGameResult.isFailure)
+        assertTrue(rejectedGameResult.exceptionOrNull()?.message?.contains("Blacklisted", ignoreCase = true) == true)
+
+        // App review blocked
+        val rejectedAppResult = PublicReviewsManager.postReview(
+            context = context,
+            giveawayId = -1L,
+            gameTitle = "LootDrop App",
+            authorName = "Tester",
+            authorTag = "LootDrop Player",
+            rating = 1,
+            title = "App check",
+            comment = "Stop saying cum cuh",
+            platform = "Android",
+            isVerifiedClaimer = true,
+            isAppReview = true
+        )
+        assertTrue(rejectedAppResult.isFailure)
+        assertTrue(rejectedAppResult.exceptionOrNull()?.message?.contains("Blacklisted", ignoreCase = true) == true)
+
+        // Cached / legacy remote reviews are sanitized on load across all fields
+        val prefs = context.getSharedPreferences("lootdrop_public_reviews_cache", Context.MODE_PRIVATE)
+        prefs.edit().putString(
+            "cached_public_reviews_json",
+            """[{"id":"old_1","giveawayId":42,"gameTitle":"Game","authorName":"cuh","title":"cash is clay","comment":"nuh nut cum","rating":5}]"""
+        ).commit()
+        val cachedParsed = PublicReviewsManager.getCachedReviews(context)
+        assertEquals(1, cachedParsed.size)
+        assertFalse(ReviewModerationFilter.containsBlacklistedWords(cachedParsed[0].authorName))
+        assertFalse(ReviewModerationFilter.containsBlacklistedWords(cachedParsed[0].title))
+        assertFalse(ReviewModerationFilter.containsBlacklistedWords(cachedParsed[0].comment))
 
         // Display masking censors profanity cleanly
         val masked = ReviewModerationFilter.sanitizeForDisplay("Game had some shit glitches")
