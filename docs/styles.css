@@ -1,5 +1,5 @@
 /* ==========================================================================
-   LootDrop V3.4.0 - Complete Material 3 Styling
+   LootDrop V3.5.0 - Complete Material 3 Styling
    Matches Jetpack Compose Android UI with 19 Themes & Website Alerts
    ========================================================================== */
 
@@ -3360,6 +3360,162 @@ body.bg-light .floating-nav-bar {
   gap: 8px;
   margin-top: 6px;
 }
+
+/* ==========================================================================
+   ABOUT & CREDITS IN WEBSITE SETTINGS
+   ========================================================================== */
+.about-hero-box {
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, rgba(var(--color-primary-rgb), 0.10), rgba(var(--color-primary-rgb), 0.02));
+  border: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.about-hero-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.about-app-mark {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-card);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  flex-shrink: 0;
+}
+
+.about-app-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.about-app-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.about-app-title-row strong {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-text-main);
+}
+
+.about-app-meta p {
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.about-pills-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.about-pill-tag {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text-main);
+}
+
+.about-pill-tag.green {
+  color: #34D399;
+  border-color: rgba(16, 185, 129, 0.45);
+  background: rgba(16, 185, 129, 0.14);
+}
+
+.about-pill-tag.primary {
+  color: var(--color-primary);
+  border-color: rgba(var(--color-primary-rgb), 0.45);
+  background: rgba(var(--color-primary-rgb), 0.14);
+}
+
+.about-pill-tag.cyan {
+  color: #22D3EE;
+  border-color: rgba(34, 211, 238, 0.45);
+  background: rgba(34, 211, 238, 0.14);
+}
+
+body.bg-light .about-pill-tag.green {
+  color: #059669;
+  border-color: rgba(5, 150, 105, 0.35);
+  background: rgba(16, 185, 129, 0.12);
+}
+
+body.bg-light .about-pill-tag.cyan {
+  color: #0891B2;
+  border-color: rgba(8, 145, 178, 0.35);
+  background: rgba(6, 182, 212, 0.12);
+}
+
+.about-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.about-group-heading {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--color-primary);
+  margin: 20px 0 10px 0;
+}
+
+.about-list {
+  margin-top: 0;
+}
+
+.credit-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.credit-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 6px;
+  color: var(--color-primary);
+  background: rgba(var(--color-primary-rgb), 0.14);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.35);
+}
+
+.credit-role {
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  color: var(--color-primary) !important;
+}
+
+.settings-link-item.static-credit-item {
+  cursor: default;
+}
+
+.settings-link-item.static-credit-item:hover {
+  transform: none;
+  border-color: var(--color-border);
+  background: var(--color-surface-card);
+}
+
 
 
 

@@ -703,7 +703,13 @@ fun GeneralSettingsCategoryContent(
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
-                            val pct = if (downloadState.progress > 0f) "${(downloadState.progress * 100).toInt()}%" else "Connecting..."
+                            val pct = if (downloadState.totalBytes > 0L && downloadState.progress > 0f) {
+                                "${(downloadState.progress * 100).toInt()}%"
+                            } else if (downloadState.bytesDownloaded > 0L) {
+                                "Downloading..."
+                            } else {
+                                "Connecting..."
+                            }
                             Text(
                                 text = pct,
                                 fontSize = 11.sp,
@@ -712,21 +718,35 @@ fun GeneralSettingsCategoryContent(
                             )
                         }
 
-                        LinearProgressIndicator(
-                            progress = { downloadState.progress.coerceIn(0f, 1f) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(6.dp)
-                                .clip(RoundedCornerShape(3.dp)),
-                            color = NeonGreen,
-                            trackColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-
                         if (downloadState.totalBytes > 0L) {
+                            LinearProgressIndicator(
+                                progress = { downloadState.progress.coerceIn(0f, 1f) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(6.dp)
+                                    .clip(RoundedCornerShape(3.dp)),
+                                color = NeonGreen,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
                             val downloadedMb = String.format("%.1f", downloadState.bytesDownloaded / (1024f * 1024f))
                             val totalMb = String.format("%.1f", downloadState.totalBytes / (1024f * 1024f))
                             Text(
                                 text = "$downloadedMb MB / $totalMb MB",
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else {
+                            LinearProgressIndicator(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(6.dp)
+                                    .clip(RoundedCornerShape(3.dp)),
+                                color = NeonGreen,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            val downloadedMb = String.format("%.1f", downloadState.bytesDownloaded / (1024f * 1024f))
+                            Text(
+                                text = if (downloadState.bytesDownloaded > 0L) "$downloadedMb MB downloaded" else "Connecting to GitHub...",
                                 fontSize = 10.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

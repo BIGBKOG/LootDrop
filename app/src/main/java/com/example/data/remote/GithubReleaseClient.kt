@@ -240,6 +240,7 @@ class GithubReleaseClient(private val context: Context) {
         internal fun parseAtomFeedXml(xml: String, currentVersionName: String): AtomReleaseCandidate? {
             val entryRegex = Pattern.compile("<entry>([\\s\\S]*?)</entry>")
             val idRegex = Pattern.compile("<id>[^<]*/([^</]+)</id>")
+            val linkTagRegex = Pattern.compile("<link[^>]*href=\"[^\"]*/releases/tag/([^\"]+)\"")
             val titleRegex = Pattern.compile("<title>([^<]+)</title>")
             val updatedRegex = Pattern.compile("<updated>([^<]+)</updated>")
             val contentRegex = Pattern.compile("<content[^>]*>([\\s\\S]*?)</content>")
@@ -253,7 +254,9 @@ class GithubReleaseClient(private val context: Context) {
             while (matcher.find()) {
                 val entryText = matcher.group(1) ?: continue
                 val idMatch = idRegex.matcher(entryText)
-                val tag = if (idMatch.find()) idMatch.group(1)?.trim() else null
+                val linkMatch = linkTagRegex.matcher(entryText)
+                val tag = (if (idMatch.find()) idMatch.group(1)?.trim() else null)
+                    ?: (if (linkMatch.find()) linkMatch.group(1)?.substringBefore("?")?.substringBefore("#")?.trim() else null)
                 if (tag.isNullOrBlank()) continue
                 if (fallbackFirstTag == null) fallbackFirstTag = tag
 
@@ -379,11 +382,18 @@ class GithubReleaseClient(private val context: Context) {
                 Pattern.CASE_INSENSITIVE
             )
             val matcher = apkRegex.matcher(html)
-            if (matcher.find()) {
-                val relativePath = matcher.group(1)?.replace("&amp;", "&") ?: return null
-                return "https://github.com$relativePath"
+            var fallbackUrl: String? = null
+            while (matcher.find()) {
+                val relativePath = matcher.group(1)?.replace("&amp;", "&") ?: continue
+                val fullUrl = "https://github.com$relativePath"
+                if (!relativePath.contains("debug", ignoreCase = true)) {
+                    return fullUrl
+                }
+                if (fallbackUrl == null) {
+                    fallbackUrl = fullUrl
+                }
             }
-            return null
+            return fallbackUrl
         }
 
         fun isCurrentModernStream(version: String): Boolean {

@@ -1457,8 +1457,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         // If this exact version is already downloaded and valid, install immediately in 1 tap
         if (currentState is UpdateDownloadState.ReadyToInstall &&
             currentState.versionTag == updateInfo.latestVersion &&
-            currentState.apkFile.exists() &&
-            currentState.apkFile.length() >= 50_000L
+            AppUpdateInstaller.hasValidApkFile(currentState.apkFile)
         ) {
             triggerInstallWithAutoResume(installContext, currentState.apkFile)
             return
@@ -1524,7 +1523,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         }
         val canInstall = Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
             context.packageManager.canRequestPackageInstalls()
-        if (canInstall && state.apkFile.exists()) {
+        if (canInstall && AppUpdateInstaller.hasValidApkFile(state.apkFile)) {
             pendingInstallAfterPermissionGrant = false
             AppUpdateInstaller.installApk(context, state.apkFile)
         }

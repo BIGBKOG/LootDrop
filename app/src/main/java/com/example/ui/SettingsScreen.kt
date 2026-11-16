@@ -51,6 +51,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.components.AboutSettingsCategoryContent
 import com.example.ui.components.AlertsSettingsCategoryContent
 import com.example.ui.components.AppearanceSettingsCategoryContent
 import com.example.ui.components.GeneralSettingsCategoryContent
@@ -253,6 +254,9 @@ fun SettingsScreen(
                             onRequestResyncDialog = { showResyncDialog = true },
                             onRequestClearClaimedDialog = { showClearClaimedDialog = true }
                         )
+                    }
+                    SettingsCategory.ABOUT -> {
+                        AboutSettingsCategoryContent()
                     }
                 }
             }

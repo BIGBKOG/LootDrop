@@ -1097,7 +1097,9 @@ fun HomeScreen(
             downloadState = updateDownloadState,
             onDismiss = {
                 viewModel.dismissUpdateDialog()
-                viewModel.resetUpdateDownloadState()
+                if (updateDownloadState is com.example.data.model.UpdateDownloadState.Error) {
+                    viewModel.resetUpdateDownloadState()
+                }
             },
             onStartDownload = {
                 viewModel.startInAppUpdateDownload(appUpdateInfo!!, context)

@@ -159,6 +159,9 @@ class MainActivity : ComponentActivity() {
         if (intent == null) return
         val openUpdate = intent.getBooleanExtra(NotificationHelper.EXTRA_OPEN_UPDATE_DIALOG, false)
         if (openUpdate) {
+            if (viewModel.appUpdateInfo.value == null) {
+                viewModel.checkGithubReleases(isManual = true)
+            }
             viewModel.setUpdateDialogVisible(true)
         }
         val giveawayId = intent.getIntExtra(NotificationHelper.EXTRA_GIVEAWAY_ID, -1)

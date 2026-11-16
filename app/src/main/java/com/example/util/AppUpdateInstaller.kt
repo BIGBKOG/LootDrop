@@ -187,6 +187,18 @@ object AppUpdateInstaller {
                     }
                     promoted = true
 
+                    // Clean up older downloaded update APKs to avoid wasting storage
+                    runCatching {
+                        targetDir.listFiles()?.forEach { file ->
+                            if (file.absolutePath != targetFile.absolutePath &&
+                                file.name.startsWith("lootdrop_") &&
+                                (file.name.endsWith(".apk") || file.name.endsWith(".apk.tmp"))
+                            ) {
+                                file.delete()
+                            }
+                        }
+                    }
+
                     Log.d(
                         TAG,
                         "Update APK successfully downloaded to: ${targetFile.absolutePath} (${targetFile.length()} bytes)"

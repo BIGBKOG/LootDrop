@@ -22,11 +22,20 @@ import com.example.data.remote.SteamOwnedGame
 import com.example.notifications.NotificationHelper
 import com.example.preferences.AppPreferences
 import kotlinx.coroutines.runBlocking
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -35,6 +44,9 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class ExampleRobolectricTest {
+
+    @get:Rule
+    val composeTestRule = createComposeRule()
 
     @Test
     fun `read string from context`() {
@@ -202,13 +214,13 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `settings categories contains appearance alerts general and storage tabs`() {
+    fun `settings categories contains appearance alerts general storage and about tabs`() {
         val categories = com.example.ui.SettingsCategory.values()
-        assertEquals(4, categories.size)
+        assertEquals(5, categories.size)
         val names = categories.map { it.name }
-        assertEquals(listOf("APPEARANCE", "ALERTS", "GENERAL", "STORAGE"), names)
+        assertEquals(listOf("APPEARANCE", "ALERTS", "GENERAL", "STORAGE", "ABOUT"), names)
         val labels = categories.map { it.label }
-        assertEquals(listOf("Appearance", "Alerts", "General", "Storage & Data"), labels)
+        assertEquals(listOf("Appearance", "Alerts", "General", "Storage & Data", "About"), labels)
     }
 
     @Test
@@ -707,6 +719,18 @@ class ExampleRobolectricTest {
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.4.0", "3.4.0"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.4.1", "3.4.0"))
         assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.4.1", "3.4.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.5.0", "3.4.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.5.0", "3.4.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.5.1", "3.5.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.5.1", "3.5.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.5.0", "3.5.1"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.5.0", "3.5.1"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.5.1", "3.5.1"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.5.1", "3.5.1"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.5.2", "3.5.1"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.5.2", "3.5.1"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.6.0", "3.5.1"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.6.0", "3.5.1"))
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.1.2", "3.2.0"))
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V3.1.2", "3.2.0"))
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("3.1.1", "3.1.2"))
@@ -1416,42 +1440,42 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `version 3 4 0 is configured and recognized as modern release stream`() {
-        assertEquals("3.4.0", BuildConfig.VERSION_NAME)
-        assertEquals(49, BuildConfig.VERSION_CODE)
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("3.4.0"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v3.4.0"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("V3.4.0"))
+    fun `version 3 5 1 build 51 is configured and recognized as modern release stream`() {
+        assertEquals("3.5.1", BuildConfig.VERSION_NAME)
+        assertEquals(51, BuildConfig.VERSION_CODE)
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("3.5.1"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v3.5.1"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("V3.5.1"))
     }
 
     @Test
-    fun `github release pull and installer resolution operates with v3 4 0 conventions`() {
+    fun `github release pull and installer resolution operates with v3 5 1 conventions`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val client = com.example.data.remote.GithubReleaseClient(context)
         val apkUrl = client.resolveApkUrl(
             com.example.data.remote.GithubReleaseClient.DEFAULT_OWNER,
             com.example.data.remote.GithubReleaseClient.DEFAULT_REPO,
-            "V3.4.0"
+            "V3.5.1"
         )
         println("RESOLVED APK URL: $apkUrl")
         assertNotNull(apkUrl)
-        assertTrue(apkUrl!!.contains("V3.4.0", ignoreCase = true))
+        assertTrue(apkUrl!!.contains("V3.5.1", ignoreCase = true))
         assertTrue(apkUrl.endsWith(".apk", ignoreCase = true))
 
         // Verify Atom feed parser picks highest modern version even if an older release appears first
         val atomXml = """
             <feed xmlns="http://www.w3.org/2005/Atom">
               <entry>
-                <id>tag:github.com,2008:Repository/12345/V3.3.0</id>
-                <updated>2026-11-14T12:00:00Z</updated>
-                <title>LootDrop V3.3.0</title>
+                <id>tag:github.com,2008:Repository/12345/V3.5.0</id>
+                <updated>2026-11-15T12:00:00Z</updated>
+                <title>LootDrop V3.5.0</title>
                 <content type="html">&lt;p&gt;Edited older release notes&lt;/p&gt;</content>
               </entry>
               <entry>
-                <id>tag:github.com,2008:Repository/12345/V3.4.0</id>
-                <updated>2026-11-15T12:00:00Z</updated>
-                <title>LootDrop V3.4.0</title>
-                <content type="html">&lt;p&gt;Material 3 Expressive &amp;amp; Build 49&lt;/p&gt;</content>
+                <id>tag:github.com,2008:Repository/12345/V3.5.1</id>
+                <updated>2026-11-16T12:00:00Z</updated>
+                <title>LootDrop V3.5.1</title>
+                <content type="html">&lt;p&gt;Custom Fonts &amp;amp; Build 51&lt;/p&gt;</content>
               </entry>
               <entry>
                 <id>tag:github.com,2008:Repository/12345/V4.5</id>
@@ -1461,23 +1485,23 @@ class ExampleRobolectricTest {
               </entry>
             </feed>
         """.trimIndent()
-        val parsedAtom = com.example.data.remote.GithubReleaseClient.parseAtomFeedXml(atomXml, "3.3.0")
+        val parsedAtom = com.example.data.remote.GithubReleaseClient.parseAtomFeedXml(atomXml, "3.5.0")
         assertNotNull(parsedAtom)
-        assertEquals("V3.4.0", parsedAtom!!.tag)
-        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion(parsedAtom.tag, "3.3.0"))
+        assertEquals("V3.5.1", parsedAtom!!.tag)
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion(parsedAtom.tag, "3.5.0"))
 
         // Verify REST API parser extracts non-blank APK asset URL
         val restJson = """
             {
-              "tag_name": "V3.4.0",
-              "name": "LootDrop V3.4.0",
-              "body": "Build 49 release",
-              "html_url": "https://github.com/BIGBKOG/LootDrop/releases/tag/V3.4.0",
-              "published_at": "2026-11-15T12:00:00Z",
+              "tag_name": "V3.5.1",
+              "name": "LootDrop V3.5.1",
+              "body": "Build 51 release",
+              "html_url": "https://github.com/BIGBKOG/LootDrop/releases/tag/V3.5.1",
+              "published_at": "2026-11-16T12:00:00Z",
               "assets": [
                 {
-                  "name": "Lootdrop-V3.4.0.apk",
-                  "browser_download_url": "https://github.com/BIGBKOG/LootDrop/releases/download/V3.4.0/Lootdrop-V3.4.0.apk"
+                  "name": "Lootdrop-V3.5.1.apk",
+                  "browser_download_url": "https://github.com/BIGBKOG/LootDrop/releases/download/V3.5.1/Lootdrop-V3.5.1.apk"
                 }
               ]
             }
@@ -1486,20 +1510,21 @@ class ExampleRobolectricTest {
             restJson,
             "BIGBKOG",
             "LootDrop",
-            "3.3.0"
+            "3.5.0"
         )
         assertNotNull(parsedRest)
         assertTrue(parsedRest!!.hasUpdate)
         assertTrue(parsedRest.isApkAvailable)
         assertEquals(
-            "https://github.com/BIGBKOG/LootDrop/releases/download/V3.4.0/Lootdrop-V3.4.0.apk",
+            "https://github.com/BIGBKOG/LootDrop/releases/download/V3.5.1/Lootdrop-V3.5.1.apk",
             parsedRest.downloadUrl
         )
 
-        // Verify expanded_assets HTML extraction supports relative & absolute links
+        // Verify expanded_assets HTML extraction prefers release APK over debug APK
         val expandedHtml = """
             <ul>
-              <li><a href="/BIGBKOG/LootDrop/releases/download/V3.4.0/Lootdrop-V3.4.0.apk">Lootdrop-V3.4.0.apk</a></li>
+              <li><a href="/BIGBKOG/LootDrop/releases/download/V3.5.1/Lootdrop-V3.5.1-debug.apk">Lootdrop-V3.5.1-debug.apk</a></li>
+              <li><a href="/BIGBKOG/LootDrop/releases/download/V3.5.1/Lootdrop-V3.5.1.apk">Lootdrop-V3.5.1.apk</a></li>
             </ul>
         """.trimIndent()
         val extracted = com.example.data.remote.GithubReleaseClient.extractApkUrlFromExpandedAssetsHtml(
@@ -1508,7 +1533,7 @@ class ExampleRobolectricTest {
             "LootDrop"
         )
         assertEquals(
-            "https://github.com/BIGBKOG/LootDrop/releases/download/V3.4.0/Lootdrop-V3.4.0.apk",
+            "https://github.com/BIGBKOG/LootDrop/releases/download/V3.5.1/Lootdrop-V3.5.1.apk",
             extracted
         )
 
@@ -2991,5 +3016,28 @@ class ExampleRobolectricTest {
         assertEquals("", viewModel.customFontName.value)
         assertEquals("", prefs.customFontPath)
         assertEquals("", prefs.customFontName)
+    }
+
+    @Test
+    fun `about settings category renders creator and api credits`() {
+        composeTestRule.setContent {
+            com.example.ui.theme.LootDropTheme {
+                androidx.compose.foundation.layout.Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                ) {
+                    com.example.ui.components.AboutSettingsCategoryContent()
+                }
+            }
+        }
+
+        composeTestRule.onNodeWithTag("about_hero_card").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("credit_contributor_bigbkog").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("BIGBKOG").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("credit_api_gamerpower").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("GamerPower API").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("credit_api_cheapshark").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("CheapShark API").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("credit_tech_license").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithTag("about_support_patreon_button").performScrollTo().assertIsDisplayed()
     }
 }

@@ -291,22 +291,37 @@ fun AppUpdateDialog(
                                         )
                                     }
                                     Text(
-                                        text = "${(downloadState.progress * 100).toInt()}%",
+                                        text = if (downloadState.totalBytes > 0L) {
+                                            "${(downloadState.progress * 100).toInt()}%"
+                                        } else {
+                                            "..."
+                                        },
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Black,
                                         color = themePrimary
                                     )
                                 }
 
-                                LinearProgressIndicator(
-                                    progress = { downloadState.progress },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(8.dp)
-                                        .clip(RoundedCornerShape(4.dp)),
-                                    color = themePrimary,
-                                    trackColor = Color(0xFF26334D)
-                                )
+                                if (downloadState.totalBytes > 0L) {
+                                    LinearProgressIndicator(
+                                        progress = { downloadState.progress.coerceIn(0f, 1f) },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(8.dp)
+                                            .clip(RoundedCornerShape(4.dp)),
+                                        color = themePrimary,
+                                        trackColor = Color(0xFF26334D)
+                                    )
+                                } else {
+                                    LinearProgressIndicator(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(8.dp)
+                                            .clip(RoundedCornerShape(4.dp)),
+                                        color = themePrimary,
+                                        trackColor = Color(0xFF26334D)
+                                    )
+                                }
 
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
