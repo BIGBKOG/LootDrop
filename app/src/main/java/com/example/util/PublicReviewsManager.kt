@@ -117,8 +117,15 @@ object PublicReviewsManager {
         val cleanComment = comment.trim()
         val isForApp = isAppReview || giveawayId == -1L || gameTitle.contains("LootDrop", ignoreCase = true)
 
-        if (cleanComment.isBlank() && cleanTitle.isBlank()) {
-            return@withContext Result.failure(IllegalArgumentException("Please write a review comment or title."))
+        val moderation = ReviewModerationFilter.validateReviewInput(
+            title = cleanTitle,
+            comment = cleanComment,
+            authorName = cleanAuthor
+        )
+        if (!moderation.isAllowed) {
+            return@withContext Result.failure(
+                IllegalArgumentException(moderation.errorMessage ?: "Review contains blacklisted words.")
+            )
         }
 
         val newReview = PublicReview(
@@ -255,7 +262,14 @@ object PublicReviewsManager {
             val array = JSONArray(jsonString)
             for (i in 0 until array.length()) {
                 val obj = array.optJSONObject(i) ?: continue
-                list.add(PublicReview.fromJson(obj))
+                val raw = PublicReview.fromJson(obj)
+                list.add(
+                    raw.copy(
+                        authorName = ReviewModerationFilter.sanitizeForDisplay(raw.authorName),
+                        title = ReviewModerationFilter.sanitizeForDisplay(raw.title),
+                        comment = ReviewModerationFilter.sanitizeForDisplay(raw.comment)
+                    )
+                )
             }
         }
         return list

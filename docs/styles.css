@@ -2862,6 +2862,17 @@ body.bg-light .floating-nav-bar {
   border-radius: var(--radius-sm);
 }
 
+.review-moderation-error {
+  font-size: 12px;
+  font-weight: 600;
+  color: #FEE2E2;
+  background: rgba(127, 29, 29, 0.55);
+  border: 1px solid rgba(239, 68, 68, 0.7);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  line-height: 1.4;
+}
+
 .btn-gold-gradient {
   background: linear-gradient(135deg, #F59E0B, #D97706);
   color: #000;

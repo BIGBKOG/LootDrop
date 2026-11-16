@@ -680,7 +680,9 @@ fun HomeScreen(
                             publicReviews = publicReviews,
                             defaultAuthorName = userProfile.name,
                             onPostAppReview = { rating, title, comment ->
-                                viewModel.postAppReview(rating = rating, title = title, comment = comment)
+                                viewModel.postAppReview(rating = rating, title = title, comment = comment) { _, msg ->
+                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                }
                             },
                             onVoteHelpful = { reviewId ->
                                 viewModel.voteReviewHelpful(reviewId)

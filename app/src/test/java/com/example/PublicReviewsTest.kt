@@ -1,9 +1,13 @@
 package com.example
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import com.example.data.model.PublicReview
-import org.json.JSONObject
+import com.example.util.PublicReviewsManager
+import com.example.util.ReviewModerationFilter
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -53,9 +57,95 @@ class PublicReviewsTest {
 
     @Test
     fun testInitialSeedReviewsExist() {
-        val seeds = com.example.util.PublicReviewsManager.getInitialSeedReviews()
+        val seeds = PublicReviewsManager.getInitialSeedReviews()
         assertTrue(seeds.isNotEmpty())
         assertTrue(seeds.any { it.gameTitle.contains("Death Stranding", ignoreCase = true) })
         assertTrue(seeds.all { it.rating in 1..5 })
+        seeds.forEach { seed ->
+            assertTrue(
+                ReviewModerationFilter.validateReviewInput(
+                    title = seed.title,
+                    comment = seed.comment,
+                    authorName = seed.authorName
+                ).isAllowed
+            )
+        }
+    }
+
+    @Test
+    fun testReviewBlacklistBlocksSwearsAndSlursIncludingObfuscation() {
+        // Explicit swears
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("This port runs like shit"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("What a fucking mess"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("Total asshole move by devs"))
+
+        // Explicit slurs
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("Stop being a retard"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("Blocked faggot behavior"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("Shut up nigger"))
+
+        // Leetspeak, symbol masking, repeated letters, and spaced-letter obfuscation
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("Total $#!7 game"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("What a b!tch"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("This is f u c k i n g broken"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("f.u.c.k this launcher"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("sh1t optimizer and n1gg3r"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("fuuuuuck this bug"))
+    }
+
+    @Test
+    fun testReviewBlacklistAllowsCleanGamingTermsWithoutFalsePositives() {
+        val cleanReviews = listOf(
+            "Assassin's Creed is a classic Stealth RPG",
+            "Helldivers 2 and Hellblade II run great on Steam Deck",
+            "RollerCoaster Tycoon Classic + Peacock support is awesome",
+            "Great cocktail of combat, scrap crafting, and compassionate NPCs",
+            "Runs smooth at 120 FPS for CyberHunter88!",
+            "S.T.A.L.K.E.R. and F.E.A.R. are must-claim freebies"
+        )
+        cleanReviews.forEach { text ->
+            assertFalse("Unexpectedly flagged clean text: $text", ReviewModerationFilter.containsBlacklistedWords(text))
+            assertEquals(text, ReviewModerationFilter.sanitizeForDisplay(text))
+        }
+    }
+
+    @Test
+    fun testValidateReviewInputChecksAllFieldsAndPostReviewRejects() = runBlocking {
+        val badHeadline = ReviewModerationFilter.validateReviewInput(
+            title = "Complete bullshit",
+            comment = "Crashes on launch",
+            authorName = "PixelHunter"
+        )
+        assertFalse(badHeadline.isAllowed)
+        assertTrue(badHeadline.flaggedFields.contains("headline"))
+
+        val badAuthor = ReviewModerationFilter.validateReviewInput(
+            title = "Fun game",
+            comment = "Really enjoyed it",
+            authorName = "b1tchSlayer"
+        )
+        assertFalse(badAuthor.isAllowed)
+        assertTrue(badAuthor.flaggedFields.contains("gamer tag"))
+
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val rejectedResult = PublicReviewsManager.postReview(
+            context = context,
+            giveawayId = 999L,
+            gameTitle = "Test Game",
+            authorName = "Tester",
+            authorTag = "Gamer",
+            rating = 1,
+            title = "Broken crap",
+            comment = "This fucking installer broke",
+            platform = "Android",
+            isVerifiedClaimer = false
+        )
+        assertTrue(rejectedResult.isFailure)
+        assertTrue(rejectedResult.exceptionOrNull()?.message?.contains("Blacklisted", ignoreCase = true) == true)
+
+        // Display masking censors profanity cleanly
+        val masked = ReviewModerationFilter.sanitizeForDisplay("Game had some shit glitches")
+        assertFalse(ReviewModerationFilter.containsBlacklistedWords(masked))
+        assertTrue(masked.contains("s***"))
     }
 }

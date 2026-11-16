@@ -1816,6 +1816,207 @@ const R2_AUTH_KEY = 'sb_publishable_htD9aXXk0QHjhG_ifS3nYg_kjUp7osD';
 let publicReviewsList = [];
 let currentReviewRating = 5;
 
+const REVIEW_BLACKLIST_TERMS = [
+  'fuck(?:er|ers|ed|ing|ings|in|wit|wits|head|heads|face|faces|tard|tards|boy|boys|s)?',
+  '(?:mother|motha|mutha)fuck(?:er|ers|ed|ing|a|as|s)?',
+  'clusterfuck(?:ed|s)?',
+  'fvck(?:er|ers|ed|ing|s)?',
+  'fuk(?:c|k)?(?:er|ers|ed|ing|s)?',
+  'phuck(?:er|ers|ed|ing|s)?',
+  'phuk(?:er|ers|ed|ing|s)?',
+  'f[*@#_]ck(?:er|ers|ed|ing|s)?',
+  'f[*_]{2}k(?:er|ers|ed|ing|s)?',
+  'shit(?:s|ty|tier|tiest|ted|ting|head|heads|face|faces|hole|holes|load|loads|show|shows|storm|storms|post|posts)?',
+  'sh[*!_#]t(?:s|ty|ted|ting|head|heads)?',
+  'bullshit(?:ter|ters|ted|ting|s)?',
+  'horseshit',
+  'dipshit(?:s)?',
+  'batshit',
+  'apeshit',
+  'bitch(?:es|ed|ing|y|ass)?',
+  'b[*!_#]tch(?:es|ed|ing|y)?',
+  'son\\s+of\\s+a\\s+bitch',
+  'bastard(?:s|ized)?',
+  'cunt(?:s|y)?',
+  'c[*_#]nt(?:s|y)?',
+  'ass',
+  'ass?hole(?:s)?',
+  'arsehole(?:s)?',
+  'jackass(?:es)?',
+  'dumbass(?:es)?',
+  'fatass(?:es)?',
+  'smartass(?:es)?',
+  'asswipe(?:s)?',
+  'asshat(?:s)?',
+  'assclown(?:s)?',
+  'a[*_]{2}hole(?:s)?',
+  'cock(?:s|sucker|suckers|sucking|head|heads|block|blocker|blockers)?',
+  'c[*_#]ck(?:s|sucker|suckers|head|heads)?',
+  'dick(?:s|head|heads|wad|wads|face|faces|weed|less)?',
+  'd[*!_#]ck(?:s|head|heads|wad|wads|face|faces)?',
+  'pussy',
+  'pussies',
+  'p[*_#]ss(?:y|ies)',
+  'whore(?:s|d|ing|house|houses)?',
+  'wh[*_#]re(?:s|d|ing)?',
+  'slut(?:s|ty|tier|tiest)?',
+  'sl[*_#]t(?:s|ty)?',
+  'twat(?:s|waffle|waffles)?',
+  'wank(?:er|ers|ed|ing|s)?',
+  'prick(?:s)?',
+  'douche(?:bag|bags|canoe|canoes|y|s)?',
+  'piss(?:ed|ing|es)?',
+  'nigg+(?:a|as|ah|ahs|er|ers|uh|uhs|let|lets)',
+  'n[*!_#]gg(?:a|as|er|ers)',
+  'nigr(?:a|o|os)',
+  'negro(?:es|s)?',
+  'sandnigg+(?:a|er|ers|as)',
+  'fag+(?:ot|ots|otry|y|s)?',
+  'f[*@_#]g(?:got|gots|s)?',
+  'dyke(?:s)?',
+  'trann(?:y|ies)',
+  'shemale(?:s)?',
+  'kike(?:s)?',
+  'kyke(?:s)?',
+  'spic(?:s|k|ks)?',
+  'wetback(?:s)?',
+  'beaner(?:s)?',
+  'chink(?:s)?',
+  'gook(?:s)?',
+  'coon(?:s)?',
+  'jigaboo(?:s)?',
+  'sambo(?:s)?',
+  'raghead(?:s)?',
+  'towelhead(?:s)?',
+  'paki(?:s)?',
+  'retard(?:s|ed|ation)?',
+  'r[*e]tard(?:s|ed)?',
+  'libtard(?:s)?',
+  'fucktard(?:s)?',
+  'spastic(?:s)?',
+  'mongoloid(?:s)?',
+  'zipperhead(?:s)?',
+  'porchmonkey(?:s)?',
+  'junglebunny',
+  'junglebunnies',
+  'cameljockey(?:s)?',
+  'redskin(?:s)?',
+  'squaw(?:s)?',
+  'injun(?:s)?',
+  'wop(?:s)?',
+  'dago(?:s|es)?',
+  'polack(?:s)?',
+  'kraut(?:s)?',
+  'heeb(?:s)?'
+];
+
+const REVIEW_DIRECT_WORD_REGEX = new RegExp(`\\b(?:${REVIEW_BLACKLIST_TERMS.join('|')})\\b`, 'gi');
+const REVIEW_SEPARATED_LETTERS_REGEX = /(?<![\p{L}\p{N}])([\p{L}\p{N}@$!*])(?:[\s._\-*]+([\p{L}\p{N}@$!*])){2,}(?![\p{L}\p{N}])/gu;
+const REVIEW_INLINE_SEP_TOKEN_REGEX = /(?<!\S)[\p{L}\p{N}@$!*]+(?:[._\-*]+[\p{L}\p{N}@$!*]+)+(?!\S)/gu;
+
+function normalizeReviewLeet(text) {
+  return text
+    .replace(/0/g, 'o')
+    .replace(/[1!]/g, 'i')
+    .replace(/3/g, 'e')
+    .replace(/[4@]/g, 'a')
+    .replace(/[5$]/g, 's')
+    .replace(/[7+]/g, 't')
+    .replace(/8/g, 'b')
+    .replace(/#/g, 'h');
+}
+
+function buildReviewModerationVariants(text) {
+  const cleaned = String(text || '')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '');
+  const base = cleaned.toLowerCase();
+  const camelBase = cleaned.replace(/([\p{Ll}\p{N}@$!*#])([\p{Lu}])/gu, '$1 $2').toLowerCase();
+  const leet = normalizeReviewLeet(base);
+  const camelLeet = normalizeReviewLeet(camelBase);
+  const inlineBase = base.replace(REVIEW_INLINE_SEP_TOKEN_REGEX, m => m.replace(/[._\-*]+/g, ''));
+  const inlineLeet = normalizeReviewLeet(inlineBase);
+  const spacedBase = base.replace(REVIEW_SEPARATED_LETTERS_REGEX, m => m.replace(/[\s._\-*]+/g, ''));
+  const spacedLeet = normalizeReviewLeet(spacedBase);
+
+  return Array.from(new Set([
+    base,
+    camelBase,
+    leet,
+    camelLeet,
+    base.replace(/(.)\1{2,}/g, '$1'),
+    leet.replace(/(.)\1{2,}/g, '$1'),
+    camelLeet.replace(/(.)\1{2,}/g, '$1'),
+    base.replace(/(.)\1{2,}/g, '$1$1'),
+    leet.replace(/(.)\1{2,}/g, '$1$1'),
+    base.replace(/(.)\1+/g, '$1'),
+    leet.replace(/(.)\1+/g, '$1'),
+    camelLeet.replace(/(.)\1+/g, '$1'),
+    inlineBase,
+    inlineLeet,
+    inlineLeet.replace(/(.)\1+/g, '$1'),
+    spacedBase,
+    spacedLeet,
+    spacedLeet.replace(/(.)\1+/g, '$1')
+  ]));
+}
+
+function containsBlacklistedReviewWords(text) {
+  if (!text || !String(text).trim()) return false;
+  return buildReviewModerationVariants(text).some(variant => {
+    REVIEW_DIRECT_WORD_REGEX.lastIndex = 0;
+    return REVIEW_DIRECT_WORD_REGEX.test(variant);
+  });
+}
+
+function validateReviewModeration(title, comment, authorName) {
+  const flagged = [];
+  if (containsBlacklistedReviewWords(title)) flagged.push('headline');
+  if (containsBlacklistedReviewWords(comment)) flagged.push('review comment');
+  if (containsBlacklistedReviewWords(authorName)) flagged.push('gamer tag');
+
+  if (flagged.length > 0) {
+    const joined = flagged.length === 1
+      ? flagged[0]
+      : flagged.length === 2
+        ? `${flagged[0]} and ${flagged[1]}`
+        : `${flagged[0]}, ${flagged[1]}, and ${flagged[2]}`;
+    return {
+      isAllowed: false,
+      errorMessage: `Blacklisted words detected in your ${joined}. Swears and slurs are not allowed in community reviews.`
+    };
+  }
+  return { isAllowed: true, errorMessage: null };
+}
+
+function maskBlacklistedToken(token) {
+  const trimmed = token.trim();
+  if (trimmed.length <= 2) return '*'.repeat(Math.max(2, trimmed.length));
+  return trimmed.charAt(0) + '*'.repeat(trimmed.length - 1);
+}
+
+function sanitizeReviewText(text) {
+  if (!containsBlacklistedReviewWords(text)) return String(text || '');
+  let result = String(text || '').replace(REVIEW_DIRECT_WORD_REGEX, m => maskBlacklistedToken(m));
+  if (containsBlacklistedReviewWords(result)) {
+    result = result.replace(REVIEW_INLINE_SEP_TOKEN_REGEX, m =>
+      containsBlacklistedReviewWords(m) ? maskBlacklistedToken(m) : m
+    );
+  }
+  if (containsBlacklistedReviewWords(result)) {
+    result = result.replace(REVIEW_SEPARATED_LETTERS_REGEX, m =>
+      containsBlacklistedReviewWords(m) ? '****' : m
+    );
+  }
+  if (containsBlacklistedReviewWords(result)) {
+    result = result.split(/(\s+)/).map(tok =>
+      tok.trim() && containsBlacklistedReviewWords(tok) ? maskBlacklistedToken(tok) : tok
+    ).join('');
+  }
+  return result;
+}
+
 const INITIAL_SEED_REVIEWS = [
   {
     id: "rev_seed_1",
@@ -1990,8 +2191,11 @@ function renderAppReviewsPreview() {
   }
 
   previewEl.innerHTML = appReviews.map(r => {
+    const cleanAuthor = sanitizeReviewText(r.authorName || 'Gamer');
+    const cleanTitle = sanitizeReviewText(r.title || '');
+    const cleanComment = sanitizeReviewText(r.comment || '');
     const starStr = '★'.repeat(r.rating || 5) + '☆'.repeat(5 - (r.rating || 5));
-    const initial = (r.authorName || 'G').trim().charAt(0).toUpperCase();
+    const initial = (cleanAuthor || 'G').trim().charAt(0).toUpperCase();
     const isVoted = votedIds.includes(r.id);
     const dateFormatted = new Date(r.timestamp || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
@@ -2002,7 +2206,7 @@ function renderAppReviewsPreview() {
             <div class="review-author-avatar">${initial}</div>
             <div class="review-author-meta">
               <span class="review-author-name">
-                ${escapeHtml(r.authorName || 'Gamer')}
+                ${escapeHtml(cleanAuthor)}
                 <span class="review-verified-badge">✓ Verified User</span>
               </span>
               <span class="review-time-platform">${escapeHtml(r.platform || 'LootDrop')} • ${dateFormatted}</span>
@@ -2010,8 +2214,8 @@ function renderAppReviewsPreview() {
           </div>
           <div class="review-stars-badge">${starStr}</div>
         </div>
-        ${r.title ? `<div class="review-card-title">${escapeHtml(r.title)}</div>` : ''}
-        ${r.comment ? `<div class="review-card-body">${escapeHtml(r.comment)}</div>` : ''}
+        ${cleanTitle ? `<div class="review-card-title">${escapeHtml(cleanTitle)}</div>` : ''}
+        ${cleanComment ? `<div class="review-card-body">${escapeHtml(cleanComment)}</div>` : ''}
         <div class="review-card-footer">
           <button class="review-helpful-btn ${isVoted ? 'voted' : ''}" data-review-id="${r.id}">
             👍 Helpful (${r.helpfulCount || 0})
@@ -2075,8 +2279,11 @@ function loadAndRenderReviewsForGame(game) {
   const votedIds = JSON.parse(localStorage.getItem('lootdrop_voted_reviews') || '[]');
 
   listEl.innerHTML = reviews.map(r => {
+    const cleanAuthor = sanitizeReviewText(r.authorName || 'Gamer');
+    const cleanTitle = sanitizeReviewText(r.title || '');
+    const cleanComment = sanitizeReviewText(r.comment || '');
     const starStr = '★'.repeat(r.rating || 5) + '☆'.repeat(5 - (r.rating || 5));
-    const initial = (r.authorName || 'G').trim().charAt(0).toUpperCase();
+    const initial = (cleanAuthor || 'G').trim().charAt(0).toUpperCase();
     const isVoted = votedIds.includes(r.id);
     const dateFormatted = new Date(r.timestamp || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
@@ -2087,7 +2294,7 @@ function loadAndRenderReviewsForGame(game) {
             <div class="review-author-avatar">${initial}</div>
             <div class="review-author-meta">
               <span class="review-author-name">
-                ${escapeHtml(r.authorName || 'Gamer')}
+                ${escapeHtml(cleanAuthor)}
                 ${r.isVerifiedClaimer ? '<span class="review-verified-badge">✓ Verified</span>' : ''}
               </span>
               <span class="review-time-platform">${escapeHtml(r.platform || 'PC')} • ${dateFormatted}</span>
@@ -2095,8 +2302,8 @@ function loadAndRenderReviewsForGame(game) {
           </div>
           <div class="review-stars-badge">${starStr}</div>
         </div>
-        ${r.title ? `<div class="review-card-title">${escapeHtml(r.title)}</div>` : ''}
-        ${r.comment ? `<div class="review-card-body">${escapeHtml(r.comment)}</div>` : ''}
+        ${cleanTitle ? `<div class="review-card-title">${escapeHtml(cleanTitle)}</div>` : ''}
+        ${cleanComment ? `<div class="review-card-body">${escapeHtml(cleanComment)}</div>` : ''}
         <div class="review-card-footer">
           <button class="review-helpful-btn ${isVoted ? 'voted' : ''}" data-review-id="${r.id}">
             👍 Helpful (${r.helpfulCount || 0})
@@ -2215,10 +2422,22 @@ function initReviewsModal() {
   targetGameBtn?.addEventListener('click', () => setReviewTarget(false));
   targetAppBtn?.addEventListener('click', () => setReviewTarget(true));
 
+  const moderationErrEl = document.getElementById('review-moderation-error');
+  const clearModerationError = () => {
+    if (moderationErrEl) {
+      moderationErrEl.style.display = 'none';
+      moderationErrEl.textContent = '';
+    }
+  };
+  ['review-input-title', 'review-input-comment', 'review-input-author'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', clearModerationError);
+  });
+
   // Open from game detail dialog
   openBtn?.addEventListener('click', () => {
     if (!selectedGiveaway) return;
     setReviewTarget(false);
+    clearModerationError();
     document.getElementById('review-input-author').value = userProfile.name || 'Gamer';
     document.getElementById('review-input-title').value = '';
     document.getElementById('review-input-comment').value = '';
@@ -2230,6 +2449,7 @@ function initReviewsModal() {
   // Open directly from Settings
   rateAppSettingBtn?.addEventListener('click', () => {
     setReviewTarget(true);
+    clearModerationError();
     document.getElementById('review-input-author').value = userProfile.name || 'Gamer';
     document.getElementById('review-input-title').value = '';
     document.getElementById('review-input-comment').value = '';
@@ -2250,6 +2470,7 @@ function initReviewsModal() {
   });
 
   closeBtn?.addEventListener('click', () => {
+    clearModerationError();
     modal?.classList.remove('open');
   });
 
@@ -2283,6 +2504,17 @@ function initReviewsModal() {
       showToast('Please enter a review headline or comment!', '⚠️');
       return;
     }
+
+    const moderation = validateReviewModeration(title, comment, author);
+    if (!moderation.isAllowed) {
+      if (moderationErrEl) {
+        moderationErrEl.textContent = `⚠️ ${moderation.errorMessage}`;
+        moderationErrEl.style.display = 'block';
+      }
+      showToast('Swears and slurs are not allowed in reviews.', '🚫');
+      return;
+    }
+    clearModerationError();
 
     submitBtn.disabled = true;
     submitBtn.textContent = 'Uploading to Cloudflare R2...';

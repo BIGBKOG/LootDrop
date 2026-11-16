@@ -3,6 +3,7 @@ package com.example.ui.components
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -103,7 +104,9 @@ fun GeneralSettingsCategoryContent(
         reviews = publicReviews,
         defaultAuthorName = userProfile.name,
         onPostAppReview = { rating, title, comment ->
-            viewModel.postAppReview(rating = rating, title = title, comment = comment)
+            viewModel.postAppReview(rating = rating, title = title, comment = comment) { _, msg ->
+                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+            }
         },
         onVoteHelpful = { reviewId ->
             viewModel.voteReviewHelpful(reviewId)

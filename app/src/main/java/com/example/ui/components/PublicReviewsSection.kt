@@ -23,8 +23,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
@@ -33,6 +35,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -78,6 +81,7 @@ import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
+import com.example.util.ReviewModerationFilter
 import java.util.Locale
 
 private val StarGold = Color(0xFFFFB800)
@@ -724,6 +728,7 @@ fun WriteReviewDialog(
     var reviewComment by remember { mutableStateOf("") }
     var authorName by remember { mutableStateOf(defaultAuthorName) }
     var isSubmitting by remember { mutableStateOf(false) }
+    var moderationError by remember { mutableStateOf<String?>(null) }
 
     val ratingLabels = listOf(
         "1 - Skip / Unplayable",
@@ -747,7 +752,9 @@ fun WriteReviewDialog(
             border = androidx.compose.foundation.BorderStroke(1.2.dp, StarGold.copy(alpha = 0.5f))
         ) {
             Column(
-                modifier = Modifier.padding(20.dp),
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 // Header
@@ -866,7 +873,10 @@ fun WriteReviewDialog(
                 // Review Title Field
                 OutlinedTextField(
                     value = reviewTitle,
-                    onValueChange = { reviewTitle = it },
+                    onValueChange = {
+                        reviewTitle = it
+                        moderationError = null
+                    },
                     label = {
                         Text(
                             text = if (isAppReview) "Review Headline (e.g. Best game tracker ever!)" else "Review Headline (e.g. Incredible story & visuals)",
@@ -891,7 +901,10 @@ fun WriteReviewDialog(
                 // Review Comment Field
                 OutlinedTextField(
                     value = reviewComment,
-                    onValueChange = { reviewComment = it },
+                    onValueChange = {
+                        reviewComment = it
+                        moderationError = null
+                    },
                     label = {
                         Text(
                             text = if (isAppReview) "What do you love about LootDrop? (Alerts, themes, backups...)" else "Your thoughts on gameplay, performance, story...",
@@ -917,7 +930,10 @@ fun WriteReviewDialog(
                 // Gamer Tag / Author Name Field
                 OutlinedTextField(
                     value = authorName,
-                    onValueChange = { authorName = it },
+                    onValueChange = {
+                        authorName = it
+                        moderationError = null
+                    },
                     label = { Text("Display Gamer Tag", fontSize = 12.sp) },
                     singleLine = true,
                     modifier = Modifier
@@ -935,17 +951,56 @@ fun WriteReviewDialog(
                 )
 
                 Text(
-                    text = "☁️ Reviews are uploaded publicly to our Cloudflare R2 bucket and visible to all gamers on Android & Web.",
+                    text = "☁️ Reviews are uploaded publicly to our Cloudflare R2 bucket and visible to all gamers on Android & Web. Respectful language only (no swears or slurs).",
                     fontSize = 10.sp,
                     color = TextMuted,
                     lineHeight = 14.sp
                 )
 
+                AnimatedVisibility(visible = moderationError != null) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFF3B1219))
+                            .border(1.dp, Color(0xFFEF4444).copy(alpha = 0.7f), RoundedCornerShape(10.dp))
+                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                            .testTag("review_moderation_error"),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = "Moderation Warning",
+                            tint = Color(0xFFFCA5A5),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = moderationError.orEmpty(),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFFFEE2E2),
+                            lineHeight = 16.sp
+                        )
+                    }
+                }
+
                 // Submit Button
                 Button(
                     onClick = {
-                        isSubmitting = true
-                        onSubmit(rating, reviewTitle, reviewComment, isAppReview)
+                        val validation = ReviewModerationFilter.validateReviewInput(
+                            title = reviewTitle,
+                            comment = reviewComment,
+                            authorName = authorName
+                        )
+                        if (!validation.isAllowed) {
+                            moderationError = validation.errorMessage
+                            isSubmitting = false
+                        } else {
+                            moderationError = null
+                            isSubmitting = true
+                            onSubmit(rating, reviewTitle, reviewComment, isAppReview)
+                        }
                     },
                     enabled = !isSubmitting && (reviewTitle.isNotBlank() || reviewComment.isNotBlank()),
                     modifier = Modifier
