@@ -196,6 +196,49 @@ object ReviewModerationFilter {
     private val REPEATED_3_PLUS_REGEX = Regex("(.)\\1{2,}")
     private val REPEATED_2_PLUS_REGEX = Regex("(.)\\1+")
 
+    // US/Canadian and international phone numbers (avoids false positives on Steam AppIDs, years, and specs)
+    private val PHONE_NUMBER_REGEX = Regex(
+        pattern = "(?:" +
+            "(?:\\+?1[-.\\s]*)?(?:\\(\\d{3}\\)|\\d{3})[-.\\s]*\\d{3}[-.\\s]*\\d{4}" +
+            "|\\+\\d{1,3}(?:[-.\\s()]*\\d){7,13}" +
+            "|\\b(?:call|text|phone|tel|dial|sms|ring|whatsapp|facetime)\\b[^\\n\\d]{0,20}\\d{3}[-.\\s]\\d{4}" +
+            "|\\b\\d{3}[-.]\\d{4}" +
+            ")\\b(?!\\s*(?:fps|hz|hours?|hrs?|players?|gamers?|mb|gb|tb|xp|gold|coins?|points?|pts)\\b)",
+        options = setOf(RegexOption.IGNORE_CASE)
+    )
+
+    // Physical street addresses (e.g. "123 Main St", "742 Evergreen Terrace", "221B Baker Street")
+    private val STREET_ADDRESS_REGEX = Regex(
+        pattern = "\\b\\d{1,6}[a-z]?\\s+" +
+            "(?:(?:north|south|east|west|n\\.?|s\\.?|e\\.?|w\\.?|ne|nw|se|sw)\\s+)?" +
+            "(?!(?:hours?|hrs?|mins?|minutes?|secs?|seconds?|days?|weeks?|months?|years?|fps|hz|gb|tb|mb|kb|pb|players?|gamers?|fans?|users?|times?|ways?|stars?|bucks|dollars?|coins?|points?|levels?|miles?|percent)\\b)" +
+            "(?:[a-z0-9'.\\-]+\\s+){1,3}" +
+            "(?:street|st|avenue|ave|boulevard|blvd|road|rd|drive|dr|lane|ln|court|ct|terrace|ter|trail|trl|parkway|pkwy|highway|hwy|circle|cir|crescent|cres|plaza|plz|alley)\\b\\.?" +
+            "(?:\\s+(?:n|s|e|w|ne|nw|se|sw)\\b)?" +
+            "(?:[,\\s]+(?:apt|apartment|suite|ste|unit|#)\\s*[a-z0-9-]+)?",
+        options = setOf(RegexOption.IGNORE_CASE)
+    )
+
+    private val SAFE_ADDRESS_FALSE_POSITIVE_REGEX = Regex(
+        pattern = "\\b(?:hard\\s+drive|solid\\s+state\\s+drive|ssd\\s+drive|hdd\\s+drive|nvme\\s+drive|usb\\s+drive|flash\\s+drive|external\\s+drive|internal\\s+drive|disk\\s+drive|disc\\s+drive|optical\\s+drive|thumb\\s+drive|test\\s+drive|warp\\s+drive|hyper\\s+drive|on\\s+the\\s+road|down\\s+the\\s+road)\\b",
+        options = setOf(RegexOption.IGNORE_CASE)
+    )
+
+    private val PO_BOX_REGEX = Regex(
+        pattern = "\\bP\\.?\\s*O\\.?\\s*Box\\s+#?[a-z0-9-]{1,10}\\b",
+        options = setOf(RegexOption.IGNORE_CASE)
+    )
+
+    private val CITY_STATE_ZIP_REGEX = Regex(
+        pattern = "\\b[a-z][a-z\\s.'-]{1,25},\\s*(?:AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC)\\s+\\d{5}(?:-\\d{4})?\\b",
+        options = setOf(RegexOption.IGNORE_CASE)
+    )
+
+    private val EMAIL_ADDRESS_REGEX = Regex(
+        pattern = "\\b[a-z0-9._%+\\-]+@[a-z0-9.\\-]+\\.[a-z]{2,}\\b",
+        options = setOf(RegexOption.IGNORE_CASE)
+    )
+
     private fun stripDiacriticsAndZeroWidth(input: String, splitCamelCase: Boolean = false): String {
         val noZeroWidth = ZERO_WIDTH_REGEX.replace(input, "")
         val decomposed = Normalizer.normalize(noZeroWidth, Normalizer.Form.NFKD)
@@ -269,14 +312,39 @@ object ReviewModerationFilter {
         return variants.toList()
     }
 
-    /**
-     * Returns true if the supplied text contains any blacklisted swear or slur.
-     */
-    fun containsBlacklistedWords(text: String): Boolean {
+    fun containsPhoneNumber(text: String): Boolean {
+        if (text.isBlank()) return false
+        val cleaned = ZERO_WIDTH_REGEX.replace(text, "")
+        return PHONE_NUMBER_REGEX.containsMatchIn(cleaned)
+    }
+
+    fun containsAddress(text: String): Boolean {
+        if (text.isBlank()) return false
+        val cleaned = ZERO_WIDTH_REGEX.replace(text, "")
+        if (PO_BOX_REGEX.containsMatchIn(cleaned) ||
+            CITY_STATE_ZIP_REGEX.containsMatchIn(cleaned) ||
+            EMAIL_ADDRESS_REGEX.containsMatchIn(cleaned)
+        ) {
+            return true
+        }
+        return STREET_ADDRESS_REGEX.findAll(cleaned).any { match ->
+            !SAFE_ADDRESS_FALSE_POSITIVE_REGEX.containsMatchIn(match.value)
+        }
+    }
+
+    private fun containsProfanityOrSlur(text: String): Boolean {
         if (text.isBlank()) return false
         return buildNormalizedVariants(text).any { variant ->
             DIRECT_WORD_REGEX.containsMatchIn(variant)
         }
+    }
+
+    /**
+     * Returns true if the supplied text contains any blacklisted swear, slur, slang, address, or phone number.
+     */
+    fun containsBlacklistedWords(text: String): Boolean {
+        if (text.isBlank()) return false
+        return containsProfanityOrSlur(text) || containsPhoneNumber(text) || containsAddress(text)
     }
 
     /**
@@ -299,9 +367,13 @@ object ReviewModerationFilter {
         }
 
         val flagged = mutableListOf<String>()
-        if (containsBlacklistedWords(cleanTitle)) flagged.add("headline")
-        if (containsBlacklistedWords(cleanComment)) flagged.add("review comment")
-        if (containsBlacklistedWords(cleanAuthor)) flagged.add("gamer tag")
+        val titleHasPii = containsAddress(cleanTitle) || containsPhoneNumber(cleanTitle)
+        val commentHasPii = containsAddress(cleanComment) || containsPhoneNumber(cleanComment)
+        val authorHasPii = containsAddress(cleanAuthor) || containsPhoneNumber(cleanAuthor)
+
+        if (titleHasPii || containsProfanityOrSlur(cleanTitle)) flagged.add("headline")
+        if (commentHasPii || containsProfanityOrSlur(cleanComment)) flagged.add("review comment")
+        if (authorHasPii || containsProfanityOrSlur(cleanAuthor)) flagged.add("gamer tag")
 
         if (flagged.isNotEmpty()) {
             val fieldList = when (flagged.size) {
@@ -309,9 +381,15 @@ object ReviewModerationFilter {
                 2 -> "${flagged[0]} and ${flagged[1]}"
                 else -> "${flagged[0]}, ${flagged[1]}, and ${flagged[2]}"
             }
+            val hasPii = titleHasPii || commentHasPii || authorHasPii
+            val message = if (hasPii) {
+                "Blacklisted content (addresses or phone numbers) detected in your $fieldList. Addresses, phone numbers, swears, slurs, and restricted slang are not allowed in community reviews."
+            } else {
+                "Blacklisted words detected in your $fieldList. Swears, slurs, and restricted slang are not allowed in community reviews."
+            }
             return ValidationResult(
                 isAllowed = false,
-                errorMessage = "Blacklisted words detected in your $fieldList. Swears, slurs, and restricted slang are not allowed in community reviews.",
+                errorMessage = message,
                 flaggedFields = flagged
             )
         }
@@ -320,30 +398,40 @@ object ReviewModerationFilter {
     }
 
     /**
-     * Masks blacklisted words in stored reviews before rendering to keep display clean.
+     * Masks blacklisted words, addresses, and phone numbers in stored reviews before rendering.
      */
     fun sanitizeForDisplay(text: String): String {
         if (!containsBlacklistedWords(text)) return text
 
-        var sanitized = DIRECT_WORD_REGEX.replace(text) { match ->
-            maskMatch(match.value)
+        var sanitized = PO_BOX_REGEX.replace(text, "[redacted]")
+        sanitized = CITY_STATE_ZIP_REGEX.replace(sanitized, "[redacted]")
+        sanitized = EMAIL_ADDRESS_REGEX.replace(sanitized, "[redacted]")
+        sanitized = STREET_ADDRESS_REGEX.replace(sanitized) { match ->
+            if (SAFE_ADDRESS_FALSE_POSITIVE_REGEX.containsMatchIn(match.value)) match.value else "[redacted]"
+        }
+        sanitized = PHONE_NUMBER_REGEX.replace(sanitized, "[redacted]")
+
+        if (containsProfanityOrSlur(sanitized)) {
+            sanitized = DIRECT_WORD_REGEX.replace(sanitized) { match ->
+                maskMatch(match.value)
+            }
         }
 
-        if (containsBlacklistedWords(sanitized)) {
+        if (containsProfanityOrSlur(sanitized)) {
             sanitized = INLINE_SEPARATOR_TOKEN_REGEX.replace(sanitized) { match ->
-                if (containsBlacklistedWords(match.value)) maskMatch(match.value) else match.value
+                if (containsProfanityOrSlur(match.value)) maskMatch(match.value) else match.value
             }
         }
 
-        if (containsBlacklistedWords(sanitized)) {
+        if (containsProfanityOrSlur(sanitized)) {
             sanitized = SEPARATED_LETTERS_REGEX.replace(sanitized) { match ->
-                if (containsBlacklistedWords(match.value)) "****" else match.value
+                if (containsProfanityOrSlur(match.value)) "****" else match.value
             }
         }
 
-        if (containsBlacklistedWords(sanitized)) {
+        if (containsProfanityOrSlur(sanitized)) {
             sanitized = sanitized.split(Regex("(?<=\\s)|(?=\\s)")).joinToString("") { token ->
-                if (token.isNotBlank() && containsBlacklistedWords(token)) {
+                if (token.isNotBlank() && containsProfanityOrSlur(token)) {
                     maskMatch(token)
                 } else {
                     token

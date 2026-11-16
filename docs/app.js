@@ -1973,6 +1973,12 @@ const REVIEW_BLACKLIST_TERMS = [
 const REVIEW_DIRECT_WORD_REGEX = new RegExp(`\\b(?:${REVIEW_BLACKLIST_TERMS.join('|')})\\b`, 'gi');
 const REVIEW_SEPARATED_LETTERS_REGEX = /(?<![\p{L}\p{N}])([\p{L}\p{N}@$!*])(?:[\s._\-*]+([\p{L}\p{N}@$!*])){2,}(?![\p{L}\p{N}])/gu;
 const REVIEW_INLINE_SEP_TOKEN_REGEX = /(?<!\S)[\p{L}\p{N}@$!*]+(?:[._\-*]+[\p{L}\p{N}@$!*]+)+(?!\S)/gu;
+const REVIEW_PHONE_REGEX = /(?:(?:\+?1[-.\s]*)?(?:\(\d{3}\)|\d{3})[-.\s]*\d{3}[-.\s]*\d{4}|\+\d{1,3}(?:[-.\s()]*\d){7,13}|\b(?:call|text|phone|tel|dial|sms|ring|whatsapp|facetime)\b[^\n\d]{0,20}\d{3}[-.\s]\d{4}|\b\d{3}[-.]\d{4})\b(?!\s*(?:fps|hz|hours?|hrs?|players?|gamers?|mb|gb|tb|xp|gold|coins?|points?|pts)\b)/gi;
+const REVIEW_STREET_ADDRESS_REGEX = /\b\d{1,6}[a-z]?\s+(?:(?:north|south|east|west|n\.?|s\.?|e\.?|w\.?|ne|nw|se|sw)\s+)?(?!(?:hours?|hrs?|mins?|minutes?|secs?|seconds?|days?|weeks?|months?|years?|fps|hz|gb|tb|mb|kb|pb|players?|gamers?|fans?|users?|times?|ways?|stars?|bucks|dollars?|coins?|points?|levels?|miles?|percent)\b)(?:[a-z0-9'.\-]+\s+){1,3}(?:street|st|avenue|ave|boulevard|blvd|road|rd|drive|dr|lane|ln|court|ct|terrace|ter|trail|trl|parkway|pkwy|highway|hwy|circle|cir|crescent|cres|plaza|plz|alley)\b\.?(?:\s+(?:n|s|e|w|ne|nw|se|sw)\b)?(?:[,\s]+(?:apt|apartment|suite|ste|unit|#)\s*[a-z0-9-]+)?/gi;
+const REVIEW_SAFE_ADDRESS_FALSE_POSITIVE_REGEX = /\b(?:hard\s+drive|solid\s+state\s+drive|ssd\s+drive|hdd\s+drive|nvme\s+drive|usb\s+drive|flash\s+drive|external\s+drive|internal\s+drive|disk\s+drive|disc\s+drive|optical\s+drive|thumb\s+drive|test\s+drive|warp\s+drive|hyper\s+drive|on\s+the\s+road|down\s+the\s+road)\b/i;
+const REVIEW_PO_BOX_REGEX = /\bP\.?\s*O\.?\s*Box\s+#?[a-z0-9-]{1,10}\b/gi;
+const REVIEW_CITY_STATE_ZIP_REGEX = /\b[a-z][a-z\s.'-]{1,25},\s*(?:AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC)\s+\d{5}(?:-\d{4})?\b/gi;
+const REVIEW_EMAIL_REGEX = /\b[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}\b/gi;
 
 function normalizeReviewLeet(text) {
   return text
@@ -2022,7 +2028,29 @@ function buildReviewModerationVariants(text) {
   ]));
 }
 
-function containsBlacklistedReviewWords(text) {
+function containsReviewPhoneNumber(text) {
+  if (!text || !String(text).trim()) return false;
+  const cleaned = String(text).replace(/[\u200B-\u200D\uFEFF]/g, '');
+  REVIEW_PHONE_REGEX.lastIndex = 0;
+  return REVIEW_PHONE_REGEX.test(cleaned);
+}
+
+function containsReviewAddress(text) {
+  if (!text || !String(text).trim()) return false;
+  const cleaned = String(text).replace(/[\u200B-\u200D\uFEFF]/g, '');
+  REVIEW_PO_BOX_REGEX.lastIndex = 0;
+  REVIEW_CITY_STATE_ZIP_REGEX.lastIndex = 0;
+  REVIEW_EMAIL_REGEX.lastIndex = 0;
+  if (REVIEW_PO_BOX_REGEX.test(cleaned) || REVIEW_CITY_STATE_ZIP_REGEX.test(cleaned) || REVIEW_EMAIL_REGEX.test(cleaned)) {
+    return true;
+  }
+  REVIEW_STREET_ADDRESS_REGEX.lastIndex = 0;
+  const matches = cleaned.match(REVIEW_STREET_ADDRESS_REGEX);
+  if (!matches) return false;
+  return matches.some(m => !REVIEW_SAFE_ADDRESS_FALSE_POSITIVE_REGEX.test(m));
+}
+
+function containsProfanityOrSlurWords(text) {
   if (!text || !String(text).trim()) return false;
   return buildReviewModerationVariants(text).some(variant => {
     REVIEW_DIRECT_WORD_REGEX.lastIndex = 0;
@@ -2030,11 +2058,20 @@ function containsBlacklistedReviewWords(text) {
   });
 }
 
+function containsBlacklistedReviewWords(text) {
+  if (!text || !String(text).trim()) return false;
+  return containsProfanityOrSlurWords(text) || containsReviewPhoneNumber(text) || containsReviewAddress(text);
+}
+
 function validateReviewModeration(title, comment, authorName) {
   const flagged = [];
-  if (containsBlacklistedReviewWords(title)) flagged.push('headline');
-  if (containsBlacklistedReviewWords(comment)) flagged.push('review comment');
-  if (containsBlacklistedReviewWords(authorName)) flagged.push('gamer tag');
+  const titleHasPii = containsReviewAddress(title) || containsReviewPhoneNumber(title);
+  const commentHasPii = containsReviewAddress(comment) || containsReviewPhoneNumber(comment);
+  const authorHasPii = containsReviewAddress(authorName) || containsReviewPhoneNumber(authorName);
+
+  if (titleHasPii || containsProfanityOrSlurWords(title)) flagged.push('headline');
+  if (commentHasPii || containsProfanityOrSlurWords(comment)) flagged.push('review comment');
+  if (authorHasPii || containsProfanityOrSlurWords(authorName)) flagged.push('gamer tag');
 
   if (flagged.length > 0) {
     const joined = flagged.length === 1
@@ -2042,9 +2079,13 @@ function validateReviewModeration(title, comment, authorName) {
       : flagged.length === 2
         ? `${flagged[0]} and ${flagged[1]}`
         : `${flagged[0]}, ${flagged[1]}, and ${flagged[2]}`;
+    const hasPii = titleHasPii || commentHasPii || authorHasPii;
+    const errorMessage = hasPii
+      ? `Blacklisted content (addresses or phone numbers) detected in your ${joined}. Addresses, phone numbers, swears, slurs, and restricted slang are not allowed in community reviews.`
+      : `Blacklisted words detected in your ${joined}. Swears, slurs, and restricted slang are not allowed in community reviews.`;
     return {
       isAllowed: false,
-      errorMessage: `Blacklisted words detected in your ${joined}. Swears, slurs, and restricted slang are not allowed in community reviews.`
+      errorMessage
     };
   }
   return { isAllowed: true, errorMessage: null };
@@ -2068,20 +2109,31 @@ function maskBlacklistedToken(token) {
 
 function sanitizeReviewText(text) {
   if (!containsBlacklistedReviewWords(text)) return String(text || '');
-  let result = String(text || '').replace(REVIEW_DIRECT_WORD_REGEX, m => maskBlacklistedToken(m));
-  if (containsBlacklistedReviewWords(result)) {
+  let result = String(text || '')
+    .replace(REVIEW_PO_BOX_REGEX, '[redacted]')
+    .replace(REVIEW_CITY_STATE_ZIP_REGEX, '[redacted]')
+    .replace(REVIEW_EMAIL_REGEX, '[redacted]')
+    .replace(REVIEW_STREET_ADDRESS_REGEX, m =>
+      REVIEW_SAFE_ADDRESS_FALSE_POSITIVE_REGEX.test(m) ? m : '[redacted]'
+    )
+    .replace(REVIEW_PHONE_REGEX, '[redacted]');
+
+  if (containsProfanityOrSlurWords(result)) {
+    result = result.replace(REVIEW_DIRECT_WORD_REGEX, m => maskBlacklistedToken(m));
+  }
+  if (containsProfanityOrSlurWords(result)) {
     result = result.replace(REVIEW_INLINE_SEP_TOKEN_REGEX, m =>
-      containsBlacklistedReviewWords(m) ? maskBlacklistedToken(m) : m
+      containsProfanityOrSlurWords(m) ? maskBlacklistedToken(m) : m
     );
   }
-  if (containsBlacklistedReviewWords(result)) {
+  if (containsProfanityOrSlurWords(result)) {
     result = result.replace(REVIEW_SEPARATED_LETTERS_REGEX, m =>
-      containsBlacklistedReviewWords(m) ? '****' : m
+      containsProfanityOrSlurWords(m) ? '****' : m
     );
   }
-  if (containsBlacklistedReviewWords(result)) {
+  if (containsProfanityOrSlurWords(result)) {
     result = result.split(/(\s+)/).map(tok =>
-      tok.trim() && containsBlacklistedReviewWords(tok) ? maskBlacklistedToken(tok) : tok
+      tok.trim() && containsProfanityOrSlurWords(tok) ? maskBlacklistedToken(tok) : tok
     ).join('');
   }
   return result;

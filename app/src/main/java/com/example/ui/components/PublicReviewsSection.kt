@@ -960,7 +960,7 @@ fun WriteReviewDialog(
                 )
 
                 Text(
-                    text = "☁️ Reviews are uploaded publicly to our Cloudflare R2 bucket and visible to all gamers on Android & Web. Respectful language only (no swears, slurs, or restricted slang).",
+                    text = "☁️ Reviews are uploaded publicly to our Cloudflare R2 bucket and visible to all gamers on Android & Web. Respectful language only (no swears, slurs, addresses, or phone numbers).",
                     fontSize = 10.sp,
                     color = TextMuted,
                     lineHeight = 14.sp

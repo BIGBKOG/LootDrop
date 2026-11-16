@@ -193,4 +193,58 @@ class PublicReviewsTest {
         assertFalse(ReviewModerationFilter.containsBlacklistedWords(masked))
         assertTrue(masked.contains("s***"))
     }
+
+    @Test
+    fun testReviewBlacklistBlocksAddressesAndPhoneNumbersWithoutFalsePositives() = runBlocking {
+        // Street addresses, PO Boxes, City/State/ZIP, emails
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("Meet me at 123 Main St"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("Lives at 742 Evergreen Terrace"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("Address: 1600 Pennsylvania Ave NW, Washington, DC 20500"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("Send mail to P.O. Box 4512"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("Found in Springfield, IL 62704"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("Email me at player@example.com"))
+
+        // Phone numbers (US, local, and international)
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("Call (555) 123-4567 for support"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("My number is 555-867-5309"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("Text +1 800 555 0199"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("Reach out 5551234567"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("UK line +44 20 7946 0958"))
+        assertTrue(ReviewModerationFilter.containsBlacklistedWords("Dial 555-0199"))
+
+        // Clean gaming numbers, storage specs, titles, and dates must remain allowed
+        val cleanGamingTexts = listOf(
+            "Runs at 120 FPS in 1920x1080 or 2560x1440 with 16GB RAM and 100 GB hard drive",
+            "1 TB SSD drive recommended for Test Drive Unlimited and Street Fighter 6",
+            "Claimed on 2026-11-16 for $19.99 saved (App ID 1091500)",
+            "Played 200 hours on the road and won 1st place in 3rd Street Saints",
+            "220-1440p dynamic resolution looks crisp"
+        )
+        cleanGamingTexts.forEach { text ->
+            assertFalse("False positive on clean text: $text", ReviewModerationFilter.containsBlacklistedWords(text))
+            assertEquals(text, ReviewModerationFilter.sanitizeForDisplay(text))
+        }
+
+        // Redaction masks addresses and phone numbers in stored/displayed text
+        val redacted = ReviewModerationFilter.sanitizeForDisplay("Call 555-123-4567 or visit 123 Main St")
+        assertFalse(ReviewModerationFilter.containsBlacklistedWords(redacted))
+        assertTrue(redacted.contains("[redacted]"))
+
+        // postReview rejects submissions containing an address or phone number
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val rejectedPhone = PublicReviewsManager.postReview(
+            context = context,
+            giveawayId = 55L,
+            gameTitle = "Co-op Game",
+            authorName = "FriendlyPlayer",
+            authorTag = "Gamer",
+            rating = 5,
+            title = "Great game",
+            comment = "Add me or call 555-234-5678",
+            platform = "Android",
+            isVerifiedClaimer = true
+        )
+        assertTrue(rejectedPhone.isFailure)
+        assertTrue(rejectedPhone.exceptionOrNull()?.message?.contains("phone", ignoreCase = true) == true)
+    }
 }
