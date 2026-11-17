@@ -21,11 +21,12 @@
             android:src="@drawable/ic_app_logo" />
 
         <TextView
+            android:id="@+id/widget_radar_header_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="6dp"
             android:layout_weight="1"
-            android:text="LootDrop Radar &amp; Vault"
+            android:text="@string/widget_radar_header"
             android:textColor="#00E5FF"
             android:textSize="11sp"
             android:textStyle="bold" />
@@ -35,7 +36,7 @@
             android:layout_width="26dp"
             android:layout_height="26dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Refresh Stats"
+            android:contentDescription="@string/widget_refresh_stats"
             android:padding="3dp"
             android:src="@drawable/ic_widget_refresh" />
     </LinearLayout>
@@ -61,15 +62,16 @@
                 android:id="@+id/widget_stat_active_count"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="-- Active"
+                android:text="@string/widget_active_placeholder"
                 android:textColor="#00E5FF"
                 android:textSize="13sp"
                 android:textStyle="bold" />
 
             <TextView
+                android:id="@+id/widget_free_drops_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Free Drops"
+                android:text="@string/widget_free_drops_label"
                 android:textColor="#8892B0"
                 android:textSize="9sp" />
         </LinearLayout>
@@ -98,9 +100,10 @@
                 android:textStyle="bold" />
 
             <TextView
+                android:id="@+id/widget_saved_in_vault_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Saved in Vault"
+                android:text="@string/widget_saved_in_vault_label"
                 android:textColor="#8892B0"
                 android:textSize="9sp" />
         </LinearLayout>
@@ -133,10 +136,11 @@
                 android:src="@drawable/ic_widget_radar" />
 
             <TextView
+                android:id="@+id/widget_radar_btn_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
-                android:text="RADAR"
+                android:text="@string/widget_radar_btn"
                 android:textColor="#CAD5E8"
                 android:textSize="10sp"
                 android:textStyle="bold" />
@@ -164,10 +168,11 @@
                 android:src="@drawable/ic_widget_vault" />
 
             <TextView
+                android:id="@+id/widget_vault_btn_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
-                android:text="MY VAULT"
+                android:text="@string/widget_vault_btn"
                 android:textColor="#CAD5E8"
                 android:textSize="10sp"
                 android:textStyle="bold" />

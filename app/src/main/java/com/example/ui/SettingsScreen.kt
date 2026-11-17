@@ -51,6 +51,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
+import com.example.i18n.localizedDescription
+import com.example.i18n.localizedLabel
 import com.example.ui.components.AboutSettingsCategoryContent
 import com.example.ui.components.AlertsSettingsCategoryContent
 import com.example.ui.components.AppearanceSettingsCategoryContent
@@ -65,6 +69,8 @@ fun SettingsScreen(
     scrollState: ScrollState = rememberScrollState(),
     modifier: Modifier = Modifier
 ) {
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
     val context = LocalContext.current
     val isAnimationsEnabled by viewModel.isAnimationsEnabled.collectAsState()
     val isLowEndOptimization by viewModel.isLowEndOptimization.collectAsState()
@@ -106,14 +112,14 @@ fun SettingsScreen(
             }
             Column {
                 Text(
-                    text = "Settings & Customization",
+                    text = if (isEs) "Ajustes y Personalización" else "Settings & Customization",
                     style = MaterialTheme.typography.headlineMedium,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    text = "Personalize theme modes, alert rules & app preferences",
+                    text = if (isEs) "Personaliza temas, reglas de alertas y preferencias" else "Personalize theme modes, alert rules & app preferences",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -180,7 +186,7 @@ fun SettingsScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
-                            text = category.label,
+                            text = category.localizedLabel(s),
                             fontSize = 13.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                             color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
@@ -211,7 +217,7 @@ fun SettingsScreen(
                         .background(MaterialTheme.colorScheme.primary)
                 )
                 AnimatedContent(
-                    targetState = selectedCategory.description,
+                    targetState = selectedCategory.localizedDescription(s),
                     transitionSpec = { ExpressiveMotion.popNumberTransform(reducedMotion) },
                     label = "settings_category_desc"
                 ) { desc ->
@@ -241,7 +247,10 @@ fun SettingsScreen(
                         AppearanceSettingsCategoryContent(viewModel = viewModel)
                     }
                     SettingsCategory.ALERTS -> {
-                        SectionHeader(title = "PUSH NOTIFICATIONS & FREEBIE ALERTS", icon = Icons.Default.Settings)
+                        SectionHeader(
+                            title = if (isEs) "NOTIFICACIONES PUSH Y ALERTAS" else "PUSH NOTIFICATIONS & FREEBIE ALERTS",
+                            icon = Icons.Default.Settings
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
                         AlertsSettingsCategoryContent(viewModel = viewModel)
                     }
@@ -274,22 +283,31 @@ fun SettingsScreen(
     if (showClearClaimedDialog) {
         AlertDialog(
             onDismissRequest = { showClearClaimedDialog = false },
-            title = { Text("Clear Claimed Games?") },
-            text = { Text("This will remove all games from your 'In Library' tab. You can still re-mark them at any time.") },
+            title = { Text(if (isEs) "¿Vaciar Juegos Reclamados?" else "Clear Claimed Games?") },
+            text = {
+                Text(
+                    if (isEs) "Esto quitará todos los juegos de tu pestaña 'En Bóveda'. Puedes volver a marcarlos cuando quieras."
+                    else "This will remove all games from your 'In Library' tab. You can still re-mark them at any time."
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
                         viewModel.clearClaimedGames()
                         showClearClaimedDialog = false
-                        Toast.makeText(context, "Claimed library cleared", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context,
+                            if (isEs) "Bóveda reclamada vaciada" else "Claimed library cleared",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 ) {
-                    Text("Clear All", color = MaterialTheme.colorScheme.primary)
+                    Text(if (isEs) "Borrar Todo" else "Clear All", color = MaterialTheme.colorScheme.primary)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearClaimedDialog = false }) {
-                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(s.common.cancel, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
             containerColor = MaterialTheme.colorScheme.surface
@@ -299,22 +317,31 @@ fun SettingsScreen(
     if (showResyncDialog) {
         AlertDialog(
             onDismissRequest = { showResyncDialog = false },
-            title = { Text("Re-sync Store Freebies?") },
-            text = { Text("This refreshes all giveaways directly from Steam, Epic, GOG, and other launchers.") },
+            title = { Text(if (isEs) "¿Resincronizar Ofertas de Tiendas?" else "Re-sync Store Freebies?") },
+            text = {
+                Text(
+                    if (isEs) "Esto actualiza todas las ofertas gratis directamente desde Steam, Epic, GOG y otros launchers."
+                    else "This refreshes all giveaways directly from Steam, Epic, GOG, and other launchers."
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
                         viewModel.forceResync()
                         showResyncDialog = false
-                        Toast.makeText(context, "Refreshing all giveaways...", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context,
+                            if (isEs) "Actualizando todas las ofertas..." else "Refreshing all giveaways...",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 ) {
-                    Text("Re-sync", color = MaterialTheme.colorScheme.primary)
+                    Text(if (isEs) "Resincronizar" else "Re-sync", color = MaterialTheme.colorScheme.primary)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showResyncDialog = false }) {
-                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(s.common.cancel, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
             containerColor = MaterialTheme.colorScheme.surface

@@ -18,13 +18,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.NewReleases
-import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -50,6 +50,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.AppUpdateInfo
 import com.example.data.model.UpdateDownloadState
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.TextMuted
@@ -65,6 +67,8 @@ fun AppUpdateDialog(
     onInstallApk: () -> Unit,
     onViewReleases: (url: String) -> Unit
 ) {
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
     val themePrimary = MaterialTheme.colorScheme.primary
 
     Dialog(
@@ -132,10 +136,10 @@ fun AppUpdateDialog(
                             ) {
                                 Text(
                                     text = when (downloadState) {
-                                        is UpdateDownloadState.Downloading -> "DOWNLOADING IN-APP..."
-                                        is UpdateDownloadState.ReadyToInstall -> "READY TO INSTALL"
-                                        is UpdateDownloadState.Error -> "DOWNLOAD FAILED"
-                                        else -> if (updateInfo.hasUpdate) "UPDATE AVAILABLE" else "RELEASE INSTALLED"
+                                        is UpdateDownloadState.Downloading -> if (isEs) "DESCARGANDO EN LA APP..." else "DOWNLOADING IN-APP..."
+                                        is UpdateDownloadState.ReadyToInstall -> if (isEs) "LISTO PARA INSTALAR" else "READY TO INSTALL"
+                                        is UpdateDownloadState.Error -> if (isEs) "ERROR DE DESCARGA" else "DOWNLOAD FAILED"
+                                        else -> if (updateInfo.hasUpdate) s.dialogs.updateAvailableTitle.uppercase() else (if (isEs) "VERSIÓN INSTALADA" else "RELEASE INSTALLED")
                                     },
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Black,
@@ -164,7 +168,7 @@ fun AppUpdateDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
+                            contentDescription = s.common.close,
                             tint = TextMuted,
                             modifier = Modifier.size(18.dp)
                         )
@@ -188,19 +192,19 @@ fun AppUpdateDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text(text = "CURRENT", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = TextMuted)
+                            Text(text = if (isEs) "ACTUAL" else "CURRENT", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = TextMuted)
                             Text(text = "v${updateInfo.currentVersion}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary)
                         }
 
                         Icon(
-                            imageVector = Icons.Default.ArrowForward,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = null,
                             tint = themePrimary,
                             modifier = Modifier.size(18.dp)
                         )
 
                         Column(horizontalAlignment = Alignment.End) {
-                            Text(text = "LATEST GITHUB", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = NeonCyan)
+                            Text(text = if (isEs) "ÚLTIMA EN GITHUB" else "LATEST GITHUB", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = NeonCyan)
                             Text(
                                 text = updateInfo.latestVersion,
                                 fontSize = 15.sp,
@@ -226,7 +230,7 @@ fun AppUpdateDialog(
 
                 if (updateInfo.releaseNotes.isNotBlank()) {
                     Text(
-                        text = "WHAT'S NEW",
+                        text = s.dialogs.updateWhatsNew,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = TextMuted,
@@ -284,7 +288,7 @@ fun AppUpdateDialog(
                                             modifier = Modifier.size(16.dp)
                                         )
                                         Text(
-                                            text = "Downloading APK in app...",
+                                            text = if (isEs) "Descargando APK en la app..." else "Downloading APK in app...",
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.SemiBold,
                                             color = TextPrimary
@@ -339,7 +343,7 @@ fun AppUpdateDialog(
                                         color = TextMuted
                                     )
                                     Text(
-                                        text = "Will prompt installer when finished",
+                                        text = if (isEs) "Se abrirá el instalador al terminar" else "Will prompt installer when finished",
                                         fontSize = 10.sp,
                                         color = TextMuted
                                     )
@@ -372,13 +376,13 @@ fun AppUpdateDialog(
                                 )
                                 Column {
                                     Text(
-                                        text = "APK Downloaded Successfully!",
+                                        text = s.dialogs.updateReadyToInstall,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = NeonGreen
                                     )
                                     Text(
-                                        text = "Tap button below to launch the package installer",
+                                        text = if (isEs) "Pulsa el botón inferior para iniciar el instalador" else "Tap button below to launch the package installer",
                                         fontSize = 11.sp,
                                         color = TextSecondary
                                     )
@@ -410,7 +414,7 @@ fun AppUpdateDialog(
                                 )
                                 Column {
                                     Text(
-                                        text = "In-App Download Error",
+                                        text = if (isEs) "Error de descarga en la app" else "In-App Download Error",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color(0xFFFF5252)
@@ -444,7 +448,7 @@ fun AppUpdateDialog(
                             colors = ButtonDefaults.buttonColors(disabledContainerColor = Color(0xFF26334D))
                         ) {
                             Text(
-                                text = "Downloading & Preparing Installer...",
+                                text = if (isEs) "Descargando y preparando instalador..." else "Downloading & Preparing Installer...",
                                 fontWeight = FontWeight.Bold,
                                 color = TextMuted,
                                 fontSize = 13.sp
@@ -470,7 +474,7 @@ fun AppUpdateDialog(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Install Update Now",
+                                text = s.dialogs.updateInstallNow,
                                 fontWeight = FontWeight.Black,
                                 color = Color.Black,
                                 fontSize = 13.sp
@@ -497,9 +501,9 @@ fun AppUpdateDialog(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = when {
-                                    downloadState is UpdateDownloadState.Error -> "Retry Update & Install"
-                                    !updateInfo.hasUpdate -> "Update & Reinstall (${updateInfo.latestVersion})"
-                                    else -> "Update & Install (${updateInfo.latestVersion})"
+                                    downloadState is UpdateDownloadState.Error -> if (isEs) "Reintentar Descarga e Instalación" else "Retry Update & Install"
+                                    !updateInfo.hasUpdate -> if (isEs) "Actualizar y Reinstalar (${updateInfo.latestVersion})" else "Update & Reinstall (${updateInfo.latestVersion})"
+                                    else -> if (isEs) "Descargar e Instalar (${updateInfo.latestVersion})" else "Update & Install (${updateInfo.latestVersion})"
                                 },
                                 fontWeight = FontWeight.Black,
                                 color = Color.Black,
@@ -527,12 +531,12 @@ fun AppUpdateDialog(
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = TextMuted)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.OpenInNew,
+                            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                             contentDescription = null,
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("View Notes", fontSize = 11.sp)
+                        Text(if (isEs) "Ver Notas" else "View Notes", fontSize = 11.sp)
                     }
 
                     OutlinedButton(
@@ -545,7 +549,7 @@ fun AppUpdateDialog(
                         border = BorderStroke(1.dp, Color(0xFF2B3347)),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = TextMuted)
                     ) {
-                        Text("Remind Later", fontSize = 11.sp)
+                        Text(s.dialogs.updateLater, fontSize = 11.sp)
                     }
                 }
             }

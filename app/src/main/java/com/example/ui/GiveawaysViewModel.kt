@@ -1,151 +1,76 @@
 package com.example.ui
 
 import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
-import com.example.BuildConfig
-import com.example.data.local.AppDatabase
-import com.example.data.model.AppUpdateInfo
-import com.example.data.model.GameCategory
-import com.example.data.model.GiveawayItem
-import com.example.data.model.LauncherType
-import com.example.data.model.UpdateDownloadState
-import com.example.data.remote.GithubReleaseClient
-import com.example.data.repository.GiveawaysRepository
-import com.example.util.AppUpdateInstaller
-import com.example.notifications.NotificationHelper
-import com.example.notifications.NotificationScheduler
-import com.example.notifications.AutoBackupScheduler
-import com.example.data.local.NotificationHistoryEntity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.widget.Toast
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.LootDropApplication
+import com.example.StorageMetrics
+import com.example.data.local.AppDatabase
+import com.example.data.local.NotificationHistoryEntity
+import com.example.data.local.SteamAchievementEntity
+import com.example.data.local.SteamGameEntity
+import com.example.data.model.AppUpdateInfo
+import com.example.data.model.BacklogChallengeGrid
+import com.example.data.model.BacklogMilestoneReward
+import com.example.data.model.GameCategory
+import com.example.data.model.GiveawayItem
+import com.example.data.model.LauncherOption
+import com.example.data.model.LauncherType
+import com.example.data.model.LibraryPlayFilter
+import com.example.data.model.LibraryViewMode
+import com.example.data.model.PlayStatus
+import com.example.data.model.PlayabilityFilter
+import com.example.data.model.PublicReview
+import com.example.data.model.SteamDlcRecommendation
+import com.example.data.model.StorageFilter
+import com.example.data.model.TrophyRarityTier
+import com.example.data.model.UnifiedLibraryItem
+import com.example.data.model.UpdateDownloadState
+import com.example.data.model.UserProfile
+import com.example.data.remote.GithubReleaseClient
+import com.example.data.repository.GiveawaysRepository
+import com.example.notifications.AutoBackupScheduler
+import com.example.notifications.NotificationHelper
+import com.example.notifications.NotificationScheduler
 import com.example.preferences.AccentTheme
-import com.example.util.MetacriticCatalog
 import com.example.preferences.AppPreferences
 import com.example.preferences.BackgroundTheme
 import com.example.preferences.CardDensity
 import com.example.preferences.DpiScaleMode
 import com.example.preferences.TargetFrameRate
+import com.example.i18n.AppLanguage
+import com.example.i18n.AppStringsRegistry
+import com.example.i18n.LocaleSyncHelper
 import com.example.preferences.ThemeMode
-import com.example.data.model.LauncherOption
-import com.example.data.model.PlayStatus
-import com.example.data.model.LibraryPlayFilter
-import com.example.data.remote.SteamApiClient
-import com.example.data.remote.SteamOwnedGame
-import com.example.data.remote.SteamOwnedGamesResult
-import kotlinx.coroutines.flow.Flow
+import com.example.util.BacklogChallengeManager
+import com.example.util.BackupRestoreManager
+import com.example.util.CloudBackupManager
+import com.example.util.CuratedAchievementsCatalog
+import com.example.util.CustomFontHelper
+import com.example.util.MythicAchievementNotificationManager
+import com.example.util.PublicReviewsManager
+import com.example.util.SteamDlcRecommender
+import com.example.util.UserProfileManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Dispatchers
-import androidx.compose.runtime.Immutable
-import com.example.LootDropApplication
-import com.example.StorageMetrics
-import com.example.data.local.SteamGameEntity
-import com.example.data.model.LibraryViewMode
-import com.example.data.model.PlayabilityFilter
-import com.example.data.model.StorageFilter
-import com.example.data.model.StorageTier
-import com.example.data.model.UserProfile
-import com.example.util.BackupRestoreManager
-import com.example.util.BackupSummary
-import com.example.util.CustomFontHelper
-import com.example.util.CloudBackupManager
-import com.example.util.RestoreSummary
-import com.example.data.model.BacklogChallengeGrid
-import com.example.data.model.BacklogMilestoneReward
-import com.example.data.model.PublicReview
-import com.example.data.model.SteamDlcRecommendation
-import com.example.data.model.UnifiedLibraryItem
-import com.example.util.BacklogChallengeManager
-import com.example.util.PublicReviewsManager
-import com.example.util.SteamDlcRecommender
-import com.example.util.UserProfileManager
-
-enum class MainTab {
-    HOME,
-    DISCOVER,
-    CLAIMED,
-    CALENDAR,
-    SETTINGS
-}
-
-enum class SortOption(val label: String) {
-    NEWEST("Newest First"),
-    HIGHEST_METACRITIC("Metascore (Top Rated)"),
-    HIGHEST_VALUE("Highest Value ($)"),
-    MOST_POPULAR("Most Claimed"),
-    ENDING_SOON("Ending Soon")
-}
-
-enum class TypeFilter(val label: String, val apiMatch: String?) {
-    ALL("All Loot", null),
-    FULL_GAMES("Full Games", "Game"),
-    DLC_LOOT("DLC & Loot", "DLC"),
-    EARLY_ACCESS("Beta / Early", "Early Access")
-}
-
-data class FilterCriteria(
-    val tab: MainTab = MainTab.HOME,
-    val launchers: Set<LauncherType> = emptySet(),
-    val typeFilter: TypeFilter = TypeFilter.ALL,
-    val sort: SortOption = SortOption.NEWEST,
-    val query: String = ""
-)
-
-@Immutable
-data class AchievementOverviewStats(
-    val totalUnlockedTrophies: Int = 0,
-    val mythicTrophiesCount: Int = 0,
-    val goldTrophiesCount: Int = 0,
-    val masteredGamesCount: Int = 0,
-    val closestToHundredCount: Int = 0,
-    val averageCompletionPercentage: Int = 0
-)
-
-@Immutable
-data class UiStats(
-    val totalFreeWorthUsd: Double = 0.0,
-    val activeGiveawaysCount: Int = 0,
-    val newFreebiesCount: Int = 0,
-    val platformCounts: Map<LauncherType, Int> = emptyMap(),
-    val claimedTotalSavedUsd: Double = 0.0,
-    val claimedCount: Int = 0,
-    val expiringSoon: Int = 0,
-    val unplayedCount: Int = 0,
-    val playingCount: Int = 0,
-    val finishedCount: Int = 0,
-    val droppedCount: Int = 0,
-    val steamTotalCount: Int = 0,
-    val steamUnplayedCount: Int = 0,
-    val steamPlayingCount: Int = 0,
-    val steamFinishedCount: Int = 0,
-    val steamDroppedCount: Int = 0,
-    // Hardware Readiness & Storage Footprint
-    val deckVerifiedCount: Int = 0,
-    val controllerFriendlyCount: Int = 0,
-    val quickSessionCount: Int = 0,
-    val storageUnder2GbCount: Int = 0,
-    val storage2To10GbCount: Int = 0,
-    val storage10To40GbCount: Int = 0,
-    val storageOver40GbCount: Int = 0,
-    val claimedTotalStorageGb: Float = 0f,
-    val steamTotalStorageGb: Float = 0f
-) {
-    val claimedStorageFormatted: String get() = com.example.data.model.formatStorageGb(claimedTotalStorageGb)
-    val steamStorageFormatted: String get() = com.example.data.model.formatStorageGb(steamTotalStorageGb)
-}
+import kotlinx.coroutines.withContext
+import java.io.File
 
 class GiveawaysViewModel(application: Application) : AndroidViewModel(application) {
+
+    typealias OwnershipStatus = GiveawayOwnershipStatus
 
     val notificationHelper = NotificationHelper(application)
     val preferences = AppPreferences(application)
@@ -156,17 +81,22 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         steamGameDao = database.steamGameDao(),
         steamAchievementDao = database.steamAchievementDao()
     )
-    private val githubReleaseClient = GithubReleaseClient(application)
+    private val updateDelegate = AppUpdateDelegate(
+        appContext = application,
+        preferences = preferences,
+        githubReleaseClient = GithubReleaseClient(application),
+        notificationHelper = notificationHelper
+    )
 
+    // --- Navigation & Filtering State ---
     private val _selectedTab = MutableStateFlow(preferences.defaultTab)
     val selectedTab: StateFlow<MainTab> = _selectedTab.asStateFlow()
 
-    private val _selectedLaunchers = MutableStateFlow<Set<LauncherType>>(
+    private val _selectedLaunchers = MutableStateFlow(
         if (preferences.defaultLauncher == LauncherType.ALL) emptySet() else setOf(preferences.defaultLauncher)
     )
     val selectedLaunchers: StateFlow<Set<LauncherType>> = _selectedLaunchers.asStateFlow()
 
-    // Backward-compatibility property
     val selectedLauncher: StateFlow<LauncherType> = _selectedLaunchers.map { set ->
         if (set.isEmpty() || set.contains(LauncherType.ALL)) LauncherType.ALL else set.first()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LauncherType.ALL)
@@ -180,29 +110,8 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     private val _selectedLibraryPlayFilter = MutableStateFlow(preferences.libraryPlayFilter)
     val selectedLibraryPlayFilter: StateFlow<LibraryPlayFilter> = _selectedLibraryPlayFilter.asStateFlow()
 
-    private val _steamUserId = MutableStateFlow(preferences.steamUserId)
-    val steamUserId: StateFlow<String> = _steamUserId.asStateFlow()
-
-    private val _steamApiKey = MutableStateFlow(preferences.steamApiKey)
-    val steamApiKey: StateFlow<String> = _steamApiKey.asStateFlow()
-
-    private val _steamSyncStatus = MutableStateFlow<String?>(null)
-    val steamSyncStatus: StateFlow<String?> = _steamSyncStatus.asStateFlow()
-
-    private val _isSyncingSteam = MutableStateFlow(false)
-    val isSyncingSteam: StateFlow<Boolean> = _isSyncingSteam.asStateFlow()
-
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
-
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-
-    private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
-
-    private val _detailItem = MutableStateFlow<GiveawayItem?>(null)
-    val detailItem: StateFlow<GiveawayItem?> = _detailItem.asStateFlow()
 
     private val _selectedCategories = MutableStateFlow<Set<GameCategory>>(emptySet())
     val selectedCategories: StateFlow<Set<GameCategory>> = _selectedCategories.asStateFlow()
@@ -216,24 +125,12 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     private val _selectedPlayabilityFilter = MutableStateFlow(PlayabilityFilter.ALL)
     val selectedPlayabilityFilter: StateFlow<PlayabilityFilter> = _selectedPlayabilityFilter.asStateFlow()
 
-    fun setPlayabilityFilter(filter: PlayabilityFilter) {
-        _selectedPlayabilityFilter.value = filter
-    }
-
     private val _selectedStorageFilter = MutableStateFlow(StorageFilter.ALL)
     val selectedStorageFilter: StateFlow<StorageFilter> = _selectedStorageFilter.asStateFlow()
 
-    fun setStorageFilter(filter: StorageFilter) {
-        _selectedStorageFilter.value = filter
-    }
-
     val activeFilterCount: StateFlow<Int> = combine(
-        _selectedLaunchers,
-        _selectedTypeFilter,
-        _selectedCategories,
-        _selectedSort,
-        _selectedPlayabilityFilter,
-        _selectedStorageFilter
+        _selectedLaunchers, _selectedTypeFilter, _selectedCategories,
+        _selectedSort, _selectedPlayabilityFilter, _selectedStorageFilter
     ) { args: Array<Any> ->
         @Suppress("UNCHECKED_CAST")
         val launchers = args[0] as Set<LauncherType>
@@ -244,9 +141,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         val playability = args[4] as PlayabilityFilter
         val storage = args[5] as StorageFilter
         var count = 0
-        if (launchers.isNotEmpty() && !launchers.contains(LauncherType.ALL)) {
-            count += launchers.size
-        }
+        if (launchers.isNotEmpty() && !launchers.contains(LauncherType.ALL)) count += launchers.size
         if (typeFilter != TypeFilter.ALL) count++
         if (categories.isNotEmpty()) count += categories.size
         if (sort != SortOption.NEWEST) count++
@@ -255,7 +150,44 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         count
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    // Preferences & Theme flows
+    // --- Steam, Loading, Detail & Update Flows ---
+    private val _steamUserId = MutableStateFlow(preferences.steamUserId)
+    val steamUserId: StateFlow<String> = _steamUserId.asStateFlow()
+
+    private val _steamApiKey = MutableStateFlow(preferences.steamApiKey)
+    val steamApiKey: StateFlow<String> = _steamApiKey.asStateFlow()
+
+    private val _steamSyncStatus = MutableStateFlow<String?>(null)
+    val steamSyncStatus: StateFlow<String?> = _steamSyncStatus.asStateFlow()
+
+    private val _isSyncingSteam = MutableStateFlow(false)
+    val isSyncingSteam: StateFlow<Boolean> = _isSyncingSteam.asStateFlow()
+
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
+    private val _detailItem = MutableStateFlow<GiveawayItem?>(null)
+    val detailItem: StateFlow<GiveawayItem?> = _detailItem.asStateFlow()
+
+    private val _appUpdateInfo = MutableStateFlow<AppUpdateInfo?>(null)
+    val appUpdateInfo: StateFlow<AppUpdateInfo?> = _appUpdateInfo.asStateFlow()
+
+    private val _isCheckingUpdates = MutableStateFlow(false)
+    val isCheckingUpdates: StateFlow<Boolean> = _isCheckingUpdates.asStateFlow()
+
+    private val _updateCheckStatus = MutableStateFlow<String?>(null)
+    val updateCheckStatus: StateFlow<String?> = _updateCheckStatus.asStateFlow()
+
+    private val _isUpdateDialogVisible = MutableStateFlow(false)
+    val isUpdateDialogVisible: StateFlow<Boolean> = _isUpdateDialogVisible.asStateFlow()
+
+    private val _updateDownloadState = MutableStateFlow<UpdateDownloadState>(UpdateDownloadState.Idle)
+    val updateDownloadState: StateFlow<UpdateDownloadState> = _updateDownloadState.asStateFlow()
+
+    // --- Theme, Appearance & Behavior Flows ---
     private val _themeMode = MutableStateFlow(preferences.themeMode)
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
 
@@ -269,20 +201,17 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     val lightBackgroundTheme: StateFlow<BackgroundTheme> = _lightBackgroundTheme.asStateFlow()
 
     private val _customFontPath = MutableStateFlow(
-        preferences.customFontPath.takeIf { path ->
-            path.isNotBlank() && java.io.File(path).exists()
-        }.also { validPath ->
-            if (preferences.customFontPath.isNotBlank() && validPath == null) {
-                preferences.customFontPath = ""
-                preferences.customFontName = ""
-            }
-        } ?: ""
+        preferences.customFontPath.takeIf { it.isNotBlank() && File(it).exists() }
+            .also { valid ->
+                if (preferences.customFontPath.isNotBlank() && valid == null) {
+                    preferences.customFontPath = ""
+                    preferences.customFontName = ""
+                }
+            } ?: ""
     )
     val customFontPath: StateFlow<String> = _customFontPath.asStateFlow()
 
-    private val _customFontName = MutableStateFlow(
-        if (_customFontPath.value.isNotBlank()) preferences.customFontName else ""
-    )
+    private val _customFontName = MutableStateFlow(if (_customFontPath.value.isNotBlank()) preferences.customFontName else "")
     val customFontName: StateFlow<String> = _customFontName.asStateFlow()
 
     private val _cardDensity = MutableStateFlow(preferences.cardDensity)
@@ -318,21 +247,6 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isAutoCheckGithubUpdates = MutableStateFlow(preferences.isAutoCheckGithubUpdates)
     val isAutoCheckGithubUpdates: StateFlow<Boolean> = _isAutoCheckGithubUpdates.asStateFlow()
 
-    private val _appUpdateInfo = MutableStateFlow<AppUpdateInfo?>(null)
-    val appUpdateInfo: StateFlow<AppUpdateInfo?> = _appUpdateInfo.asStateFlow()
-
-    private val _isCheckingUpdates = MutableStateFlow(false)
-    val isCheckingUpdates: StateFlow<Boolean> = _isCheckingUpdates.asStateFlow()
-
-    private val _updateCheckStatus = MutableStateFlow<String?>(null)
-    val updateCheckStatus: StateFlow<String?> = _updateCheckStatus.asStateFlow()
-
-    private val _isUpdateDialogVisible = MutableStateFlow(false)
-    val isUpdateDialogVisible: StateFlow<Boolean> = _isUpdateDialogVisible.asStateFlow()
-
-    private val _updateDownloadState = MutableStateFlow<UpdateDownloadState>(UpdateDownloadState.Idle)
-    val updateDownloadState: StateFlow<UpdateDownloadState> = _updateDownloadState.asStateFlow()
-
     private val _isAnimationsEnabled = MutableStateFlow(preferences.isAnimationsEnabled)
     val isAnimationsEnabled: StateFlow<Boolean> = _isAnimationsEnabled.asStateFlow()
 
@@ -363,6 +277,12 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isNewTodayDismissed = MutableStateFlow(preferences.isNewTodayDismissed)
     val isNewTodayDismissed: StateFlow<Boolean> = _isNewTodayDismissed.asStateFlow()
 
+    private val _appLanguage = MutableStateFlow(preferences.appLanguage)
+    val appLanguage: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
+
+    private val _hasSelectedInitialLanguage = MutableStateFlow(preferences.hasSelectedInitialLanguage)
+    val hasSelectedInitialLanguage: StateFlow<Boolean> = _hasSelectedInitialLanguage.asStateFlow()
+
     private val _showOnboardingWalkthrough = MutableStateFlow(!preferences.hasSeenOnboarding)
     val showOnboardingWalkthrough: StateFlow<Boolean> = _showOnboardingWalkthrough.asStateFlow()
 
@@ -374,7 +294,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
 
     private var lastRefreshTimestamp: Long = 0L
 
-    // Notification State Flows for Settings Screen
+    // --- Notification Flows ---
     private val _isNotificationsEnabled = MutableStateFlow(notificationHelper.isNotificationsEnabled)
     val isNotificationsEnabled: StateFlow<Boolean> = _isNotificationsEnabled.asStateFlow()
 
@@ -448,36 +368,23 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     val isNotificationHistorySheetOpen: StateFlow<Boolean> = _isNotificationHistorySheetOpen.asStateFlow()
 
     val notificationHistory: StateFlow<List<NotificationHistoryEntity>> =
-        database.notificationHistoryDao().getAllNotificationsFlow().stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5000),
-            emptyList()
-        )
+        database.notificationHistoryDao().getAllNotificationsFlow()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val unreadNotificationCount: StateFlow<Int> =
-        database.notificationHistoryDao().getUnreadCountFlow().stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5000),
-            0
-        )
+        database.notificationHistoryDao().getUnreadCountFlow()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     private val _libraryViewMode = MutableStateFlow(preferences.libraryViewMode)
     val libraryViewMode: StateFlow<LibraryViewMode> = _libraryViewMode.asStateFlow()
 
-    // Base flow from repository
-    val allGiveaways: StateFlow<List<GiveawayItem>> = repository.allGiveawaysFlow.stateIn(
-        viewModelScope,
-        SharingStarted.WhileSubscribed(5000),
-        emptyList()
-    )
+    // --- Core Giveaway & Steam Library Flows ---
+    val allGiveaways: StateFlow<List<GiveawayItem>> = repository.allGiveawaysFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val allSteamGames: StateFlow<List<SteamGameEntity>> = repository.allSteamGamesFlow.stateIn(
-        viewModelScope,
-        SharingStarted.WhileSubscribed(5000),
-        emptyList()
-    )
+    val allSteamGames: StateFlow<List<SteamGameEntity>> = repository.allSteamGamesFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // 3 Most recently played Steam games for Home dashboard
     val recentPlayedSteamGames: StateFlow<List<SteamGameEntity>> = allSteamGames.map { games ->
         val played = games.filter { it.playtimeMinutes > 0 || it.lastPlayedTimestamp > 0 }
             .sortedWith(
@@ -486,56 +393,40 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                     .thenByDescending { it.playtimeMinutes }
             )
         if (played.isNotEmpty()) played.take(3) else games.take(3)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Best 3 free games today (highest rated / active) for Home carousel
     val top3FreeGamesToday: StateFlow<List<GiveawayItem>> = allGiveaways.map { list ->
         val active = list.filter { it.status.equals("Active", ignoreCase = true) }
-        val source = if (active.isNotEmpty()) active else list
+        val source = active.ifEmpty { list }
         source.sortedWith(
             compareByDescending<GiveawayItem> { it.metacriticScore }
                 .thenByDescending { it.numericWorth }
                 .thenByDescending { it.users }
         ).take(3)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val filteredSteamGames: StateFlow<List<SteamGameEntity>> = combine(
-        allSteamGames,
-        _selectedLibraryPlayFilter,
-        _searchQuery,
-        _selectedPlayabilityFilter,
-        _selectedStorageFilter
-    ) { args: Array<Any> ->
-        @Suppress("UNCHECKED_CAST")
-        val steamGames = args[0] as List<SteamGameEntity>
-        val playFilter = args[1] as LibraryPlayFilter
-        val query = args[2] as String
-        val playability = args[3] as PlayabilityFilter
-        val storage = args[4] as StorageFilter
-
+        allSteamGames, _selectedLibraryPlayFilter, _searchQuery, _selectedPlayabilityFilter, _selectedStorageFilter
+    ) { steamGames, playFilter, query, playability, storage ->
         var list = steamGames
-        if (playFilter.status != null) {
-            list = list.filter { it.playStatus == playFilter.status }
-        }
+        if (playFilter.status != null) list = list.filter { it.playStatus == playFilter.status }
         if (query.isNotBlank()) {
             val q = query.trim().lowercase()
             list = list.filter { it.name.lowercase().contains(q) }
         }
-        when (playability) {
-            PlayabilityFilter.ALL -> {}
-            PlayabilityFilter.DECK_VERIFIED -> list = list.filter { it.hardwareProfile.isDeckVerified }
-            PlayabilityFilter.CONTROLLER_FRIENDLY -> list = list.filter { it.hardwareProfile.isControllerFriendly }
-            PlayabilityFilter.QUICK_SESSION -> list = list.filter { it.hardwareProfile.isQuickSession }
+        list = when (playability) {
+            PlayabilityFilter.ALL -> list
+            PlayabilityFilter.DECK_VERIFIED -> list.filter { it.hardwareProfile.isDeckVerified }
+            PlayabilityFilter.CONTROLLER_FRIENDLY -> list.filter { it.hardwareProfile.isControllerFriendly }
+            PlayabilityFilter.QUICK_SESSION -> list.filter { it.hardwareProfile.isQuickSession }
         }
         if (storage != StorageFilter.ALL && storage.tier != null) {
-            list = list.filter { game ->
-                storage.tier.matches(game.hardwareProfile.effectiveStorageGb)
-            }
+            list = list.filter { storage.tier.matches(it.hardwareProfile.effectiveStorageGb) }
         }
         list
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val rarestAchievements: StateFlow<List<com.example.data.local.SteamAchievementEntity>> = repository.rarestAchievementsFlow
+    val rarestAchievements: StateFlow<List<SteamAchievementEntity>> = repository.rarestAchievementsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val closestToHundredGames: StateFlow<List<SteamGameEntity>> = allSteamGames.map { games ->
@@ -545,50 +436,26 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                     .thenBy { it.achievementsTotal - it.achievementsUnlocked }
                     .thenByDescending { it.playtimeMinutes }
             )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val achievementOverviewStats: StateFlow<AchievementOverviewStats> = combine(
-        rarestAchievements,
-        allSteamGames
-    ) { trophies, games ->
-        val totalUnlocked = trophies.size
-        val mythic = trophies.count { it.globalPercentage in 0.001f..5.0f }
-        val gold = trophies.count { it.globalPercentage in 5.0f..15.0f }
-        val gamesWithAch = games.filter { it.achievementsTotal > 0 }
-        val mastered = gamesWithAch.count { it.achievementsUnlocked >= it.achievementsTotal }
-        val closest = gamesWithAch.count { it.achievementsPercentage in 80..99 }
-        val avgCompletion = if (gamesWithAch.isNotEmpty()) {
-            gamesWithAch.map { it.achievementsPercentage }.average().toInt()
-        } else 0
-
-        AchievementOverviewStats(
-            totalUnlockedTrophies = totalUnlocked,
-            mythicTrophiesCount = mythic,
-            goldTrophiesCount = gold,
-            masteredGamesCount = mastered,
-            closestToHundredCount = closest,
-            averageCompletionPercentage = avgCompletion
-        )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AchievementOverviewStats())
+    val achievementOverviewStats: StateFlow<AchievementOverviewStats> = combine(rarestAchievements, allSteamGames) { trophies, games ->
+        GiveawayFilterEngine.computeAchievementOverviewStats(trophies, games)
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AchievementOverviewStats())
 
     private val _selectedGameForAchievements = MutableStateFlow<SteamGameEntity?>(null)
     val selectedGameForAchievements: StateFlow<SteamGameEntity?> = _selectedGameForAchievements.asStateFlow()
 
-    private val _selectedGameAchievements = MutableStateFlow<List<com.example.data.local.SteamAchievementEntity>>(emptyList())
-    val selectedGameAchievements: StateFlow<List<com.example.data.local.SteamAchievementEntity>> = _selectedGameAchievements.asStateFlow()
+    private val _selectedGameAchievements = MutableStateFlow<List<SteamAchievementEntity>>(emptyList())
+    val selectedGameAchievements: StateFlow<List<SteamAchievementEntity>> = _selectedGameAchievements.asStateFlow()
 
     private val _isLoadingGameAchievements = MutableStateFlow(false)
     val isLoadingGameAchievements: StateFlow<Boolean> = _isLoadingGameAchievements.asStateFlow()
 
-    val allUnifiedLibraryItems: StateFlow<List<UnifiedLibraryItem>> = combine(
-        allGiveaways,
-        allSteamGames
-    ) { giveaways, steamGames ->
-        val vaultItems = giveaways.filter { it.isClaimed }.map { UnifiedLibraryItem.Vault(it) }
-        val steamItems = steamGames.map { UnifiedLibraryItem.Steam(it) }
-        vaultItems + steamItems
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val allUnifiedLibraryItems: StateFlow<List<UnifiedLibraryItem>> = combine(allGiveaways, allSteamGames) { giveaways, steamGames ->
+        giveaways.filter { it.isClaimed }.map { UnifiedLibraryItem.Vault(it) } + steamGames.map { UnifiedLibraryItem.Steam(it) }
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // --- Backlog Challenge State ---
     private val _selectedBacklogWeek = MutableStateFlow(BacklogChallengeManager.getCurrentWeekKey())
     val selectedBacklogWeek: StateFlow<String> = _selectedBacklogWeek.asStateFlow()
     val selectedBacklogMonth: StateFlow<String> = selectedBacklogWeek
@@ -596,365 +463,45 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isBacklogChallengeDialogVisible = MutableStateFlow(false)
     val isBacklogChallengeDialogVisible: StateFlow<Boolean> = _isBacklogChallengeDialogVisible.asStateFlow()
 
-    fun setBacklogChallengeDialogVisible(visible: Boolean) {
-        _isBacklogChallengeDialogVisible.value = visible
-    }
-
     private val _backlogGridRefreshTrigger = MutableStateFlow(0)
 
     val backlogChallengeGrid: StateFlow<BacklogChallengeGrid> = combine(
-        allUnifiedLibraryItems,
-        rarestAchievements,
-        _selectedBacklogWeek,
-        _backlogGridRefreshTrigger
-    ) { games, trophies, weekKey, _ ->
-        BacklogChallengeManager.getOrGenerateGrid(
-            preferences = preferences,
-            weekKey = weekKey,
-            games = games,
-            trophies = trophies
-        )
-    }.stateIn(
+        allUnifiedLibraryItems, rarestAchievements, _selectedBacklogWeek, _backlogGridRefreshTrigger, _appLanguage
+    ) { games, trophies, weekKey, _, lang ->
+        BacklogChallengeManager.getOrGenerateGrid(preferences, weekKey, games, trophies, lang)
+    }.flowOn(Dispatchers.Default).stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
-        BacklogChallengeManager.getOrGenerateGrid(preferences)
+        BacklogChallengeManager.getOrGenerateGrid(preferences, language = preferences.appLanguage)
     )
 
-    fun selectBacklogWeek(weekKey: String) {
-        val currentWeek = BacklogChallengeManager.getCurrentWeekKey()
-        val diffFromCurrent = BacklogChallengeManager.getWeeksBetween(currentWeek, weekKey)
-        val diffFromAnchor = BacklogChallengeManager.getWeeksBetween(BacklogChallengeManager.ANCHOR_WEEK_KEY, weekKey)
-        if (diffFromAnchor >= 0 && diffFromCurrent <= BacklogChallengeManager.MAX_FUTURE_WEEKS_PREVIEW) {
-            _selectedBacklogWeek.value = weekKey
-        }
-    }
+    val mythicAchievementNotification: StateFlow<SteamAchievementEntity?> =
+        MythicAchievementNotificationManager.pendingNotification
 
-    fun selectBacklogMonth(monthKey: String) {
-        selectBacklogWeek(monthKey)
-    }
+    val uiStats: StateFlow<UiStats> = combine(allGiveaways, allSteamGames) { all, steamGames ->
+        GiveawayFilterEngine.computeUiStats(all, steamGames)
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiStats())
 
-    fun checkWeeklyBacklogRollover() {
-        val currentWeek = BacklogChallengeManager.getCurrentWeekKey()
-        val lastWeek = preferences.lastActiveBacklogWeekKey
-        if (lastWeek.isNotBlank() && lastWeek != currentWeek) {
-            preferences.lastActiveBacklogWeekKey = currentWeek
-            _selectedBacklogWeek.value = currentWeek
-            _backlogGridRefreshTrigger.value += 1
-            notificationHelper.sendWeeklyBacklogChallengeNotification(
-                BacklogChallengeManager.getWeekDisplayName(currentWeek)
-            )
-        } else if (lastWeek.isBlank()) {
-            preferences.lastActiveBacklogWeekKey = currentWeek
-        }
-    }
-
-    fun checkMonthlyBacklogRollover() {
-        checkWeeklyBacklogRollover()
-    }
-
-    fun refreshBacklogChallengeGrid() {
-        checkWeeklyBacklogRollover()
-        _backlogGridRefreshTrigger.value += 1
-    }
-
-    fun toggleBacklogTileManual(tileIndex: Int, weekKey: String = _selectedBacklogWeek.value): Boolean {
-        val success = BacklogChallengeManager.toggleManualOverride(preferences, weekKey, tileIndex)
-        if (success) {
-            _backlogGridRefreshTrigger.value += 1
-        }
-        return success
-    }
-
-    fun claimBacklogMilestones(onClaimed: (List<BacklogMilestoneReward>) -> Unit = {}) {
-        viewModelScope.launch {
-            val grid = backlogChallengeGrid.value
-            val newlyAwarded = BacklogChallengeManager.checkAndAwardMilestones(
-                grid = grid,
-                database = database,
-                preferences = preferences
-            )
-            if (newlyAwarded.isNotEmpty()) {
-                _backlogGridRefreshTrigger.value += 1
-                onClaimed(newlyAwarded)
-            }
-        }
-    }
-
-    fun openGameAchievements(game: SteamGameEntity) {
-        _selectedGameForAchievements.value = game
-        loadAchievementsForGame(game)
-    }
-
-    fun closeGameAchievements() {
-        _selectedGameForAchievements.value = null
-        _selectedGameAchievements.value = emptyList()
-    }
-
-    val mythicAchievementNotification: StateFlow<com.example.data.local.SteamAchievementEntity?> =
-        com.example.util.MythicAchievementNotificationManager.pendingNotification
-
-    fun dismissMythicToast() {
-        com.example.util.MythicAchievementNotificationManager.dismissNotification(getApplication())
-    }
-
-    fun previewMythicUnlockToast(customAch: com.example.data.local.SteamAchievementEntity? = null) {
-        val ach = customAch ?: com.example.util.CuratedAchievementsCatalog.getInitialAchievements()
-            .firstOrNull { it.rarityTier == com.example.data.model.TrophyRarityTier.MYTHIC }
-            ?: com.example.data.local.SteamAchievementEntity(
-                appId = 1091500,
-                apiName = "ACH_CP_AUTODIDACT",
-                displayName = "Autodidact",
-                description = "Develop any skill to the maximum level in Night City.",
-                isAchieved = true,
-                globalPercentage = 4.2f,
-                gameName = "Cyberpunk 2077"
-            )
-        com.example.util.MythicAchievementNotificationManager.postMythicUnlock(ach, getApplication())
-    }
-
-    fun openAchievementsForAppId(appId: Int, gameName: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val existing = database.steamGameDao().getSteamGameById(appId)
-            val game = existing ?: SteamGameEntity(
-                appId = appId,
-                name = gameName.ifBlank { "Steam Game" },
-                playtimeMinutes = 60,
-                lastPlayedTimestamp = System.currentTimeMillis() / 1000L,
-                playStatus = PlayStatus.PLAYING
-            )
-            withContext(Dispatchers.Main) {
-                openGameAchievements(game)
-            }
-        }
-    }
-
-    fun loadAchievementsForGame(game: SteamGameEntity) {
-        viewModelScope.launch(Dispatchers.IO) {
-            _isLoadingGameAchievements.value = true
-            val local = repository.getAchievementsForApp(game.appId, game.name)
-            _selectedGameAchievements.value = local
-
-            val userId = _steamUserId.value.trim()
-            if (userId.isNotBlank()) {
-                val apiKey = SteamApiClient.resolveApiKey(_steamApiKey.value)
-                val resolvedId = SteamApiClient.resolveSteamId(userId, apiKey)
-                if (resolvedId != null) {
-                    val remote = SteamApiClient.getDetailedPlayerAchievements(game.appId, resolvedId, apiKey, game.name)
-                    if (remote.isNotEmpty()) {
-                        com.example.util.SteamSyncHelper.checkAndNotifyMythicAchievements(
-                            context = getApplication(),
-                            db = database,
-                            achievements = remote,
-                            sendSystemNotification = false
-                        )
-                        repository.insertAchievements(remote)
-                        _selectedGameAchievements.value = remote
-                    }
-                }
-            }
-            _isLoadingGameAchievements.value = false
-        }
-    }
-
-   // Compute live UI stats
-    val uiStats: StateFlow<UiStats> = combine(
-        allGiveaways,
-        allSteamGames
-    ) { all, steamGames ->
-        val totalWorth = all.sumOf { it.numericWorth }
-        val newCount = all.count { it.isNew }
-        val claimedGames = all.filter { it.isClaimed }
-        val claimedTotalSaved = claimedGames.sumOf { it.numericWorth }
-        val claimedCount = claimedGames.size
-        val expiringCount = all.count { it.endDate != "N/A" && it.endDate.isNotBlank() }
-        val unplayed = claimedGames.count { it.playStatus == PlayStatus.NOT_STARTED }
-        val playing = claimedGames.count { it.playStatus == PlayStatus.PLAYING }
-        val finished = claimedGames.count { it.playStatus == PlayStatus.BEATEN }
-        val dropped = claimedGames.count { it.playStatus == PlayStatus.DROPPED }
-
-        val steamTotal = steamGames.size
-        val steamUnplayed = steamGames.count { it.playStatus == PlayStatus.NOT_STARTED }
-        val steamPlaying = steamGames.count { it.playStatus == PlayStatus.PLAYING }
-        val steamFinished = steamGames.count { it.playStatus == PlayStatus.BEATEN }
-        val steamDropped = steamGames.count { it.playStatus == PlayStatus.DROPPED }
-
-        // Combined library hardware readiness counts
-        val activeOrClaimed = if (claimedGames.isNotEmpty()) claimedGames else all
-        val deckVerified = activeOrClaimed.count { it.hardwareProfile.isDeckVerified }
-        val controllerFriendly = activeOrClaimed.count { it.hardwareProfile.isControllerFriendly }
-        val quickSession = activeOrClaimed.count { it.hardwareProfile.isQuickSession }
-        val under2Gb = activeOrClaimed.count { it.hardwareProfile.storageTier == StorageTier.FEATHERWEIGHT }
-        val from2To10Gb = activeOrClaimed.count { it.hardwareProfile.storageTier == StorageTier.COMPACT }
-        val from10To40Gb = activeOrClaimed.count { it.hardwareProfile.storageTier == StorageTier.MEDIUM }
-        val over40Gb = activeOrClaimed.count { it.hardwareProfile.storageTier == StorageTier.HEAVYWEIGHT }
-        val claimedTotalStorage = claimedGames.sumOf { it.hardwareProfile.effectiveSizeGb.toDouble() }.toFloat()
-        val steamTotalStorage = steamGames.sumOf { it.hardwareProfile.effectiveSizeGb.toDouble() }.toFloat()
-
-        val platformMap = mutableMapOf<LauncherType, Int>()
-        for (launcher in LauncherType.values()) {
-            if (launcher == LauncherType.ALL) {
-                platformMap[launcher] = all.size
-            } else {
-                platformMap[launcher] = all.count { it.matchesLauncher(launcher) }
-            }
-        }
-        UiStats(
-            totalFreeWorthUsd = totalWorth,
-            activeGiveawaysCount = all.size,
-            newFreebiesCount = newCount,
-            platformCounts = platformMap,
-            claimedTotalSavedUsd = claimedTotalSaved,
-            claimedCount = claimedCount,
-            expiringSoon = expiringCount,
-            unplayedCount = unplayed,
-            playingCount = playing,
-            finishedCount = finished,
-            droppedCount = dropped,
-            steamTotalCount = steamTotal,
-            steamUnplayedCount = steamUnplayed,
-            steamPlayingCount = steamPlaying,
-            steamFinishedCount = steamFinished,
-            steamDroppedCount = steamDropped,
-            deckVerifiedCount = deckVerified,
-            controllerFriendlyCount = controllerFriendly,
-            quickSessionCount = quickSession,
-            storageUnder2GbCount = under2Gb,
-            storage2To10GbCount = from2To10Gb,
-            storage10To40GbCount = from10To40Gb,
-            storageOver40GbCount = over40Gb,
-            claimedTotalStorageGb = claimedTotalStorage,
-            steamTotalStorageGb = steamTotalStorage
-        )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = UiStats()
-    )
-   
-    // Helper method to apply launcher, type, category, search, playability, storage and sort filters to any giveaway list
-    private fun filterAndSortList(
-        source: List<GiveawayItem>,
-        launchers: Set<LauncherType>,
-        typeFilter: TypeFilter,
-        categories: Set<GameCategory>,
-        sort: SortOption,
-        query: String,
-        playability: PlayabilityFilter = PlayabilityFilter.ALL,
-        storage: StorageFilter = StorageFilter.ALL
-    ): List<GiveawayItem> {
-        var filtered = source
-
-        // Multi-Platform / Store filter
-        if (launchers.isNotEmpty() && !launchers.contains(LauncherType.ALL)) {
-            filtered = filtered.filter { item ->
-                launchers.any { launcher -> item.matchesLauncher(launcher) }
-            }
-        }
-
-        // Type filter
-        if (typeFilter != TypeFilter.ALL && typeFilter.apiMatch != null) {
-            val match = typeFilter.apiMatch
-            filtered = filtered.filter { it.type.contains(match, ignoreCase = true) }
-        }
-
-        // Multi-Category filter
-        if (categories.isNotEmpty()) {
-            filtered = filtered.filter { item ->
-                item.categories.any { it in categories }
-            }
-        }
-
-        // Playability filter (Steam Deck Verified, Controller Friendly, Quick Session)
-        when (playability) {
-            PlayabilityFilter.ALL -> {}
-            PlayabilityFilter.DECK_VERIFIED -> {
-                filtered = filtered.filter { it.hardwareProfile.isDeckVerified }
-            }
-            PlayabilityFilter.CONTROLLER_FRIENDLY -> {
-                filtered = filtered.filter { it.hardwareProfile.isControllerFriendly }
-            }
-            PlayabilityFilter.QUICK_SESSION -> {
-                filtered = filtered.filter { it.hardwareProfile.isQuickSession }
-            }
-        }
-
-        // Storage Footprint filter
-        if (storage != StorageFilter.ALL && storage.tier != null) {
-            filtered = filtered.filter { item ->
-                storage.tier.matches(item.hardwareProfile.effectiveStorageGb)
-            }
-        }
-
-        // Search query
-        if (query.isNotBlank()) {
-            val q = query.trim().lowercase()
-            filtered = filtered.filter {
-                it.title.lowercase().contains(q) ||
-                it.description.lowercase().contains(q) ||
-                it.platforms.lowercase().contains(q) ||
-                (q.contains("playstation") && it.isPlayStation) ||
-                (q.contains("ps5") && it.isPlayStation) ||
-                (q.contains("ps4") && it.isPlayStation) ||
-                (q.contains("xbox") && it.isXbox) ||
-                (q.contains("nintendo") && it.isNintendo) ||
-                (q.contains("switch") && it.isNintendo) ||
-                (q.contains("android") && it.isAndroid) ||
-                (q.contains("ios") && it.isIos) ||
-                (q.contains("iphone") && it.isIos) ||
-                (q.contains("ipad") && it.isIos) ||
-                (q.contains("mobile") && it.isMobile) ||
-                (q.contains("console") && it.isConsole)
-            }
-        }
-
-        // Sorting
-        return when (sort) {
-            SortOption.NEWEST -> filtered.sortedByDescending { it.id }
-            SortOption.HIGHEST_METACRITIC -> filtered.sortedByDescending { it.metacriticScore }
-            SortOption.HIGHEST_VALUE -> filtered.sortedByDescending { it.numericWorth }
-            SortOption.MOST_POPULAR -> filtered.sortedByDescending { it.users }
-            SortOption.ENDING_SOON -> filtered.sortedBy {
-                if (it.endDate == "N/A" || it.endDate.isBlank()) "9999" else it.endDate
-            }
-        }
-    }
-
-    // Discover giveaways: always all items filtered & sorted (never empties or switches to claimed on tab change)
     val discoverGiveaways: StateFlow<List<GiveawayItem>> = combine(
-        allGiveaways,
-        _selectedLaunchers,
-        _selectedTypeFilter,
-        _selectedCategories,
-        _selectedSort,
-        _searchQuery,
-        _selectedPlayabilityFilter,
-        _selectedStorageFilter
+        allGiveaways, _selectedLaunchers, _selectedTypeFilter, _selectedCategories,
+        _selectedSort, _searchQuery, _selectedPlayabilityFilter, _selectedStorageFilter
     ) { args: Array<Any> ->
         @Suppress("UNCHECKED_CAST")
-        val all = args[0] as List<GiveawayItem>
-        @Suppress("UNCHECKED_CAST")
-        val launchers = args[1] as Set<LauncherType>
-        val typeFilter = args[2] as TypeFilter
-        @Suppress("UNCHECKED_CAST")
-        val categories = args[3] as Set<GameCategory>
-        val sort = args[4] as SortOption
-        val query = args[5] as String
-        val playability = args[6] as PlayabilityFilter
-        val storage = args[7] as StorageFilter
-        filterAndSortList(all, launchers, typeFilter, categories, sort, query, playability, storage)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        GiveawayFilterEngine.filterAndSortList(
+            source = args[0] as List<GiveawayItem>,
+            launchers = args[1] as Set<LauncherType>,
+            typeFilter = args[2] as TypeFilter,
+            categories = args[3] as Set<GameCategory>,
+            sort = args[4] as SortOption,
+            query = args[5] as String,
+            playability = args[6] as PlayabilityFilter,
+            storage = args[7] as StorageFilter
+        )
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Claimed giveaways: always claimed library items filtered & sorted
     val claimedGiveaways: StateFlow<List<GiveawayItem>> = combine(
-        allGiveaways,
-        _selectedLaunchers,
-        _selectedTypeFilter,
-        _selectedCategories,
-        _selectedSort,
-        _searchQuery,
-        _selectedLibraryPlayFilter,
-        _selectedPlayabilityFilter,
-        _selectedStorageFilter
+        allGiveaways, _selectedLaunchers, _selectedTypeFilter, _selectedCategories,
+        _selectedSort, _searchQuery, _selectedLibraryPlayFilter, _selectedPlayabilityFilter, _selectedStorageFilter
     ) { args: Array<Any> ->
         @Suppress("UNCHECKED_CAST")
         val all = args[0] as List<GiveawayItem>
@@ -968,30 +515,21 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         val playFilter = args[6] as LibraryPlayFilter
         val playability = args[7] as PlayabilityFilter
         val storage = args[8] as StorageFilter
-
         val claimed = all.filter { it.isClaimed }
         val statusFiltered = if (playFilter.status == null) claimed else claimed.filter { it.playStatus == playFilter.status }
-        filterAndSortList(statusFiltered, launchers, typeFilter, categories, sort, query, playability, storage)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        GiveawayFilterEngine.filterAndSortList(statusFiltered, launchers, typeFilter, categories, sort, query, playability, storage)
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Filtered & sorted list matching the currently selected tab
-    val displayedGiveaways: StateFlow<List<GiveawayItem>> = combine(
-        _selectedTab,
-        discoverGiveaways,
-        claimedGiveaways
-    ) { tab, discover, claimed ->
+    val displayedGiveaways: StateFlow<List<GiveawayItem>> = combine(_selectedTab, discoverGiveaways, claimedGiveaways) { tab, discover, claimed ->
         when (tab) {
-            MainTab.HOME -> discover
-            MainTab.DISCOVER -> discover
+            MainTab.HOME, MainTab.DISCOVER, MainTab.CALENDAR -> discover
             MainTab.CLAIMED -> claimed
-            MainTab.CALENDAR -> discover
             MainTab.SETTINGS -> emptyList()
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _storageMetrics = MutableStateFlow(
-        LootDropApplication.getStorageMetrics(getApplication())
-    )
+    // --- Storage, Reviews & Steam DLC Flows ---
+    private val _storageMetrics = MutableStateFlow(StorageMetrics(0L, 0L, 0L, 0L))
     val storageMetrics: StateFlow<StorageMetrics> = _storageMetrics.asStateFlow()
 
     private val _storageFootprintBytes = MutableStateFlow(0L)
@@ -1000,11 +538,9 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     private val _publicReviews = MutableStateFlow<List<PublicReview>>(emptyList())
     val publicReviews: StateFlow<List<PublicReview>> = _publicReviews.asStateFlow()
 
-    // --- Steam Library DLC Recommender ---
-    private val _storeDlcRecommendations = MutableStateFlow(SteamDlcRecommender.loadCachedDlcs(preferences))
-    private val _dismissedDlcIds = MutableStateFlow(
-        preferences.dismissedDlcAppIds.mapNotNull { it.toIntOrNull() }.toSet()
-    )
+    private val _storeDlcRecommendations = MutableStateFlow<List<SteamDlcRecommendation>>(emptyList())
+    private val _dismissedDlcIds = MutableStateFlow(preferences.dismissedDlcAppIds.mapNotNull { it.toIntOrNull() }.toSet())
+
     private val _isLoadingSteamDlcs = MutableStateFlow(false)
     val isLoadingSteamDlcs: StateFlow<Boolean> = _isLoadingSteamDlcs.asStateFlow()
 
@@ -1021,1524 +557,17 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     val isLoadingGameDlcs: StateFlow<Boolean> = _isLoadingGameDlcs.asStateFlow()
 
     val steamDlcRecommendations: StateFlow<List<SteamDlcRecommendation>> = combine(
-        allGiveaways,
-        allSteamGames,
-        _storeDlcRecommendations,
-        _dismissedDlcIds
+        allGiveaways, allSteamGames, _storeDlcRecommendations, _dismissedDlcIds
     ) { giveaways, steamGames, storeDlcs, dismissedIds ->
-        if (steamGames.isEmpty()) {
-            emptyList()
-        } else {
-            val ownedAppIds = steamGames.map { it.appId }.toSet()
-            val freeGiveawayMatches = SteamDlcRecommender.findFreeDlcGiveawaysForSteamLibrary(
-                giveaways = giveaways,
-                steamGames = steamGames
-            )
-            val filteredStore = storeDlcs.filter { dlc ->
-                dlc.dlcAppId !in ownedAppIds &&
-                    dlc.dlcAppId !in dismissedIds &&
-                    dlc.parentAppId in ownedAppIds
-            }
-            val giveawayAppIds = freeGiveawayMatches.map { it.dlcAppId }.toSet()
-            val combined = freeGiveawayMatches + filteredStore.filter { it.dlcAppId !in giveawayAppIds }
-            combined
-                .filter { it.dlcAppId !in dismissedIds }
-                .sortedWith(
-                    compareByDescending<SteamDlcRecommendation> { it.isFromFreeGiveaway }
-                        .thenBy { it.isSoundtrackOrCosmetic }
-                        .thenByDescending { it.relevanceScore }
-                )
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        DlcAndReviewsDelegate.mergeDlcRecommendations(giveaways, steamGames, storeDlcs, dismissedIds)
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    init {
-        runCatching { refreshGiveaways() }
-        runCatching { updateStorageFootprint() }
-        runCatching { refreshPublicReviews() }
-        runCatching { NotificationScheduler.schedulePeriodicSync(application) }
-        runCatching { AutoBackupScheduler.schedulePeriodicAutoBackup(application) }
-        runCatching { checkAndTriggerAutoBackupIfNeeded(application) }
-        runCatching { checkAndTriggerCloudAutoBackupIfNeeded(application) }
-        runCatching { checkGithubReleases(isManual = false) }
-        runCatching { com.example.util.MythicAchievementNotificationManager.checkPendingFromPreferences(application) }
-        runCatching { checkWeeklyBacklogRollover() }
-        viewModelScope.launch(Dispatchers.IO) {
-            runCatching {
-                val curatedAppIds = listOf(1091500, 620, 367520, 1145360, 264710, 1794680, 413150)
-                database.steamGameDao().deleteByAppIds(curatedAppIds)
-                database.steamAchievementDao().deleteByAppIds(curatedAppIds)
-                if (_steamUserId.value.isBlank()) {
-                    database.steamGameDao().clearAll()
-                    database.steamAchievementDao().clearAll()
-                } else if (!SteamDlcRecommender.isCacheFresh(preferences)) {
-                    val savedGames = database.steamGameDao().getAllSteamGamesList()
-                    if (savedGames.isNotEmpty()) {
-                        refreshSteamDlcRecommendations(forceRefresh = false)
-                    }
-                }
-            }
-        }
-    }
-
-    fun refreshSteamDlcRecommendations(forceRefresh: Boolean = true) {
-        if (_isLoadingSteamDlcs.value) return
-        viewModelScope.launch(Dispatchers.IO) {
-            if (!forceRefresh && SteamDlcRecommender.isCacheFresh(preferences)) {
-                _storeDlcRecommendations.value = SteamDlcRecommender.loadCachedDlcs(preferences)
-                return@launch
-            }
-            val ownedGames = database.steamGameDao().getAllSteamGamesList()
-            if (ownedGames.isEmpty()) {
-                _steamDlcScanStatus.value = "Sync your Steam library first to discover DLCs."
-                return@launch
-            }
-            _isLoadingSteamDlcs.value = true
-            _steamDlcScanStatus.value = "Scanning Steam Store for DLCs matching your library..."
-            try {
-                val dismissed = _dismissedDlcIds.value
-                val fetched = SteamDlcRecommender.fetchRecommendationsForLibrary(
-                    steamGames = ownedGames,
-                    dismissedIds = dismissed,
-                    onProgress = { msg -> _steamDlcScanStatus.value = msg }
-                )
-                if (fetched.isNotEmpty()) {
-                    _storeDlcRecommendations.value = fetched
-                    SteamDlcRecommender.saveCachedDlcs(preferences, fetched)
-                    _steamDlcScanStatus.value = "Found ${fetched.size} Steam DLC recommendations for your library!"
-                } else {
-                    _steamDlcScanStatus.value = "Scan complete — no additional Steam DLCs found."
-                }
-            } catch (e: Exception) {
-                _steamDlcScanStatus.value = "Could not scan Steam DLCs: ${e.message}"
-            } finally {
-                _isLoadingSteamDlcs.value = false
-            }
-        }
-    }
-
-    fun openGameDlcExplorer(game: SteamGameEntity) {
-        _selectedGameForDlcs.value = game
-        val existingCached = steamDlcRecommendations.value.filter { it.parentAppId == game.appId }
-        _selectedGameDlcs.value = existingCached
-        viewModelScope.launch(Dispatchers.IO) {
-            _isLoadingGameDlcs.value = true
-            try {
-                val ownedIds = database.steamGameDao().getAllSteamGamesList().map { it.appId }.toSet()
-                val dismissed = _dismissedDlcIds.value
-                val freeMatches = SteamDlcRecommender.findFreeDlcGiveawaysForSteamLibrary(
-                    giveaways = allGiveaways.value,
-                    steamGames = listOf(game)
-                )
-                val storeDlcs = SteamDlcRecommender.fetchDlcsForSingleGame(
-                    parentGame = game,
-                    ownedAppIds = ownedIds,
-                    dismissedIds = dismissed
-                )
-                val freeIds = freeMatches.map { it.dlcAppId }.toSet()
-                val combined = (freeMatches + storeDlcs.filter { it.dlcAppId !in freeIds })
-                    .filter { it.dlcAppId !in dismissed }
-                    .sortedWith(
-                        compareByDescending<SteamDlcRecommendation> { it.isFromFreeGiveaway }
-                            .thenBy { it.isSoundtrackOrCosmetic }
-                            .thenByDescending { it.relevanceScore }
-                    )
-                _selectedGameDlcs.value = combined
-                if (storeDlcs.isNotEmpty()) {
-                    val mergedStore = (_storeDlcRecommendations.value + storeDlcs)
-                        .distinctBy { it.dlcAppId }
-                        .take(50)
-                    _storeDlcRecommendations.value = mergedStore
-                    SteamDlcRecommender.saveCachedDlcs(preferences, mergedStore)
-                }
-            } finally {
-                _isLoadingGameDlcs.value = false
-            }
-        }
-    }
-
-    fun closeGameDlcExplorer() {
-        _selectedGameForDlcs.value = null
-        _selectedGameDlcs.value = emptyList()
-        _isLoadingGameDlcs.value = false
-    }
-
-    fun dismissDlcRecommendation(dlcAppId: Int) {
-        preferences.dismissDlcAppId(dlcAppId)
-        _dismissedDlcIds.value = _dismissedDlcIds.value + dlcAppId
-        _selectedGameDlcs.value = _selectedGameDlcs.value.filterNot { it.dlcAppId == dlcAppId }
-    }
-
-    fun openDlcRecommendation(context: Context, dlc: SteamDlcRecommendation) {
-        val giveawayId = dlc.matchedGiveawayId
-        if (giveawayId != null) {
-            val matchedGiveaway = allGiveaways.value.firstOrNull { it.id == giveawayId }
-            if (matchedGiveaway != null) {
-                openDetail(matchedGiveaway)
-                return
-            }
-        }
-        val url = dlc.storeUrl.ifBlank { "https://store.steampowered.com/app/${dlc.dlcAppId}" }
-        if (_isUseInAppBrowser.value) {
-            openInAppBrowser(url, dlc.name)
-        } else {
-            launchExternalBrowser(context, url)
-        }
-    }
-
-    fun refreshPublicReviews() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val list = PublicReviewsManager.fetchReviews(getApplication())
-            _publicReviews.value = list
-        }
-    }
-
-    fun getReviewsForGame(giveawayId: Long, gameTitle: String): List<PublicReview> {
-        val all = _publicReviews.value
-        val cleanGame = gameTitle.trim().lowercase()
-        return all.filter { review ->
-            (giveawayId > 0 && review.giveawayId == giveawayId) ||
-            (cleanGame.isNotBlank() && review.gameTitle.trim().lowercase() == cleanGame) ||
-            (cleanGame.length >= 4 && (review.gameTitle.lowercase().contains(cleanGame) || cleanGame.contains(review.gameTitle.lowercase())))
-        }
-    }
-
-    fun getReviewsForGame(giveawayId: Int, gameTitle: String): List<PublicReview> {
-        return getReviewsForGame(giveawayId.toLong(), gameTitle)
-    }
-
-    fun getAppReviews(): List<PublicReview> {
-        return _publicReviews.value.filter { it.isForApp }
-    }
-
-    fun postAppReview(
-        rating: Int,
-        title: String,
-        comment: String,
-        onComplete: (Boolean, String) -> Unit = { _, _ -> }
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val author = preferences.userProfileName.ifBlank { "Gamer" }
-            val result = PublicReviewsManager.postReview(
-                context = getApplication(),
-                giveawayId = -1L,
-                gameTitle = "LootDrop App",
-                authorName = author,
-                authorTag = "LootDrop Player",
-                rating = rating,
-                title = title,
-                comment = comment,
-                platform = "Android",
-                isVerifiedClaimer = true,
-                isAppReview = true
-            )
-            result.onSuccess { review ->
-                val updated = _publicReviews.value.toMutableList()
-                updated.removeAll { it.id == review.id }
-                updated.add(0, review)
-                _publicReviews.value = updated
-                withContext(Dispatchers.Main) {
-                    onComplete(true, "Your LootDrop App review has been posted publicly!")
-                }
-            }.onFailure { err ->
-                withContext(Dispatchers.Main) {
-                    onComplete(false, err.message ?: "Failed to post review")
-                }
-            }
-        }
-    }
-
-    fun postPublicReview(
-        giveawayId: Long,
-        gameTitle: String,
-        rating: Int,
-        title: String,
-        comment: String,
-        onComplete: (Boolean, String) -> Unit = { _, _ -> }
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val author = preferences.userProfileName.ifBlank { "Gamer" }
-            val isClaimed = claimedGiveaways.value.any { it.id == giveawayId.toInt() }
-            val tag = if (isClaimed) "Verified Claimer" else "Community Member"
-            val result = PublicReviewsManager.postReview(
-                context = getApplication(),
-                giveawayId = giveawayId,
-                gameTitle = gameTitle,
-                authorName = author,
-                authorTag = tag,
-                rating = rating,
-                title = title,
-                comment = comment,
-                platform = "Android",
-                isVerifiedClaimer = isClaimed
-            )
-            result.onSuccess { review ->
-                val updated = _publicReviews.value.toMutableList()
-                updated.removeAll { it.id == review.id }
-                updated.add(0, review)
-                _publicReviews.value = updated
-                withContext(Dispatchers.Main) {
-                    onComplete(true, "Your review has been posted publicly to the community!")
-                }
-            }.onFailure { err ->
-                withContext(Dispatchers.Main) {
-                    onComplete(false, err.message ?: "Failed to post review")
-                }
-            }
-        }
-    }
-
-    fun postPublicReview(
-        giveawayId: Int,
-        gameTitle: String,
-        rating: Int,
-        title: String,
-        comment: String,
-        onComplete: (Boolean, String) -> Unit = { _, _ -> }
-    ) {
-        postPublicReview(giveawayId.toLong(), gameTitle, rating, title, comment, onComplete)
-    }
-
-    fun voteReviewHelpful(reviewId: String, onComplete: (Boolean, String) -> Unit = { _, _ -> }) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val res = PublicReviewsManager.voteHelpful(getApplication(), reviewId)
-            res.onSuccess { newCount ->
-                val updated = _publicReviews.value.map {
-                    if (it.id == reviewId) it.copy(helpfulCount = newCount) else it
-                }
-                _publicReviews.value = updated
-                withContext(Dispatchers.Main) {
-                    onComplete(true, "Marked as helpful!")
-                }
-            }.onFailure { err ->
-                withContext(Dispatchers.Main) {
-                    onComplete(false, err.message ?: "Could not vote")
-                }
-            }
-        }
-    }
-
-    fun hasVotedHelpful(reviewId: String): Boolean {
-        return PublicReviewsManager.hasVotedHelpful(getApplication(), reviewId)
-    }
-
-    fun updateStorageFootprint() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val metrics = LootDropApplication.getStorageMetrics(getApplication())
-            _storageMetrics.value = metrics
-            _storageFootprintBytes.value = metrics.totalFootprintBytes
-        }
-    }
-
-    fun clearAllCaches() {
-        performDeepClean()
-    }
-
-    fun performDeepClean() {
-        viewModelScope.launch(Dispatchers.IO) {
-            _isLoading.value = true
-            val reclaimed = repository.clearAllCaches(getApplication())
-            if (preferences.isAutoPruneExpired) {
-                repository.pruneExpiredGiveaways(getApplication())
-            }
-            updateStorageFootprint()
-            _isLoading.value = false
-            val formatted = _storageMetrics.value.formatBytes(reclaimed)
-            _reopenStatusMessage.value = "Deep clean complete! Reclaimed $formatted of disk storage."
-        }
-    }
-
-    fun clearImageCache() {
-        viewModelScope.launch(Dispatchers.IO) {
-            _isLoading.value = true
-            val reclaimed = repository.clearImageCache(getApplication())
-            updateStorageFootprint()
-            _isLoading.value = false
-            val formatted = _storageMetrics.value.formatBytes(reclaimed)
-            _reopenStatusMessage.value = "Image cache cleared! Reclaimed $formatted."
-        }
-    }
-
-    fun clearNetworkCache() {
-        viewModelScope.launch(Dispatchers.IO) {
-            _isLoading.value = true
-            val reclaimed = repository.clearHttpCache(getApplication())
-            updateStorageFootprint()
-            _isLoading.value = false
-            val formatted = _storageMetrics.value.formatBytes(reclaimed)
-            _reopenStatusMessage.value = "Network API cache cleared! Reclaimed $formatted."
-        }
-    }
-
-    fun optimizeDatabase() {
-        viewModelScope.launch(Dispatchers.IO) {
-            _isLoading.value = true
-            val pruned = if (preferences.isAutoPruneExpired) {
-                repository.pruneExpiredGiveaways(getApplication())
-            } else 0
-            repository.vacuumDatabase(getApplication())
-            updateStorageFootprint()
-            _isLoading.value = false
-            _reopenStatusMessage.value = if (pruned > 0) {
-                "Database compacted with VACUUM. Purged $pruned expired freebies."
-            } else {
-                "Database compacted & defragmented successfully."
-            }
-        }
-    }
-
-    fun refreshGiveaways(isAutoCheck: Boolean = false) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            _errorMessage.value = null
-            lastRefreshTimestamp = System.currentTimeMillis()
-            val result = repository.refreshGiveaways()
-            _isLoading.value = false
-            if (result.isFailure) {
-                if (!isAutoCheck || allGiveaways.value.isEmpty()) {
-                    _errorMessage.value = result.exceptionOrNull()?.localizedMessage
-                        ?: "Could not fetch latest free games. Check connection."
-                }
-            } else {
-                updateStorageFootprint()
-                val syncResult = result.getOrNull()
-                if (syncResult != null && syncResult.newGamesCount > 0) {
-                    _reopenStatusMessage.value = "🎯 Found ${syncResult.newGamesCount} new free game${if (syncResult.newGamesCount > 1) "s" else ""}!"
-                    preferences.isNewTodayDismissed = false
-                    _isNewTodayDismissed.value = false
-                } else if (isAutoCheck) {
-                    _reopenStatusMessage.value = "⚡ Auto-check complete: Games are up to date"
-                }
-            }
-            // Trigger background task to check for new GitHub releases on reload
-            checkGithubReleases(isManual = false)
-        }
-    }
-
-    fun checkNewGamesOnAppReopen() {
-        if (!preferences.isAutoCheckOnReopen) return
-
-        val now = System.currentTimeMillis()
-        // If already refreshing or refreshed less than 4 seconds ago, skip redundant check
-        if (_isLoading.value || (now - lastRefreshTimestamp < 4000L && lastRefreshTimestamp != 0L)) {
-            return
-        }
-
-        refreshGiveaways(isAutoCheck = true)
-        // Background task to check for new GitHub releases when reopening app
-        checkGithubReleases(isManual = false)
-    }
-
-    fun setAutoCheckGithubUpdates(enabled: Boolean) {
-        preferences.isAutoCheckGithubUpdates = enabled
-        _isAutoCheckGithubUpdates.value = enabled
-    }
-
-    private var pendingInstallAfterPermissionGrant: Boolean = false
-
-    fun setUpdateDialogVisible(visible: Boolean) {
-        _isUpdateDialogVisible.value = visible
-    }
-
-    fun dismissUpdateDialog(neverRemindThisVersion: Boolean = false) {
-        _isUpdateDialogVisible.value = false
-        if (neverRemindThisVersion) {
-            _appUpdateInfo.value?.latestVersion?.let { tag ->
-                preferences.lastDismissedUpdateTag = tag
-            }
-        }
-    }
-
-    fun startInAppUpdateDownload(updateInfo: AppUpdateInfo, context: Context? = null) {
-        val currentState = _updateDownloadState.value
-        if (currentState is UpdateDownloadState.Downloading) return
-
-        val installContext = context ?: getApplication()
-
-        // If this exact version is already downloaded and valid, install immediately in 1 tap
-        if (currentState is UpdateDownloadState.ReadyToInstall &&
-            currentState.versionTag == updateInfo.latestVersion &&
-            AppUpdateInstaller.hasValidApkFile(currentState.apkFile)
-        ) {
-            triggerInstallWithAutoResume(installContext, currentState.apkFile)
-            return
-        }
-
-        val targetUrl = updateInfo.downloadUrl ?: updateInfo.releaseUrl
-        if (targetUrl.isBlank()) {
-            _updateDownloadState.value = UpdateDownloadState.Error("No download URL found for this release")
-            return
-        }
-
-        pendingInstallAfterPermissionGrant = false
-
-        viewModelScope.launch {
-            _updateDownloadState.value = UpdateDownloadState.Downloading(
-                progress = 0f,
-                bytesDownloaded = 0L,
-                totalBytes = 0L
-            )
-
-            val result = AppUpdateInstaller.downloadApk(
-                context = getApplication(),
-                downloadUrl = targetUrl,
-                versionTag = updateInfo.latestVersion,
-                onProgress = { progress, downloaded, total ->
-                    _updateDownloadState.value = UpdateDownloadState.Downloading(
-                        progress = progress,
-                        bytesDownloaded = downloaded,
-                        totalBytes = total
-                    )
-                }
-            )
-
-            if (result.isSuccess) {
-                val apkFile = result.getOrThrow()
-                _updateDownloadState.value = UpdateDownloadState.ReadyToInstall(
-                    apkFile = apkFile,
-                    versionTag = updateInfo.latestVersion
-                )
-                // Automatically prompt installation immediately on completion
-                triggerInstallWithAutoResume(installContext, apkFile)
-            } else {
-                val err = result.exceptionOrNull()?.localizedMessage ?: "Download failed"
-                _updateDownloadState.value = UpdateDownloadState.Error(err)
-            }
-        }
-    }
-
-    private fun triggerInstallWithAutoResume(context: Context, apkFile: java.io.File) {
-        val needsUnknownSourcesGrant =
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-                !context.packageManager.canRequestPackageInstalls()
-        val launched = AppUpdateInstaller.installApk(context, apkFile)
-        pendingInstallAfterPermissionGrant = !launched && needsUnknownSourcesGrant
-    }
-
-    fun resumePendingUpdateInstallIfPermitted(context: Context) {
-        if (!pendingInstallAfterPermissionGrant) return
-        val state = _updateDownloadState.value
-        if (state !is UpdateDownloadState.ReadyToInstall) {
-            pendingInstallAfterPermissionGrant = false
-            return
-        }
-        val canInstall = Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
-            context.packageManager.canRequestPackageInstalls()
-        if (canInstall && AppUpdateInstaller.hasValidApkFile(state.apkFile)) {
-            pendingInstallAfterPermissionGrant = false
-            AppUpdateInstaller.installApk(context, state.apkFile)
-        }
-    }
-
-    fun installDownloadedApk(context: Context) {
-        val state = _updateDownloadState.value
-        if (state is UpdateDownloadState.ReadyToInstall) {
-            triggerInstallWithAutoResume(context, state.apkFile)
-        }
-    }
-
-    fun resetUpdateDownloadState() {
-        pendingInstallAfterPermissionGrant = false
-        _updateDownloadState.value = UpdateDownloadState.Idle
-    }
-
-    fun checkGithubReleases(isManual: Boolean = false) {
-        if (!isManual && !preferences.isAutoCheckGithubUpdates) return
-
-        val now = System.currentTimeMillis()
-        // Throttle automatic background checks (5 minutes) so we don't spam GitHub API on frequent reload taps
-        if (!isManual && preferences.lastGithubCheckTime > 0L && (now - preferences.lastGithubCheckTime < 5 * 60 * 1000L)) {
-            return
-        }
-
-        viewModelScope.launch {
-            _isCheckingUpdates.value = true
-            if (isManual) {
-                _updateCheckStatus.value = "Checking GitHub for new releases..."
-            }
-            val result = githubReleaseClient.checkLatestRelease(currentVersionName = BuildConfig.VERSION_NAME)
-            preferences.lastGithubCheckTime = System.currentTimeMillis()
-            _isCheckingUpdates.value = false
-
-            if (result.isSuccess) {
-                val info = result.getOrNull()
-                _appUpdateInfo.value = info
-                if (info != null) {
-                    preferences.cachedLatestGithubVersion = info.latestVersion
-                    if (info.hasUpdate) {
-                        _updateCheckStatus.value = "🚀 New release ${info.latestVersion} available!"
-                        if (preferences.lastDismissedUpdateTag != info.latestVersion) {
-                            _reopenStatusMessage.value = "🚀 New Release Available: LootDrop ${info.latestVersion} (Tap to view)"
-                            notificationHelper.sendUpdateNotification(info)
-                        }
-                    } else {
-                        if (isManual) {
-                            _updateCheckStatus.value = "LootDrop is up to date (V${BuildConfig.VERSION_NAME})"
-                        }
-                    }
-                }
-            } else {
-                if (isManual) {
-                    _updateCheckStatus.value = "Could not check updates: ${result.exceptionOrNull()?.localizedMessage ?: "Network issue"}"
-                }
-            }
-        }
-    }
-
-    fun clearReopenStatusMessage() {
-        _reopenStatusMessage.value = null
-    }
-
-    fun onAppClosedOrLeft() {
-        _reopenStatusMessage.value = null
-    }
-
-    fun selectTab(tab: MainTab) {
-        _selectedTab.value = tab
-    }
-
-    fun toggleLauncher(launcher: LauncherType) {
-        if (launcher == LauncherType.ALL) {
-            _selectedLaunchers.value = emptySet()
-            return
-        }
-        val current = _selectedLaunchers.value.toMutableSet()
-        current.remove(LauncherType.ALL)
-        if (current.contains(launcher)) {
-            current.remove(launcher)
-        } else {
-            current.add(launcher)
-        }
-        _selectedLaunchers.value = current
-    }
-
-    fun selectLauncher(launcher: LauncherType) {
-        toggleLauncher(launcher)
-    }
-
-    fun clearLauncherFilters() {
-        _selectedLaunchers.value = emptySet()
-    }
-
-    fun selectTypeFilter(type: TypeFilter) {
-        _selectedTypeFilter.value = type
-    }
-
-    fun toggleCategoryFilter(category: GameCategory) {
-        val current = _selectedCategories.value.toMutableSet()
-        if (current.contains(category)) {
-            current.remove(category)
-        } else {
-            current.add(category)
-        }
-        _selectedCategories.value = current
-    }
-
-    fun setCategoryFilters(categories: Set<GameCategory>) {
-        _selectedCategories.value = categories
-    }
-
-    fun clearCategoryFilters() {
-        _selectedCategories.value = emptySet()
-    }
-
-    fun setCategorySheetOpen(open: Boolean) {
-        _isCategorySheetOpen.value = open
-    }
-
-    fun selectSort(sort: SortOption) {
-        _selectedSort.value = sort
-    }
-
-    fun setFilterSheetOpen(open: Boolean) {
-        _isFilterSheetOpen.value = open
-    }
-
-    fun resetFilters() {
-        _selectedLaunchers.value = emptySet()
-        _selectedTypeFilter.value = TypeFilter.ALL
-        _selectedCategories.value = emptySet()
-        _selectedSort.value = SortOption.NEWEST
-        _selectedPlayabilityFilter.value = PlayabilityFilter.ALL
-        _selectedStorageFilter.value = StorageFilter.ALL
-        _searchQuery.value = ""
-    }
-
-    fun setGiveawayManualStorage(id: Int, sizeGb: Float?) {
-        viewModelScope.launch {
-            repository.updateGiveawayManualStorage(id, sizeGb)
-            _detailItem.value?.let { current ->
-                if (current.id == id) {
-                    _detailItem.value = current.copy(manualInstallSizeGb = sizeGb)
-                }
-            }
-        }
-    }
-
-    fun setSteamGameManualStorage(appId: Int, sizeGb: Float?) {
-        viewModelScope.launch {
-            repository.updateSteamGameManualStorage(appId, sizeGb)
-        }
-    }
-
-    fun updateSearchQuery(query: String) {
-        _searchQuery.value = query
-    }
-
-    fun openDetail(item: GiveawayItem) {
-        _detailItem.value = item
-    }
-
-    fun closeDetail() {
-        _detailItem.value = null
-    }
-
-    // Theme & Appearance Actions
-    fun setThemeMode(mode: ThemeMode) {
-        preferences.themeMode = mode
-        _themeMode.value = mode
-    }
-
-    fun setAccentTheme(theme: AccentTheme) {
-        preferences.accentTheme = theme
-        _accentTheme.value = theme
-    }
-
-    fun setDarkBackgroundTheme(theme: BackgroundTheme) {
-        preferences.darkBackgroundTheme = theme
-        _darkBackgroundTheme.value = theme
-    }
-
-    fun setLightBackgroundTheme(theme: BackgroundTheme) {
-        preferences.lightBackgroundTheme = theme
-        _lightBackgroundTheme.value = theme
-    }
-
-    fun importCustomFont(
-        context: Context,
-        uri: Uri,
-        onResult: (Boolean, String) -> Unit
-    ) {
-        viewModelScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                CustomFontHelper.importFontFromUri(context, uri)
-            }
-            when (result) {
-                is CustomFontHelper.ImportResult.Success -> {
-                    preferences.customFontPath = result.filePath
-                    preferences.customFontName = result.displayName
-                    _customFontPath.value = result.filePath
-                    _customFontName.value = result.displayName
-                    onResult(true, "Applied custom font: ${result.displayName}")
-                }
-                is CustomFontHelper.ImportResult.Error -> {
-                    onResult(false, result.message)
-                }
-            }
-        }
-    }
-
-    fun resetCustomFont(context: Context) {
-        CustomFontHelper.clearCustomFonts(context)
-        preferences.customFontPath = ""
-        preferences.customFontName = ""
-        _customFontPath.value = ""
-        _customFontName.value = ""
-    }
-
-    fun setCardDensity(density: CardDensity) {
-        preferences.cardDensity = density
-        _cardDensity.value = density
-    }
-
-    fun setDefaultTab(tab: MainTab) {
-        preferences.defaultTab = tab
-        _defaultTab.value = tab
-    }
-
-    fun setShowOriginalPrice(show: Boolean) {
-        preferences.isShowOriginalPrice = show
-        _isShowOriginalPrice.value = show
-    }
-
-    fun setShowExpiration(show: Boolean) {
-        preferences.isShowExpiration = show
-        _isShowExpiration.value = show
-    }
-
-    fun setConfirmToastOnClaim(confirm: Boolean) {
-        preferences.isConfirmToastOnClaim = confirm
-        _isConfirmToastOnClaim.value = confirm
-    }
-
-    fun setUseInAppBrowser(enabled: Boolean) {
-        preferences.isUseInAppBrowser = enabled
-        _isUseInAppBrowser.value = enabled
-    }
-
-    fun openInAppBrowser(url: String, title: String = "") {
-        _inAppBrowserTitle.value = title
-        _inAppBrowserUrl.value = url
-    }
-
-    fun closeInAppBrowser() {
-        _inAppBrowserUrl.value = null
-        _inAppBrowserTitle.value = ""
-    }
-
-    fun setAutoCheckOnReopen(enabled: Boolean) {
-        preferences.isAutoCheckOnReopen = enabled
-        _isAutoCheckOnReopen.value = enabled
-    }
-
-    fun setDataSaverMode(enabled: Boolean) {
-        preferences.isDataSaverMode = enabled
-        _isDataSaverMode.value = enabled
-    }
-
-    fun setAutoPruneExpired(enabled: Boolean) {
-        preferences.isAutoPruneExpired = enabled
-        _isAutoPruneExpired.value = enabled
-    }
-
-    fun setDefaultLauncher(launcher: LauncherType) {
-        preferences.defaultLauncher = launcher
-        _defaultLauncher.value = launcher
-    }
-
-    fun setAnimationsEnabled(enabled: Boolean) {
-        preferences.isAnimationsEnabled = enabled
-        _isAnimationsEnabled.value = enabled
-    }
-
-    fun setLowEndOptimization(enabled: Boolean) {
-        preferences.isLowEndOptimization = enabled
-        _isLowEndOptimization.value = enabled
-    }
-
-    fun setTargetFrameRate(frameRate: TargetFrameRate) {
-        preferences.targetFrameRate = frameRate
-        _targetFrameRate.value = frameRate
-    }
-
-    fun setDetectedRefreshRate(rate: Int) {
-        _detectedRefreshRate.value = rate
-    }
-
-    fun setDpiOptimizationEnabled(enabled: Boolean) {
-        preferences.isDpiOptimizationEnabled = enabled
-        _isDpiOptimizationEnabled.value = enabled
-    }
-
-    fun setDpiScaleMode(mode: DpiScaleMode) {
-        preferences.dpiScaleMode = mode
-        _dpiScaleMode.value = mode
-    }
-
-    fun setDetectedScreenDpi(dpi: Int) {
-        preferences.detectedScreenDpi = dpi
-        _detectedScreenDpi.value = dpi
-    }
-
-    fun completeOnboarding() {
-        preferences.hasSeenOnboarding = true
-        _showOnboardingWalkthrough.value = false
-    }
-
-    fun dismissOnboarding() {
-        preferences.hasSeenOnboarding = true
-        _showOnboardingWalkthrough.value = false
-    }
-
-    fun replayOnboarding() {
-        _showOnboardingWalkthrough.value = true
-    }
-
-    fun updateUserProfile(name: String, avatarUri: Uri? = null, removeAvatar: Boolean = false) {
-        val updated = UserProfileManager.saveProfile(
-            context = getApplication(),
-            preferences = preferences,
-            name = name,
-            avatarUri = avatarUri,
-            removeAvatar = removeAvatar
-        )
-        _userProfile.value = updated
-        if (preferences.isCloudAccountLoggedIn) {
-            viewModelScope.launch {
-                CloudBackupManager.updateSupabaseDisplayName(name, preferences)
-            }
-        }
-    }
-
-    fun updateDisplayedTrophies(hasCustom: Boolean, keys: Set<String>) {
-        val updated = UserProfileManager.saveDisplayedTrophies(preferences, hasCustom, keys)
-        _userProfile.value = updated
-    }
-
-    fun refreshUserProfile() {
-        _userProfile.value = UserProfileManager.getProfile(preferences)
-    }
-
-    fun dismissNewToday() {
-        preferences.isNewTodayDismissed = true
-        _isNewTodayDismissed.value = true
-    }
-
-    fun resetNewTodayDismissed() {
-        preferences.isNewTodayDismissed = false
-        _isNewTodayDismissed.value = false
-    }
-
-    // Notification Preferences Actions
-    fun setNotificationsEnabled(enabled: Boolean) {
-        notificationHelper.isNotificationsEnabled = enabled
-        _isNotificationsEnabled.value = enabled
-    }
-
-    fun setNotifyPlayStation(enabled: Boolean) {
-        notificationHelper.isNotifyPlayStation = enabled
-        _isNotifyPlayStation.value = enabled
-    }
-
-    fun setNotifyXbox(enabled: Boolean) {
-        notificationHelper.isNotifyXbox = enabled
-        _isNotifyXbox.value = enabled
-    }
-
-    fun setNotifyNintendo(enabled: Boolean) {
-        notificationHelper.isNotifyNintendo = enabled
-        _isNotifyNintendo.value = enabled
-    }
-
-    fun setNotifySteam(enabled: Boolean) {
-        notificationHelper.isNotifySteam = enabled
-        _isNotifySteam.value = enabled
-    }
-
-    fun setNotifyEpic(enabled: Boolean) {
-        notificationHelper.isNotifyEpic = enabled
-        _isNotifyEpic.value = enabled
-    }
-
-    fun setNotifyGog(enabled: Boolean) {
-        notificationHelper.isNotifyGog = enabled
-        _isNotifyGog.value = enabled
-    }
-
-    fun setNotifyAndroid(enabled: Boolean) {
-        notificationHelper.isNotifyAndroid = enabled
-        _isNotifyAndroid.value = enabled
-    }
-
-    fun setNotifyIos(enabled: Boolean) {
-        notificationHelper.isNotifyIos = enabled
-        _isNotifyIos.value = enabled
-    }
-
-    fun setNotifyOthers(enabled: Boolean) {
-        notificationHelper.isNotifyOthers = enabled
-        _isNotifyOthers.value = enabled
-    }
-
-    fun setGamesOnly(enabled: Boolean) {
-        notificationHelper.isGamesOnly = enabled
-        _isGamesOnly.value = enabled
-    }
-
-    fun setNotifyEndingSoon(enabled: Boolean) {
-        notificationHelper.isNotifyEndingSoon = enabled
-        _isNotifyEndingSoon.value = enabled
-    }
-
-    fun setMinWorthAlertThreshold(threshold: Float) {
-        notificationHelper.minWorthAlertThreshold = threshold
-        _minWorthAlertThreshold.value = threshold
-    }
-
-    fun setQuietHoursEnabled(enabled: Boolean) {
-        notificationHelper.isQuietHoursEnabled = enabled
-        _isQuietHoursEnabled.value = enabled
-    }
-
-    fun setNotificationSoundEnabled(enabled: Boolean) {
-        notificationHelper.isNotificationSoundEnabled = enabled
-        _isNotificationSoundEnabled.value = enabled
-    }
-
-    fun setNotificationVibrateEnabled(enabled: Boolean) {
-        notificationHelper.isNotificationVibrateEnabled = enabled
-        _isNotificationVibrateEnabled.value = enabled
-    }
-
-    fun setKeepForeverOnly(enabled: Boolean) {
-        notificationHelper.isKeepForeverOnly = enabled
-        _isKeepForeverOnly.value = enabled
-    }
-
-    fun setNotificationRichArtwork(enabled: Boolean) {
-        notificationHelper.isNotificationRichArtwork = enabled
-        _isNotificationRichArtwork.value = enabled
-    }
-
-    fun setNotificationActionsEnabled(enabled: Boolean) {
-        notificationHelper.isNotificationActionsEnabled = enabled
-        _isNotificationActionsEnabled.value = enabled
-    }
-
-    fun setQuietHoursHours(start: Int, end: Int) {
-        preferences.quietHoursStartHour = start
-        preferences.quietHoursEndHour = end
-        _quietHoursStartHour.value = start
-        _quietHoursEndHour.value = end
-    }
-
-    fun setBackgroundSyncInterval(hours: Int) {
-        preferences.backgroundSyncIntervalHours = hours
-        _backgroundSyncIntervalHours.value = hours
-        NotificationScheduler.schedulePeriodicSync(getApplication())
-    }
-
-    fun setBackgroundSyncWifiOnly(wifiOnly: Boolean) {
-        preferences.backgroundSyncWifiOnly = wifiOnly
-        _backgroundSyncWifiOnly.value = wifiOnly
-    }
-
-    fun setNotificationHistorySheetOpen(open: Boolean) {
-        _isNotificationHistorySheetOpen.value = open
-    }
-
-    fun sendTestNotification(isRichPreview: Boolean = true) {
-        notificationHelper.sendTestNotification(isRichPreview)
-    }
-
-    fun sendEndingSoonTestNotification() {
-        notificationHelper.sendTestEndingSoonNotification()
-    }
-
-    fun markNotificationAsRead(id: Long) {
-        viewModelScope.launch(Dispatchers.IO) {
-            database.notificationHistoryDao().markAsRead(id)
-        }
-    }
-
-    fun markAllNotificationsAsRead() {
-        viewModelScope.launch(Dispatchers.IO) {
-            database.notificationHistoryDao().markAllAsRead()
-        }
-    }
-
-    fun clearAllNotificationHistory() {
-        viewModelScope.launch(Dispatchers.IO) {
-            database.notificationHistoryDao().clearAllNotifications()
-        }
-    }
-
-    fun deleteNotification(id: Long) {
-        viewModelScope.launch(Dispatchers.IO) {
-            database.notificationHistoryDao().deleteNotification(id)
-        }
-    }
-
-    // Library Data Management Actions
-    fun clearClaimedGames() {
-        viewModelScope.launch {
-            repository.clearAllClaimed()
-        }
-    }
-
-    fun clearBookmarkedGames() {
-        viewModelScope.launch {
-            repository.clearAllBookmarks()
-        }
-    }
-
-    fun forceResync() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            _errorMessage.value = null
-            repository.forceResync()
-            _isLoading.value = false
-        }
-    }
-
-    fun toggleClaimed(item: GiveawayItem) {
-        viewModelScope.launch {
-            repository.toggleClaimed(item.id, item.isClaimed)
-            if (_detailItem.value?.id == item.id) {
-                _detailItem.value = _detailItem.value?.copy(isClaimed = !item.isClaimed)
-            }
-        }
-    }
-
-    fun updatePlayStatus(item: GiveawayItem, status: PlayStatus) {
-        viewModelScope.launch {
-            repository.updatePlayStatus(item.id, status)
-            if (_detailItem.value?.id == item.id) {
-                _detailItem.value = _detailItem.value?.copy(playStatus = status)
-            }
-        }
-    }
-
-    fun updatePlayStatusById(id: Int, status: PlayStatus) {
-        viewModelScope.launch {
-            repository.updatePlayStatus(id, status)
-            if (_detailItem.value?.id == id) {
-                _detailItem.value = _detailItem.value?.copy(playStatus = status)
-            }
-        }
-    }
-
-    fun setLibraryPlayFilter(filter: LibraryPlayFilter) {
-        preferences.libraryPlayFilter = filter
-        _selectedLibraryPlayFilter.value = filter
-    }
-
-    fun setSteamUserId(userId: String) {
-        preferences.steamUserId = userId
-        _steamUserId.value = userId
-    }
-
-    fun setSteamApiKey(key: String) {
-        preferences.steamApiKey = key
-        _steamApiKey.value = key
-    }
-
-    fun clearSteamSyncStatus() {
-        _steamSyncStatus.value = null
-    }
-
-    fun syncSteamLibrary(customSteamId: String? = null, customApiKey: String? = null) {
-        viewModelScope.launch {
-            _isSyncingSteam.value = true
-            _steamSyncStatus.value = "Connecting to Steam Web API..."
-            try {
-                val apiKey = SteamApiClient.resolveApiKey(customApiKey ?: _steamApiKey.value)
-                val rawUserId = (customSteamId ?: _steamUserId.value).trim()
-
-                if (rawUserId.isBlank()) {
-                    _steamSyncStatus.value = "Please enter your Steam ID, Custom URL, or profile URL."
-                    return@launch
-                }
-
-                _steamSyncStatus.value = "Resolving Steam profile: $rawUserId..."
-                val resolvedSteamId = SteamApiClient.resolveSteamId(rawUserId, apiKey)
-                if (resolvedSteamId == null) {
-                    _steamSyncStatus.value = "Could not find Steam profile '$rawUserId'. In Steam: check your Custom URL in Edit Profile, or paste your 17-digit numeric Steam ID (starts with 7656119...)."
-                    return@launch
-                }
-                preferences.steamUserId = rawUserId
-                _steamUserId.value = rawUserId
-
-                _steamSyncStatus.value = "Fetching owned games & wishlist from Steam..."
-                val gamesResult = SteamApiClient.getOwnedGamesWithStatus(resolvedSteamId, apiKey)
-                val wishlistMap = SteamApiClient.getWishlist(resolvedSteamId, apiKey)
-
-                val ownedGames: List<SteamOwnedGame> = when (gamesResult) {
-                    is SteamOwnedGamesResult.Success -> gamesResult.games
-                    is SteamOwnedGamesResult.PrivacyRestricted -> {
-                        _steamSyncStatus.value = "Profile found, but your Game Details are Private! In Steam app: go to Profile > Edit Profile > Privacy Settings > set 'Game details' to Public and uncheck 'Always keep my playtime private'."
-                        return@launch
-                    }
-                    is SteamOwnedGamesResult.Error -> {
-                        _steamSyncStatus.value = "Steam API error: ${gamesResult.message}"
-                        return@launch
-                    }
-                }
-
-                if (ownedGames.isEmpty() && wishlistMap.isEmpty()) {
-                    _steamSyncStatus.value = "No games found on Steam account ($resolvedSteamId)."
-                    return@launch
-                }
-
-                // 1. Process and save ALL Steam library games (preserving existing trophies and statuses)
-                val claimedItems = allGiveaways.value.filter { it.isClaimed }
-                val existingMap = database.steamGameDao().getAllSteamGamesList().associateBy { it.appId }
-
-                val steamEntities = ownedGames.map { g ->
-                    val matchedClaimed = claimedItems.firstOrNull { claimed ->
-                        SteamApiClient.matchSteamGame(claimed, listOf(g)) != null
-                    }
-                    val isClaimed = matchedClaimed != null
-                    val existing = existingMap[g.appId]
-                    val unlocked = existing?.achievementsUnlocked ?: 0
-                    val total = existing?.achievementsTotal ?: 0
-                    val preservedStatus = if (existing != null && (existing.playStatus == PlayStatus.BEATEN || existing.playStatus == PlayStatus.DROPPED)) {
-                        existing.playStatus
-                    } else {
-                        SteamApiClient.classifyPlayStatus(
-                            playtimeMinutes = g.playtimeForeverMinutes,
-                            unlockedAchievements = unlocked,
-                            totalAchievements = total
-                        )
-                    }
-                    val icon = if (g.imgIconUrl.isNotBlank()) {
-                        "https://media.steampowered.com/steamcommunity/public/images/apps/${g.appId}/${g.imgIconUrl}.jpg"
-                    } else {
-                        existing?.imgIconUrl ?: ""
-                    }
-
-                    SteamGameEntity(
-                        appId = g.appId,
-                        name = g.name,
-                        playtimeMinutes = g.playtimeForeverMinutes,
-                        playtime2WeeksMinutes = g.playtime2WeeksMinutes,
-                        lastPlayedTimestamp = g.rtimeLastPlayed,
-                        playStatus = preservedStatus,
-                        achievementsUnlocked = unlocked,
-                        achievementsTotal = total,
-                        imgIconUrl = icon,
-                        matchedGiveawayId = matchedClaimed?.id ?: existing?.matchedGiveawayId,
-                        isLootDropClaimed = isClaimed || (existing?.isLootDropClaimed == true),
-                        manualInstallSizeGb = existing?.manualInstallSizeGb
-                    )
-                }
-
-                if (steamEntities.isNotEmpty()) {
-                    repository.insertSteamGames(steamEntities)
-                }
-
-                // 2. Mark Wishlisted giveaways
-                var wishlistMatchCount = 0
-                val wishlistAppIds = wishlistMap.keys.toList()
-                if (wishlistAppIds.isNotEmpty()) {
-                    repository.markWishlistedBySteamAppIds(wishlistAppIds)
-                }
-                for (giveaway in allGiveaways.value) {
-                    if (SteamApiClient.isItemOnWishlist(giveaway, wishlistMap)) {
-                        wishlistMatchCount++
-                        if (!giveaway.isWishlisted) {
-                            repository.toggleWishlisted(giveaway.id, false)
-                        }
-                    }
-                }
-
-                // 3. Match claimed LootDrop freebies with Steam telemetry
-                var matchedCount = 0
-                var unplayed = 0
-                var playing = 0
-                var finished = 0
-
-                for (claimed in claimedItems) {
-                    val steamGame = SteamApiClient.matchSteamGame(claimed, ownedGames)
-                    if (steamGame != null) {
-                        matchedCount++
-                        val achievements = if (steamGame.playtimeForeverMinutes > 0) {
-                            SteamApiClient.getPlayerAchievements(steamGame.appId, resolvedSteamId, apiKey)
-                        } else null
-
-                        val unlocked = achievements?.unlockedCount ?: 0
-                        val total = achievements?.totalCount ?: 0
-
-                        val classifiedStatus = SteamApiClient.classifyPlayStatus(
-                            playtimeMinutes = steamGame.playtimeForeverMinutes,
-                            unlockedAchievements = unlocked,
-                            totalAchievements = total
-                        )
-
-                        when (classifiedStatus) {
-                            PlayStatus.NOT_STARTED -> unplayed++
-                            PlayStatus.PLAYING -> playing++
-                            PlayStatus.BEATEN -> finished++
-                            PlayStatus.DROPPED -> {}
-                        }
-
-                        repository.updateSteamTelemetry(
-                            id = claimed.id,
-                            status = classifiedStatus,
-                            steamAppId = steamGame.appId,
-                            playtimeMinutes = steamGame.playtimeForeverMinutes,
-                            achievementsUnlocked = unlocked,
-                            achievementsTotal = total,
-                            lastPlayed = steamGame.rtimeLastPlayed
-                        )
-
-                        repository.updateSteamGamePlayStatus(steamGame.appId, classifiedStatus)
-                        database.steamGameDao().updateTelemetry(
-                            appId = steamGame.appId,
-                            status = classifiedStatus,
-                            playtime = steamGame.playtimeForeverMinutes,
-                            unlocked = unlocked,
-                            total = total,
-                            lastPlayed = steamGame.rtimeLastPlayed
-                        )
-                    }
-                }
-
-                // 4. Scan trophies & global achievement percentages for top played games
-                _steamSyncStatus.value = "Scanning trophies & global achievement rarities..."
-                val gamesWithPlaytime = ownedGames.filter { it.playtimeForeverMinutes > 0 }
-                    .sortedByDescending { it.playtimeForeverMinutes }
-                    .take(25)
-
-                var syncedTrophiesCount = 0
-                for (sg in gamesWithPlaytime) {
-                    val detailedAchievements = SteamApiClient.getDetailedPlayerAchievements(
-                        appId = sg.appId,
-                        steamId = resolvedSteamId,
-                        apiKey = apiKey,
-                        gameName = sg.name
-                    )
-                    if (detailedAchievements.isNotEmpty()) {
-                        com.example.util.SteamSyncHelper.checkAndNotifyMythicAchievements(
-                            context = getApplication(),
-                            db = database,
-                            achievements = detailedAchievements,
-                            sendSystemNotification = false
-                        )
-                        repository.insertAchievements(detailedAchievements)
-                        val unlocked = detailedAchievements.count { it.isAchieved }
-                        val total = detailedAchievements.size
-                        syncedTrophiesCount += unlocked
-                        val classified = SteamApiClient.classifyPlayStatus(sg.playtimeForeverMinutes, unlocked, total)
-                        database.steamGameDao().updateTelemetry(
-                            appId = sg.appId,
-                            status = classified,
-                            playtime = sg.playtimeForeverMinutes,
-                            unlocked = unlocked,
-                            total = total,
-                            lastPlayed = sg.rtimeLastPlayed
-                        )
-                    } else {
-                        database.steamGameDao().updateTelemetry(
-                            appId = sg.appId,
-                            status = SteamApiClient.classifyPlayStatus(sg.playtimeForeverMinutes, 0, 0),
-                            playtime = sg.playtimeForeverMinutes,
-                            unlocked = 0,
-                            total = 0,
-                            lastPlayed = sg.rtimeLastPlayed
-                        )
-                    }
-                }
-
-                val trophyMsg = if (syncedTrophiesCount > 0) " • $syncedTrophiesCount trophies tracked" else ""
-                val wishlistMsg = if (wishlistMap.isNotEmpty()) " • ${wishlistMap.size} wishlisted ($wishlistMatchCount free in app)" else ""
-                _steamSyncStatus.value = if (ownedGames.isNotEmpty()) {
-                    "Synced ${ownedGames.size} Steam games into All+Paid ($matchedCount claimed matched)$trophyMsg$wishlistMsg!"
-                } else {
-                    "Synced wishlist ($wishlistMatchCount matches found)!"
-                }
-                if (ownedGames.isNotEmpty()) {
-                    refreshSteamDlcRecommendations(forceRefresh = true)
-                }
-            } catch (e: Exception) {
-                _steamSyncStatus.value = "Steam sync failed: ${e.message}"
-            } finally {
-                _isSyncingSteam.value = false
-            }
-        }
-    }
-
-    fun setLibraryViewMode(mode: LibraryViewMode) {
-        preferences.libraryViewMode = mode
-        _libraryViewMode.value = mode
-    }
-
-    fun updateSteamGamePlayStatus(game: SteamGameEntity, status: PlayStatus) {
-        viewModelScope.launch {
-            repository.updateSteamGamePlayStatus(game.appId, status)
-            game.matchedGiveawayId?.let { id ->
-                repository.updatePlayStatus(id, status)
-            }
-        }
-    }
-
-    fun toggleWishlist(item: GiveawayItem) {
-        viewModelScope.launch {
-            repository.toggleWishlisted(item.id, item.isWishlisted)
-            if (_detailItem.value?.id == item.id) {
-                _detailItem.value = _detailItem.value?.copy(isWishlisted = !item.isWishlisted)
-            }
-        }
-    }
-
-
-    fun toggleBookmark(item: GiveawayItem) {
-        viewModelScope.launch {
-            repository.toggleBookmarked(item.id, item.isBookmarked)
-            if (_detailItem.value?.id == item.id) {
-                _detailItem.value = _detailItem.value?.copy(isBookmarked = !item.isBookmarked)
-            }
-        }
-    }
-
-    fun toggleBookmarkById(id: Int) {
-        viewModelScope.launch {
-            val item = repository.getGiveawayById(id)
-            if (item != null) {
-                repository.toggleBookmarked(item.id, item.isBookmarked)
-            } else {
-                database.giveawayDao().setBookmarked(id, true)
-            }
-        }
-    }
-
-    fun openItemById(id: Int) {
-        viewModelScope.launch {
-            val item = repository.getGiveawayById(id)
-            if (item != null) {
-                _detailItem.value = item
-            }
-        }
-    }
-
-    data class OwnershipStatus(
-        val isOwned: Boolean = false,
-        val inVault: Boolean = false,
-        val inSteam: Boolean = false,
-        val matchedSteamGameName: String? = null,
-        val badgeLabel: String = ""
-    )
-
-    fun checkOwnership(item: GiveawayItem): OwnershipStatus {
-        val inVault = item.isClaimed || item.playStatus != PlayStatus.NOT_STARTED
-        val steamGamesList = allSteamGames.value
-        val matchedSteam = if (steamGamesList.isNotEmpty()) {
-            // Check direct steamAppId, extract from URL, or normalize title matching
-            steamGamesList.firstOrNull { steamGame ->
-                (item.steamAppId != null && item.steamAppId > 0 && item.steamAppId == steamGame.appId) ||
-                (SteamApiClient.extractSteamAppId(item.openGiveawayUrl) == steamGame.appId) ||
-                item.availableLaunchers.any { SteamApiClient.extractSteamAppId(it.url) == steamGame.appId } ||
-                SteamApiClient.normalizeGameTitle(item.title).let { normItem ->
-                    normItem.length >= 3 && SteamApiClient.normalizeGameTitle(steamGame.name) == normItem
-                } ||
-                MetacriticCatalog.cleanTitle(item.title).lowercase().let { cleanItem ->
-                    val cleanSteam = MetacriticCatalog.cleanTitle(steamGame.name).lowercase()
-                    cleanItem == cleanSteam ||
-                    (cleanItem.length > 5 && cleanSteam.contains(cleanItem)) ||
-                    (cleanSteam.length > 5 && cleanItem.contains(cleanSteam))
-                }
-            }
-        } else null
-
-        val inSteam = matchedSteam != null
-        val isOwned = inVault || inSteam
-
-        val label = when {
-            inVault && inSteam -> "ALREADY IN YOUR VAULT & STEAM"
-            inVault -> "ALREADY IN YOUR VAULT"
-            inSteam -> "ALREADY IN YOUR STEAM LIBRARY"
-            else -> ""
-        }
-
-        return OwnershipStatus(
-            isOwned = isOwned,
-            inVault = inVault,
-            inSteam = inSteam,
-            matchedSteamGameName = matchedSteam?.name,
-            badgeLabel = label
-        )
-    }
-
-    fun getLauncherOptionsFor(item: GiveawayItem): List<LauncherOption> {
-        val baseOptions = item.availableLaunchers.toMutableList()
-        val cleanTitle = item.title.trim().lowercase()
-            .replace(Regex("(?i)\\b(giveaway|free|dlc|pack|key|bundle|edition|standard|steam|epic|gog|playstation|ps5|ps4|xbox)\\b"), "")
-            .trim()
-
-        if (cleanTitle.length >= 3) {
-            val matchingGiveaways = allGiveaways.value.filter { other ->
-                other.id != item.id && other.title.trim().lowercase().contains(cleanTitle)
-            }
-            for (match in matchingGiveaways) {
-                for (opt in match.availableLaunchers) {
-                    if (opt.launcherType != LauncherType.OTHER && baseOptions.none { it.launcherType == opt.launcherType }) {
-                        baseOptions.add(opt)
-                    }
-                }
-            }
-        }
-        return baseOptions
-    }
-
-    fun claimAndLaunch(
-        context: Context,
-        item: GiveawayItem,
-        targetUrl: String? = null,
-        launcherName: String? = null
-    ) {
-        if (!item.isClaimed) {
-            viewModelScope.launch {
-                repository.toggleClaimed(item.id, false)
-                if (_detailItem.value?.id == item.id) {
-                    _detailItem.value = _detailItem.value?.copy(isClaimed = true)
-                }
-            }
-            if (_isConfirmToastOnClaim.value) {
-                val label = if (launcherName != null) " on $launcherName" else ""
-                Toast.makeText(context, "Claiming '${item.title}'$label! Added to library.", Toast.LENGTH_SHORT).show()
-            }
-        }
-        val url = targetUrl ?: item.openGiveawayUrl
-        if (_isUseInAppBrowser.value && url.isNotBlank()) {
-            openInAppBrowser(url, item.title)
-        } else {
-            launchExternalBrowser(context, url)
-        }
-    }
-
-    fun launchExternalBrowser(context: Context, url: String) {
-        if (url.isBlank()) return
-        try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
-            clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("Giveaway URL", url))
-            Toast.makeText(
-                context,
-                "No browser found. Link copied to clipboard!",
-                Toast.LENGTH_LONG
-            ).show()
-        }
-    }
-
-    // --- Library Backup & Restore Suite ---
-
+    // --- Backup & Cloud Sync State ---
     private val _backupRestoreStatus = MutableStateFlow<String?>(null)
     val backupRestoreStatus: StateFlow<String?> = _backupRestoreStatus.asStateFlow()
 
     private val _isBackingUpOrRestoring = MutableStateFlow(false)
     val isBackingUpOrRestoring: StateFlow<Boolean> = _isBackingUpOrRestoring.asStateFlow()
-
-    fun dismissBackupRestoreStatus() {
-        _backupRestoreStatus.value = null
-    }
-
-    fun exportBackup(context: Context, uri: Uri) {
-        viewModelScope.launch {
-            _isBackingUpOrRestoring.value = true
-            val result = BackupRestoreManager.exportBackup(context, uri, database, preferences)
-            _isBackingUpOrRestoring.value = false
-            result.onSuccess { summary ->
-                _backupRestoreStatus.value = "✅ Backup exported successfully! (${summary.totalGamesCount} games backed up, ${summary.fileSizeFormatted})"
-                Toast.makeText(context, "Backup exported successfully! (${summary.totalGamesCount} games)", Toast.LENGTH_LONG).show()
-                updateStorageFootprint()
-            }.onFailure { e ->
-                _backupRestoreStatus.value = "❌ Export failed: ${e.message}"
-                Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
-            }
-        }
-    }
-
-    fun restoreBackup(context: Context, uri: Uri) {
-        viewModelScope.launch {
-            _isBackingUpOrRestoring.value = true
-            val result = BackupRestoreManager.restoreBackup(context, uri, database, preferences)
-            _isBackingUpOrRestoring.value = false
-            result.onSuccess { summary ->
-                _backupRestoreStatus.value = "🎉 ${summary.message}"
-                Toast.makeText(context, summary.message, Toast.LENGTH_LONG).show()
-                updateStorageFootprint()
-                refreshUserProfile()
-            }.onFailure { e ->
-                _backupRestoreStatus.value = "❌ Restore failed: ${e.message}"
-                Toast.makeText(context, "Restore failed: ${e.message}", Toast.LENGTH_LONG).show()
-            }
-        }
-    }
-
-    // --- Automatic Scheduled Cloud / Drive Backup Suite ---
 
     private val _isAutoBackupEnabled = MutableStateFlow(preferences.isAutoBackupEnabled)
     val isAutoBackupEnabled: StateFlow<Boolean> = _isAutoBackupEnabled.asStateFlow()
@@ -2561,98 +590,14 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isAutoBackingUp = MutableStateFlow(false)
     val isAutoBackingUp: StateFlow<Boolean> = _isAutoBackingUp.asStateFlow()
 
-    fun setAutoBackupEnabled(enabled: Boolean, context: Context) {
-        preferences.isAutoBackupEnabled = enabled
-        _isAutoBackupEnabled.value = enabled
-        if (enabled) {
-            AutoBackupScheduler.schedulePeriodicAutoBackup(context)
-            if (preferences.autoBackupFolderUri.isNotBlank()) {
-                triggerManualAutoBackup(context)
-            }
-        } else {
-            AutoBackupScheduler.cancelPeriodicAutoBackup(context)
-        }
-    }
-
-    fun setAutoBackupFolder(uri: Uri, context: Context) {
-        val folderName = BackupRestoreManager.getFolderDisplayName(context, uri)
-        preferences.autoBackupFolderUri = uri.toString()
-        preferences.autoBackupFolderDisplayName = folderName
-        _autoBackupFolderUri.value = uri.toString()
-        _autoBackupFolderDisplayName.value = folderName
-        AutoBackupScheduler.schedulePeriodicAutoBackup(context)
-        triggerManualAutoBackup(context)
-    }
-
-    fun clearAutoBackupFolder(context: Context) {
-        preferences.autoBackupFolderUri = ""
-        preferences.autoBackupFolderDisplayName = ""
-        _autoBackupFolderUri.value = ""
-        _autoBackupFolderDisplayName.value = ""
-        AutoBackupScheduler.cancelPeriodicAutoBackup(context)
-    }
-
-    fun setAutoBackupIntervalDays(days: Int, context: Context) {
-        preferences.autoBackupIntervalDays = days
-        _autoBackupIntervalDays.value = days
-        AutoBackupScheduler.schedulePeriodicAutoBackup(context)
-    }
-
-    fun triggerManualAutoBackup(context: Context) {
-        val folderUriStr = preferences.autoBackupFolderUri
-        if (folderUriStr.isBlank()) {
-            runCatching { Toast.makeText(context, "Please select a backup folder first", Toast.LENGTH_SHORT).show() }
-            return
-        }
-        val folderUri = runCatching { Uri.parse(folderUriStr) }.getOrNull()
-        if (folderUri == null) {
-            runCatching { Toast.makeText(context, "Invalid folder configuration", Toast.LENGTH_SHORT).show() }
-            return
-        }
-
-        viewModelScope.launch {
-            _isAutoBackingUp.value = true
-            val result = BackupRestoreManager.exportToFolderUri(context, folderUri, database, preferences, "lootdrop_backup_latest.json")
-            _isAutoBackingUp.value = false
-            _lastAutoBackupTimestamp.value = preferences.lastAutoBackupTimestamp
-            _lastAutoBackupStatus.value = preferences.lastAutoBackupStatus
-            result.onSuccess { summary ->
-                val folderName = preferences.autoBackupFolderDisplayName.ifBlank { "Cloud Folder" }
-                val msg = "Auto-backup updated in $folderName! (${summary.totalGamesCount} games)"
-                runCatching { Toast.makeText(context, msg, Toast.LENGTH_LONG).show() }
-                updateStorageFootprint()
-            }.onFailure { e ->
-                val errorMsg = "Auto-backup failed: ${e.message}"
-                _lastAutoBackupStatus.value = "❌ $errorMsg"
-                runCatching { Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show() }
-            }
-        }
-    }
-
-    fun checkAndTriggerAutoBackupIfNeeded(context: Context) {
-        if (!preferences.isAutoBackupEnabled || preferences.autoBackupFolderUri.isBlank()) return
-        val days = preferences.autoBackupIntervalDays.coerceAtLeast(1)
-        val intervalMillis = days.toLong() * 24L * 60L * 60L * 1000L
-        val elapsed = System.currentTimeMillis() - preferences.lastAutoBackupTimestamp
-        if (preferences.lastAutoBackupTimestamp <= 0L || elapsed >= intervalMillis) {
-            viewModelScope.launch {
-                val result = runCatching { BackupRestoreManager.performScheduledAutoBackup(context) }.getOrNull()
-                _lastAutoBackupTimestamp.value = preferences.lastAutoBackupTimestamp
-                _lastAutoBackupStatus.value = preferences.lastAutoBackupStatus
-                if (result?.isSuccess == true) {
-                    updateStorageFootprint()
-                }
-            }
-        }
-    }
-
-    // --- Direct Cloud Backup & Sync Suite (Supabase & Cloudflare Proxy) ---
-
-    val isCloudBackupConfigured: Boolean
-        get() = CloudBackupManager.isConfigured()
-
-    val cloudBackupProviderHost: String
-        get() = CloudBackupManager.getProviderHost()
+    val isCloudBackupConfigured: Boolean get() = CloudBackupManager.isConfigured()
+    val cloudBackupProviderHost: String get() = CloudBackupManager.getProviderHost()
+    val cloudAccountEmail: String get() = preferences.cloudAccountEmail
+    val lastRememberedCloudEmail: String get() = preferences.lastCloudAccountEmail
+    val isCloudSessionActive: Boolean
+        get() = preferences.cloudAccountToken.isNotBlank() ||
+            preferences.cloudAccountRefreshToken.isNotBlank() ||
+            (preferences.isCloudAccountLoggedIn && CloudBackupManager.resolveCloudBackupUrl().isNotBlank())
 
     private val _isCloudAccountLoggedIn = MutableStateFlow(preferences.isCloudAccountLoggedIn)
     val isCloudAccountLoggedIn: StateFlow<Boolean> = _isCloudAccountLoggedIn.asStateFlow()
@@ -2678,126 +623,848 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isCloudAutoBackupEnabled = MutableStateFlow(preferences.isCloudAutoBackupEnabled)
     val isCloudAutoBackupEnabled: StateFlow<Boolean> = _isCloudAutoBackupEnabled.asStateFlow()
 
-    fun dismissCloudBackupStatus() {
-        _cloudBackupStatus.value = null
-    }
-
-    fun setCloudAutoBackupEnabled(enabled: Boolean) {
-        preferences.isCloudAutoBackupEnabled = enabled
-        _isCloudAutoBackupEnabled.value = enabled
-    }
-
-    val cloudAccountEmail: String
-        get() = preferences.cloudAccountEmail
-
-    val lastRememberedCloudEmail: String
-        get() = preferences.lastCloudAccountEmail
-
-    val isCloudSessionActive: Boolean
-        get() = preferences.cloudAccountToken.isNotBlank() || preferences.cloudAccountRefreshToken.isNotBlank() || (preferences.isCloudAccountLoggedIn && CloudBackupManager.resolveCloudBackupUrl().isNotBlank())
-
     private val _isCloudSessionActive = MutableStateFlow(isCloudSessionActive)
     val isCloudSessionActiveFlow: StateFlow<Boolean> = _isCloudSessionActive.asStateFlow()
 
+    init {
+        runCatching { refreshGiveaways() }
+        runCatching { updateStorageFootprint() }
+        runCatching { refreshPublicReviews() }
+        runCatching { checkGithubReleases(isManual = false) }
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                _storeDlcRecommendations.value = SteamDlcRecommender.loadCachedDlcs(preferences)
+            }
+            runCatching { NotificationScheduler.schedulePeriodicSync(application) }
+            runCatching { AutoBackupScheduler.schedulePeriodicAutoBackup(application) }
+            runCatching { checkAndTriggerAutoBackupIfNeeded(application) }
+            runCatching { checkAndTriggerCloudAutoBackupIfNeeded(application) }
+            runCatching { MythicAchievementNotificationManager.checkPendingFromPreferences(application) }
+            runCatching { checkWeeklyBacklogRollover() }
+            runCatching {
+                val curatedAppIds = listOf(1091500, 620, 367520, 1145360, 264710, 1794680, 413150)
+                database.steamGameDao().deleteByAppIds(curatedAppIds)
+                database.steamAchievementDao().deleteByAppIds(curatedAppIds)
+                if (_steamUserId.value.isBlank()) {
+                    database.steamGameDao().clearAll()
+                    database.steamAchievementDao().clearAll()
+                } else if (!SteamDlcRecommender.isCacheFresh(preferences) && database.steamGameDao().getAllSteamGamesList().isNotEmpty()) {
+                    refreshSteamDlcRecommendations(forceRefresh = false)
+                }
+            }
+        }
+    }
+
+    // --- Backlog & Trophy Actions ---
+    fun setBacklogChallengeDialogVisible(visible: Boolean) { _isBacklogChallengeDialogVisible.value = visible }
+
+    fun selectBacklogWeek(weekKey: String) {
+        val currentWeek = BacklogChallengeManager.getCurrentWeekKey()
+        val diffFromCurrent = BacklogChallengeManager.getWeeksBetween(currentWeek, weekKey)
+        val diffFromAnchor = BacklogChallengeManager.getWeeksBetween(BacklogChallengeManager.ANCHOR_WEEK_KEY, weekKey)
+        if (diffFromAnchor >= 0 && diffFromCurrent <= BacklogChallengeManager.MAX_FUTURE_WEEKS_PREVIEW) {
+            _selectedBacklogWeek.value = weekKey
+        }
+    }
+
+    fun selectBacklogMonth(monthKey: String) = selectBacklogWeek(monthKey)
+
+    fun checkWeeklyBacklogRollover() {
+        val currentWeek = BacklogChallengeManager.getCurrentWeekKey()
+        val lastWeek = preferences.lastActiveBacklogWeekKey
+        if (lastWeek.isNotBlank() && lastWeek != currentWeek) {
+            preferences.lastActiveBacklogWeekKey = currentWeek
+            _selectedBacklogWeek.value = currentWeek
+            _backlogGridRefreshTrigger.value += 1
+            notificationHelper.sendWeeklyBacklogChallengeNotification(
+                BacklogChallengeManager.getWeekDisplayName(currentWeek, _appLanguage.value)
+            )
+        } else if (lastWeek.isBlank()) {
+            preferences.lastActiveBacklogWeekKey = currentWeek
+        }
+    }
+
+    fun checkMonthlyBacklogRollover() = checkWeeklyBacklogRollover()
+
+    fun refreshBacklogChallengeGrid() {
+        checkWeeklyBacklogRollover()
+        _backlogGridRefreshTrigger.value += 1
+    }
+
+    fun toggleBacklogTileManual(tileIndex: Int, weekKey: String = _selectedBacklogWeek.value): Boolean {
+        val success = BacklogChallengeManager.toggleManualOverride(preferences, weekKey, tileIndex)
+        if (success) _backlogGridRefreshTrigger.value += 1
+        return success
+    }
+
+    fun claimBacklogMilestones(onClaimed: (List<BacklogMilestoneReward>) -> Unit = {}) {
+        viewModelScope.launch {
+            val newlyAwarded = BacklogChallengeManager.checkAndAwardMilestones(backlogChallengeGrid.value, database, preferences)
+            if (newlyAwarded.isNotEmpty()) {
+                _backlogGridRefreshTrigger.value += 1
+                onClaimed(newlyAwarded)
+            }
+        }
+    }
+
+    fun openGameAchievements(game: SteamGameEntity) {
+        _selectedGameForAchievements.value = game
+        loadAchievementsForGame(game)
+    }
+
+    fun closeGameAchievements() {
+        _selectedGameForAchievements.value = null
+        _selectedGameAchievements.value = emptyList()
+    }
+
+    fun dismissMythicToast() = MythicAchievementNotificationManager.dismissNotification(getApplication())
+
+    fun previewMythicUnlockToast(customAch: SteamAchievementEntity? = null) {
+        val ach = customAch ?: CuratedAchievementsCatalog.getInitialAchievements()
+            .firstOrNull { it.rarityTier == TrophyRarityTier.MYTHIC }
+            ?: SteamAchievementEntity(
+                appId = 1091500, apiName = "ACH_CP_AUTODIDACT", displayName = "Autodidact",
+                description = "Develop any skill to the maximum level in Night City.",
+                isAchieved = true, globalPercentage = 4.2f, gameName = "Cyberpunk 2077"
+            )
+        MythicAchievementNotificationManager.postMythicUnlock(ach, getApplication())
+    }
+
+    fun openAchievementsForAppId(appId: Int, gameName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val game = database.steamGameDao().getSteamGameById(appId) ?: SteamGameEntity(
+                appId = appId, name = gameName.ifBlank { "Steam Game" }, playtimeMinutes = 60,
+                lastPlayedTimestamp = System.currentTimeMillis() / 1000L, playStatus = PlayStatus.PLAYING
+            )
+            withContext(Dispatchers.Main) { openGameAchievements(game) }
+        }
+    }
+
+    fun loadAchievementsForGame(game: SteamGameEntity) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoadingGameAchievements.value = true
+            SteamLibrarySyncDelegate.loadAchievementsForGame(
+                context = getApplication(), database = database, repository = repository,
+                game = game, userId = _steamUserId.value, steamApiKey = _steamApiKey.value
+            ) { _selectedGameAchievements.value = it }
+            _isLoadingGameAchievements.value = false
+        }
+    }
+
+    // --- DLC & Reviews Actions ---
+    fun refreshSteamDlcRecommendations(forceRefresh: Boolean = true) {
+        if (_isLoadingSteamDlcs.value) return
+        viewModelScope.launch(Dispatchers.IO) {
+            DlcAndReviewsDelegate.scanLibraryDlcs(
+                database = database, preferences = preferences, forceRefresh = forceRefresh,
+                dismissedIds = _dismissedDlcIds.value,
+                onCached = { _storeDlcRecommendations.value = it },
+                onLoading = { _isLoadingSteamDlcs.value = it },
+                onStatus = { _steamDlcScanStatus.value = it }
+            )
+        }
+    }
+
+    fun openGameDlcExplorer(game: SteamGameEntity) {
+        _selectedGameForDlcs.value = game
+        _selectedGameDlcs.value = steamDlcRecommendations.value.filter { it.parentAppId == game.appId }
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoadingGameDlcs.value = true
+            try {
+                DlcAndReviewsDelegate.loadGameDlcs(
+                    database = database, preferences = preferences, game = game,
+                    allGiveaways = allGiveaways.value, dismissedIds = _dismissedDlcIds.value,
+                    existingStoreDlcs = _storeDlcRecommendations.value,
+                    onGameDlcs = { _selectedGameDlcs.value = it },
+                    onStoreDlcsUpdated = { _storeDlcRecommendations.value = it }
+                )
+            } finally {
+                _isLoadingGameDlcs.value = false
+            }
+        }
+    }
+
+    fun closeGameDlcExplorer() {
+        _selectedGameForDlcs.value = null
+        _selectedGameDlcs.value = emptyList()
+        _isLoadingGameDlcs.value = false
+    }
+
+    fun dismissDlcRecommendation(dlcAppId: Int) {
+        preferences.dismissDlcAppId(dlcAppId)
+        _dismissedDlcIds.value += dlcAppId
+        _selectedGameDlcs.value = _selectedGameDlcs.value.filterNot { it.dlcAppId == dlcAppId }
+    }
+
+    fun openDlcRecommendation(context: Context, dlc: SteamDlcRecommendation) {
+        val matched = dlc.matchedGiveawayId?.let { id -> allGiveaways.value.firstOrNull { it.id == id } }
+        if (matched != null) {
+            openDetail(matched)
+            return
+        }
+        val url = dlc.storeUrl.ifBlank { "https://store.steampowered.com/app/${dlc.dlcAppId}" }
+        if (_isUseInAppBrowser.value) openInAppBrowser(url, dlc.name) else launchExternalBrowser(context, url)
+    }
+
+    fun refreshPublicReviews() {
+        viewModelScope.launch(Dispatchers.IO) { _publicReviews.value = PublicReviewsManager.fetchReviews(getApplication()) }
+    }
+
+    fun getReviewsForGame(giveawayId: Long, gameTitle: String): List<PublicReview> =
+        DlcAndReviewsDelegate.filterReviewsForGame(_publicReviews.value, giveawayId, gameTitle)
+
+    fun getReviewsForGame(giveawayId: Int, gameTitle: String): List<PublicReview> = getReviewsForGame(giveawayId.toLong(), gameTitle)
+
+    fun getAppReviews(): List<PublicReview> = _publicReviews.value.filter { it.isForApp }
+
+    fun postAppReview(rating: Int, title: String, comment: String, onComplete: (Boolean, String) -> Unit = { _, _ -> }) {
+        val s = AppStringsRegistry.forLanguage(_appLanguage.value)
+        viewModelScope.launch(Dispatchers.IO) {
+            DlcAndReviewsDelegate.submitReview(
+                context = getApplication(), giveawayId = -1L, gameTitle = "LootDrop App",
+                authorName = preferences.userProfileName.ifBlank { "Gamer" }, authorTag = "LootDrop Player",
+                rating = rating, title = title, comment = comment, platform = "Android",
+                isVerifiedClaimer = true, isAppReview = true,
+                successMessage = s.dialogs.reviewsPostedToast,
+                onSuccess = { review ->
+                    _publicReviews.value = listOf(review) + _publicReviews.value.filterNot { it.id == review.id }
+                },
+                onComplete = onComplete
+            )
+        }
+    }
+
+    fun postPublicReview(giveawayId: Long, gameTitle: String, rating: Int, title: String, comment: String, onComplete: (Boolean, String) -> Unit = { _, _ -> }) {
+        val s = AppStringsRegistry.forLanguage(_appLanguage.value)
+        viewModelScope.launch(Dispatchers.IO) {
+            val isClaimed = claimedGiveaways.value.any { it.id == giveawayId.toInt() }
+            DlcAndReviewsDelegate.submitReview(
+                context = getApplication(), giveawayId = giveawayId, gameTitle = gameTitle,
+                authorName = preferences.userProfileName.ifBlank { "Gamer" },
+                authorTag = if (isClaimed) s.dialogs.reviewsVerifiedClaimer else "Community",
+                rating = rating, title = title, comment = comment, platform = "Android",
+                isVerifiedClaimer = isClaimed, isAppReview = false,
+                successMessage = s.dialogs.reviewsPostedToast,
+                onSuccess = { review ->
+                    _publicReviews.value = listOf(review) + _publicReviews.value.filterNot { it.id == review.id }
+                },
+                onComplete = onComplete
+            )
+        }
+    }
+
+    fun postPublicReview(giveawayId: Int, gameTitle: String, rating: Int, title: String, comment: String, onComplete: (Boolean, String) -> Unit = { _, _ -> }) =
+        postPublicReview(giveawayId.toLong(), gameTitle, rating, title, comment, onComplete)
+
+    fun voteReviewHelpful(reviewId: String, onComplete: (Boolean, String) -> Unit = { _, _ -> }) {
+        val s = AppStringsRegistry.forLanguage(_appLanguage.value)
+        viewModelScope.launch(Dispatchers.IO) {
+            PublicReviewsManager.voteHelpful(getApplication(), reviewId).onSuccess { newCount ->
+                _publicReviews.value = _publicReviews.value.map { if (it.id == reviewId) it.copy(helpfulCount = newCount) else it }
+                withContext(Dispatchers.Main) { onComplete(true, s.dialogs.reviewsVotedHelpfulToast) }
+            }.onFailure { err ->
+                withContext(Dispatchers.Main) { onComplete(false, err.message ?: s.dialogs.reviewsVoteFailed) }
+            }
+        }
+    }
+
+    fun hasVotedHelpful(reviewId: String): Boolean = PublicReviewsManager.hasVotedHelpful(getApplication(), reviewId)
+
+    // --- Storage, Cache & Refresh Actions ---
+    fun updateStorageFootprint() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val metrics = LootDropApplication.getStorageMetrics(getApplication())
+            _storageMetrics.value = metrics
+            _storageFootprintBytes.value = metrics.totalFootprintBytes
+        }
+    }
+
+    fun clearAllCaches() = performDeepClean()
+
+    private inline fun runStorageAction(crossinline block: suspend () -> String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoading.value = true
+            val msg = block()
+            updateStorageFootprint()
+            _isLoading.value = false
+            _reopenStatusMessage.value = msg
+        }
+    }
+
+    fun performDeepClean() = runStorageAction {
+        val s = AppStringsRegistry.forLanguage(_appLanguage.value)
+        val reclaimed = repository.clearAllCaches(getApplication())
+        if (preferences.isAutoPruneExpired) repository.pruneExpiredGiveaways(getApplication())
+        String.format(s.system.vmDeepCleanDoneFormat, _storageMetrics.value.formatBytes(reclaimed))
+    }
+
+    fun clearImageCache() = runStorageAction {
+        val s = AppStringsRegistry.forLanguage(_appLanguage.value)
+        val reclaimed = repository.clearImageCache(getApplication())
+        String.format(s.system.vmImageCacheDoneFormat, _storageMetrics.value.formatBytes(reclaimed))
+    }
+
+    fun clearNetworkCache() = runStorageAction {
+        val s = AppStringsRegistry.forLanguage(_appLanguage.value)
+        val reclaimed = repository.clearHttpCache(getApplication())
+        String.format(s.system.vmNetworkCacheDoneFormat, _storageMetrics.value.formatBytes(reclaimed))
+    }
+
+    fun optimizeDatabase() = runStorageAction {
+        val s = AppStringsRegistry.forLanguage(_appLanguage.value)
+        val pruned = if (preferences.isAutoPruneExpired) repository.pruneExpiredGiveaways(getApplication()) else 0
+        repository.vacuumDatabase(getApplication())
+        if (pruned > 0) String.format(s.system.vmDbCompactedPrunedFormat, pruned)
+        else s.system.vmDbCompactedDone
+    }
+
+    fun refreshGiveaways(isAutoCheck: Boolean = false) {
+        viewModelScope.launch {
+            val s = AppStringsRegistry.forLanguage(_appLanguage.value)
+            _isLoading.value = true
+            _errorMessage.value = null
+            lastRefreshTimestamp = System.currentTimeMillis()
+            val result = repository.refreshGiveaways()
+            _isLoading.value = false
+            if (result.isFailure) {
+                if (!isAutoCheck || allGiveaways.value.isEmpty()) {
+                    _errorMessage.value = result.exceptionOrNull()?.localizedMessage ?: s.system.vmFetchGamesError
+                }
+            } else {
+                updateStorageFootprint()
+                val syncResult = result.getOrNull()
+                if (syncResult != null && syncResult.newGamesCount > 0) {
+                    val unitWord = if (syncResult.newGamesCount > 1) s.common.newLootPluralSuffix else s.common.newLootSingleSuffix
+                    _reopenStatusMessage.value = String.format(s.system.vmFoundNewGamesFormat, syncResult.newGamesCount, unitWord)
+                    preferences.isNewTodayDismissed = false
+                    _isNewTodayDismissed.value = false
+                } else if (isAutoCheck) {
+                    _reopenStatusMessage.value = s.system.vmAutoCheckUpToDate
+                }
+            }
+            checkGithubReleases(isManual = false)
+        }
+    }
+
+    fun checkNewGamesOnAppReopen() {
+        if (!preferences.isAutoCheckOnReopen) return
+        val now = System.currentTimeMillis()
+        if (_isLoading.value || (now - lastRefreshTimestamp < 4000L && lastRefreshTimestamp != 0L)) return
+        refreshGiveaways(isAutoCheck = true)
+        checkGithubReleases(isManual = false)
+    }
+
+    // --- GitHub Releases & Updater ---
+    fun setAutoCheckGithubUpdates(enabled: Boolean) { preferences.isAutoCheckGithubUpdates = enabled; _isAutoCheckGithubUpdates.value = enabled }
+    fun setUpdateDialogVisible(visible: Boolean) { _isUpdateDialogVisible.value = visible }
+
+    fun dismissUpdateDialog(neverRemindThisVersion: Boolean = false) {
+        _isUpdateDialogVisible.value = false
+        if (neverRemindThisVersion) _appUpdateInfo.value?.latestVersion?.let { preferences.lastDismissedUpdateTag = it }
+    }
+
+    fun startInAppUpdateDownload(updateInfo: AppUpdateInfo, context: Context? = null) {
+        val currentState = _updateDownloadState.value
+        if (currentState is UpdateDownloadState.Downloading) return
+        val installContext = context ?: getApplication()
+        if (currentState is UpdateDownloadState.ReadyToInstall &&
+            currentState.versionTag == updateInfo.latestVersion &&
+            com.example.util.AppUpdateInstaller.hasValidApkFile(currentState.apkFile)
+        ) {
+            updateDelegate.triggerInstallWithAutoResume(installContext, currentState.apkFile)
+            return
+        }
+        viewModelScope.launch {
+            updateDelegate.downloadAndInstallUpdate(updateInfo, installContext) { _updateDownloadState.value = it }
+        }
+    }
+
+    fun resumePendingUpdateInstallIfPermitted(context: Context) =
+        updateDelegate.resumePendingUpdateInstallIfPermitted(context, _updateDownloadState.value)
+
+    fun installDownloadedApk(context: Context) {
+        val state = _updateDownloadState.value
+        if (state is UpdateDownloadState.ReadyToInstall) updateDelegate.triggerInstallWithAutoResume(context, state.apkFile)
+    }
+
+    fun resetUpdateDownloadState() {
+        updateDelegate.pendingInstallAfterPermissionGrant = false
+        _updateDownloadState.value = UpdateDownloadState.Idle
+    }
+
+    fun checkGithubReleases(isManual: Boolean = false) {
+        viewModelScope.launch {
+            updateDelegate.checkGithubReleases(
+                isManual = isManual,
+                onChecking = { _isCheckingUpdates.value = it },
+                onUpdateInfo = { _appUpdateInfo.value = it },
+                onStatus = { _updateCheckStatus.value = it },
+                onReopenMessage = { _reopenStatusMessage.value = it }
+            )
+        }
+    }
+
+    // --- Tab, Filter, Sort & Detail Actions ---
+    fun clearReopenStatusMessage() { _reopenStatusMessage.value = null }
+    fun onAppClosedOrLeft() { _reopenStatusMessage.value = null }
+    fun selectTab(tab: MainTab) { _selectedTab.value = tab }
+
+    fun toggleLauncher(launcher: LauncherType) {
+        if (launcher == LauncherType.ALL) { _selectedLaunchers.value = emptySet(); return }
+        val current = _selectedLaunchers.value.toMutableSet().apply { remove(LauncherType.ALL) }
+        if (!current.add(launcher)) current.remove(launcher)
+        _selectedLaunchers.value = current
+    }
+
+    fun selectLauncher(launcher: LauncherType) = toggleLauncher(launcher)
+    fun clearLauncherFilters() { _selectedLaunchers.value = emptySet() }
+    fun selectTypeFilter(type: TypeFilter) { _selectedTypeFilter.value = type }
+
+    fun toggleCategoryFilter(category: GameCategory) {
+        val current = _selectedCategories.value.toMutableSet()
+        if (!current.add(category)) current.remove(category)
+        _selectedCategories.value = current
+    }
+
+    fun setCategoryFilters(categories: Set<GameCategory>) { _selectedCategories.value = categories }
+    fun clearCategoryFilters() { _selectedCategories.value = emptySet() }
+    fun setCategorySheetOpen(open: Boolean) { _isCategorySheetOpen.value = open }
+    fun selectSort(sort: SortOption) { _selectedSort.value = sort }
+    fun setFilterSheetOpen(open: Boolean) { _isFilterSheetOpen.value = open }
+    fun setPlayabilityFilter(filter: PlayabilityFilter) { _selectedPlayabilityFilter.value = filter }
+    fun setStorageFilter(filter: StorageFilter) { _selectedStorageFilter.value = filter }
+    fun updateSearchQuery(query: String) { _searchQuery.value = query }
+    fun openDetail(item: GiveawayItem) { _detailItem.value = item }
+    fun closeDetail() { _detailItem.value = null }
+
+    fun resetFilters() {
+        _selectedLaunchers.value = emptySet()
+        _selectedTypeFilter.value = TypeFilter.ALL
+        _selectedCategories.value = emptySet()
+        _selectedSort.value = SortOption.NEWEST
+        _selectedPlayabilityFilter.value = PlayabilityFilter.ALL
+        _selectedStorageFilter.value = StorageFilter.ALL
+        _searchQuery.value = ""
+    }
+
+    fun setGiveawayManualStorage(id: Int, sizeGb: Float?) {
+        viewModelScope.launch {
+            repository.updateGiveawayManualStorage(id, sizeGb)
+            _detailItem.value?.takeIf { it.id == id }?.let { _detailItem.value = it.copy(manualInstallSizeGb = sizeGb) }
+        }
+    }
+
+    fun setSteamGameManualStorage(appId: Int, sizeGb: Float?) {
+        viewModelScope.launch { repository.updateSteamGameManualStorage(appId, sizeGb) }
+    }
+
+    // --- Theme & Appearance Actions ---
+    fun setThemeMode(mode: ThemeMode) { preferences.themeMode = mode; _themeMode.value = mode }
+    fun setAccentTheme(theme: AccentTheme) { preferences.accentTheme = theme; _accentTheme.value = theme }
+    fun setDarkBackgroundTheme(theme: BackgroundTheme) { preferences.darkBackgroundTheme = theme; _darkBackgroundTheme.value = theme }
+    fun setLightBackgroundTheme(theme: BackgroundTheme) { preferences.lightBackgroundTheme = theme; _lightBackgroundTheme.value = theme }
+
+    fun importCustomFont(context: Context, uri: Uri, onResult: (Boolean, String) -> Unit) {
+        val s = AppStringsRegistry.forLanguage(_appLanguage.value)
+        viewModelScope.launch {
+            when (val res = withContext(Dispatchers.IO) { CustomFontHelper.importFontFromUri(context, uri) }) {
+                is CustomFontHelper.ImportResult.Success -> {
+                    preferences.customFontPath = res.filePath
+                    preferences.customFontName = res.displayName
+                    _customFontPath.value = res.filePath
+                    _customFontName.value = res.displayName
+                    onResult(true, String.format(s.system.vmCustomFontAppliedFormat, res.displayName))
+                }
+                is CustomFontHelper.ImportResult.Error -> onResult(false, res.message)
+            }
+        }
+    }
+
+    fun resetCustomFont(context: Context) {
+        CustomFontHelper.clearCustomFonts(context)
+        preferences.customFontPath = ""; preferences.customFontName = ""
+        _customFontPath.value = ""; _customFontName.value = ""
+    }
+
+    fun setAppLanguage(language: AppLanguage) {
+        preferences.appLanguage = language
+        _appLanguage.value = language
+        LocaleSyncHelper.applyAndRefreshSystemSurfaces(getApplication(), language)
+    }
+
+    fun completeInitialLanguageSelection(language: AppLanguage) {
+        setAppLanguage(language)
+        preferences.hasSelectedInitialLanguage = true
+        _hasSelectedInitialLanguage.value = true
+    }
+
+    fun setCardDensity(density: CardDensity) { preferences.cardDensity = density; _cardDensity.value = density }
+    fun setDefaultTab(tab: MainTab) { preferences.defaultTab = tab; _defaultTab.value = tab }
+    fun setShowOriginalPrice(show: Boolean) { preferences.isShowOriginalPrice = show; _isShowOriginalPrice.value = show }
+    fun setShowExpiration(show: Boolean) { preferences.isShowExpiration = show; _isShowExpiration.value = show }
+    fun setConfirmToastOnClaim(confirm: Boolean) { preferences.isConfirmToastOnClaim = confirm; _isConfirmToastOnClaim.value = confirm }
+    fun setUseInAppBrowser(enabled: Boolean) { preferences.isUseInAppBrowser = enabled; _isUseInAppBrowser.value = enabled }
+    fun openInAppBrowser(url: String, title: String = "") { _inAppBrowserTitle.value = title; _inAppBrowserUrl.value = url }
+    fun closeInAppBrowser() { _inAppBrowserUrl.value = null; _inAppBrowserTitle.value = "" }
+    fun setAutoCheckOnReopen(enabled: Boolean) { preferences.isAutoCheckOnReopen = enabled; _isAutoCheckOnReopen.value = enabled }
+    fun setDataSaverMode(enabled: Boolean) { preferences.isDataSaverMode = enabled; _isDataSaverMode.value = enabled }
+    fun setAutoPruneExpired(enabled: Boolean) { preferences.isAutoPruneExpired = enabled; _isAutoPruneExpired.value = enabled }
+    fun setDefaultLauncher(launcher: LauncherType) { preferences.defaultLauncher = launcher; _defaultLauncher.value = launcher }
+    fun setAnimationsEnabled(enabled: Boolean) { preferences.isAnimationsEnabled = enabled; _isAnimationsEnabled.value = enabled }
+    fun setLowEndOptimization(enabled: Boolean) {
+        preferences.isLowEndOptimization = enabled
+        _isLowEndOptimization.value = enabled
+        if (enabled) {
+            LootDropApplication.trimMemoryCaches(getApplication(), aggressive = false)
+        }
+    }
+    fun setTargetFrameRate(frameRate: TargetFrameRate) { preferences.targetFrameRate = frameRate; _targetFrameRate.value = frameRate }
+    fun setDetectedRefreshRate(rate: Int) { _detectedRefreshRate.value = rate }
+    fun setDpiOptimizationEnabled(enabled: Boolean) { preferences.isDpiOptimizationEnabled = enabled; _isDpiOptimizationEnabled.value = enabled }
+    fun setDpiScaleMode(mode: DpiScaleMode) { preferences.dpiScaleMode = mode; _dpiScaleMode.value = mode }
+    fun setDetectedScreenDpi(dpi: Int) { preferences.detectedScreenDpi = dpi; _detectedScreenDpi.value = dpi }
+    fun completeOnboarding() { preferences.hasSeenOnboarding = true; _showOnboardingWalkthrough.value = false }
+    fun dismissOnboarding() { preferences.hasSeenOnboarding = true; _showOnboardingWalkthrough.value = false }
+    fun replayOnboarding() { _showOnboardingWalkthrough.value = true }
+
+    fun updateUserProfile(name: String, avatarUri: Uri? = null, removeAvatar: Boolean = false) {
+        _userProfile.value = UserProfileManager.saveProfile(getApplication(), preferences, name, avatarUri, removeAvatar)
+        if (preferences.isCloudAccountLoggedIn) {
+            viewModelScope.launch { CloudBackupManager.updateSupabaseDisplayName(name, preferences) }
+        }
+    }
+
+    fun updateDisplayedTrophies(hasCustom: Boolean, keys: Set<String>) {
+        _userProfile.value = UserProfileManager.saveDisplayedTrophies(preferences, hasCustom, keys)
+    }
+
+    fun refreshUserProfile() { _userProfile.value = UserProfileManager.getProfile(preferences) }
+    fun dismissNewToday() { preferences.isNewTodayDismissed = true; _isNewTodayDismissed.value = true }
+    fun resetNewTodayDismissed() { preferences.isNewTodayDismissed = false; _isNewTodayDismissed.value = false }
+
+    // --- Notification Preferences Actions ---
+    fun setNotificationsEnabled(enabled: Boolean) { notificationHelper.isNotificationsEnabled = enabled; _isNotificationsEnabled.value = enabled }
+    fun setNotifyPlayStation(enabled: Boolean) { notificationHelper.isNotifyPlayStation = enabled; _isNotifyPlayStation.value = enabled }
+    fun setNotifyXbox(enabled: Boolean) { notificationHelper.isNotifyXbox = enabled; _isNotifyXbox.value = enabled }
+    fun setNotifyNintendo(enabled: Boolean) { notificationHelper.isNotifyNintendo = enabled; _isNotifyNintendo.value = enabled }
+    fun setNotifySteam(enabled: Boolean) { notificationHelper.isNotifySteam = enabled; _isNotifySteam.value = enabled }
+    fun setNotifyEpic(enabled: Boolean) { notificationHelper.isNotifyEpic = enabled; _isNotifyEpic.value = enabled }
+    fun setNotifyGog(enabled: Boolean) { notificationHelper.isNotifyGog = enabled; _isNotifyGog.value = enabled }
+    fun setNotifyAndroid(enabled: Boolean) { notificationHelper.isNotifyAndroid = enabled; _isNotifyAndroid.value = enabled }
+    fun setNotifyIos(enabled: Boolean) { notificationHelper.isNotifyIos = enabled; _isNotifyIos.value = enabled }
+    fun setNotifyOthers(enabled: Boolean) { notificationHelper.isNotifyOthers = enabled; _isNotifyOthers.value = enabled }
+    fun setGamesOnly(enabled: Boolean) { notificationHelper.isGamesOnly = enabled; _isGamesOnly.value = enabled }
+    fun setNotifyEndingSoon(enabled: Boolean) { notificationHelper.isNotifyEndingSoon = enabled; _isNotifyEndingSoon.value = enabled }
+    fun setMinWorthAlertThreshold(threshold: Float) { notificationHelper.minWorthAlertThreshold = threshold; _minWorthAlertThreshold.value = threshold }
+    fun setQuietHoursEnabled(enabled: Boolean) { notificationHelper.isQuietHoursEnabled = enabled; _isQuietHoursEnabled.value = enabled }
+    fun setNotificationSoundEnabled(enabled: Boolean) { notificationHelper.isNotificationSoundEnabled = enabled; _isNotificationSoundEnabled.value = enabled }
+    fun setNotificationVibrateEnabled(enabled: Boolean) { notificationHelper.isNotificationVibrateEnabled = enabled; _isNotificationVibrateEnabled.value = enabled }
+    fun setKeepForeverOnly(enabled: Boolean) { notificationHelper.isKeepForeverOnly = enabled; _isKeepForeverOnly.value = enabled }
+    fun setNotificationRichArtwork(enabled: Boolean) { notificationHelper.isNotificationRichArtwork = enabled; _isNotificationRichArtwork.value = enabled }
+    fun setNotificationActionsEnabled(enabled: Boolean) { notificationHelper.isNotificationActionsEnabled = enabled; _isNotificationActionsEnabled.value = enabled }
+
+    fun setQuietHoursHours(start: Int, end: Int) {
+        preferences.quietHoursStartHour = start; preferences.quietHoursEndHour = end
+        _quietHoursStartHour.value = start; _quietHoursEndHour.value = end
+    }
+
+    fun setBackgroundSyncInterval(hours: Int) {
+        preferences.backgroundSyncIntervalHours = hours
+        _backgroundSyncIntervalHours.value = hours
+        NotificationScheduler.schedulePeriodicSync(getApplication())
+    }
+
+    fun setBackgroundSyncWifiOnly(wifiOnly: Boolean) { preferences.backgroundSyncWifiOnly = wifiOnly; _backgroundSyncWifiOnly.value = wifiOnly }
+    fun setNotificationHistorySheetOpen(open: Boolean) { _isNotificationHistorySheetOpen.value = open }
+    fun sendTestNotification(isRichPreview: Boolean = true) = notificationHelper.sendTestNotification(isRichPreview)
+    fun sendEndingSoonTestNotification() = notificationHelper.sendTestEndingSoonNotification()
+    fun markNotificationAsRead(id: Long) { viewModelScope.launch(Dispatchers.IO) { database.notificationHistoryDao().markAsRead(id) } }
+    fun markAllNotificationsAsRead() { viewModelScope.launch(Dispatchers.IO) { database.notificationHistoryDao().markAllAsRead() } }
+    fun clearAllNotificationHistory() { viewModelScope.launch(Dispatchers.IO) { database.notificationHistoryDao().clearAllNotifications() } }
+    fun deleteNotification(id: Long) { viewModelScope.launch(Dispatchers.IO) { database.notificationHistoryDao().deleteNotification(id) } }
+
+    // --- Library & Steam Sync Actions ---
+    fun clearClaimedGames() { viewModelScope.launch { repository.clearAllClaimed() } }
+    fun clearBookmarkedGames() { viewModelScope.launch { repository.clearAllBookmarks() } }
+
+    fun forceResync() {
+        viewModelScope.launch {
+            _isLoading.value = true; _errorMessage.value = null
+            repository.forceResync()
+            _isLoading.value = false
+        }
+    }
+
+    fun toggleClaimed(item: GiveawayItem) {
+        viewModelScope.launch {
+            repository.toggleClaimed(item.id, item.isClaimed)
+            _detailItem.value?.takeIf { it.id == item.id }?.let { _detailItem.value = it.copy(isClaimed = !item.isClaimed) }
+        }
+    }
+
+    fun updatePlayStatus(item: GiveawayItem, status: PlayStatus) = updatePlayStatusById(item.id, status)
+
+    fun updatePlayStatusById(id: Int, status: PlayStatus) {
+        viewModelScope.launch {
+            repository.updatePlayStatus(id, status)
+            _detailItem.value?.takeIf { it.id == id }?.let { _detailItem.value = it.copy(playStatus = status) }
+        }
+    }
+
+    fun setLibraryPlayFilter(filter: LibraryPlayFilter) { preferences.libraryPlayFilter = filter; _selectedLibraryPlayFilter.value = filter }
+    fun setSteamUserId(userId: String) { preferences.steamUserId = userId; _steamUserId.value = userId }
+    fun setSteamApiKey(key: String) { preferences.steamApiKey = key; _steamApiKey.value = key }
+    fun clearSteamSyncStatus() { _steamSyncStatus.value = null }
+
+    fun syncSteamLibrary(customSteamId: String? = null, customApiKey: String? = null) {
+        val s = AppStringsRegistry.forLanguage(_appLanguage.value)
+        viewModelScope.launch {
+            _isSyncingSteam.value = true
+            _steamSyncStatus.value = s.system.vmSteamSyncingConnecting
+            try {
+                SteamLibrarySyncDelegate.syncSteamLibrary(
+                    context = getApplication(), database = database, repository = repository,
+                    preferences = preferences, rawUserId = (customSteamId ?: _steamUserId.value).trim(),
+                    rawApiKey = customApiKey ?: _steamApiKey.value, allGiveaways = allGiveaways.value,
+                    onStatus = { _steamSyncStatus.value = it },
+                    onUserIdSaved = { _steamUserId.value = it },
+                    onTriggerDlcRefresh = { refreshSteamDlcRecommendations(forceRefresh = true) }
+                )
+            } catch (e: Exception) {
+                _steamSyncStatus.value = String.format(s.system.vmSteamSyncFailedFormat, e.message ?: "")
+            } finally {
+                _isSyncingSteam.value = false
+            }
+        }
+    }
+
+    fun setLibraryViewMode(mode: LibraryViewMode) { preferences.libraryViewMode = mode; _libraryViewMode.value = mode }
+
+    fun updateSteamGamePlayStatus(game: SteamGameEntity, status: PlayStatus) {
+        viewModelScope.launch {
+            repository.updateSteamGamePlayStatus(game.appId, status)
+            game.matchedGiveawayId?.let { repository.updatePlayStatus(it, status) }
+        }
+    }
+
+    fun toggleWishlist(item: GiveawayItem) {
+        viewModelScope.launch {
+            repository.toggleWishlisted(item.id, item.isWishlisted)
+            _detailItem.value?.takeIf { it.id == item.id }?.let { _detailItem.value = it.copy(isWishlisted = !item.isWishlisted) }
+        }
+    }
+
+    fun toggleBookmark(item: GiveawayItem) {
+        viewModelScope.launch {
+            repository.toggleBookmarked(item.id, item.isBookmarked)
+            _detailItem.value?.takeIf { it.id == item.id }?.let { _detailItem.value = it.copy(isBookmarked = !item.isBookmarked) }
+        }
+    }
+
+    fun toggleBookmarkById(id: Int) {
+        viewModelScope.launch {
+            val item = repository.getGiveawayById(id)
+            if (item != null) repository.toggleBookmarked(item.id, item.isBookmarked)
+            else database.giveawayDao().setBookmarked(id, true)
+        }
+    }
+
+    fun openItemById(id: Int) {
+        viewModelScope.launch { repository.getGiveawayById(id)?.let { _detailItem.value = it } }
+    }
+
+    fun checkOwnership(item: GiveawayItem): OwnershipStatus =
+        GiveawayFilterEngine.checkOwnership(item, allSteamGames.value)
+
+    fun getLauncherOptionsFor(item: GiveawayItem): List<LauncherOption> =
+        GiveawayFilterEngine.getLauncherOptionsFor(item, allGiveaways.value)
+
+    fun claimAndLaunch(context: Context, item: GiveawayItem, targetUrl: String? = null, launcherName: String? = null) {
+        val s = AppStringsRegistry.forLanguage(_appLanguage.value)
+        if (!item.isClaimed) {
+            viewModelScope.launch {
+                repository.toggleClaimed(item.id, false)
+                _detailItem.value?.takeIf { it.id == item.id }?.let { _detailItem.value = it.copy(isClaimed = true) }
+            }
+            if (_isConfirmToastOnClaim.value) {
+                val label = if (launcherName != null) String.format(s.system.vmOnStoreFormat, launcherName) else ""
+                Toast.makeText(context, String.format(s.system.vmClaimToastFormat, item.title, label), Toast.LENGTH_SHORT).show()
+            }
+        }
+        val url = targetUrl ?: item.openGiveawayUrl
+        if (_isUseInAppBrowser.value && url.isNotBlank()) openInAppBrowser(url, item.title) else launchExternalBrowser(context, url)
+    }
+
+    fun launchExternalBrowser(context: Context, url: String) {
+        if (url.isBlank()) return
+        try {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK })
+        } catch (_: Exception) {
+            val s = AppStringsRegistry.forLanguage(_appLanguage.value)
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+            clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("Giveaway URL", url))
+            Toast.makeText(context, s.system.vmNoBrowserCopiedToast, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    // --- Backup & Cloud Sync Actions ---
+    fun dismissBackupRestoreStatus() { _backupRestoreStatus.value = null }
+
+    fun exportBackup(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            _isBackingUpOrRestoring.value = true
+            CloudAndBackupDelegate.exportLocalBackup(context, uri, database, preferences, { _backupRestoreStatus.value = it }, { updateStorageFootprint() })
+            _isBackingUpOrRestoring.value = false
+        }
+    }
+
+    fun restoreBackup(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            _isBackingUpOrRestoring.value = true
+            CloudAndBackupDelegate.restoreLocalBackup(context, uri, database, preferences, { _backupRestoreStatus.value = it }) {
+                updateStorageFootprint(); refreshUserProfile()
+            }
+            _isBackingUpOrRestoring.value = false
+        }
+    }
+
+    fun setAutoBackupEnabled(enabled: Boolean, context: Context) {
+        preferences.isAutoBackupEnabled = enabled; _isAutoBackupEnabled.value = enabled
+        if (enabled) {
+            AutoBackupScheduler.schedulePeriodicAutoBackup(context)
+            if (preferences.autoBackupFolderUri.isNotBlank()) triggerManualAutoBackup(context)
+        } else AutoBackupScheduler.cancelPeriodicAutoBackup(context)
+    }
+
+    fun setAutoBackupFolder(uri: Uri, context: Context) {
+        val folderName = BackupRestoreManager.getFolderDisplayName(context, uri)
+        preferences.autoBackupFolderUri = uri.toString(); preferences.autoBackupFolderDisplayName = folderName
+        _autoBackupFolderUri.value = uri.toString(); _autoBackupFolderDisplayName.value = folderName
+        AutoBackupScheduler.schedulePeriodicAutoBackup(context)
+        triggerManualAutoBackup(context)
+    }
+
+    fun clearAutoBackupFolder(context: Context) {
+        preferences.autoBackupFolderUri = ""; preferences.autoBackupFolderDisplayName = ""
+        _autoBackupFolderUri.value = ""; _autoBackupFolderDisplayName.value = ""
+        AutoBackupScheduler.cancelPeriodicAutoBackup(context)
+    }
+
+    fun setAutoBackupIntervalDays(days: Int, context: Context) {
+        preferences.autoBackupIntervalDays = days; _autoBackupIntervalDays.value = days
+        AutoBackupScheduler.schedulePeriodicAutoBackup(context)
+    }
+
+    fun triggerManualAutoBackup(context: Context) {
+        val s = AppStringsRegistry.forLanguage(_appLanguage.value)
+        val folderUri = preferences.autoBackupFolderUri.takeIf { it.isNotBlank() }?.let { runCatching { Uri.parse(it) }.getOrNull() }
+        if (folderUri == null) {
+            showShortToast(context, if (preferences.autoBackupFolderUri.isBlank()) s.system.vmSelectBackupFolderFirst else s.system.vmInvalidFolderConfig)
+            return
+        }
+        viewModelScope.launch {
+            _isAutoBackingUp.value = true
+            CloudAndBackupDelegate.performManualAutoBackup(
+                context, folderUri, database, preferences,
+                { ts, st -> _lastAutoBackupTimestamp.value = ts; _lastAutoBackupStatus.value = st },
+                { updateStorageFootprint() }
+            )
+            _isAutoBackingUp.value = false
+        }
+    }
+
+    fun checkAndTriggerAutoBackupIfNeeded(context: Context) {
+        if (!preferences.isAutoBackupEnabled || preferences.autoBackupFolderUri.isBlank()) return
+        val intervalMillis = preferences.autoBackupIntervalDays.coerceAtLeast(1).toLong() * 86_400_000L
+        val elapsed = System.currentTimeMillis() - preferences.lastAutoBackupTimestamp
+        if (preferences.lastAutoBackupTimestamp <= 0L || elapsed >= intervalMillis) {
+            viewModelScope.launch {
+                val result = runCatching { BackupRestoreManager.performScheduledAutoBackup(context) }.getOrNull()
+                _lastAutoBackupTimestamp.value = preferences.lastAutoBackupTimestamp
+                _lastAutoBackupStatus.value = preferences.lastAutoBackupStatus
+                if (result?.isSuccess == true) updateStorageFootprint()
+            }
+        }
+    }
+
+    fun dismissCloudBackupStatus() { _cloudBackupStatus.value = null }
+    fun setCloudAutoBackupEnabled(enabled: Boolean) { preferences.isCloudAutoBackupEnabled = enabled; _isCloudAutoBackupEnabled.value = enabled }
+
+    private fun syncCloudAccountFlows() {
+        _isCloudAccountLoggedIn.value = preferences.isCloudAccountLoggedIn
+        _cloudAccountUsername.value = preferences.cloudAccountUsername
+        _isCloudSessionActive.value = isCloudSessionActive
+        _cloudBackupStatus.value = preferences.lastCloudBackupStatus
+    }
+
     fun createCloudAccount(username: String, password: String, context: Context, email: String = "", onResult: (Boolean, String) -> Unit = { _, _ -> }) {
+        val s = AppStringsRegistry.forLanguage(_appLanguage.value)
         viewModelScope.launch {
             _isCloudAuthenticating.value = true
             val result = CloudBackupManager.createAccount(username, password, preferences, email)
-            _isCloudAuthenticating.value = false
-            _isCloudAccountLoggedIn.value = preferences.isCloudAccountLoggedIn
-            _cloudAccountUsername.value = preferences.cloudAccountUsername
-            _isCloudSessionActive.value = isCloudSessionActive
-            _cloudBackupStatus.value = preferences.lastCloudBackupStatus
+            _isCloudAuthenticating.value = false; syncCloudAccountFlows()
             result.onSuccess { user ->
                 updateUserProfile(name = user)
-                val msg = "Account '$user' connected with display name matching your profile!"
-                runCatching { Toast.makeText(context, msg, Toast.LENGTH_LONG).show() }
-                onResult(true, msg)
+                val msg = String.format(s.system.vmCloudCreatedFormat, user)
+                showLongToast(context, msg); onResult(true, msg)
             }.onFailure { e ->
-                val err = e.message ?: "Account creation failed"
-                runCatching { Toast.makeText(context, err, Toast.LENGTH_LONG).show() }
-                onResult(false, err)
+                val err = e.message ?: s.system.vmCloudCreateFailed
+                showLongToast(context, err); onResult(false, err)
             }
         }
     }
 
     fun signInCloudAccount(username: String, password: String, context: Context, email: String = "", onResult: (Boolean, String) -> Unit = { _, _ -> }) {
+        val s = AppStringsRegistry.forLanguage(_appLanguage.value)
         viewModelScope.launch {
             _isCloudAuthenticating.value = true
             val result = CloudBackupManager.signInAccount(username, password, preferences, email)
-            _isCloudAuthenticating.value = false
-            _isCloudAccountLoggedIn.value = preferences.isCloudAccountLoggedIn
-            _cloudAccountUsername.value = preferences.cloudAccountUsername
-            _isCloudSessionActive.value = isCloudSessionActive
-            _cloudBackupStatus.value = preferences.lastCloudBackupStatus
+            _isCloudAuthenticating.value = false; syncCloudAccountFlows()
             result.onSuccess { user ->
-                if (preferences.userProfileName.isBlank() || preferences.userProfileName == "Gamer") {
-                    updateUserProfile(name = user)
-                }
-                val msg = "Signed in as '$user'! Ready to sync your backup."
-                runCatching { Toast.makeText(context, msg, Toast.LENGTH_LONG).show() }
-                onResult(true, msg)
+                if (preferences.userProfileName.isBlank() || preferences.userProfileName == "Gamer") updateUserProfile(name = user)
+                val msg = String.format(s.system.vmCloudSignedInFormat, user)
+                showLongToast(context, msg); onResult(true, msg)
             }.onFailure { e ->
-                val err = e.message ?: "Sign in failed"
-                runCatching { Toast.makeText(context, err, Toast.LENGTH_LONG).show() }
-                onResult(false, err)
+                val err = e.message ?: s.system.vmCloudSignInFailed
+                showLongToast(context, err); onResult(false, err)
             }
         }
     }
 
     fun signOutCloudAccount(context: Context) {
+        val s = AppStringsRegistry.forLanguage(_appLanguage.value)
         CloudBackupManager.signOut(preferences)
-        _isCloudAccountLoggedIn.value = false
-        _cloudAccountUsername.value = ""
-        _isCloudSessionActive.value = false
-        _cloudBackupStatus.value = preferences.lastCloudBackupStatus
-        runCatching { Toast.makeText(context, "Signed out of Cloud Account", Toast.LENGTH_SHORT).show() }
+        _isCloudAccountLoggedIn.value = false; _cloudAccountUsername.value = ""
+        _isCloudSessionActive.value = false; _cloudBackupStatus.value = preferences.lastCloudBackupStatus
+        showShortToast(context, s.system.vmCloudSignedOut)
     }
 
     fun backupToCloud(context: Context, isAutomated: Boolean = false) {
         viewModelScope.launch {
             _isCloudBackingUp.value = true
-            val result = CloudBackupManager.uploadBackupToCloud(context, database, preferences)
+            CloudAndBackupDelegate.uploadToCloud(context, database, preferences, isAutomated, {
+                _isCloudSessionActive.value = isCloudSessionActive
+                _lastCloudBackupTimestamp.value = preferences.lastCloudBackupTimestamp
+                _cloudBackupStatus.value = preferences.lastCloudBackupStatus
+            }, { updateStorageFootprint() })
             _isCloudBackingUp.value = false
-            _isCloudSessionActive.value = isCloudSessionActive
-            _lastCloudBackupTimestamp.value = preferences.lastCloudBackupTimestamp
-            _cloudBackupStatus.value = preferences.lastCloudBackupStatus
-            result.onSuccess { statusMsg ->
-                if (!isAutomated) {
-                    runCatching { Toast.makeText(context, statusMsg, Toast.LENGTH_LONG).show() }
-                }
-                updateStorageFootprint()
-            }.onFailure { e ->
-                if (!isAutomated) {
-                    runCatching { Toast.makeText(context, "Cloud backup failed: ${e.message}", Toast.LENGTH_LONG).show() }
-                }
-            }
         }
     }
 
     fun restoreFromCloud(context: Context) {
         viewModelScope.launch {
             _isCloudRestoring.value = true
-            val result = CloudBackupManager.restoreBackupFromCloud(context, database, preferences)
+            CloudAndBackupDelegate.restoreFromCloud(context, database, preferences, {
+                _isCloudSessionActive.value = isCloudSessionActive
+                _cloudBackupStatus.value = preferences.lastCloudBackupStatus
+            }) { updateStorageFootprint(); refreshUserProfile() }
             _isCloudRestoring.value = false
-            _isCloudSessionActive.value = isCloudSessionActive
-            _cloudBackupStatus.value = preferences.lastCloudBackupStatus
-            result.onSuccess { summary ->
-                runCatching { Toast.makeText(context, summary.message, Toast.LENGTH_LONG).show() }
-                updateStorageFootprint()
-                refreshUserProfile()
-            }.onFailure { e ->
-                runCatching { Toast.makeText(context, "Cloud restore failed: ${e.message}", Toast.LENGTH_LONG).show() }
-            }
         }
     }
 
     fun checkAndTriggerCloudAutoBackupIfNeeded(context: Context) {
         if (!preferences.isCloudAutoBackupEnabled || !CloudBackupManager.isConfigured() || !preferences.isCloudAccountLoggedIn) return
-        val oneDayMillis = 24L * 60L * 60L * 1000L
         val elapsed = System.currentTimeMillis() - preferences.lastCloudBackupTimestamp
-        if (preferences.lastCloudBackupTimestamp <= 0L || elapsed >= oneDayMillis) {
-            backupToCloud(context, isAutomated = true)
-        }
+        if (preferences.lastCloudBackupTimestamp <= 0L || elapsed >= 86_400_000L) backupToCloud(context, isAutomated = true)
     }
 }

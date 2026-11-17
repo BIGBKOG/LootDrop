@@ -35,68 +35,69 @@ fun LootDropTheme(
     }
 
     val activeBackground = if (isDark) darkBackgroundTheme else lightBackgroundTheme
-    val primaryColor = accentTheme.primary(isDark)
-    val secondaryColor = accentTheme.secondary(isDark)
+    val colorScheme = remember(isDark, accentTheme, activeBackground) {
+        val primaryColor = accentTheme.primary(isDark)
+        val secondaryColor = accentTheme.secondary(isDark)
+        // Smooth tonal surface hierarchy derived from activeBackground so chrome bars, cards, and banners meld cleanly
+        val surfaceLow = lerp(activeBackground.backgroundColor, activeBackground.surfaceColor, 0.72f)
+        val surfaceContainer = activeBackground.surfaceColor
+        val surfaceHigh = lerp(activeBackground.surfaceColor, activeBackground.surfaceVariantColor, 0.55f)
+        val surfaceHighest = activeBackground.surfaceVariantColor
+        val calmOutlineVariant = lerp(activeBackground.surfaceColor, activeBackground.borderColor, 0.6f)
 
-    // Smooth tonal surface hierarchy derived from activeBackground so chrome bars, cards, and banners meld cleanly
-    val surfaceLow = lerp(activeBackground.backgroundColor, activeBackground.surfaceColor, 0.72f)
-    val surfaceContainer = activeBackground.surfaceColor
-    val surfaceHigh = lerp(activeBackground.surfaceColor, activeBackground.surfaceVariantColor, 0.55f)
-    val surfaceHighest = activeBackground.surfaceVariantColor
-    val calmOutlineVariant = lerp(activeBackground.surfaceColor, activeBackground.borderColor, 0.6f)
-
-    val colorScheme = if (isDark) {
-        darkColorScheme(
-            primary = primaryColor,
-            onPrimary = activeBackground.backgroundColor,
-            primaryContainer = activeBackground.surfaceVariantColor,
-            onPrimaryContainer = primaryColor,
-            secondary = secondaryColor,
-            onSecondary = activeBackground.backgroundColor,
-            secondaryContainer = activeBackground.surfaceVariantColor,
-            onSecondaryContainer = secondaryColor,
-            tertiary = NeonPurple,
-            onTertiary = activeBackground.backgroundColor,
-            background = activeBackground.backgroundColor,
-            onBackground = activeBackground.textPrimaryColor,
-            surface = activeBackground.surfaceColor,
-            onSurface = activeBackground.textPrimaryColor,
-            surfaceVariant = activeBackground.surfaceVariantColor,
-            onSurfaceVariant = activeBackground.textSecondaryColor,
-            surfaceContainerLowest = activeBackground.backgroundColor,
-            surfaceContainerLow = surfaceLow,
-            surfaceContainer = surfaceContainer,
-            surfaceContainerHigh = surfaceHigh,
-            surfaceContainerHighest = surfaceHighest,
-            outline = activeBackground.borderColor,
-            outlineVariant = calmOutlineVariant
-        )
-    } else {
-        lightColorScheme(
-            primary = primaryColor,
-            onPrimary = Color.White,
-            primaryContainer = activeBackground.surfaceVariantColor,
-            onPrimaryContainer = primaryColor,
-            secondary = secondaryColor,
-            onSecondary = Color.White,
-            secondaryContainer = activeBackground.surfaceVariantColor,
-            onSecondaryContainer = secondaryColor,
-            tertiary = NeonPurple,
-            onTertiary = Color.White,
-            background = activeBackground.backgroundColor,
-            onBackground = activeBackground.textPrimaryColor,
-            surface = activeBackground.surfaceColor,
-            onSurface = activeBackground.textPrimaryColor,
-            surfaceVariant = activeBackground.surfaceVariantColor,
-            onSurfaceVariant = activeBackground.textSecondaryColor,
-            surfaceContainerLowest = activeBackground.surfaceColor,
-            surfaceContainerLow = surfaceLow,
-            surfaceContainer = surfaceContainer,
-            surfaceContainerHigh = surfaceHigh,
-            surfaceContainerHighest = surfaceHighest,
-            outline = activeBackground.borderColor,
-            outlineVariant = calmOutlineVariant
-        )
+        if (isDark) {
+            darkColorScheme(
+                primary = primaryColor,
+                onPrimary = activeBackground.backgroundColor,
+                primaryContainer = activeBackground.surfaceVariantColor,
+                onPrimaryContainer = primaryColor,
+                secondary = secondaryColor,
+                onSecondary = activeBackground.backgroundColor,
+                secondaryContainer = activeBackground.surfaceVariantColor,
+                onSecondaryContainer = secondaryColor,
+                tertiary = NeonPurple,
+                onTertiary = activeBackground.backgroundColor,
+                background = activeBackground.backgroundColor,
+                onBackground = activeBackground.textPrimaryColor,
+                surface = activeBackground.surfaceColor,
+                onSurface = activeBackground.textPrimaryColor,
+                surfaceVariant = activeBackground.surfaceVariantColor,
+                onSurfaceVariant = activeBackground.textSecondaryColor,
+                surfaceContainerLowest = activeBackground.backgroundColor,
+                surfaceContainerLow = surfaceLow,
+                surfaceContainer = surfaceContainer,
+                surfaceContainerHigh = surfaceHigh,
+                surfaceContainerHighest = surfaceHighest,
+                outline = activeBackground.borderColor,
+                outlineVariant = calmOutlineVariant
+            )
+        } else {
+            lightColorScheme(
+                primary = primaryColor,
+                onPrimary = Color.White,
+                primaryContainer = activeBackground.surfaceVariantColor,
+                onPrimaryContainer = primaryColor,
+                secondary = secondaryColor,
+                onSecondary = Color.White,
+                secondaryContainer = activeBackground.surfaceVariantColor,
+                onSecondaryContainer = secondaryColor,
+                tertiary = NeonPurple,
+                onTertiary = Color.White,
+                background = activeBackground.backgroundColor,
+                onBackground = activeBackground.textPrimaryColor,
+                surface = activeBackground.surfaceColor,
+                onSurface = activeBackground.textPrimaryColor,
+                surfaceVariant = activeBackground.surfaceVariantColor,
+                onSurfaceVariant = activeBackground.textSecondaryColor,
+                surfaceContainerLowest = activeBackground.surfaceColor,
+                surfaceContainerLow = surfaceLow,
+                surfaceContainer = surfaceContainer,
+                surfaceContainerHigh = surfaceHigh,
+                surfaceContainerHighest = surfaceHighest,
+                outline = activeBackground.borderColor,
+                outlineVariant = calmOutlineVariant
+            )
+        }
     }
 
     val view = LocalView.current

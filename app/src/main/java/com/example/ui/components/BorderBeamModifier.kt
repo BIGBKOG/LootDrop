@@ -22,6 +22,17 @@ import androidx.compose.ui.unit.Dp
  * Produces a focused bright hotspot with a luminous fading trail that travels around
  * the card's rounded perimeter.
  */
+private val BEAM_POSITIONS = floatArrayOf(
+    0.00f,
+    0.03f,
+    0.07f,
+    0.12f,
+    0.20f,
+    0.30f,
+    0.38f,
+    1.00f
+)
+
 class RotatingBorderBeamBrush(
     private val baseColorArgb: Int,
     private val accentColorArgb: Int,
@@ -43,17 +54,7 @@ class RotatingBorderBeamBrush(
             baseColorArgb,
             baseColorArgb
         )
-        val positions = floatArrayOf(
-            0.00f,
-            0.03f,
-            0.07f,
-            0.12f,
-            0.20f,
-            0.30f,
-            0.38f,
-            1.00f
-        )
-        val shader = SweepGradient(cx, cy, colors, positions)
+        val shader = SweepGradient(cx, cy, colors, BEAM_POSITIONS)
         val matrix = Matrix()
         matrix.postRotate(angle, cx, cy)
         shader.setLocalMatrix(matrix)

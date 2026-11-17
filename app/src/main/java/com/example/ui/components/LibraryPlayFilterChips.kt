@@ -1,18 +1,9 @@
 package com.example.ui.components
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,7 +15,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,40 +24,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.ui.graphics.graphicsLayer
-import com.example.ui.theme.ExpressiveMotion
-import com.example.ui.theme.expressivePressScale
-import com.example.ui.theme.rememberExpressiveCornerRadius
-import kotlin.math.abs
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Key
-import androidx.compose.material.icons.filled.OpenInNew
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -76,28 +44,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.LibraryPlayFilter
 import com.example.data.model.LibraryViewMode
-import com.example.data.model.PlayStatus
 import com.example.data.model.PlayabilityFilter
 import com.example.data.model.StorageFilter
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
+import com.example.i18n.localizedLabel
 import com.example.ui.UiStats
+import com.example.ui.theme.ExpressiveMotion
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGreen
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
+import com.example.ui.theme.expressivePressScale
+import com.example.ui.theme.rememberExpressiveCornerRadius
+import kotlin.math.abs
 
 @Composable
 fun LibraryPlayFilterChips(
@@ -127,6 +94,8 @@ fun LibraryPlayFilterChips(
     onToggleCompactHeader: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
     val reducedMotion = !isAnimationsEnabled || isLowEndOptimization
 
     Column(
@@ -135,7 +104,6 @@ fun LibraryPlayFilterChips(
             .padding(horizontal = 16.dp, vertical = 6.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Sub-Tab Segmented Selector with M3 Expressive sliding pill indicator
         val selectedModeIndex = when (viewMode) {
             LibraryViewMode.VAULT -> 0
             LibraryViewMode.ALL_PAID -> 1
@@ -172,8 +140,6 @@ fun LibraryPlayFilterChips(
                 .padding(4.dp)
         ) {
             val segmentWidth = maxWidth / 3
-
-            // Sliding Expressive Pill Indicator
             Box(
                 modifier = Modifier
                     .offset(x = segmentWidth * animatedModeIndex)
@@ -189,140 +155,46 @@ fun LibraryPlayFilterChips(
                     .background(animatedIndicatorColor)
             )
 
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val isVaultSelected = viewMode == LibraryViewMode.VAULT
-                val isAllPaidSelected = viewMode == LibraryViewMode.ALL_PAID
-                val isAchievementsSelected = viewMode == LibraryViewMode.ACHIEVEMENTS
-
-                val vaultInteraction = remember { MutableInteractionSource() }
-                val allPaidInteraction = remember { MutableInteractionSource() }
-                val trophiesInteraction = remember { MutableInteractionSource() }
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .expressivePressScale(vaultInteraction, enabled = !reducedMotion, pressedScale = 0.93f)
-                        .clip(RoundedCornerShape(9.dp))
-                        .clickable(
-                            interactionSource = vaultInteraction,
-                            indication = null
-                        ) { onViewModeChange(LibraryViewMode.VAULT) }
-                        .testTag("tab_claimed_vault"),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = "🎁 Vault",
-                            fontSize = 11.sp,
-                            fontWeight = if (isVaultSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isVaultSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Box(
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(if (isVaultSelected) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface)
-                                .padding(horizontal = 4.dp, vertical = 1.dp)
-                        ) {
-                            Text(
-                                text = "${uiStats.claimedCount}",
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isVaultSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .expressivePressScale(allPaidInteraction, enabled = !reducedMotion, pressedScale = 0.93f)
-                        .clip(RoundedCornerShape(9.dp))
-                        .clickable(
-                            interactionSource = allPaidInteraction,
-                            indication = null
-                        ) { onViewModeChange(LibraryViewMode.ALL_PAID) }
-                        .testTag("tab_all_paid"),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = "🎮 All+Paid",
-                            fontSize = 11.sp,
-                            fontWeight = if (isAllPaidSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isAllPaidSelected) Color(0xFF0B0F19) else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Box(
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(if (isAllPaidSelected) Color(0xFF0B0F19).copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface)
-                                .padding(horizontal = 4.dp, vertical = 1.dp)
-                        ) {
-                            Text(
-                                text = "${uiStats.steamTotalCount + uiStats.claimedCount}",
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isAllPaidSelected) Color(0xFF0B0F19) else Color(0xFF66C0F4)
-                            )
-                        }
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .expressivePressScale(trophiesInteraction, enabled = !reducedMotion, pressedScale = 0.93f)
-                        .clip(RoundedCornerShape(9.dp))
-                        .clickable(
-                            interactionSource = trophiesInteraction,
-                            indication = null
-                        ) { onViewModeChange(LibraryViewMode.ACHIEVEMENTS) }
-                        .testTag("tab_trophies_showcase"),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = "🏆 Trophies",
-                            fontSize = 11.sp,
-                            fontWeight = if (isAchievementsSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isAchievementsSelected) Color(0xFF0F1420) else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        if (trophyCount > 0) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(CircleShape)
-                                    .background(if (isAchievementsSelected) Color(0xFF0F1420).copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface)
-                                    .padding(horizontal = 4.dp, vertical = 1.dp)
-                            ) {
-                                Text(
-                                    text = "$trophyCount",
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isAchievementsSelected) Color(0xFF0F1420) else Color(0xFFE040FB)
-                                )
-                            }
-                        }
-                    }
-                }
+            Row(modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                LibrarySegmentItem(
+                    label = s.library.segmentVault,
+                    count = uiStats.claimedCount,
+                    isSelected = viewMode == LibraryViewMode.VAULT,
+                    selectedTextColor = MaterialTheme.colorScheme.onPrimary,
+                    selectedBadgeBg = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f),
+                    unselectedBadgeTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    reducedMotion = reducedMotion,
+                    testTag = "tab_claimed_vault",
+                    modifier = Modifier.weight(1f),
+                    onClick = { onViewModeChange(LibraryViewMode.VAULT) }
+                )
+                LibrarySegmentItem(
+                    label = s.library.segmentAllPaid,
+                    count = uiStats.steamTotalCount + uiStats.claimedCount,
+                    isSelected = viewMode == LibraryViewMode.ALL_PAID,
+                    selectedTextColor = Color(0xFF0B0F19),
+                    selectedBadgeBg = Color(0xFF0B0F19).copy(alpha = 0.15f),
+                    unselectedBadgeTextColor = Color(0xFF66C0F4),
+                    reducedMotion = reducedMotion,
+                    testTag = "tab_all_paid",
+                    modifier = Modifier.weight(1f),
+                    onClick = { onViewModeChange(LibraryViewMode.ALL_PAID) }
+                )
+                LibrarySegmentItem(
+                    label = s.library.segmentTrophies,
+                    count = if (trophyCount > 0) trophyCount else null,
+                    isSelected = viewMode == LibraryViewMode.ACHIEVEMENTS,
+                    selectedTextColor = Color(0xFF0F1420),
+                    selectedBadgeBg = Color(0xFF0F1420).copy(alpha = 0.2f),
+                    unselectedBadgeTextColor = Color(0xFFE040FB),
+                    reducedMotion = reducedMotion,
+                    testTag = "tab_trophies_showcase",
+                    modifier = Modifier.weight(1f),
+                    onClick = { onViewModeChange(LibraryViewMode.ACHIEVEMENTS) }
+                )
             }
         }
 
-        // Steam Game Tracker banner (tucked smoothly when user switches to Compact Header mode)
         AnimatedVisibility(
             visible = !isCompactHeader,
             enter = ExpressiveMotion.expressiveExpandEnter(reducedMotion),
@@ -336,15 +208,18 @@ fun LibraryPlayFilterChips(
             )
         }
 
-        // Sync feedback toast/banner if message is present
         AnimatedVisibility(
             visible = steamSyncStatus != null,
             enter = ExpressiveMotion.expressiveExpandEnter(reducedMotion),
             exit = ExpressiveMotion.expressiveCollapseExit(reducedMotion)
         ) {
             steamSyncStatus?.let { status ->
-                val isSuccess = status.contains("Synced", ignoreCase = true)
-                val isError = status.contains("failed", ignoreCase = true) || status.contains("Could not", ignoreCase = true)
+                val isSuccess = status.contains("Synced", ignoreCase = true) ||
+                    status.contains("Sincroniz", ignoreCase = true)
+                val isError = status.contains("failed", ignoreCase = true) ||
+                    status.contains("Could not", ignoreCase = true) ||
+                    status.contains("Error", ignoreCase = true) ||
+                    status.contains("No se pudo", ignoreCase = true)
                 val bannerBg = when {
                     isSuccess -> NeonGreen.copy(alpha = 0.15f)
                     isError -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.85f)
@@ -377,11 +252,7 @@ fun LibraryPlayFilterChips(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         if (isSyncingSteam) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(14.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
                         } else {
                             Icon(
                                 imageVector = if (isSuccess) Icons.Default.Check else if (isError) Icons.Default.Close else Icons.Default.Sync,
@@ -390,26 +261,10 @@ fun LibraryPlayFilterChips(
                                 modifier = Modifier.size(15.dp)
                             )
                         }
-                        Text(
-                            text = status,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = textColor,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Text(status, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = textColor, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     }
-
-                    IconButton(
-                        onClick = onDismissStatus,
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Dismiss",
-                            tint = textColor.copy(alpha = 0.7f),
-                            modifier = Modifier.size(14.dp)
-                        )
+                    IconButton(onClick = onDismissStatus, modifier = Modifier.size(24.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = s.common.dismiss, tint = textColor.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
                     }
                 }
             }
@@ -419,22 +274,18 @@ fun LibraryPlayFilterChips(
             var showFilterMenuDialog by remember { mutableStateOf(false) }
 
             val isFilterActive = selectedFilter != LibraryPlayFilter.ALL ||
-                    selectedPlayability != PlayabilityFilter.ALL ||
-                    selectedStorage != StorageFilter.ALL
+                selectedPlayability != PlayabilityFilter.ALL ||
+                selectedStorage != StorageFilter.ALL
 
             val activeFilterCount = (if (selectedFilter != LibraryPlayFilter.ALL) 1 else 0) +
-                    (if (selectedPlayability != PlayabilityFilter.ALL) 1 else 0) +
-                    (if (selectedStorage != StorageFilter.ALL) 1 else 0)
+                (if (selectedPlayability != PlayabilityFilter.ALL) 1 else 0) +
+                (if (selectedStorage != StorageFilter.ALL) 1 else 0)
 
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(vertical = 2.dp),
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Integrated Filter Button
                 val filterBtnInteraction = remember { MutableInteractionSource() }
                 val isFilterPressed by filterBtnInteraction.collectIsPressedAsState()
                 val filterBtnCorner = rememberExpressiveCornerRadius(
@@ -449,58 +300,34 @@ fun LibraryPlayFilterChips(
                     modifier = Modifier
                         .expressivePressScale(filterBtnInteraction, enabled = !reducedMotion, pressedScale = 0.93f)
                         .clip(RoundedCornerShape(filterBtnCorner))
-                        .background(
-                            if (isFilterActive) NeonCyan.copy(alpha = 0.2f)
-                            else MaterialTheme.colorScheme.surfaceVariant
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = if (isFilterActive) NeonCyan else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
-                            shape = RoundedCornerShape(filterBtnCorner)
-                        )
-                        .clickable(
-                            interactionSource = filterBtnInteraction,
-                            indication = null
-                        ) { showFilterMenuDialog = true }
+                        .background(if (isFilterActive) NeonCyan.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant)
+                        .border(1.dp, if (isFilterActive) NeonCyan else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f), RoundedCornerShape(filterBtnCorner))
+                        .clickable(interactionSource = filterBtnInteraction, indication = null) { showFilterMenuDialog = true }
                         .padding(horizontal = 12.dp, vertical = 7.dp)
                         .testTag("vault_filter_menu_button"),
                     contentAlignment = Alignment.Center
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Icon(
                             imageVector = Icons.Default.Tune,
-                            contentDescription = "Filters",
+                            contentDescription = s.common.filters,
                             tint = if (isFilterActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(15.dp)
                         )
                         Text(
-                            text = if (viewMode == LibraryViewMode.ALL_PAID) "Steam Filters" else "Vault Filters",
+                            text = if (viewMode == LibraryViewMode.ALL_PAID) s.library.steamFiltersBtn else s.library.vaultFiltersBtn,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (isFilterActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                         )
                         if (activeFilterCount > 0) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary)
-                                    .padding(horizontal = 5.dp, vertical = 1.dp)
-                            ) {
-                                Text(
-                                    text = "$activeFilterCount",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = MaterialTheme.colorScheme.onPrimary
-                                )
+                            Box(modifier = Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.primary).padding(horizontal = 5.dp, vertical = 1.dp)) {
+                                Text("$activeFilterCount", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onPrimary)
                             }
                         }
                     }
                 }
 
-                // Quick Compact Header Toggle pill to collapse/expand top banners
                 if (onToggleCompactHeader != null) {
                     val compactInteraction = remember { MutableInteractionSource() }
                     val isCompactPressed by compactInteraction.collectIsPressedAsState()
@@ -516,25 +343,15 @@ fun LibraryPlayFilterChips(
                         modifier = Modifier
                             .expressivePressScale(compactInteraction, enabled = !reducedMotion, pressedScale = 0.93f)
                             .clip(RoundedCornerShape(compactCorner))
-                            .background(
-                                if (isCompactHeader) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
-                                else MaterialTheme.colorScheme.surfaceContainerHigh
-                            )
-                            .border(
-                                width = 1.dp,
-                                color = if (isCompactHeader) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
-                                shape = RoundedCornerShape(compactCorner)
-                            )
-                            .clickable(
-                                interactionSource = compactInteraction,
-                                indication = null
-                            ) { onToggleCompactHeader() }
+                            .background(if (isCompactHeader) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .border(1.dp, if (isCompactHeader) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f), RoundedCornerShape(compactCorner))
+                            .clickable(interactionSource = compactInteraction, indication = null) { onToggleCompactHeader() }
                             .padding(horizontal = 10.dp, vertical = 7.dp)
                             .testTag("toggle_compact_library_header"),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = if (isCompactHeader) "▾ Show Banners" else "▴ Hide Banners",
+                            text = if (isCompactHeader) s.library.showBannersBtn else s.library.hideBannersBtn,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (isCompactHeader) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
@@ -542,153 +359,49 @@ fun LibraryPlayFilterChips(
                     }
                 }
 
-                // DLC Picks Hub Button
                 if (onOpenDlcHub != null && (viewMode == LibraryViewMode.ALL_PAID || uiStats.steamTotalCount > 0 || steamUserId.isNotBlank())) {
-                    val dlcInteraction = remember { MutableInteractionSource() }
-                    val isDlcPressed by dlcInteraction.collectIsPressedAsState()
-                    val dlcCorner = rememberExpressiveCornerRadius(
-                        isPressed = isDlcPressed,
-                        baseRadius = 10.dp,
-                        pressedRadius = 18.dp,
-                        enabled = !reducedMotion
+                    LibraryActionChip(
+                        emoji = "🧩",
+                        label = s.library.dlcPicksChip,
+                        accentColor = Color(0xFFA855F7),
+                        badgeCount = dlcRecommendationsCount,
+                        reducedMotion = reducedMotion,
+                        testTag = "open_dlc_hub_button",
+                        onClick = onOpenDlcHub
                     )
-                    Box(
-                        modifier = Modifier
-                            .expressivePressScale(dlcInteraction, enabled = !reducedMotion, pressedScale = 0.93f)
-                            .clip(RoundedCornerShape(dlcCorner))
-                            .background(Color(0xFFA855F7).copy(alpha = 0.14f))
-                            .border(
-                                width = 1.dp,
-                                color = Color(0xFFA855F7).copy(alpha = 0.55f),
-                                shape = RoundedCornerShape(dlcCorner)
-                            )
-                            .clickable(
-                                interactionSource = dlcInteraction,
-                                indication = null
-                            ) { onOpenDlcHub() }
-                            .padding(horizontal = 10.dp, vertical = 7.dp)
-                            .testTag("open_dlc_hub_button"),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp)
-                        ) {
-                            Text("🧩", fontSize = 12.sp)
-                            Text(
-                                text = "DLC Picks",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFA855F7)
-                            )
-                            if (dlcRecommendationsCount > 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(CircleShape)
-                                        .background(Color(0xFFA855F7))
-                                        .padding(horizontal = 5.dp, vertical = 1.dp)
-                                ) {
-                                    Text(
-                                        text = "$dlcRecommendationsCount",
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = Color.White
-                                    )
-                                }
-                            }
-                        }
-                    }
                 }
 
-                // 3x3 Backlog Challenge Grid Button
                 if (onOpenBacklogChallenge != null) {
-                    val gridInteraction = remember { MutableInteractionSource() }
-                    val isGridPressed by gridInteraction.collectIsPressedAsState()
-                    val gridCorner = rememberExpressiveCornerRadius(
-                        isPressed = isGridPressed,
-                        baseRadius = 10.dp,
-                        pressedRadius = 18.dp,
-                        enabled = !reducedMotion
+                    LibraryActionChip(
+                        emoji = "🎯",
+                        label = s.library.challengeChip,
+                        accentColor = Color(0xFFF59E0B),
+                        badgeCount = 0,
+                        reducedMotion = reducedMotion,
+                        testTag = "open_backlog_challenge_button",
+                        onClick = onOpenBacklogChallenge
                     )
-                    Box(
-                        modifier = Modifier
-                            .expressivePressScale(gridInteraction, enabled = !reducedMotion, pressedScale = 0.93f)
-                            .clip(RoundedCornerShape(gridCorner))
-                            .background(Color(0xFFF59E0B).copy(alpha = 0.14f))
-                            .border(
-                                width = 1.dp,
-                                color = Color(0xFFF59E0B).copy(alpha = 0.55f),
-                                shape = RoundedCornerShape(gridCorner)
-                            )
-                            .clickable(
-                                interactionSource = gridInteraction,
-                                indication = null
-                            ) { onOpenBacklogChallenge() }
-                            .padding(horizontal = 10.dp, vertical = 7.dp)
-                            .testTag("open_backlog_challenge_button"),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text("🎯", fontSize = 12.sp)
-                            Text(
-                                text = "3×3 Challenge",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFF59E0B)
-                            )
-                        }
-                    }
                 }
 
-                // Roll Random Backlog Button in All+Paid mode to beat analysis paralysis
                 if (viewMode == LibraryViewMode.ALL_PAID && onRollRandomBacklog != null) {
-                    val rollInteraction = remember { MutableInteractionSource() }
-                    val isRollPressed by rollInteraction.collectIsPressedAsState()
-                    val rollCorner = rememberExpressiveCornerRadius(
-                        isPressed = isRollPressed,
-                        baseRadius = 10.dp,
-                        pressedRadius = 18.dp,
-                        enabled = !reducedMotion
+                    LibraryActionChip(
+                        emoji = "🎲",
+                        label = s.library.rollBacklogChip,
+                        accentColor = Color(0xFFA855F7),
+                        badgeCount = 0,
+                        reducedMotion = reducedMotion,
+                        testTag = "roll_random_backlog_button",
+                        onClick = onRollRandomBacklog
                     )
-                    Box(
-                        modifier = Modifier
-                            .expressivePressScale(rollInteraction, enabled = !reducedMotion, pressedScale = 0.93f)
-                            .clip(RoundedCornerShape(rollCorner))
-                            .background(Color(0xFFA855F7).copy(alpha = 0.14f))
-                            .border(
-                                width = 1.dp,
-                                color = Color(0xFFA855F7).copy(alpha = 0.55f),
-                                shape = RoundedCornerShape(rollCorner)
-                            )
-                            .clickable(
-                                interactionSource = rollInteraction,
-                                indication = null
-                            ) { onRollRandomBacklog() }
-                            .padding(horizontal = 10.dp, vertical = 7.dp)
-                            .testTag("roll_random_backlog_button"),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text("🎲", fontSize = 12.sp)
-                            Text(
-                                text = "Roll Backlog",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFA855F7)
-                            )
-                        }
-                    }
                 }
 
                 if (!isFilterActive) {
                     Text(
-                        text = if (viewMode == LibraryViewMode.ALL_PAID) "${uiStats.steamTotalCount + uiStats.claimedCount} total" else "${uiStats.claimedCount} claimed",
+                        text = if (viewMode == LibraryViewMode.ALL_PAID) {
+                            s.library.totalCountFormat.format(uiStats.steamTotalCount + uiStats.claimedCount)
+                        } else {
+                            s.library.claimedCountFormat.format(uiStats.claimedCount)
+                        },
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -698,35 +411,23 @@ fun LibraryPlayFilterChips(
             }
 
             if (isFilterActive) {
-                // Active filter tags horizontally scrollable with tap-to-remove
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (selectedFilter != LibraryPlayFilter.ALL) {
-                        ActiveFilterPill(
-                            label = selectedFilter.displayName,
-                            onRemove = { onFilterSelect(LibraryPlayFilter.ALL) }
-                        )
+                        val filterLabel = if (isEs) selectedFilter.localizedLabel(s) else selectedFilter.displayName
+                        ActiveFilterPill(filterLabel) { onFilterSelect(LibraryPlayFilter.ALL) }
                     }
                     if (selectedPlayability != PlayabilityFilter.ALL) {
-                        ActiveFilterPill(
-                            label = "${selectedPlayability.iconEmoji} ${selectedPlayability.label}",
-                            onRemove = { onPlayabilitySelect(PlayabilityFilter.ALL) }
-                        )
+                        ActiveFilterPill("${selectedPlayability.iconEmoji} ${selectedPlayability.localizedLabel(s)}") { onPlayabilitySelect(PlayabilityFilter.ALL) }
                     }
                     if (selectedStorage != StorageFilter.ALL) {
-                        ActiveFilterPill(
-                            label = "💾 ${selectedStorage.label}",
-                            onRemove = { onStorageSelect(StorageFilter.ALL) }
-                        )
+                        ActiveFilterPill("💾 ${selectedStorage.localizedLabel(s)}") { onStorageSelect(StorageFilter.ALL) }
                     }
-
                     Text(
-                        text = "Reset",
+                        text = s.common.reset,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = NeonCyan,
@@ -761,10 +462,98 @@ fun LibraryPlayFilterChips(
 }
 
 @Composable
-private fun ActiveFilterPill(
+private fun LibrarySegmentItem(
     label: String,
-    onRemove: () -> Unit
+    count: Int?,
+    isSelected: Boolean,
+    selectedTextColor: Color,
+    selectedBadgeBg: Color,
+    unselectedBadgeTextColor: Color,
+    reducedMotion: Boolean,
+    testTag: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
 ) {
+    val interaction = remember { MutableInteractionSource() }
+    Box(
+        modifier = modifier
+            .fillMaxHeight()
+            .expressivePressScale(interaction, enabled = !reducedMotion, pressedScale = 0.93f)
+            .clip(RoundedCornerShape(9.dp))
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+            .testTag(testTag),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = label,
+                fontSize = 11.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                color = if (isSelected) selectedTextColor else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (count != null) {
+                Box(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(if (isSelected) selectedBadgeBg else MaterialTheme.colorScheme.surface)
+                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                ) {
+                    Text(
+                        text = "$count",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isSelected) selectedTextColor else unselectedBadgeTextColor
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LibraryActionChip(
+    emoji: String,
+    label: String,
+    accentColor: Color,
+    badgeCount: Int,
+    reducedMotion: Boolean,
+    testTag: String,
+    onClick: () -> Unit
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val isPressed by interaction.collectIsPressedAsState()
+    val corner = rememberExpressiveCornerRadius(
+        isPressed = isPressed,
+        baseRadius = 10.dp,
+        pressedRadius = 18.dp,
+        enabled = !reducedMotion
+    )
+    Box(
+        modifier = Modifier
+            .expressivePressScale(interaction, enabled = !reducedMotion, pressedScale = 0.93f)
+            .clip(RoundedCornerShape(corner))
+            .background(accentColor.copy(alpha = 0.14f))
+            .border(1.dp, accentColor.copy(alpha = 0.55f), RoundedCornerShape(corner))
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 7.dp)
+            .testTag(testTag),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(emoji, fontSize = 12.sp)
+            Text(label, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = accentColor)
+            if (badgeCount > 0) {
+                Box(modifier = Modifier.clip(CircleShape).background(accentColor).padding(horizontal = 5.dp, vertical = 1.dp)) {
+                    Text("$badgeCount", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActiveFilterPill(label: String, onRemove: () -> Unit) {
+    val s = LocalAppStrings.current
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
@@ -775,441 +564,7 @@ private fun ActiveFilterPill(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Text(text = label, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-        Icon(
-            imageVector = Icons.Default.Close,
-            contentDescription = "Remove filter",
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(12.dp)
-        )
-    }
-}
-
-@Composable
-private fun SteamTrackerBanner(
-    isSyncing: Boolean,
-    steamUserId: String,
-    onOpenDialog: () -> Unit,
-    onQuickSync: () -> Unit
-) {
-    val infiniteTransition = rememberInfiniteTransition(label = "steam_spin")
-    val spinAngle by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "spin_angle"
-    )
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, Color(0xFF66C0F4).copy(alpha = 0.45f), RoundedCornerShape(16.dp))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(
-            modifier = Modifier
-                .weight(1f)
-                .clickable(onClick = onOpenDialog),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            // Steam icon badge
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFF66C0F4).copy(alpha = 0.14f))
-                    .border(1.dp, Color(0xFF66C0F4).copy(alpha = 0.45f), RoundedCornerShape(10.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.SportsEsports,
-                    contentDescription = "Steam",
-                    tint = Color(0xFF66C0F4),
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            Column {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(5.dp)
-                ) {
-                    Text(
-                        text = "Steam Game Tracker",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(Color(0xFF66C0F4).copy(alpha = 0.16f))
-                            .padding(horizontal = 4.dp, vertical = 1.dp)
-                    ) {
-                        Text(
-                            text = if (steamUserId.isNotBlank()) "LINKED" else "STEAM API",
-                            fontSize = 8.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFF66C0F4)
-                        )
-                    }
-                }
-                Text(
-                    text = if (steamUserId.isNotBlank()) {
-                        "ID: $steamUserId • Auto-categorize by playtime"
-                    } else {
-                        "Tap to link Steam ID & auto-sort library"
-                    },
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            // Quick sync button
-            IconButton(
-                onClick = {
-                    if (steamUserId.isNotBlank()) {
-                        onQuickSync()
-                    } else {
-                        onOpenDialog()
-                    }
-                },
-                enabled = !isSyncing,
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                    .testTag("steam_quick_sync_button")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Sync,
-                    contentDescription = "Sync Steam",
-                    tint = if (isSyncing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier
-                        .size(16.dp)
-                        .then(if (isSyncing) Modifier.rotate(spinAngle) else Modifier)
-                )
-            }
-
-            // Configure / settings button
-            IconButton(
-                onClick = onOpenDialog,
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                    .testTag("steam_settings_button")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = "Steam Settings",
-                    tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun SteamSyncDialog(
-    currentUserId: String,
-    currentApiKey: String,
-    isSyncing: Boolean,
-    statusMessage: String?,
-    onDismiss: () -> Unit,
-    onSync: (userId: String, apiKey: String) -> Unit
-) {
-    var userIdInput by remember(currentUserId) { mutableStateOf(currentUserId) }
-    var apiKeyInput by remember(currentApiKey) { mutableStateOf(currentApiKey) }
-    var showAdvancedKey by remember { mutableStateOf(false) }
-
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth(0.92f)
-                .clip(RoundedCornerShape(20.dp))
-                .border(1.2.dp, Color(0xFF66C0F4).copy(alpha = 0.7f), RoundedCornerShape(20.dp)),
-            color = Color(0xFF171A21),
-            tonalElevation = 6.dp
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                // Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0xFF1B2838))
-                                .border(1.dp, Color(0xFF66C0F4), RoundedCornerShape(10.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.SportsEsports,
-                                contentDescription = null,
-                                tint = Color(0xFF66C0F4),
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                        Column {
-                            Text(
-                                text = "Steam Game Tracker",
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                            Text(
-                                text = "Auto-organize your claimed vault",
-                                fontSize = 12.sp,
-                                color = Color(0xFF8F98A0)
-                            )
-                        }
-                    }
-
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = Color(0xFF8F98A0)
-                        )
-                    }
-                }
-
-                // Description card
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF1B2838))
-                        .border(1.dp, Color(0xFF2A475E), RoundedCornerShape(10.dp))
-                        .padding(12.dp)
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = "How Auto-Categorization Works:",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF66C0F4)
-                        )
-                        Text(
-                            text = "• 0 min played ➔ Unplayed (Backlog)\n• >0 min played ➔ Playing\n• 100% achievements or 30+ hrs ➔ Finished",
-                            fontSize = 11.sp,
-                            lineHeight = 16.sp,
-                            color = Color(0xFFC7D5E0)
-                        )
-                    }
-                }
-
-                // Steam User ID / Vanity URL Input
-                OutlinedTextField(
-                    value = userIdInput,
-                    onValueChange = { userIdInput = it },
-                    label = { Text("Steam ID64 or Custom URL", color = Color(0xFF8F98A0)) },
-                    placeholder = { Text("e.g. 76561198... or your Custom URL", color = Color(0xFF667382)) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = null,
-                            tint = Color(0xFF66C0F4)
-                        )
-                    },
-                    singleLine = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("steam_user_id_input"),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF66C0F4),
-                        unfocusedBorderColor = Color(0xFF2A475E),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedContainerColor = Color(0xFF0E141B),
-                        unfocusedContainerColor = Color(0xFF0E141B)
-                    )
-                )
-
-                // Steam ID & Privacy Instructions Box
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF131B23))
-                        .border(1.dp, Color(0xFF2A475E).copy(alpha = 0.6f), RoundedCornerShape(10.dp))
-                        .padding(10.dp)
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = "How to find your Steam ID & sync games:",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF66C0F4)
-                        )
-                        Text(
-                            text = "1. In Steam app: click your account avatar (top right) > Account Details > copy your 17-digit Steam ID (starts with 7656119...).\n" +
-                                    "2. Or in Steam: Edit Profile > check your Custom URL.\n" +
-                                    "3. Privacy: In Steam > Edit Profile > Privacy Settings > set 'Game details' to Public (and uncheck 'Always keep playtime private').",
-                            fontSize = 10.sp,
-                            lineHeight = 15.sp,
-                            color = Color(0xFFC7D5E0)
-                        )
-                    }
-                }
-
-                // Advanced API Key toggle
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showAdvancedKey = !showAdvancedKey },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = if (showAdvancedKey) "Hide Custom API Key ▴" else "Custom Steam API Key (Optional) ▾",
-                        fontSize = 11.sp,
-                        color = Color(0xFF66C0F4),
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-
-                AnimatedVisibility(visible = showAdvancedKey) {
-                    OutlinedTextField(
-                        value = apiKeyInput,
-                        onValueChange = { apiKeyInput = it },
-                        label = { Text("Custom Steam Web API Key", color = Color(0xFF8F98A0)) },
-                        placeholder = { Text("Leave blank to use pre-configured key", color = Color(0xFF667382)) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Key,
-                                contentDescription = null,
-                                tint = Color(0xFF66C0F4)
-                            )
-                        },
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("steam_custom_api_key_input"),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFF66C0F4),
-                            unfocusedBorderColor = Color(0xFF2A475E),
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            focusedContainerColor = Color(0xFF0E141B),
-                            unfocusedContainerColor = Color(0xFF0E141B)
-                        )
-                    )
-                }
-
-                // Sync status message inside dialog
-                if (statusMessage != null) {
-                    val isError = statusMessage.contains("failed", ignoreCase = true) ||
-                            statusMessage.contains("error", ignoreCase = true) ||
-                            statusMessage.contains("private", ignoreCase = true) ||
-                            statusMessage.contains("could not", ignoreCase = true)
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp),
-                        color = if (isError) Color(0xFF3B181E) else Color(0xFF0F382A),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, if (isError) Color(0xFFE53935) else NeonGreen)
-                    ) {
-                        Text(
-                            text = statusMessage,
-                            fontSize = 11.sp,
-                            color = if (isError) Color(0xFFFFB4AB) else NeonGreen,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(10.dp),
-                            lineHeight = 15.sp
-                        )
-                    }
-                }
-
-                // Action buttons
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFC7D5E0)),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2A475E))
-                    ) {
-                        Text("Close")
-                    }
-
-                    Button(
-                        onClick = {
-                            onSync(userIdInput, apiKeyInput)
-                        },
-                        enabled = !isSyncing && userIdInput.isNotBlank(),
-                        modifier = Modifier
-                            .weight(1.4f)
-                            .testTag("steam_sync_submit_button"),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF66C0F4),
-                            contentColor = Color(0xFF0B0F19),
-                            disabledContainerColor = Color(0xFF2A475E),
-                            disabledContentColor = Color(0xFF8F98A0)
-                        )
-                    ) {
-                        if (isSyncing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                                color = Color(0xFF0B0F19)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Syncing...", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.Sync,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Sync Library", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        }
-                    }
-                }
-            }
-        }
+        Text(label, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+        Icon(Icons.Default.Close, contentDescription = s.library.removeFilterCd, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(12.dp))
     }
 }

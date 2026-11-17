@@ -34,15 +34,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
-import androidx.compose.material.icons.filled.OpenInBrowser
-import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
@@ -77,12 +75,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.example.data.local.NotificationHistoryEntity
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
 import com.example.ui.GiveawaysViewModel
 import com.example.ui.theme.EpicGamesBlue
 import com.example.ui.theme.GamingCardBorder
-import com.example.ui.theme.GamingDarkBackground
 import com.example.ui.theme.GamingDarkSurface
 import com.example.ui.theme.GamingDarkSurfaceVariant
 import com.example.ui.theme.NeonCyan
@@ -94,15 +92,18 @@ import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 import com.example.ui.theme.XboxGreen
+import com.example.util.LocalLowEndOptimization
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private enum class AlertFilter(val label: String) {
-    ALL("All Alerts"),
-    MAJOR_GAMES("🔥 Games"),
-    ENDING_SOON("⏳ Ending Soon"),
-    DLC("🎁 DLC & Loot")
+private val NOTIF_LOCALE_ES: Locale = Locale.forLanguageTag("es")
+
+private enum class AlertFilter(val label: String, val spanishLabel: String) {
+    ALL("All Alerts", "Todas"),
+    MAJOR_GAMES("🔥 Games", "🔥 Juegos"),
+    ENDING_SOON("⏳ Ending Soon", "⏳ Por Vencer"),
+    DLC("🎁 DLC & Loot", "🎁 DLC y Botín")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -112,7 +113,10 @@ fun NotificationHistorySheet(
     onDismiss: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
     val context = LocalContext.current
+    val lowEnd = LocalLowEndOptimization.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val history by viewModel.notificationHistory.collectAsState()
     val unreadCount by viewModel.unreadNotificationCount.collectAsState()
@@ -169,7 +173,7 @@ fun NotificationHistorySheet(
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "Alert Inbox & History",
+                                text = s.settings.alertsHistoryTitle,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary
@@ -183,7 +187,7 @@ fun NotificationHistorySheet(
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                 ) {
                                     Text(
-                                        text = "$unreadCount NEW",
+                                        text = if (isEs) "$unreadCount NUEVAS" else "$unreadCount NEW",
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.ExtraBold,
                                         color = NeonGreen
@@ -192,7 +196,7 @@ fun NotificationHistorySheet(
                             }
                         }
                         Text(
-                            text = "${history.size} total notifications recorded",
+                            text = if (isEs) "${history.size} notificaciones registradas" else "${history.size} total notifications recorded",
                             fontSize = 12.sp,
                             color = TextSecondary
                         )
@@ -206,7 +210,7 @@ fun NotificationHistorySheet(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Settings,
-                            contentDescription = "Alert Settings",
+                            contentDescription = if (isEs) "Ajustes de Alertas" else "Alert Settings",
                             tint = TextSecondary
                         )
                     }
@@ -214,7 +218,7 @@ fun NotificationHistorySheet(
                     IconButton(onClick = onDismiss) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
+                            contentDescription = s.common.close,
                             tint = TextPrimary
                         )
                     }
@@ -234,24 +238,29 @@ fun NotificationHistorySheet(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    items(AlertFilter.values()) { filter ->
+                    items(AlertFilter.entries) { filter ->
                         val isSelected = selectedFilter == filter
-                        val chipScale by animateFloatAsState(
-                            targetValue = if (isSelected) 1.05f else 1.0f,
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessMediumLow
-                            ),
-                            label = "alert_filter_chip_scale"
-                        )
+                        val chipModifier = if (lowEnd) {
+                            Modifier
+                        } else {
+                            val chipScale by animateFloatAsState(
+                                targetValue = if (isSelected) 1.05f else 1.0f,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                ),
+                                label = "alert_filter_chip_scale"
+                            )
+                            Modifier.graphicsLayer {
+                                scaleX = chipScale
+                                scaleY = chipScale
+                            }
+                        }
                         FilterChip(
                             selected = isSelected,
                             onClick = { selectedFilter = filter },
-                            modifier = Modifier.graphicsLayer {
-                                scaleX = chipScale
-                                scaleY = chipScale
-                            },
-                            label = { Text(filter.label, fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                            modifier = chipModifier,
+                            label = { Text(if (isEs) filter.spanishLabel else filter.label, fontSize = 11.sp, fontWeight = FontWeight.Bold) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
                                 selectedLabelColor = Color.White,
@@ -277,7 +286,7 @@ fun NotificationHistorySheet(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.DoneAll,
-                                    contentDescription = "Mark all read",
+                                    contentDescription = s.settings.alertsMarkAllRead,
                                     tint = NeonCyan,
                                     modifier = Modifier.size(18.dp)
                                 )
@@ -286,13 +295,17 @@ fun NotificationHistorySheet(
                         IconButton(
                             onClick = {
                                 viewModel.clearAllNotificationHistory()
-                                Toast.makeText(context, "Notification history cleared", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    context,
+                                    if (isEs) "Historial de notificaciones borrado" else "Notification history cleared",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             },
                             modifier = Modifier.size(36.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.DeleteSweep,
-                                contentDescription = "Clear All",
+                                contentDescription = s.settings.alertsClearHistory,
                                 tint = TextMuted,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -331,7 +344,11 @@ fun NotificationHistorySheet(
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = if (history.isEmpty()) "No Alerts Yet" else "No matching alerts in this filter",
+                            text = if (history.isEmpty()) {
+                                if (isEs) "Sin Alertas Todavía" else "No Alerts Yet"
+                            } else {
+                                if (isEs) "No hay alertas en este filtro" else "No matching alerts in this filter"
+                            },
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
@@ -339,9 +356,10 @@ fun NotificationHistorySheet(
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = if (history.isEmpty()) {
-                                "LootDrop scans PC & Console stores in the background. When free games or ending deals appear, you'll see them here!"
+                                s.settings.alertsHistoryEmpty
                             } else {
-                                "Try switching to 'All Alerts' to see your complete notifications log."
+                                if (isEs) "Prueba cambiar a 'Todas' para ver el historial completo de alertas."
+                                else "Try switching to 'All Alerts' to see your complete notifications log."
                             },
                             fontSize = 12.sp,
                             color = TextSecondary,
@@ -351,7 +369,7 @@ fun NotificationHistorySheet(
                         OutlinedButton(
                             onClick = {
                                 viewModel.sendTestNotification(isRichPreview = true)
-                                Toast.makeText(context, "Rich test alert dispatched!", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, s.settings.alertsTestToast, Toast.LENGTH_SHORT).show()
                             },
                             shape = RoundedCornerShape(12.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan),
@@ -359,7 +377,7 @@ fun NotificationHistorySheet(
                         ) {
                             Icon(imageVector = Icons.Default.NotificationsActive, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Send Rich Test Alert", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text(if (isEs) "Enviar Alerta de Prueba" else "Send Rich Test Alert", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -373,14 +391,19 @@ fun NotificationHistorySheet(
                     items(filteredHistory, key = { it.id }) { item ->
                         NotificationHistoryCard(
                             entity = item,
-                            modifier = Modifier.animateItem(
-                                fadeInSpec = tween(240),
-                                placementSpec = spring(
-                                    dampingRatio = Spring.DampingRatioLowBouncy,
-                                    stiffness = Spring.StiffnessMediumLow
-                                ),
-                                fadeOutSpec = tween(180)
-                            ),
+                            lowEnd = lowEnd,
+                            modifier = if (lowEnd) {
+                                Modifier
+                            } else {
+                                Modifier.animateItem(
+                                    fadeInSpec = tween(240),
+                                    placementSpec = spring(
+                                        dampingRatio = Spring.DampingRatioLowBouncy,
+                                        stiffness = Spring.StiffnessMediumLow
+                                    ),
+                                    fadeOutSpec = tween(180)
+                                )
+                            },
                             onCardClick = {
                                 viewModel.markNotificationAsRead(item.id)
                                 viewModel.openItemById(item.giveawayId)
@@ -396,33 +419,38 @@ fun NotificationHistorySheet(
                             onBookmarkClick = {
                                 viewModel.markNotificationAsRead(item.id)
                                 viewModel.toggleBookmarkById(item.giveawayId)
-                                Toast.makeText(context, "★ Saved to Bookmarks!", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    context,
+                                    s.system.notifBookmarkSavedToastFormat.format(item.title),
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             },
                             onShareClick = {
                                 coroutineScope.launch {
                                     val giveaway = viewModel.allGiveaways.value.find { it.id == item.giveawayId }
-                                    if (giveaway != null) {
-                                        try {
-                                            com.example.util.ShareGraphicGenerator.shareGraphicCard(context, giveaway, includeTextLink = true)
-                                        } catch (_: Exception) {
-                                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                                type = "text/plain"
-                                                putExtra(
-                                                    Intent.EXTRA_TEXT,
-                                                    "🔥 Free Game Alert: ${item.title} (${item.worth})!\nClaim here: ${item.openGiveawayUrl}\nTracked with LootDrop"
-                                                )
-                                            }
-                                            context.startActivity(Intent.createChooser(shareIntent, "Share Free Game Deal"))
-                                        }
-                                    } else {
+                                    val fallbackShare: () -> Unit = {
                                         val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                             type = "text/plain"
                                             putExtra(
                                                 Intent.EXTRA_TEXT,
-                                                "🔥 Free Game Alert: ${item.title} (${item.worth})!\nClaim here: ${item.openGiveawayUrl}\nTracked with LootDrop"
+                                                s.dialogs.shareGameMessageFormat.format(
+                                                    item.title,
+                                                    item.worth.ifBlank { "100% OFF" },
+                                                    item.platforms,
+                                                    item.openGiveawayUrl
+                                                )
                                             )
                                         }
-                                        context.startActivity(Intent.createChooser(shareIntent, "Share Free Game Deal"))
+                                        context.startActivity(Intent.createChooser(shareIntent, s.dialogs.shareChooserTitle))
+                                    }
+                                    if (giveaway != null) {
+                                        try {
+                                            com.example.util.ShareGraphicGenerator.shareGraphicCard(context, giveaway, includeTextLink = true)
+                                        } catch (_: Exception) {
+                                            fallbackShare()
+                                        }
+                                    } else {
+                                        fallbackShare()
                                     }
                                 }
                             },
@@ -440,6 +468,7 @@ fun NotificationHistorySheet(
 @Composable
 private fun NotificationHistoryCard(
     entity: NotificationHistoryEntity,
+    lowEnd: Boolean = false,
     onCardClick: () -> Unit,
     onClaimClick: () -> Unit,
     onBookmarkClick: () -> Unit,
@@ -447,19 +476,29 @@ private fun NotificationHistoryCard(
     onDismissNotification: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
     val context = LocalContext.current
-    val relativeTime = remember(entity.timestamp) { formatRelativeTimestamp(entity.timestamp) }
+    val relativeTime = remember(entity.timestamp, isEs) { formatRelativeTimestamp(entity.timestamp, isEs) }
 
     val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val cardScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.97f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "notif_card_scale"
-    )
+    val scaleModifier = if (lowEnd) {
+        Modifier
+    } else {
+        val isPressed by interactionSource.collectIsPressedAsState()
+        val cardScale by animateFloatAsState(
+            targetValue = if (isPressed) 0.97f else 1f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessLow
+            ),
+            label = "notif_card_scale"
+        )
+        Modifier.graphicsLayer {
+            scaleX = cardScale
+            scaleY = cardScale
+        }
+    }
 
     val platformColor = when {
         entity.platforms.contains("PlayStation", ignoreCase = true) -> PlayStationBlue
@@ -470,13 +509,21 @@ private fun NotificationHistoryCard(
         else -> NeonGreen
     }
 
+    val thumbUrl = entity.thumbnail.ifBlank { entity.image }
+    val thumbRequest = remember(context, thumbUrl, lowEnd) {
+        buildGiveawayImageRequest(
+            context = context,
+            url = thumbUrl,
+            isLowEndOptimization = lowEnd,
+            width = 160,
+            height = 140
+        )
+    }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .graphicsLayer {
-                scaleX = cardScale
-                scaleY = cardScale
-            }
+            .then(scaleModifier)
             .clip(RoundedCornerShape(14.dp))
             .background(if (entity.isRead) GamingDarkSurfaceVariant else GamingDarkSurfaceVariant.copy(alpha = 0.95f))
             .border(
@@ -503,11 +550,7 @@ private fun NotificationHistoryCard(
                     .background(Color.Black)
             ) {
                 AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(entity.thumbnail.ifBlank { entity.image })
-                        .crossfade(true)
-                        .size(160, 140)
-                        .build(),
+                    model = thumbRequest,
                     contentDescription = entity.title,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.size(width = 80.dp, height = 70.dp)
@@ -515,9 +558,9 @@ private fun NotificationHistoryCard(
 
                 // Channel badge pill on thumbnail
                 val channelTag = when (entity.channelType) {
-                    "ENDING_SOON" -> "⏳ ENDING"
+                    "ENDING_SOON" -> if (isEs) "⏳ VENCE" else "⏳ ENDING"
                     "DLC" -> "🎁 DLC"
-                    else -> "FREE"
+                    else -> if (isEs) "GRATIS" else "FREE"
                 }
                 val channelBg = when (entity.channelType) {
                     "ENDING_SOON" -> Color(0xFFFF5252)
@@ -599,12 +642,12 @@ private fun NotificationHistoryCard(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "Value: ",
+                        text = if (isEs) "Valor: " else "Value: ",
                         fontSize = 11.sp,
                         color = TextSecondary
                     )
                     Text(
-                        text = if (entity.worth.isNotBlank() && entity.worth != "N/A") entity.worth else "100% OFF",
+                        text = if (entity.worth.isNotBlank() && entity.worth != "N/A") entity.worth else s.system.notif100Off,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = NeonGreen
@@ -630,9 +673,9 @@ private fun NotificationHistoryCard(
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(imageVector = Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(12.dp))
+                            Icon(imageVector = Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(12.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Claim Free", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text(if (isEs) "Reclamar" else "Claim Free", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 
@@ -648,14 +691,14 @@ private fun NotificationHistoryCard(
                     ) {
                         Icon(imageVector = Icons.Default.BookmarkBorder, contentDescription = null, modifier = Modifier.size(12.dp))
                         Spacer(modifier = Modifier.width(3.dp))
-                        Text("Save", fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                        Text(if (isEs) "Guardar" else "Save", fontSize = 11.sp, fontWeight = FontWeight.Medium)
                     }
 
                     IconButton(
                         onClick = onShareClick,
                         modifier = Modifier.size(28.dp)
                     ) {
-                        Icon(imageVector = Icons.Default.Share, contentDescription = "Share", tint = TextSecondary, modifier = Modifier.size(14.dp))
+                        Icon(imageVector = Icons.Default.Share, contentDescription = s.system.notifActionShare, tint = TextSecondary, modifier = Modifier.size(14.dp))
                     }
                 }
             }
@@ -663,7 +706,7 @@ private fun NotificationHistoryCard(
     }
 }
 
-private fun formatRelativeTimestamp(timestamp: Long): String {
+private fun formatRelativeTimestamp(timestamp: Long, isEs: Boolean): String {
     val diff = System.currentTimeMillis() - timestamp
     val seconds = diff / 1000
     val minutes = seconds / 60
@@ -671,13 +714,14 @@ private fun formatRelativeTimestamp(timestamp: Long): String {
     val days = hours / 24
 
     return when {
-        minutes < 1 -> "Just now"
-        minutes < 60 -> "${minutes}m ago"
-        hours < 24 -> "${hours}h ago"
-        days == 1L -> "Yesterday"
-        days < 7 -> "${days}d ago"
+        minutes < 1 -> if (isEs) "Ahora mismo" else "Just now"
+        minutes < 60 -> if (isEs) "Hace ${minutes}m" else "${minutes}m ago"
+        hours < 24 -> if (isEs) "Hace ${hours}h" else "${hours}h ago"
+        days == 1L -> if (isEs) "Ayer" else "Yesterday"
+        days < 7 -> if (isEs) "Hace ${days}d" else "${days}d ago"
         else -> {
-            val sdf = SimpleDateFormat("MMM d", Locale.getDefault())
+            val locale = if (isEs) NOTIF_LOCALE_ES else Locale.getDefault()
+            val sdf = SimpleDateFormat("MMM d", locale)
             sdf.format(Date(timestamp))
         }
     }

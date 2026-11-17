@@ -11,6 +11,7 @@ import com.example.data.model.GameCategory
 import com.example.data.model.PlayStatus
 import com.example.data.model.TrophyRarityTier
 import com.example.data.model.UnifiedLibraryItem
+import com.example.i18n.AppLanguage
 import com.example.preferences.AccentTheme
 import com.example.preferences.AppPreferences
 import org.json.JSONArray
@@ -261,25 +262,37 @@ object BacklogChallengeManager {
      * Returns a human-friendly week display title marking the launch week as Week 1
      * (e.g. "Week 1 (Nov 9 – Nov 15)").
      */
-    fun getWeekDisplayName(weekKey: String = getCurrentWeekKey()): String {
+    fun getWeekDisplayName(
+        weekKey: String = getCurrentWeekKey(),
+        language: AppLanguage = AppLanguage.ENGLISH
+    ): String {
+        val isEs = language == AppLanguage.SPANISH
         return try {
             val cal = getCalendarForWeek(weekKey)
             val relativeWeekNum = getRelativeWeekNumber(weekKey)
-            val startFormat = SimpleDateFormat("MMM d", Locale.US)
-            val endFormat = SimpleDateFormat("MMM d", Locale.US)
+            val dateLocale = if (isEs) Locale("es", "ES") else Locale.US
+            val startFormat = SimpleDateFormat("MMM d", dateLocale)
+            val endFormat = SimpleDateFormat("MMM d", dateLocale)
             val startDateStr = startFormat.format(cal.time)
             cal.add(Calendar.DAY_OF_WEEK, 6)
             val endDateStr = endFormat.format(cal.time)
-            "Week $relativeWeekNum ($startDateStr – $endDateStr)"
+            if (isEs) {
+                "Semana $relativeWeekNum ($startDateStr – $endDateStr)"
+            } else {
+                "Week $relativeWeekNum ($startDateStr – $endDateStr)"
+            }
         } catch (_: Exception) {
-            "Weekly Backlog Challenge"
+            if (isEs) "Reto Semanal de Backlog" else "Weekly Backlog Challenge"
         }
     }
 
     /**
      * Backward-compatible alias for getWeekDisplayName.
      */
-    fun getMonthDisplayName(key: String = getCurrentWeekKey()): String = getWeekDisplayName(key)
+    fun getMonthDisplayName(
+        key: String = getCurrentWeekKey(),
+        language: AppLanguage = AppLanguage.ENGLISH
+    ): String = getWeekDisplayName(key, language)
 
     /**
      * Computes the preceding week key (e.g. "2026-W44" from "2026-W45").
@@ -409,7 +422,8 @@ object BacklogChallengeManager {
         preferences: AppPreferences,
         weekKey: String = getCurrentWeekKey(),
         games: List<UnifiedLibraryItem> = emptyList(),
-        trophies: List<SteamAchievementEntity> = emptyList()
+        trophies: List<SteamAchievementEntity> = emptyList(),
+        language: AppLanguage = AppLanguage.ENGLISH
     ): BacklogChallengeGrid {
         val rawSaved = preferences.getBacklogChallengeProgress(weekKey)
         val manualOverrides = parseManualOverrides(rawSaved)
@@ -554,7 +568,7 @@ object BacklogChallengeManager {
 
         return BacklogChallengeGrid(
             weekKey = weekKey,
-            weekTitle = getWeekDisplayName(weekKey),
+            weekTitle = getWeekDisplayName(weekKey, language),
             daysRemaining = getDaysRemainingInWeek(weekKey),
             tiles = evaluatedTiles,
             completedRows = completedRows,

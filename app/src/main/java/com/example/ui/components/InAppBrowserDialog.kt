@@ -73,6 +73,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.TextMuted
 
@@ -89,9 +91,11 @@ fun InAppBrowserDialog(
     onOpenExternal: (String) -> Unit
 ) {
     val context = LocalContext.current
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
     var currentUrl by remember { mutableStateOf(url) }
-    var displayTitle by remember { mutableStateOf(title.ifBlank { "Claim Free Game" }) }
+    var displayTitle by remember { mutableStateOf(title.ifBlank { s.dialogs.detailClaimFree }) }
     var loadProgress by remember { mutableFloatStateOf(0.1f) }
     var isLoading by remember { mutableStateOf(true) }
     var canGoBack by remember { mutableStateOf(false) }
@@ -156,7 +160,7 @@ fun InAppBrowserDialog(
                             IconButton(onClick = onDismiss) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
-                                    contentDescription = "Close Browser",
+                                    contentDescription = s.common.close,
                                     tint = MaterialTheme.colorScheme.onSurface
                                 )
                             }
@@ -180,7 +184,7 @@ fun InAppBrowserDialog(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Lock,
-                                        contentDescription = "Secure Connection",
+                                        contentDescription = if (isEs) "Conexión segura" else "Secure Connection",
                                         tint = NeonCyan,
                                         modifier = Modifier.size(10.dp)
                                     )
@@ -206,7 +210,7 @@ fun InAppBrowserDialog(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Refresh,
-                                    contentDescription = "Refresh Page",
+                                    contentDescription = s.common.refresh,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -216,12 +220,12 @@ fun InAppBrowserDialog(
                                 onClick = {
                                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
                                     clipboard?.setPrimaryClip(ClipData.newPlainText("Giveaway URL", currentUrl))
-                                    Toast.makeText(context, "Link copied to clipboard!", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, s.common.copiedLink, Toast.LENGTH_SHORT).show()
                                 }
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.ContentCopy,
-                                    contentDescription = "Copy Link",
+                                    contentDescription = s.common.copyLink,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -232,7 +236,7 @@ fun InAppBrowserDialog(
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                                    contentDescription = "Open in External Browser",
+                                    contentDescription = s.dialogs.browserOpenExternal,
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                             }
@@ -380,13 +384,13 @@ fun InAppBrowserDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Warning,
-                                contentDescription = "Renderer Interrupted",
+                                contentDescription = if (isEs) "Renderizado interrumpido" else "Renderer Interrupted",
                                 tint = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.size(52.dp)
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = "Storefront Requires External Browser",
+                                text = if (isEs) "La tienda requiere navegador externo" else "Storefront Requires External Browser",
                                 fontSize = 17.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface,
@@ -394,7 +398,11 @@ fun InAppBrowserDialog(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "This external storefront encountered high memory usage or anti-embed protection in the embedded engine. You can claim it directly in your device's browser.",
+                                text = if (isEs) {
+                                    "Esta tienda externa usó demasiada memoria o bloqueó la vista integrada. Puedes reclamar el juego directamente en tu navegador."
+                                } else {
+                                    "This external storefront encountered high memory usage or anti-embed protection in the embedded engine. You can claim it directly in your device's browser."
+                                },
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
@@ -413,7 +421,7 @@ fun InAppBrowserDialog(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Open in External Browser")
+                                Text(s.dialogs.browserOpenExternal)
                             }
                         }
                     }
@@ -460,7 +468,7 @@ fun InAppBrowserDialog(
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Navigate Back",
+                                    contentDescription = s.common.back,
                                     tint = if (canGoBack) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                                 )
                             }
@@ -472,7 +480,7 @@ fun InAppBrowserDialog(
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                    contentDescription = "Navigate Forward",
+                                    contentDescription = if (isEs) "Avanzar" else "Navigate Forward",
                                     tint = if (canGoForward) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                                 )
                             }
@@ -491,7 +499,7 @@ fun InAppBrowserDialog(
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                     Text(
-                                        text = "External Browser",
+                                        text = s.dialogs.browserOpenExternal,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.primary

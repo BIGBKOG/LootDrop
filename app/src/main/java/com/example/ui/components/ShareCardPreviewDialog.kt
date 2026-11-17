@@ -5,7 +5,6 @@ import android.content.ClipboardManager
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
-import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
@@ -70,6 +69,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.GiveawayItem
+import com.example.i18n.AppLanguage
+import com.example.i18n.AppStringsRegistry
+import com.example.i18n.LocalAppStrings
 import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
@@ -78,9 +80,6 @@ import com.example.util.ShareGraphicGenerator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileOutputStream
-import java.io.OutputStream
 
 @Composable
 fun ShareCardPreviewDialog(
@@ -88,6 +87,8 @@ fun ShareCardPreviewDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
     val coroutineScope = rememberCoroutineScope()
 
     var cardBitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -102,7 +103,11 @@ fun ShareCardPreviewDialog(
             val bmp = ShareGraphicGenerator.generateCardBitmap(context, item)
             cardBitmap = bmp
         } catch (e: Exception) {
-            Toast.makeText(context, "Failed to render share card: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                if (isEs) "No se pudo generar la tarjeta: ${e.message}" else "Failed to render share card: ${e.message}",
+                Toast.LENGTH_SHORT
+            ).show()
         } finally {
             isLoading = false
         }
@@ -170,13 +175,17 @@ fun ShareCardPreviewDialog(
                         }
                         Column {
                             Text(
-                                text = "Shareable Freebie Card",
+                                text = s.dialogs.sharePreviewTitle,
                                 fontSize = 17.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Instant 16:9 graphic for Discord, Reddit & Stories",
+                                text = if (isEs) {
+                                    "Gráfico 16:9 listo para Discord, Reddit e Historias"
+                                } else {
+                                    "Instant 16:9 graphic for Discord, Reddit & Stories"
+                                },
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -189,7 +198,7 @@ fun ShareCardPreviewDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
+                            contentDescription = s.common.close,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -215,7 +224,7 @@ fun ShareCardPreviewDialog(
                     if (bmp != null) {
                         Image(
                             bitmap = bmp.asImageBitmap(),
-                            contentDescription = "Rendered Share Card for ${item.title}",
+                            contentDescription = if (isEs) "Tarjeta generada para ${item.title}" else "Rendered Share Card for ${item.title}",
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .aspectRatio(1200f / 675f)
@@ -233,14 +242,14 @@ fun ShareCardPreviewDialog(
                                 modifier = Modifier.size(32.dp)
                             )
                             Text(
-                                text = "Generating graphic card...",
+                                text = s.dialogs.shareGenerating,
                                 fontSize = 12.sp,
                                 color = TextMuted
                             )
                         }
                     } else {
                         Text(
-                            text = "Card generation failed",
+                            text = if (isEs) "No se pudo crear la tarjeta" else "Card generation failed",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.error
                         )
@@ -258,7 +267,11 @@ fun ShareCardPreviewDialog(
                                 try {
                                     ShareGraphicGenerator.shareGraphicCard(context, item, includeTextLink = true)
                                 } catch (e: Exception) {
-                                    Toast.makeText(context, "Error sharing: ${e.message}", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(
+                                        context,
+                                        if (isEs) "Error al compartir: ${e.message}" else "Error sharing: ${e.message}",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 } finally {
                                     isSharing = false
                                 }
@@ -283,7 +296,7 @@ fun ShareCardPreviewDialog(
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Launching Share Sheet...", fontSize = 14.sp)
+                        Text(if (isEs) "Abriendo menú de compartir..." else "Launching Share Sheet...", fontSize = 14.sp)
                     } else {
                         Icon(
                             imageVector = Icons.Default.Share,
@@ -292,7 +305,7 @@ fun ShareCardPreviewDialog(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Share Graphic (Discord / Stories / SMS)",
+                            text = if (isEs) "Compartir Imagen (Discord / Historias / SMS)" else "Share Graphic (Discord / Stories / SMS)",
                             fontSize = 13.5.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -312,7 +325,7 @@ fun ShareCardPreviewDialog(
                             if (!isSaving) {
                                 isSaving = true
                                 coroutineScope.launch {
-                                    saveCardToGallery(context, bmp, item.title)
+                                    saveCardToGallery(context, bmp)
                                     isSaving = false
                                 }
                             }
@@ -333,7 +346,7 @@ fun ShareCardPreviewDialog(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (isSaving) "Saving..." else "Save Image",
+                            text = if (isSaving) (if (isEs) "Guardando..." else "Saving...") else (if (isEs) "Guardar Imagen" else "Save Image"),
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -344,7 +357,7 @@ fun ShareCardPreviewDialog(
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             val clip = ClipData.newPlainText("Game Link", item.openGiveawayUrl)
                             clipboard.setPrimaryClip(clip)
-                            Toast.makeText(context, "Claim link copied to clipboard!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, s.common.copiedLink, Toast.LENGTH_SHORT).show()
                         },
                         modifier = Modifier
                             .weight(1f)
@@ -361,7 +374,7 @@ fun ShareCardPreviewDialog(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Copy Link",
+                            text = s.common.copyLink,
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -372,48 +385,49 @@ fun ShareCardPreviewDialog(
     }
 }
 
-private suspend fun saveCardToGallery(context: Context, bitmap: Bitmap, title: String) = withContext(Dispatchers.IO) {
+private suspend fun saveCardToGallery(context: Context, bitmap: Bitmap) = withContext(Dispatchers.IO) {
+    val isEs = AppStringsRegistry.forContext(context).language == AppLanguage.SPANISH
     try {
         val filename = "LootDrop_${System.currentTimeMillis()}.png"
+        val values = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, filename)
+            put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+            put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/LootDrop")
+            put(MediaStore.Images.Media.IS_PENDING, 1)
+        }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val values = ContentValues().apply {
-                put(MediaStore.Images.Media.DISPLAY_NAME, filename)
-                put(MediaStore.Images.Media.MIME_TYPE, "image/png")
-                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/LootDrop")
-                put(MediaStore.Images.Media.IS_PENDING, 1)
+        val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+        if (uri != null) {
+            context.contentResolver.openOutputStream(uri)?.use { out ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
             }
+            values.clear()
+            values.put(MediaStore.Images.Media.IS_PENDING, 0)
+            context.contentResolver.update(uri, values, null, null)
 
-            val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-            if (uri != null) {
-                context.contentResolver.openOutputStream(uri)?.use { out ->
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-                }
-                values.clear()
-                values.put(MediaStore.Images.Media.IS_PENDING, 0)
-                context.contentResolver.update(uri, values, null, null)
-
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Saved to Pictures/LootDrop!", Toast.LENGTH_SHORT).show()
-                }
-                return@withContext
+            withContext(Dispatchers.Main) {
+                Toast.makeText(
+                    context,
+                    if (isEs) "¡Guardada en Imágenes/LootDrop!" else "Saved to Pictures/LootDrop!",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        } else {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(
+                    context,
+                    if (isEs) "No se pudo guardar en la galería" else "Unable to save image to gallery",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
-
-        // Fallback to pictures directory
-        val picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-        val appDir = File(picturesDir, "LootDrop").apply { if (!exists()) mkdirs() }
-        val file = File(appDir, filename)
-        FileOutputStream(file).use { out ->
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-        }
-
+    } catch (_: Exception) {
         withContext(Dispatchers.Main) {
-            Toast.makeText(context, "Saved to Pictures/LootDrop!", Toast.LENGTH_SHORT).show()
-        }
-    } catch (e: Exception) {
-        withContext(Dispatchers.Main) {
-            Toast.makeText(context, "Saved card to cache", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                if (isEs) "No se pudo guardar en la galería" else "Unable to save image to gallery",
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 }

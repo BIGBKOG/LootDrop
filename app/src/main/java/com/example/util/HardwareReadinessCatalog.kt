@@ -97,6 +97,18 @@ object HardwareReadinessCatalog {
         """(?i)(\d+(?:\.\d+)?)\s*(?:GB|MB)\s*(?:available|free|storage|space|disk|required|hd|install)"""
     )
 
+    private const val MAX_PROFILE_CACHE = 512
+    private val cacheLock = Any()
+    private val PROFILE_CACHE = object : LinkedHashMap<String, GameHardwareProfile>(128, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, GameHardwareProfile>?): Boolean = size > MAX_PROFILE_CACHE
+    }
+
+    fun clearCaches() {
+        synchronized(cacheLock) {
+            PROFILE_CACHE.clear()
+        }
+    }
+
     /**
      * Resolves the hardware readiness profile by App ID, clean title, or heuristics.
      */
@@ -148,7 +160,7 @@ object HardwareReadinessCatalog {
      * Resolves the hardware readiness profile for a giveaway item.
      */
     fun resolveProfile(item: GiveawayItem): GameHardwareProfile {
-        // 1. Check direct Steam App ID
+        // 1. Check direct Steam App ID (O(1) map lookup)
         if (item.steamAppId != null) {
             val curated = APP_ID_MAP[item.steamAppId]
             if (curated != null) {
@@ -162,22 +174,29 @@ object HardwareReadinessCatalog {
             }
         }
 
+        val cacheKey = "G:${item.id}:${item.title}:${item.type}:${item.platforms}:${item.steamAppId ?: -1}:${item.manualInstallSizeGb ?: -1f}:${item.description.hashCode()}"
+        synchronized(cacheLock) {
+            PROFILE_CACHE[cacheKey]?.let { return it }
+        }
+
         // 2. Check title against curated title list
         val cleanTitle = MetacriticCatalog.cleanTitle(item.title).lowercase(Locale.ROOT)
+        var resolved: GameHardwareProfile? = null
         for ((key, curated) in TITLE_MAP) {
             if (cleanTitle == key || (cleanTitle.length > 5 && cleanTitle.contains(key))) {
-                return GameHardwareProfile(
+                resolved = GameHardwareProfile(
                     deckStatus = curated.deckStatus,
                     controllerSupport = curated.controllerSupport,
                     sessionStyle = curated.sessionStyle,
                     estimatedStorageGb = curated.estimatedStorageGb,
                     manualStorageGb = item.manualInstallSizeGb
                 )
+                break
             }
         }
 
         // 3. Fallback inference through heuristics
-        return inferHardwareProfile(
+        val finalProfile = resolved ?: inferHardwareProfile(
             title = item.title,
             type = item.type,
             platforms = item.platforms,
@@ -186,6 +205,11 @@ object HardwareReadinessCatalog {
             numericWorth = item.numericWorth,
             manualStorageGb = item.manualInstallSizeGb
         )
+
+        synchronized(cacheLock) {
+            PROFILE_CACHE[cacheKey] = finalProfile
+        }
+        return finalProfile
     }
 
     /**
@@ -204,22 +228,29 @@ object HardwareReadinessCatalog {
             )
         }
 
+        val cacheKey = "S:${game.appId}:${game.name}:${game.manualInstallSizeGb ?: -1f}"
+        synchronized(cacheLock) {
+            PROFILE_CACHE[cacheKey]?.let { return it }
+        }
+
         // 2. Title lookup
         val cleanTitle = MetacriticCatalog.cleanTitle(game.name).lowercase(Locale.ROOT)
+        var resolved: GameHardwareProfile? = null
         for ((key, predefined) in TITLE_MAP) {
             if (cleanTitle == key || (cleanTitle.length > 5 && cleanTitle.contains(key))) {
-                return GameHardwareProfile(
+                resolved = GameHardwareProfile(
                     deckStatus = predefined.deckStatus,
                     controllerSupport = predefined.controllerSupport,
                     sessionStyle = predefined.sessionStyle,
                     estimatedStorageGb = predefined.estimatedStorageGb,
                     manualStorageGb = game.manualInstallSizeGb
                 )
+                break
             }
         }
 
         // 3. Inference
-        return inferHardwareProfile(
+        val finalProfile = resolved ?: inferHardwareProfile(
             title = game.name,
             type = "Game",
             platforms = "Steam, PC",
@@ -228,6 +259,11 @@ object HardwareReadinessCatalog {
             numericWorth = 19.99,
             manualStorageGb = game.manualInstallSizeGb
         )
+
+        synchronized(cacheLock) {
+            PROFILE_CACHE[cacheKey] = finalProfile
+        }
+        return finalProfile
     }
 
     private fun inferHardwareProfile(

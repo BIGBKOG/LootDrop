@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.ui.graphics.Color
 import com.example.data.model.LauncherType
+import com.example.i18n.AppLanguage
 import com.example.ui.MainTab
 import com.example.ui.SortOption
 import com.example.ui.theme.EpicGamesBlue
@@ -383,6 +384,8 @@ class AppPreferences(context: Context) {
         private const val KEY_DISPLAYED_TROPHY_KEYS = "key_displayed_trophy_keys"
         private const val KEY_CUSTOM_FONT_PATH = "key_custom_font_path"
         private const val KEY_CUSTOM_FONT_NAME = "key_custom_font_name"
+        private const val KEY_APP_LANGUAGE = "key_app_language"
+        private const val KEY_HAS_SELECTED_INITIAL_LANGUAGE = "key_has_selected_initial_language"
     }
 
     var themeMode: ThemeMode
@@ -810,4 +813,12 @@ class AppPreferences(context: Context) {
     fun clearDismissedDlcs() {
         dismissedDlcAppIds = emptySet()
     }
+
+    var appLanguage: AppLanguage
+        get() = AppLanguage.fromCode(prefs.getString(KEY_APP_LANGUAGE, AppLanguage.ENGLISH.code))
+        set(value) = prefs.edit().putString(KEY_APP_LANGUAGE, value.code).apply()
+
+    var hasSelectedInitialLanguage: Boolean
+        get() = prefs.getBoolean(KEY_HAS_SELECTED_INITIAL_LANGUAGE, false)
+        set(value) = prefs.edit().putBoolean(KEY_HAS_SELECTED_INITIAL_LANGUAGE, value).apply()
 }

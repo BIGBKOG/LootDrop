@@ -4,20 +4,23 @@
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
 
-# Moshi & JSON Data Models
+# Moshi Codegen Adapters (@JsonClass(generateAdapter = true))
 -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
--keepclassmembers class * {
-    @com.squareup.moshi.Json <fields>;
+-keepnames @com.squareup.moshi.JsonClass class *
+-keep class **JsonAdapter {
+    public <init>(com.squareup.moshi.Moshi);
 }
--keepclassmembers class * {
-    @com.squareup.moshi.JsonClass *;
-}
--keep class com.example.data.model.** { *; }
--keep class com.example.data.remote.** { *; }
 
-# Room Database & Entities
+# Retrofit Service Interfaces (method signatures & generic return types)
+-keep,allowshrinking,allowobfuscation interface com.example.data.remote.GamerPowerApiService {
+    <methods>;
+}
+-keep,allowshrinking,allowobfuscation interface com.example.data.remote.CheapSharkApiService {
+    <methods>;
+}
+
+# Room Database
 -keep class * extends androidx.room.RoomDatabase
--keep class com.example.data.local.** { *; }
 -dontwarn androidx.room.paging.**
 
 # ViewModels & AndroidViewModel reflection instantiation (ViewModelProvider)
@@ -27,29 +30,20 @@
 -keepclassmembers class * extends androidx.lifecycle.ViewModel {
     public <init>();
 }
--keep class com.example.ui.GiveawaysViewModel { *; }
 
-# Retrofit & OkHttp
+# Suppress benign missing-reference warnings from networking/image libraries
 -dontwarn retrofit2.**
--keep class retrofit2.** { *; }
 -dontwarn okhttp3.**
--keep class okhttp3.** { *; }
-
-# Coil Image Loader
--keep class coil.** { *; }
 -dontwarn coil.**
-
-# Android App Widgets (RemoteViews Providers)
--keep class com.example.widget.** { *; }
 
 # R8 Bytecode & DEX Optimization Rules
 -repackageclasses ''
 -allowaccessmodification
--optimizations !code/simplification/arithmetic,!field/*,!class/merging/*
 
-# Strip verbose and debug logging in release builds to reduce DEX bytecode
+# Strip verbose, debug, and info logging in release builds to reduce DEX bytecode
 -assumenosideeffects class android.util.Log {
     public static boolean isLoggable(java.lang.String, int);
     public static int v(...);
     public static int d(...);
+    public static int i(...);
 }

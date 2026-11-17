@@ -1,0 +1,27 @@
+<resources>
+    <string name="app_name">LootDrop</string>
+    <string name="widget_latest_drop_desc">Muestra el juego gratis más reciente con reclamo rápido y detalles de tienda</string>
+    <string name="widget_radar_stats_desc">Radar en vivo de juegos gratis disponibles y total ahorrado en tu bóveda</string>
+    <string name="shortcut_expiring_soon_short">Por expirar</string>
+    <string name="shortcut_expiring_soon_long">Ofertas por expirar</string>
+    <string name="shortcut_todays_drops_short">Drops de hoy</string>
+    <string name="shortcut_todays_drops_long">Juegos gratis de hoy</string>
+    <string name="shortcut_my_vault_short">Mi bóveda</string>
+    <string name="shortcut_my_vault_long">Mi bóveda (Juegos reclamados)</string>
+    <string name="tile_free_games_label">Juegos Gratis</string>
+    <string name="tile_free_games_subtitle">Ver Drops</string>
+    <string name="widget_latest_header">LootDrop • Último Drop</string>
+    <string name="widget_refresh_drops">Actualizar drops</string>
+    <string name="widget_game_artwork">Portada del juego</string>
+    <string name="widget_no_cached_games">Sin juegos gratis en caché</string>
+    <string name="widget_free_badge">GRATIS</string>
+    <string name="widget_claim_btn">RECLAMAR</string>
+    <string name="widget_details_btn">DETALLES</string>
+    <string name="widget_radar_header">LootDrop Radar y Bóveda</string>
+    <string name="widget_refresh_stats">Actualizar estadísticas</string>
+    <string name="widget_active_placeholder">-- Activos</string>
+    <string name="widget_free_drops_label">Drops Gratis</string>
+    <string name="widget_saved_in_vault_label">Ahorrado en Bóveda</string>
+    <string name="widget_radar_btn">RADAR</string>
+    <string name="widget_vault_btn">MI BÓVEDA</string>
+</resources>

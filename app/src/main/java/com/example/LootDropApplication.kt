@@ -1,6 +1,9 @@
 package com.example
 
 import android.app.Application
+import android.content.ComponentCallbacks2
+import android.content.Context
+import coil.Coil
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.disk.DiskCache
@@ -37,6 +40,9 @@ class LootDropApplication : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+        runCatching {
+            com.example.i18n.LocaleSyncHelper.applyDefaultLocale(AppPreferences(this).appLanguage)
+        }
         runCatching {
             // Pre-warm the shared network client with disk cache
             ApiClient.getOkHttpClient(this)
@@ -81,7 +87,31 @@ class LootDropApplication : Application(), ImageLoaderFactory {
             .build()
     }
 
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW || level == ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) {
+            val aggressive = level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL || level >= ComponentCallbacks2.TRIM_MEMORY_COMPLETE
+            trimMemoryCaches(this, aggressive = aggressive)
+        }
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        trimMemoryCaches(this, aggressive = true)
+    }
+
     companion object {
+        fun trimMemoryCaches(context: Context, aggressive: Boolean = false) {
+            runCatching {
+                Coil.imageLoader(context).memoryCache?.clear()
+            }
+            if (aggressive) {
+                runCatching { com.example.util.MetacriticCatalog.clearCaches() }
+                runCatching { com.example.util.HardwareReadinessCatalog.clearCaches() }
+                runCatching { com.example.ui.calendar.ExpirationCalendarUtils.clearCache() }
+            }
+        }
+
         fun getImageCacheSizeBytes(application: Application): Long {
             return runCatching {
                 val imageCacheDir = application.cacheDir.resolve("image_cache")

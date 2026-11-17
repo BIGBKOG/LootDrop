@@ -44,6 +44,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
 import com.example.ui.theme.GamingCardBorder
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.TextMuted
@@ -65,6 +67,8 @@ fun OfficialOstSection(
     isLoading: Boolean = false
 ) {
     val context = LocalContext.current
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
     val spotifyGreen = Color(0xFF1DB954)
     val youtubeRed = Color(0xFFFF0000)
     val discogsOrange = Color(0xFFFF851B)
@@ -89,7 +93,7 @@ fun OfficialOstSection(
                     modifier = Modifier.size(16.dp)
                 )
                 Text(
-                    text = "OFFICIAL SOUNDTRACK (OST)",
+                    text = s.dialogs.ostSectionTitle,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (ostInfo != null) NeonCyan else TextMuted,
@@ -122,9 +126,9 @@ fun OfficialOstSection(
             ) {
                 Text(
                     text = when {
-                        isLoading -> "Checking OST..."
-                        ostInfo != null -> "🎵 Official OST"
-                        else -> "No OST"
+                        isLoading -> if (isEs) "Buscando OST..." else "Checking OST..."
+                        ostInfo != null -> "🎵 ${s.dialogs.ostVerifiedScore}"
+                        else -> if (isEs) "Sin OST" else "No OST"
                     },
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
@@ -193,7 +197,7 @@ fun OfficialOstSection(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Text(
-                                    text = if (ostInfo.composer.isNotBlank()) "Composed by ${ostInfo.composer}" else "Official Video Game Soundtrack",
+                                    text = if (ostInfo.composer.isNotBlank()) String.format(s.dialogs.ostComposerFormat, ostInfo.composer) else s.dialogs.ostVerifiedScore,
                                     fontSize = 11.sp,
                                     color = TextSecondary,
                                     maxLines = 1,
@@ -415,7 +419,7 @@ fun OfficialOstSection(
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        text = "Querying Discogs API & Spotify Web API for official soundtrack...",
+                        text = s.dialogs.ostChecking,
                         fontSize = 12.sp,
                         color = TextSecondary
                     )
@@ -448,13 +452,13 @@ fun OfficialOstSection(
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
-                            text = "No official soundtrack release found for this item.",
+                            text = if (isEs) "No se encontró banda sonora oficial para este artículo." else "No official soundtrack release found for this item.",
                             fontSize = 12.sp,
                             color = TextMuted
                         )
                     }
                     Text(
-                        text = "No OST",
+                        text = if (isEs) "Sin OST" else "No OST",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF94A3B8)

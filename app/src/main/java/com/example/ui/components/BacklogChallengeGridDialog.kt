@@ -1,7 +1,5 @@
 package com.example.ui.components
 
-import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -11,8 +9,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,7 +16,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -30,36 +25,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.HelpOutline
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.OpenInNew
-import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Stars
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -68,7 +48,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -80,15 +59,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.example.data.model.BacklogChallengeCategory
 import com.example.data.model.BacklogChallengeGrid
 import com.example.data.model.BacklogChallengeTile
 import com.example.data.model.BacklogMilestoneReward
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
+import com.example.i18n.localizedDisplayName
+import com.example.i18n.localizedTitle
 import com.example.preferences.AccentTheme
-import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
+import com.example.util.LocalLowEndOptimization
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -105,19 +86,26 @@ fun BacklogChallengeGridDialog(
 ) {
     val weekSelector = onSelectWeek ?: onSelectMonth
     val context = LocalContext.current
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
+    val lowEnd = LocalLowEndOptimization.current
     var selectedTile by remember { mutableStateOf<BacklogChallengeTile?>(null) }
     var showHowItWorks by remember { mutableStateOf(false) }
 
-    val infiniteTransition = rememberInfiniteTransition(label = "blackout_glow")
-    val glowAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 0.9f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "glow_pulse"
-    )
+    val glowAlpha = if (grid.isBlackout && !lowEnd) {
+        val infiniteTransition = rememberInfiniteTransition(label = "blackout_glow")
+        infiniteTransition.animateFloat(
+            initialValue = 0.4f,
+            targetValue = 0.9f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1200, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "glow_pulse"
+        ).value
+    } else {
+        0.75f
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -186,7 +174,7 @@ fun BacklogChallengeGridDialog(
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                 ) {
                                     Text(
-                                        text = "BLACKOUT!",
+                                        text = if (isEs) "¡CARTÓN LLENO!" else "BLACKOUT!",
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Black,
                                         color = Color.Black
@@ -197,17 +185,21 @@ fun BacklogChallengeGridDialog(
 
                         Text(
                             text = if (grid.isCurrentWeek) {
-                                "Auto-refreshes every Monday • ⏳ ${grid.daysRemaining} days left"
+                                if (isEs) {
+                                    "Se renueva cada lunes • ⏳ Quedan ${grid.daysRemaining} días"
+                                } else {
+                                    "Auto-refreshes every Monday • ⏳ ${grid.daysRemaining} days left"
+                                }
                             } else {
                                 val diff = com.example.util.BacklogChallengeManager.getWeeksBetween(
                                     com.example.util.BacklogChallengeManager.getCurrentWeekKey(),
                                     grid.weekKey
                                 )
                                 when {
-                                    diff == 1 -> "Upcoming Challenge Preview • Starts next Monday"
-                                    diff == 2 -> "Upcoming Challenge Preview • Starts in 2 weeks"
-                                    diff < 0 -> "Weekly Challenge Archive"
-                                    else -> "Upcoming Challenge Preview"
+                                    diff == 1 -> if (isEs) "Vista Previa • Empieza el próximo lunes" else "Upcoming Challenge Preview • Starts next Monday"
+                                    diff == 2 -> if (isEs) "Vista Previa • Empieza en 2 semanas" else "Upcoming Challenge Preview • Starts in 2 weeks"
+                                    diff < 0 -> if (isEs) "Archivo Semanal de Retos" else "Weekly Challenge Archive"
+                                    else -> if (isEs) "Vista Previa del Reto" else "Upcoming Challenge Preview"
                                 }
                             },
                             fontSize = 12.sp,
@@ -224,8 +216,8 @@ fun BacklogChallengeGridDialog(
                             modifier = Modifier.size(34.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.HelpOutline,
-                                contentDescription = "How it works",
+                                imageVector = Icons.AutoMirrored.Filled.HelpOutline,
+                                contentDescription = if (isEs) "Cómo funciona" else "How it works",
                                 tint = Color(0xFF94A3B8),
                                 modifier = Modifier.size(20.dp)
                             )
@@ -236,7 +228,7 @@ fun BacklogChallengeGridDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
-                                contentDescription = "Auto Check",
+                                contentDescription = if (isEs) "Comprobación automática" else "Auto Check",
                                 tint = Color(0xFFF59E0B),
                                 modifier = Modifier.size(20.dp)
                             )
@@ -247,7 +239,7 @@ fun BacklogChallengeGridDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Close",
+                                contentDescription = s.common.close,
                                 tint = Color.White,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -275,7 +267,7 @@ fun BacklogChallengeGridDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.ChevronLeft,
-                                contentDescription = "Previous Week",
+                                contentDescription = s.dialogs.challengePreviousWeek,
                                 tint = Color(0xFF94A3B8),
                                 modifier = Modifier.size(18.dp)
                             )
@@ -304,7 +296,7 @@ fun BacklogChallengeGridDialog(
                                     .padding(horizontal = 5.dp, vertical = 1.dp)
                             ) {
                                 Text(
-                                    text = "ACTIVE",
+                                    text = if (isEs) "ACTIVA" else "ACTIVE",
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF38BDF8)
@@ -320,7 +312,7 @@ fun BacklogChallengeGridDialog(
                                     .padding(horizontal = 5.dp, vertical = 1.dp)
                             ) {
                                 Text(
-                                    text = "PREVIEW (Tap for Active)",
+                                    text = if (isEs) "VISTA PREVIA (Ir a Activa)" else "PREVIEW (Tap for Active)",
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFFA78BFA)
@@ -336,7 +328,7 @@ fun BacklogChallengeGridDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.ChevronRight,
-                                contentDescription = "Next Week",
+                                contentDescription = s.dialogs.challengeNextWeek,
                                 tint = Color(0xFF94A3B8),
                                 modifier = Modifier.size(18.dp)
                             )
@@ -364,16 +356,16 @@ fun BacklogChallengeGridDialog(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "${grid.completedCount} / 9 Challenges Completed",
+                                text = s.dialogs.challengeCompletedTilesFormat.format(grid.completedCount),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (grid.isBlackout) Color(0xFFFFD700) else Color(0xFF38BDF8)
                             )
                             Text(
                                 text = when {
-                                    grid.isBlackout -> "🌟 FULL BLACKOUT CLEARED"
-                                    grid.totalLinesCompleted > 0 -> "⚡ ${grid.totalLinesCompleted} Line(s) Bingo!"
-                                    else -> "Complete any row, col, or diag!"
+                                    grid.isBlackout -> if (isEs) "🌟 CARTÓN COMPLETO" else "🌟 FULL BLACKOUT CLEARED"
+                                    grid.totalLinesCompleted > 0 -> "⚡ " + s.dialogs.challengeLinesDoneFormat.format(grid.totalLinesCompleted)
+                                    else -> if (isEs) "¡Completa una fila, col. o diagonal!" else "Complete any row, col, or diag!"
                                 },
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
@@ -397,12 +389,16 @@ fun BacklogChallengeGridDialog(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "🎯 Goal: Complete 3-in-a-row",
+                                text = if (isEs) "🎯 Meta: 3 casillas en línea" else "🎯 Goal: Complete 3-in-a-row",
                                 fontSize = 10.sp,
                                 color = TextMuted
                             )
                             Text(
-                                text = "Manual Unlocks: ${grid.manualOverridesUsed}/${grid.maxManualOverrides} used",
+                                text = if (isEs) {
+                                    "Desbloqueos manuales: ${grid.manualOverridesUsed}/${grid.maxManualOverrides}"
+                                } else {
+                                    "Manual Unlocks: ${grid.manualOverridesUsed}/${grid.maxManualOverrides} used"
+                                },
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = if (grid.manualOverridesUsed >= grid.maxManualOverrides) Color(0xFFFBBF24) else Color(0xFF38BDF8)
@@ -423,17 +419,25 @@ fun BacklogChallengeGridDialog(
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(
-                                text = "🎮 How Backlog Bingo Works:",
+                                text = if (isEs) "🎮 Cómo funciona el Bingo de Backlog:" else "🎮 How Backlog Bingo Works:",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFFFBBF24)
                             )
                             Text(
-                                text = "• Weekly Auto-Refresh: Every Monday at 00:00, your 3×3 challenge grid automatically refreshes with a fresh set of challenges sampled across all categories. Your unlocked themes and trophies remain permanently unlocked!\n" +
+                                text = if (isEs) {
+                                    "• Renovación semanal: Cada lunes a las 00:00 tu tablero 3×3 se renueva con nuevos retos de todas las categorías. ¡Tus temas y trofeos desbloqueados permanecen para siempre!\n" +
+                                        "• Seguimiento automático: Horas jugadas, juegos terminados y logros de Steam llenan casillas automáticamente.\n" +
+                                        "• Líneas Bingo: Cualquier línea de 3 (horizontal, vertical o diagonal) desbloquea el Trofeo y Tema Matabacklog.\n" +
+                                        "• Cartón Lleno: Completa las 9 casillas para reclamar el tema Oro de Bóveda 24K y el Trofeo Nebulosa Blackout.\n" +
+                                        "• Desbloqueo manual: ¿Juegas en consola o sin conexión? Puedes marcar manualmente hasta 2 casillas por semana (toca una casilla marcada para liberar el espacio)."
+                                } else {
+                                    "• Weekly Auto-Refresh: Every Monday at 00:00, your 3×3 challenge grid automatically refreshes with a fresh set of challenges sampled across all categories. Your unlocked themes and trophies remain permanently unlocked!\n" +
                                         "• Auto-Tracked: Playtime, beaten status, and Steam achievements automatically fill tiles.\n" +
                                         "• Line Bingos: Any 3-in-a-row (horizontal, vertical, or diagonal) unlocks the Backlog Slayer Trophy & Theme!\n" +
                                         "• Blackout: Clear all 9 tiles to claim the 24K Vault Cleaner Theme and Nebula Blackout Champion Trophy!\n" +
-                                        "• Manual Override: Playing on console/offline? You can manually unlock up to 2 challenges per week (tap an unlocked tile anytime to uncheck and free up a slot).",
+                                        "• Manual Override: Playing on console/offline? You can manually unlock up to 2 challenges per week (tap an unlocked tile anytime to uncheck and free up a slot)."
+                                },
                                 fontSize = 11.sp,
                                 color = Color(0xFFCBD5E1),
                                 lineHeight = 15.sp
@@ -494,10 +498,10 @@ fun BacklogChallengeGridDialog(
                             onClaimAll = {
                                 onClaimMilestones { newlyAwarded ->
                                     val count = newlyAwarded.size
-                                    val titles = newlyAwarded.joinToString(", ") { it.title }
+                                    val titles = newlyAwarded.joinToString(", ") { it.localizedTitle(s) }
                                     Toast.makeText(
                                         context,
-                                        "🎉 Unlocked $count Milestone(s): $titles!",
+                                        if (isEs) "🎉 Desbloqueaste $count recompensa(s): $titles" else "🎉 Unlocked $count Milestone(s): $titles!",
                                         Toast.LENGTH_LONG
                                     ).show()
                                 }
@@ -528,20 +532,32 @@ fun BacklogChallengeGridDialog(
                     if (newManual) {
                         Toast.makeText(
                             context,
-                            "✅ Challenge manually unlocked (${grid.manualOverridesUsed + 1}/${grid.maxManualOverrides} used)",
+                            if (isEs) {
+                                "✅ Casilla marcada manualmente (${grid.manualOverridesUsed + 1}/${grid.maxManualOverrides} usadas)"
+                            } else {
+                                "✅ Challenge manually unlocked (${grid.manualOverridesUsed + 1}/${grid.maxManualOverrides} used)"
+                            },
                             Toast.LENGTH_SHORT
                         ).show()
                     } else {
                         Toast.makeText(
                             context,
-                            "Manual unlock cleared (${(grid.manualOverridesUsed - 1).coerceAtLeast(0)}/${grid.maxManualOverrides} used)",
+                            if (isEs) {
+                                "Desbloqueo manual liberado (${(grid.manualOverridesUsed - 1).coerceAtLeast(0)}/${grid.maxManualOverrides} usadas)"
+                            } else {
+                                "Manual unlock cleared (${(grid.manualOverridesUsed - 1).coerceAtLeast(0)}/${grid.maxManualOverrides} used)"
+                            },
                             Toast.LENGTH_SHORT
                         ).show()
                     }
                 } else {
                     Toast.makeText(
                         context,
-                        "⚠️ Manual unlock limit reached! You can only manually unlock 2 challenges per week.",
+                        if (isEs) {
+                            "⚠️ ¡Límite alcanzado! Solo puedes marcar manualmente 2 retos por semana."
+                        } else {
+                            "⚠️ Manual unlock limit reached! You can only manually unlock 2 challenges per week."
+                        },
                         Toast.LENGTH_LONG
                     ).show()
                 }
@@ -557,14 +573,22 @@ private fun BingoTileCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val borderColor by animateColorAsState(
-        targetValue = when {
-            tile.isCompleted && isInWinningLine -> Color(0xFFFFD700)
-            tile.isCompleted -> Color(0xFF10B981)
-            else -> Color(0xFF1E293B)
-        },
-        label = "tile_border"
-    )
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
+    val lowEnd = LocalLowEndOptimization.current
+    val targetBorderColor = when {
+        tile.isCompleted && isInWinningLine -> Color(0xFFFFD700)
+        tile.isCompleted -> Color(0xFF10B981)
+        else -> Color(0xFF1E293B)
+    }
+    val borderColor = if (lowEnd) {
+        targetBorderColor
+    } else {
+        animateColorAsState(
+            targetValue = targetBorderColor,
+            label = "tile_border"
+        ).value
+    }
 
     val backgroundBrush = if (tile.isCompleted) {
         if (isInWinningLine) {
@@ -623,7 +647,7 @@ private fun BingoTileCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = "Completed",
+                            contentDescription = if (isEs) "Completado" else "Completed",
                             tint = Color.Black,
                             modifier = Modifier.size(12.dp)
                         )
@@ -647,7 +671,7 @@ private fun BingoTileCard(
 
             // Center: Title
             Text(
-                text = tile.title,
+                text = tile.localizedTitle(s),
                 fontSize = 11.sp,
                 fontWeight = if (tile.isCompleted) FontWeight.Bold else FontWeight.SemiBold,
                 color = if (tile.isCompleted) {
@@ -661,433 +685,19 @@ private fun BingoTileCard(
             // Bottom pill: Category / Manual indicator
             if (tile.manualOverrideDone) {
                 Text(
-                    text = "Manual Done",
+                    text = if (isEs) "Manual" else "Manual Done",
                     fontSize = 8.sp,
                     color = Color(0xFFFBBF24),
                     fontWeight = FontWeight.Bold
                 )
             } else {
                 Text(
-                    text = tile.category.displayName,
+                    text = tile.category.localizedDisplayName(s),
                     fontSize = 8.sp,
                     color = TextMuted,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun MilestonesShelf(
-    milestones: List<BacklogMilestoneReward>,
-    onClaimAll: () -> Unit,
-    onEquipTheme: (AccentTheme) -> Unit
-) {
-    val unclaimedCount = milestones.count { it.isUnlocked && !it.isClaimed }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF111827))
-            .border(1.dp, Color(0xFF1E293B), RoundedCornerShape(16.dp))
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(
-                    text = "🏆 Milestone Rewards",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                if (unclaimedCount > 0) {
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(Color(0xFFEF4444))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = "$unclaimedCount NEW",
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Black,
-                            color = Color.White
-                        )
-                    }
-                }
-            }
-
-            if (unclaimedCount > 0) {
-                Button(
-                    onClick = onClaimAll,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF59E0B)),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier
-                        .height(32.dp)
-                        .testTag("claim_all_backlog_milestones")
-                ) {
-                    Text(
-                        text = "Claim All",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black
-                    )
-                }
-            }
-        }
-
-        milestones.forEach { milestone ->
-            MilestoneItemRow(
-                milestone = milestone,
-                onEquipTheme = onEquipTheme
-            )
-        }
-    }
-}
-
-@Composable
-private fun MilestoneItemRow(
-    milestone: BacklogMilestoneReward,
-    onEquipTheme: (AccentTheme) -> Unit
-) {
-    val isUnlocked = milestone.isUnlocked
-    val isClaimed = milestone.isClaimed
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(if (isClaimed) Color(0xFF14241B) else if (isUnlocked) Color(0xFF1E293B) else Color(0xFF0F172A))
-            .border(
-                1.dp,
-                if (isClaimed) Color(0xFF10B981).copy(alpha = 0.5f) else if (isUnlocked) Color(0xFFF59E0B).copy(alpha = 0.6f) else Color(0xFF1E293B),
-                RoundedCornerShape(10.dp)
-            )
-            .padding(10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        // Icon / Status badge
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(
-                    if (isClaimed) Color(0xFF10B981).copy(alpha = 0.2f)
-                    else if (isUnlocked) Color(0xFFF59E0B).copy(alpha = 0.2f)
-                    else Color(0xFF1E293B)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            if (isClaimed) {
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = "Claimed",
-                    tint = Color(0xFF10B981),
-                    modifier = Modifier.size(20.dp)
-                )
-            } else if (isUnlocked) {
-                Icon(
-                    imageVector = Icons.Default.Stars,
-                    contentDescription = "Unlocked",
-                    tint = Color(0xFFF59E0B),
-                    modifier = Modifier.size(20.dp)
-                )
-            } else {
-                Icon(
-                    imageVector = Icons.Default.Lock,
-                    contentDescription = "Locked",
-                    tint = Color(0xFF64748B),
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-        }
-
-        // Details
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = milestone.title,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (isClaimed) Color(0xFF86EFAC) else if (isUnlocked) Color(0xFFFDE68A) else Color(0xFF94A3B8)
-            )
-            Text(
-                text = milestone.subtitle,
-                fontSize = 10.sp,
-                color = TextSecondary
-            )
-        }
-
-        // Action Buttons: Equip Theme or Claimed Badge
-        if (isClaimed && milestone.themeReward != null) {
-            Button(
-                onClick = { onEquipTheme(milestone.themeReward) },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.height(28.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Palette,
-                        contentDescription = null,
-                        modifier = Modifier.size(12.dp),
-                        tint = Color.White
-                    )
-                    Text("Equip", fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        } else if (isClaimed) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(Color(0xFF10B981).copy(alpha = 0.15f))
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-            ) {
-                Text(
-                    text = "In Showcase",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF34D399)
-                )
-            }
-        } else {
-            Text(
-                text = if (isUnlocked) "Ready to Claim" else "Locked",
-                fontSize = 10.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = if (isUnlocked) Color(0xFFFBBF24) else TextMuted
-            )
-        }
-    }
-}
-
-@Composable
-private fun TileDetailDialog(
-    tile: BacklogChallengeTile,
-    grid: BacklogChallengeGrid,
-    onDismiss: () -> Unit,
-    onToggleManual: () -> Unit
-) {
-    val context = LocalContext.current
-
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .border(1.dp, Color(0xFF334155), RoundedCornerShape(20.dp)),
-            color = Color(0xFF0F172A)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(text = tile.emoji, fontSize = 28.sp)
-                        Column {
-                            Text(
-                                text = tile.title,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                            Text(
-                                text = "Category: ${tile.category.displayName}",
-                                fontSize = 11.sp,
-                                color = Color(0xFF94A3B8)
-                            )
-                        }
-                    }
-
-                    IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = Color.White,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-
-                // Description
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF1E293B))
-                        .padding(12.dp)
-                ) {
-                    Text(
-                        text = tile.description,
-                        fontSize = 13.sp,
-                        color = Color(0xFFE2E8F0),
-                        lineHeight = 18.sp
-                    )
-                }
-
-                // Progress Info
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Progress: ${tile.currentProgress} / ${tile.targetRequirement}",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (tile.isCompleted) Color(0xFF34D399) else Color(0xFF38BDF8)
-                    )
-
-                    if (tile.isCompleted) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = null,
-                                tint = Color(0xFF34D399),
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Text(
-                                text = if (tile.manualOverrideDone) "Manual Done" else "Auto-Completed",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF34D399)
-                            )
-                        }
-                    }
-                }
-
-                // Recommended Game if present
-                tile.recommendedGameTitle?.let { title ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFF1E293B).copy(alpha = 0.6f))
-                            .border(1.dp, Color(0xFF38BDF8).copy(alpha = 0.3f), RoundedCornerShape(10.dp))
-                            .padding(10.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "💡 Recommended From Library:",
-                                    fontSize = 10.sp,
-                                    color = Color(0xFF38BDF8),
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Text(
-                                    text = title,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-
-                            if (tile.recommendedAppId != null && tile.recommendedAppId > 0) {
-                                TextButton(
-                                    onClick = {
-                                        try {
-                                            val steamUri = Uri.parse("steam://run/${tile.recommendedAppId}")
-                                            val intent = Intent(Intent.ACTION_VIEW, steamUri)
-                                            context.startActivity(intent)
-                                        } catch (_: Exception) {
-                                            val webUri = Uri.parse("https://store.steampowered.com/app/${tile.recommendedAppId}")
-                                            context.startActivity(Intent(Intent.ACTION_VIEW, webUri))
-                                        }
-                                    }
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        Text("Launch", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                        Icon(
-                                            imageVector = Icons.Default.OpenInNew,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(12.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Manual Toggle Action (Offline / Console Play)
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = onToggleManual,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("toggle_manual_tile_${tile.index}"),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = when {
-                                tile.manualOverrideDone -> Color(0xFFEF4444)
-                                grid.canManualOverrideMore -> Color(0xFFF59E0B)
-                                else -> Color(0xFF94A3B8)
-                            }
-                        ),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text(
-                            text = when {
-                                tile.manualOverrideDone -> "Clear Manual Unlock (Free up slot)"
-                                grid.canManualOverrideMore -> "Mark Done Manually (${grid.remainingManualOverrides} left)"
-                                else -> "Manual Unlock Limit Reached (2/2 Used)"
-                            },
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    Text(
-                        text = when {
-                            tile.manualOverrideDone -> "Tap to uncheck and free up 1 of your 2 weekly manual unlocks"
-                            grid.canManualOverrideMore -> "Allowance: ${grid.manualOverridesUsed}/${grid.maxManualOverrides} used this week"
-                            else -> "Limit of 2 manual unlocks reached this week. Clear another tile first to use here."
-                        },
-                        fontSize = 10.sp,
-                        color = Color(0xFF94A3B8),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
             }
         }
     }

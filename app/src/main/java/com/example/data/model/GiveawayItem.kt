@@ -3,6 +3,10 @@ package com.example.data.model
 import androidx.compose.runtime.Immutable
 import com.example.util.MetacriticCatalog
 
+private val PLATFORM_SPLIT_ALL_REGEX = Regex("[,/| ]+")
+private val LAUNCHER_SPLIT_REGEX = Regex("[,/|]+")
+private val STRIP_TITLE_WORDS_REGEX = Regex("(?i)\\b(giveaway|free|dlc|pack|key)\\b")
+
 @Immutable
 data class GiveawayItem(
     val id: Int,
@@ -115,9 +119,9 @@ data class GiveawayItem(
                 lower.contains("android") -> LauncherType.ANDROID
                 lower.contains("ios") || lower.contains("iphone") || lower.contains("ipad") -> LauncherType.IOS
                 lower.contains("ubisoft") || lower.contains("uplay") -> LauncherType.UBISOFT
-                lower.contains("itch.io") || lower.contains("itchio") || lower.split(Regex("[,/ ]+")).any { it == "itch" } -> LauncherType.ITCH_IO
+                lower.contains("itch.io") || lower.contains("itchio") || lower.split(PLATFORM_SPLIT_ALL_REGEX).any { it == "itch" } -> LauncherType.ITCH_IO
                 lower.contains("amazon") || lower.contains("prime") -> LauncherType.PRIME
-                lower.contains("origin") || lower.contains("ea app") || lower.split(Regex("[,/ ]+")).any { it == "ea" } -> LauncherType.EA_ORIGIN
+                lower.contains("origin") || lower.contains("ea app") || lower.split(PLATFORM_SPLIT_ALL_REGEX).any { it == "ea" } -> LauncherType.EA_ORIGIN
                 lower.contains("battlenet") || lower.contains("battle.net") -> LauncherType.BATTLENET
                 else -> LauncherType.OTHER
             }
@@ -127,11 +131,13 @@ data class GiveawayItem(
         get() = availableLaunchers.filter { it.launcherType != LauncherType.OTHER }.size > 1
 
     val availableLaunchers: List<LauncherOption>
-        get() {
-            val lower = platforms.lowercase()
-            val tokens = lower.split(Regex("[,/|]+")).map { it.trim() }
+        get() = getAvailableLaunchers(false)
+
+    fun getAvailableLaunchers(isSpanish: Boolean = false): List<LauncherOption> {
+        val lower = platforms.lowercase()
+        val tokens = lower.split(LAUNCHER_SPLIT_REGEX).map { it.trim() }
         val encodedTitle = try {
-            java.net.URLEncoder.encode(title.replace(Regex("(?i)\\b(giveaway|free|dlc|pack|key)\\b"), "").trim(), "UTF-8")
+            java.net.URLEncoder.encode(title.replace(STRIP_TITLE_WORDS_REGEX, "").trim(), "UTF-8")
         } catch (e: Exception) {
             title
         }
@@ -143,7 +149,7 @@ data class GiveawayItem(
                 LauncherOption(
                     launcherType = LauncherType.STEAM,
                     name = "Steam",
-                    subtitle = "Claim on Steam Store (PC)",
+                    subtitle = if (isSpanish) "Reclamar en Tienda Steam (PC)" else "Claim on Steam Store (PC)",
                     url = steamUrl,
                     badgeColorHex = 0xFF66C0F4
                 )
@@ -156,7 +162,7 @@ data class GiveawayItem(
                 LauncherOption(
                     launcherType = LauncherType.EPIC,
                     name = "Epic Games Store",
-                    subtitle = "Claim on Epic Games Store",
+                    subtitle = if (isSpanish) "Reclamar en Epic Games Store" else "Claim on Epic Games Store",
                     url = epicUrl,
                     badgeColorHex = 0xFF0078F2
                 )
@@ -207,7 +213,7 @@ data class GiveawayItem(
                 LauncherOption(
                     launcherType = LauncherType.NINTENDO,
                     name = "Nintendo eShop",
-                    subtitle = "Nintendo Switch eShop (100% Off)",
+                    subtitle = if (isSpanish) "Nintendo Switch eShop (100% Gratis)" else "Nintendo Switch eShop (100% Off)",
                     url = nintendoUrl,
                     badgeColorHex = 0xFFE60012
                 )
@@ -220,7 +226,7 @@ data class GiveawayItem(
                 LauncherOption(
                     launcherType = LauncherType.GOG,
                     name = "GOG.com",
-                    subtitle = "Claim DRM-Free on GOG",
+                    subtitle = if (isSpanish) "Reclamar sin DRM en GOG" else "Claim DRM-Free on GOG",
                     url = gogUrl,
                     badgeColorHex = 0xFFBA55D3
                 )
@@ -232,7 +238,7 @@ data class GiveawayItem(
                 LauncherOption(
                     launcherType = LauncherType.UBISOFT,
                     name = "Ubisoft Connect",
-                    subtitle = "Ubisoft Store page",
+                    subtitle = if (isSpanish) "Página de Tienda Ubisoft" else "Ubisoft Store page",
                     url = openGiveawayUrl,
                     badgeColorHex = 0xFF00A2FF
                 )
@@ -244,7 +250,7 @@ data class GiveawayItem(
                 LauncherOption(
                     launcherType = LauncherType.ITCH_IO,
                     name = "itch.io",
-                    subtitle = "Claim indie DRM-Free on itch.io",
+                    subtitle = if (isSpanish) "Reclamar indie sin DRM en itch.io" else "Claim indie DRM-Free on itch.io",
                     url = if (openGiveawayUrl.contains("itch.io")) openGiveawayUrl else "https://itch.io/search?q=$encodedTitle",
                     badgeColorHex = 0xFFFA5C5C
                 )
@@ -256,7 +262,7 @@ data class GiveawayItem(
                 LauncherOption(
                     launcherType = LauncherType.PRIME,
                     name = "Prime Gaming",
-                    subtitle = "Claim via Amazon Prime Gaming",
+                    subtitle = if (isSpanish) "Reclamar vía Amazon Prime Gaming" else "Claim via Amazon Prime Gaming",
                     url = if (openGiveawayUrl.contains("gaming.amazon.com")) openGiveawayUrl else "https://gaming.amazon.com/home",
                     badgeColorHex = 0xFFFF9900
                 )
@@ -268,7 +274,7 @@ data class GiveawayItem(
                 LauncherOption(
                     launcherType = LauncherType.EA_ORIGIN,
                     name = "EA App",
-                    subtitle = "Electronic Arts Store",
+                    subtitle = if (isSpanish) "Tienda Electronic Arts" else "Electronic Arts Store",
                     url = openGiveawayUrl,
                     badgeColorHex = 0xFFFF4500
                 )
@@ -280,7 +286,7 @@ data class GiveawayItem(
                 LauncherOption(
                     launcherType = LauncherType.BATTLENET,
                     name = "Battle.net",
-                    subtitle = "Blizzard Battle.net Store",
+                    subtitle = if (isSpanish) "Tienda Blizzard Battle.net" else "Blizzard Battle.net Store",
                     url = openGiveawayUrl,
                     badgeColorHex = 0xFF00B4FF
                 )
@@ -293,7 +299,7 @@ data class GiveawayItem(
                 LauncherOption(
                     launcherType = LauncherType.ANDROID,
                     name = "Google Play / Android",
-                    subtitle = "Claim on Google Play Store (Android)",
+                    subtitle = if (isSpanish) "Reclamar en Google Play Store (Android)" else "Claim on Google Play Store (Android)",
                     url = androidUrl,
                     badgeColorHex = 0xFF3DDC84
                 )
@@ -306,7 +312,7 @@ data class GiveawayItem(
                 LauncherOption(
                     launcherType = LauncherType.IOS,
                     name = "Apple App Store / iOS",
-                    subtitle = "Claim on App Store (iPhone & iPad)",
+                    subtitle = if (isSpanish) "Reclamar en App Store (iPhone y iPad)" else "Claim on App Store (iPhone & iPad)",
                     url = iosUrl,
                     badgeColorHex = 0xFF007AFF
                 )
@@ -317,8 +323,8 @@ data class GiveawayItem(
         options.add(
             LauncherOption(
                 launcherType = LauncherType.OTHER,
-                name = "Official Giveaway Page",
-                subtitle = "Direct promotion & key redemption",
+                name = if (isSpanish) "Página Oficial del Regalo" else "Official Giveaway Page",
+                subtitle = if (isSpanish) "Promoción directa y canje de clave" else "Direct promotion & key redemption",
                 url = openGiveawayUrl,
                 badgeColorHex = 0xFF00E5FF,
                 isDirectStore = false
@@ -331,29 +337,32 @@ data class GiveawayItem(
     fun matchesLauncher(type: LauncherType): Boolean {
         if (type == LauncherType.ALL) return true
         val lower = platforms.lowercase()
-        val tokens = lower.split(Regex("[,/| ]+")).map { it.trim() }
         return when (type) {
             LauncherType.ALL -> true
-            LauncherType.PLAYSTATION -> isPlayStation
-            LauncherType.XBOX -> isXbox
-            LauncherType.NINTENDO -> isNintendo
-            LauncherType.ANDROID -> isAndroid
-            LauncherType.IOS -> isIos
+            LauncherType.PLAYSTATION -> lower.contains("playstation") || lower.contains("ps4") || lower.contains("ps5") || lower.contains("ps3") || lower.contains("psvr")
+            LauncherType.XBOX -> lower.contains("xbox")
+            LauncherType.NINTENDO -> lower.contains("nintendo") || lower.contains("switch")
+            LauncherType.ANDROID -> lower.contains("android")
+            LauncherType.IOS -> lower.contains("ios") || lower.contains("iphone") || lower.contains("ipad") || lower.contains("apple")
             LauncherType.STEAM -> lower.contains("steam")
             LauncherType.EPIC -> lower.contains("epic")
             LauncherType.GOG -> lower.contains("gog")
             LauncherType.UBISOFT -> lower.contains("ubisoft") || lower.contains("uplay")
-            LauncherType.ITCH_IO -> lower.contains("itch.io") || lower.contains("itchio") || tokens.any { it == "itch" }
+            LauncherType.ITCH_IO -> lower.contains("itch.io") || lower.contains("itchio") || hasExactPlatformToken(lower, "itch")
             LauncherType.PRIME -> lower.contains("amazon") || lower.contains("prime")
-            LauncherType.EA_ORIGIN -> lower.contains("origin") || lower.contains("ea app") || tokens.any { it == "ea" }
+            LauncherType.EA_ORIGIN -> lower.contains("origin") || lower.contains("ea app") || hasExactPlatformToken(lower, "ea")
             LauncherType.BATTLENET -> lower.contains("battlenet") || lower.contains("battle.net")
             LauncherType.OTHER -> !lower.contains("steam") && !lower.contains("epic") && !lower.contains("gog") &&
                     !lower.contains("playstation") && !lower.contains("xbox") && !lower.contains("nintendo") &&
                     !lower.contains("switch") && !lower.contains("ubisoft") &&
                     !lower.contains("android") && !lower.contains("ios") && !lower.contains("iphone") && !lower.contains("ipad") &&
-                    !(lower.contains("itch.io") || lower.contains("itchio") || tokens.any { it == "itch" }) &&
-                    !lower.contains("prime") && !lower.contains("origin") && !tokens.any { it == "ea" }
+                    !(lower.contains("itch.io") || lower.contains("itchio") || hasExactPlatformToken(lower, "itch")) &&
+                    !lower.contains("prime") && !lower.contains("origin") && !hasExactPlatformToken(lower, "ea")
         }
+    }
+
+    private fun hasExactPlatformToken(lower: String, target: String): Boolean {
+        return lower.split(PLATFORM_SPLIT_ALL_REGEX).any { it.trim() == target }
     }
 }
 

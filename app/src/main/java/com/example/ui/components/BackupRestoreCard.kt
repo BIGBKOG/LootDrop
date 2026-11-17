@@ -41,9 +41,9 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -68,6 +68,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
 import com.example.ui.GiveawaysViewModel
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGreen
@@ -83,6 +85,8 @@ fun BackupRestoreCard(
     viewModel: GiveawaysViewModel,
     modifier: Modifier = Modifier
 ) {
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
     val context = LocalContext.current
     val uiStats by viewModel.uiStats.collectAsState()
     val isBackingUpOrRestoring by viewModel.isBackingUpOrRestoring.collectAsState()
@@ -170,13 +174,13 @@ fun BackupRestoreCard(
 
                     Column {
                         Text(
-                            text = "Backup & Restore Games",
+                            text = if (isEs) "Respaldar y Restaurar Juegos" else "Backup & Restore Games",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Export, sync or transfer library across devices",
+                            text = if (isEs) "Exporta, sincroniza o transfiere tu biblioteca entre dispositivos" else "Export, sync or transfer library across devices",
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -218,7 +222,7 @@ fun BackupRestoreCard(
                     ) {
                         Text("🎮", fontSize = 12.sp)
                         Text(
-                            text = "Vault: ${uiStats.claimedCount} claimed",
+                            text = if (isEs) "Bóveda: ${uiStats.claimedCount} reclamados" else "Vault: ${uiStats.claimedCount} claimed",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = TextPrimary
@@ -231,7 +235,7 @@ fun BackupRestoreCard(
                     ) {
                         Text("⚡", fontSize = 12.sp)
                         Text(
-                            text = "Steam: ${uiStats.steamTotalCount} games",
+                            text = if (isEs) "Steam: ${uiStats.steamTotalCount} juegos" else "Steam: ${uiStats.steamTotalCount} games",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = NeonCyan
@@ -241,7 +245,7 @@ fun BackupRestoreCard(
             }
 
             Text(
-                text = "Export your claimed games, play statuses (Unplayed/Playing/Beaten), and Steam library to a single JSON file. Works with Google Drive, local storage, or SD cards.",
+                text = s.settings.backupLocalSub,
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 lineHeight = 16.sp
@@ -281,7 +285,7 @@ fun BackupRestoreCard(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
-                                    contentDescription = "Dismiss",
+                                    contentDescription = s.common.dismiss,
                                     tint = TextSecondary,
                                     modifier = Modifier.size(14.dp)
                                 )
@@ -327,7 +331,7 @@ fun BackupRestoreCard(
                         ) {
                             Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
                             Text(
-                                text = "Export File",
+                                text = s.settings.backupExportBtn,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -355,7 +359,7 @@ fun BackupRestoreCard(
                     ) {
                         Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                         Text(
-                            text = "Restore Games",
+                            text = s.settings.backupRestoreBtn,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -363,7 +367,7 @@ fun BackupRestoreCard(
                 }
             }
 
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), thickness = 0.5.dp)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), thickness = 0.5.dp)
 
             // --- SECTION: Automatic Cloud & Drive Backup ---
             Column(
@@ -400,13 +404,13 @@ fun BackupRestoreCard(
 
                         Column {
                             Text(
-                                text = "Auto-Backup to Cloud / Drive",
+                                text = s.settings.backupAutoTitle,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Keeps backup current in your Google Drive or cloud folder",
+                                text = s.settings.backupAutoSub,
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -470,7 +474,7 @@ fun BackupRestoreCard(
                                             modifier = Modifier.size(18.dp)
                                         )
                                         Text(
-                                            text = "BACKUP DESTINATION",
+                                            text = if (isEs) "CARPETA DE DESTINO" else "BACKUP DESTINATION",
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -484,7 +488,7 @@ fun BackupRestoreCard(
                                             color = NeonGreen.copy(alpha = 0.15f)
                                         ) {
                                             Text(
-                                                text = "ACTIVE",
+                                                text = s.settings.languageActiveBadge,
                                                 fontSize = 9.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = NeonGreen,
@@ -502,13 +506,13 @@ fun BackupRestoreCard(
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = "Sync target: lootdrop_backup_latest.json",
+                                        text = if (isEs) "Archivo: lootdrop_backup_latest.json" else "Sync target: lootdrop_backup_latest.json",
                                         fontSize = 11.sp,
                                         color = TextMuted
                                     )
                                 } else {
                                     Text(
-                                        text = "No cloud folder selected yet. Tap below to choose a Google Drive folder or device directory.",
+                                        text = if (isEs) "Aún no hay carpeta elegida. Pulsa abajo para elegir una carpeta en Google Drive o almacenamiento local." else "No cloud folder selected yet. Tap below to choose a Google Drive folder or device directory.",
                                         fontSize = 11.sp,
                                         color = Color(0xFFF59E0B),
                                         lineHeight = 15.sp
@@ -532,7 +536,11 @@ fun BackupRestoreCard(
                                         )
                                     ) {
                                         Text(
-                                            text = if (autoBackupFolderDisplayName.isBlank()) "Choose Google Drive / Cloud Folder" else "Change Folder",
+                                            text = if (autoBackupFolderDisplayName.isBlank()) {
+                                                s.settings.backupSelectFolderBtn
+                                            } else {
+                                                if (isEs) "Cambiar Carpeta" else "Change Folder"
+                                            },
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold
                                         )
@@ -545,7 +553,7 @@ fun BackupRestoreCard(
                                             shape = RoundedCornerShape(8.dp),
                                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                                         ) {
-                                            Text("Clear", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            Text(s.common.clear, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         }
                                     }
                                 }
@@ -568,7 +576,7 @@ fun BackupRestoreCard(
                                     modifier = Modifier.size(14.dp)
                                 )
                                 Text(
-                                    text = "Auto-Backup Interval",
+                                    text = if (isEs) "Intervalo de Auto-Respaldo" else "Auto-Backup Interval",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
@@ -580,10 +588,10 @@ fun BackupRestoreCard(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 val frequencies = listOf(
-                                    1 to "Daily",
-                                    2 to "Every 2 Days",
-                                    3 to "Every 3 Days",
-                                    7 to "Weekly"
+                                    1 to (if (isEs) "Diario" else "Daily"),
+                                    2 to (if (isEs) "Cada 2 Días" else "Every 2 Days"),
+                                    3 to (if (isEs) "Cada 3 Días" else "Every 3 Days"),
+                                    7 to (if (isEs) "Semanal" else "Weekly")
                                 )
 
                                 for ((days, label) in frequencies) {
@@ -671,7 +679,10 @@ fun BackupRestoreCard(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Writing to Cloud Folder...", fontSize = 12.sp)
+                                Text(
+                                    text = if (isEs) "Escribiendo en Carpeta..." else "Writing to Cloud Folder...",
+                                    fontSize = 12.sp
+                                )
                             } else {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -679,7 +690,7 @@ fun BackupRestoreCard(
                                 ) {
                                     Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(15.dp))
                                     Text(
-                                        text = "Back Up to Folder Now (Keep Current)",
+                                        text = s.settings.backupRunNowBtn,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -707,18 +718,18 @@ fun BackupRestoreCard(
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(22.dp)
                     )
-                    Text("Restore Games from File?")
+                    Text(if (isEs) "¿Restaurar Juegos desde Archivo?" else "Restore Games from File?")
                 }
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "Select a previously exported LootDrop JSON backup file to restore your claimed Vault games, play statuses, and Steam library.",
+                        text = if (isEs) "Elige un archivo de respaldo JSON exportado anteriormente para restaurar tu Bóveda reclamada, estados de juego y biblioteca Steam." else "Select a previously exported LootDrop JSON backup file to restore your claimed Vault games, play statuses, and Steam library.",
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "• Existing claimed games are safely preserved\n• Works with files from Google Drive, cloud, or device\n• Instant one-tap import",
+                        text = if (isEs) "• Tus juegos reclamados actuales se conservan\n• Compatible con Google Drive, nube o dispositivo\n• Importación al instante en un toque" else "• Existing claimed games are safely preserved\n• Works with files from Google Drive, cloud, or device\n• Instant one-tap import",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         lineHeight = 17.sp
@@ -737,12 +748,12 @@ fun BackupRestoreCard(
                     ),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Select File & Restore", fontWeight = FontWeight.Bold)
+                    Text(if (isEs) "Elegir Archivo y Restaurar" else "Select File & Restore", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showRestoreConfirmDialog = false }) {
-                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(s.common.cancel, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
             containerColor = MaterialTheme.colorScheme.surface

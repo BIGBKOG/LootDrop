@@ -20,7 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -39,10 +39,28 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.MetacriticInfo
 import com.example.data.model.MetacriticRatingTier
+import com.example.i18n.AppLanguage
+import com.example.i18n.AppStrings
+import com.example.i18n.LocalAppStrings
 import com.example.ui.theme.GamingCardBorder
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
+
+private fun MetacriticRatingTier.localizedTierLabel(s: AppStrings): String = when (this) {
+    MetacriticRatingTier.UNIVERSAL_ACCLAIM -> s.library.metacriticUniversalAcclaim
+    MetacriticRatingTier.GENERALLY_FAVORABLE -> s.library.metacriticGenerallyFavorable
+    MetacriticRatingTier.MIXED_REVIEWS -> s.library.metacriticMixedAverage
+    MetacriticRatingTier.UNFAVORABLE -> s.library.metacriticUnfavorable
+}
+
+private fun MetacriticRatingTier.localizedTierSummary(s: AppStrings): String =
+    if (s.language == AppLanguage.ENGLISH) summary else when (this) {
+        MetacriticRatingTier.UNIVERSAL_ACCLAIM -> "Aclamación universal de la crítica"
+        MetacriticRatingTier.GENERALLY_FAVORABLE -> "Críticas mayormente positivas"
+        MetacriticRatingTier.MIXED_REVIEWS -> "Críticas mixtas o promedio"
+        MetacriticRatingTier.UNFAVORABLE -> "Críticas negativas o desfavorables"
+    }
 
 /**
  * Compact Metacritic score pill for game cards and list items.
@@ -134,6 +152,8 @@ fun MetacriticDetailBadge(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null
 ) {
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
     val tier = info.tier
     val isLightColor = tier != MetacriticRatingTier.UNFAVORABLE
 
@@ -179,14 +199,14 @@ fun MetacriticDetailBadge(
                 if (info.score >= 90) {
                     Icon(
                         imageVector = Icons.Default.Star,
-                        contentDescription = "Must-Play",
+                        contentDescription = if (isEs) "Imprescindible" else "Must-Play",
                         tint = tier.badgeColor,
                         modifier = Modifier.size(10.dp)
                     )
                 }
             }
             Text(
-                text = tier.label,
+                text = tier.localizedTierLabel(s),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = tier.badgeColor
@@ -205,6 +225,8 @@ fun MetacriticDetailSection(
     context: Context,
     modifier: Modifier = Modifier
 ) {
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
     val tier = info.tier
     val isLightColor = tier != MetacriticRatingTier.UNFAVORABLE
 
@@ -246,7 +268,7 @@ fun MetacriticDetailSection(
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "METACRITIC SCORE",
+                            text = if (isEs) "NOTA METACRITIC" else "METACRITIC SCORE",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -268,7 +290,7 @@ fun MetacriticDetailSection(
                         }
                     }
                     Text(
-                        text = "${tier.label} • ${tier.summary}",
+                        text = "${tier.localizedTierLabel(s)} • ${tier.localizedTierSummary(s)}",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
                         color = tier.badgeColor
@@ -280,7 +302,11 @@ fun MetacriticDetailSection(
         Spacer(modifier = Modifier.height(10.dp))
 
         Text(
-            text = "Accurate critic consensus verified through CheapShark & GamerPower APIs from top editorial review publications worldwide.",
+            text = if (isEs) {
+                "Consenso oficial de la crítica verificado mediante CheapShark y GamerPower a partir de publicaciones especializadas."
+            } else {
+                "Accurate critic consensus verified through CheapShark & GamerPower APIs from top editorial review publications worldwide."
+            },
             fontSize = 11.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             lineHeight = 16.sp
@@ -297,7 +323,11 @@ fun MetacriticDetailSection(
                     }
                     context.startActivity(browserIntent)
                 } catch (_: Exception) {
-                    Toast.makeText(context, "Could not open browser", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        if (isEs) "No se pudo abrir el navegador" else "Could not open browser",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             },
             modifier = Modifier
@@ -313,13 +343,13 @@ fun MetacriticDetailSection(
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.OpenInNew,
+                    imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                     contentDescription = null,
                     tint = tier.badgeColor,
                     modifier = Modifier.size(14.dp)
                 )
                 Text(
-                    text = "View '$gameTitle' on Metacritic",
+                    text = if (isEs) "Ver '$gameTitle' en Metacritic" else "View '$gameTitle' on Metacritic",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface

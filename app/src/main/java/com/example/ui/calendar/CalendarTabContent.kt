@@ -1,17 +1,9 @@
 package com.example.ui.calendar
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,29 +15,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SportsEsports
-import androidx.compose.material.icons.filled.WarningAmber
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.graphics.graphicsLayer
-import com.example.ui.theme.ExpressiveMotion
-import com.example.ui.theme.ExpressivePlacementSpec
-import com.example.ui.theme.expressivePressScale
-import com.example.ui.theme.rememberExpressiveCornerRadius
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -53,8 +32,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -62,32 +39,47 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.GiveawayItem
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
+import com.example.i18n.localizedLabel
 import com.example.preferences.CardDensity
 import com.example.ui.components.GiveawayCard
 import com.example.ui.density.ScreenDensityInfo
+import com.example.ui.theme.ExpressiveMotion
+import com.example.ui.theme.ExpressivePlacementSpec
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGreen
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
+import com.example.ui.theme.rememberExpressiveCornerRadius
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 
-private val NeonAmber = Color(0xFFFFB300)
+private val CALENDAR_LOCALE_ES: Locale = Locale.forLanguageTag("es")
+
+private data class CalendarIndexSummary(
+    val dayExpiringCountMap: Map<LocalDate, Int>,
+    val itemsByDate: Map<LocalDate, List<GiveawayItem>>,
+    val next14DaysItems: List<GiveawayItem>,
+    val next7DaysItems: List<GiveawayItem>,
+    val urgentItems: List<GiveawayItem>,
+    val ongoingGiveaways: List<GiveawayItem>,
+    val totalExpiringIn14Days: Int,
+    val totalValueExpiring14Days: Double,
+    val urgentCount: Int
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -111,6 +103,8 @@ fun CalendarTabContent(
     onToggleClaimed: (GiveawayItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
     val today = remember { LocalDate.now() }
     val upcomingDays = remember(today) {
         ExpirationCalendarUtils.getUpcomingCalendarDays(today, daysCount = 15)
@@ -124,63 +118,69 @@ fun CalendarTabContent(
     var showOngoingGiveaways by remember { mutableStateOf(false) }
     var isCalendarHeaderCompact by rememberSaveable { mutableStateOf(false) }
 
-    // Map each day to the count of giveaways expiring on that day
-    val dayExpiringCountMap = remember(giveaways, today) {
-        val map = mutableMapOf<LocalDate, Int>()
-        for (day in upcomingDays) {
-            map[day] = giveaways.count { item ->
-                ExpirationCalendarUtils.isExpiringOnDate(item.endDate, day)
+    // Single-pass index build across giveaways for day counts, scope lists, ongoing list, and summary metrics
+    val calendarSummary = remember(giveaways, today) {
+        val dayCountMap = HashMap<LocalDate, Int>(24)
+        val byDate = HashMap<LocalDate, MutableList<GiveawayItem>>(24)
+        val next14 = ArrayList<GiveawayItem>(giveaways.size)
+        val next7 = ArrayList<GiveawayItem>(giveaways.size)
+        val urgent = ArrayList<GiveawayItem>(16)
+        val ongoing = ArrayList<GiveawayItem>(16)
+        var value14 = 0.0
+
+        for (item in giveaways) {
+            val endDateStr = item.endDate
+            if (endDateStr.isBlank() || endDateStr.equals("N/A", ignoreCase = true)) {
+                ongoing.add(item)
+                continue
+            }
+            val parsedDate = ExpirationCalendarUtils.parseExpirationDate(endDateStr) ?: continue
+            dayCountMap[parsedDate] = (dayCountMap[parsedDate] ?: 0) + 1
+            byDate.getOrPut(parsedDate) { ArrayList() }.add(item)
+            val days = ChronoUnit.DAYS.between(today, parsedDate)
+            if (days in 0L..14L) {
+                next14.add(item)
+                value14 += item.numericWorth
+            }
+            if (days in 0L..7L) {
+                next7.add(item)
+            }
+            if (days in 0L..1L) {
+                urgent.add(item)
             }
         }
-        map
+        CalendarIndexSummary(
+            dayExpiringCountMap = dayCountMap,
+            itemsByDate = byDate,
+            next14DaysItems = next14,
+            next7DaysItems = next7,
+            urgentItems = urgent,
+            ongoingGiveaways = ongoing,
+            totalExpiringIn14Days = next14.size,
+            totalValueExpiring14Days = value14,
+            urgentCount = urgent.size
+        )
     }
 
-    // Filter giveaways according to selected day or scope
-    val filteredTimelineItems by remember(giveaways, selectedCalendarDate, selectedScope, today) {
+    val dayExpiringCountMap = calendarSummary.dayExpiringCountMap
+    val ongoingGiveaways = calendarSummary.ongoingGiveaways
+    val totalExpiringIn14Days = calendarSummary.totalExpiringIn14Days
+    val totalValueExpiring14Days = calendarSummary.totalValueExpiring14Days
+    val urgentCount = calendarSummary.urgentCount
+
+    val filteredTimelineItems by remember(calendarSummary, selectedCalendarDate, selectedScope) {
         derivedStateOf {
-            if (selectedCalendarDate != null) {
-                giveaways.filter { ExpirationCalendarUtils.isExpiringOnDate(it.endDate, selectedCalendarDate!!) }
+            val pickedDate = selectedCalendarDate
+            if (pickedDate != null) {
+                calendarSummary.itemsByDate[pickedDate].orEmpty()
             } else {
                 when (selectedScope) {
-                    CalendarFilterScope.NEXT_14_DAYS -> {
-                        giveaways.filter {
-                            ExpirationCalendarUtils.isExpiringInDayRange(it.endDate, 0, 14, today)
-                        }
-                    }
-                    CalendarFilterScope.NEXT_7_DAYS -> {
-                        giveaways.filter {
-                            ExpirationCalendarUtils.isExpiringInDayRange(it.endDate, 0, 7, today)
-                        }
-                    }
-                    CalendarFilterScope.URGENT_48H -> {
-                        giveaways.filter {
-                            ExpirationCalendarUtils.isExpiringInDayRange(it.endDate, 0, 1, today)
-                        }
-                    }
+                    CalendarFilterScope.NEXT_14_DAYS -> calendarSummary.next14DaysItems
+                    CalendarFilterScope.NEXT_7_DAYS -> calendarSummary.next7DaysItems
+                    CalendarFilterScope.URGENT_48H -> calendarSummary.urgentItems
                 }
             }
         }
-    }
-
-    // Ongoing giveaways (no set expiration date, e.g. "N/A" or unlimited until keys run out)
-    val ongoingGiveaways by remember(giveaways) {
-        derivedStateOf {
-            giveaways.filter {
-                it.endDate.isBlank() || it.endDate.equals("N/A", ignoreCase = true)
-            }
-        }
-    }
-
-    // Metrics for the summary card
-    val totalExpiringIn14Days = remember(giveaways, today) {
-        giveaways.count { ExpirationCalendarUtils.isExpiringInDayRange(it.endDate, 0, 14, today) }
-    }
-    val totalValueExpiring14Days = remember(giveaways, today) {
-        giveaways.filter { ExpirationCalendarUtils.isExpiringInDayRange(it.endDate, 0, 14, today) }
-            .sumOf { it.numericWorth }
-    }
-    val urgentCount = remember(giveaways, today) {
-        giveaways.count { ExpirationCalendarUtils.isExpiringInDayRange(it.endDate, 0, 1, today) }
     }
 
     PullToRefreshBox(
@@ -229,7 +229,7 @@ fun CalendarTabContent(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "EXPIRATION CALENDAR • NEXT 14 DAYS",
+                            text = if (isEs) "CALENDARIO DE EXPIRACIÓN • PRÓX. 14 DÍAS" else "EXPIRATION CALENDAR • NEXT 14 DAYS",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
@@ -238,7 +238,7 @@ fun CalendarTabContent(
 
                         if (selectedCalendarDate != null) {
                             Text(
-                                text = "Clear Date Filter",
+                                text = if (isEs) "Limpiar Fecha" else "Clear Date Filter",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = NeonCyan,
@@ -260,12 +260,13 @@ fun CalendarTabContent(
                         // "All" pill button
                         item {
                             CalendarDayChip(
-                                label = "ALL",
+                                label = if (isEs) "TODO" else "ALL",
                                 dateNumber = "14D",
-                                month = "RANGE",
+                                month = if (isEs) "RANGO" else "RANGE",
                                 expiringCount = totalExpiringIn14Days,
                                 isSelected = selectedCalendarDate == null,
                                 reducedMotion = reducedMotion,
+                                tagKey = "all",
                                 onClick = { selectedCalendarDate = null }
                             )
                         }
@@ -273,13 +274,26 @@ fun CalendarTabContent(
                         // Day pills for each upcoming day
                         items(upcomingDays) { day ->
                             val daysBetween = ChronoUnit.DAYS.between(today, day)
-                            val label = when (daysBetween) {
+                            val enLabel = when (daysBetween) {
                                 0L -> "TODAY"
                                 1L -> "TOM"
                                 else -> day.dayOfWeek.name.take(3)
                             }
+                            val label = if (!isEs) {
+                                enLabel
+                            } else when (daysBetween) {
+                                0L -> "HOY"
+                                1L -> "MAÑ"
+                                else -> day.dayOfWeek.getDisplayName(TextStyle.SHORT, CALENDAR_LOCALE_ES)
+                                    .replace(".", "").uppercase().take(3)
+                            }
                             val count = dayExpiringCountMap[day] ?: 0
-                            val monthStr = day.month.name.take(3)
+                            val monthStr = if (isEs) {
+                                day.month.getDisplayName(TextStyle.SHORT, CALENDAR_LOCALE_ES)
+                                    .replace(".", "").uppercase().take(3)
+                            } else {
+                                day.month.name.take(3)
+                            }
 
                             CalendarDayChip(
                                 label = label,
@@ -289,6 +303,7 @@ fun CalendarTabContent(
                                 isSelected = selectedCalendarDate == day,
                                 isUrgent = daysBetween <= 1L && count > 0,
                                 reducedMotion = reducedMotion,
+                                tagKey = enLabel.lowercase(),
                                 onClick = {
                                     selectedCalendarDate = if (selectedCalendarDate == day) null else day
                                 }
@@ -312,7 +327,7 @@ fun CalendarTabContent(
                             .padding(horizontal = 16.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        CalendarFilterScope.values().forEach { scope ->
+                        CalendarFilterScope.entries.forEach { scope ->
                             val isSelected = selectedScope == scope
                             val chipCorner = rememberExpressiveCornerRadius(
                                 isSelected = isSelected,
@@ -325,7 +340,7 @@ fun CalendarTabContent(
                                 onClick = { selectedScope = scope },
                                 label = {
                                     Text(
-                                        text = scope.label,
+                                        text = scope.localizedLabel(s),
                                         fontSize = 11.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                     )
@@ -349,10 +364,11 @@ fun CalendarTabContent(
             // Results count header
             item(key = "calendar_results_header") {
                 val headerTitle = if (selectedCalendarDate != null) {
-                    val formatter = DateTimeFormatter.ofPattern("EEEE, MMMM d", Locale.getDefault())
-                    "Expiring on ${selectedCalendarDate!!.format(formatter)}"
+                    val dateLocale = if (isEs) CALENDAR_LOCALE_ES else Locale.ENGLISH
+                    val formatter = DateTimeFormatter.ofPattern("EEEE, MMMM d", dateLocale)
+                    if (isEs) "Expiran el ${selectedCalendarDate!!.format(formatter)}" else "Expiring on ${selectedCalendarDate!!.format(formatter)}"
                 } else {
-                    "${selectedScope.label} Expirations"
+                    if (isEs) "Expiraciones (${selectedScope.localizedLabel(s)})" else "${selectedScope.localizedLabel(s)} Expirations"
                 }
 
                 Row(
@@ -382,7 +398,7 @@ fun CalendarTabContent(
                     }
 
                     Text(
-                        text = "${filteredTimelineItems.size} games",
+                        text = if (isEs) "${filteredTimelineItems.size} juegos" else "${filteredTimelineItems.size} games",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -423,7 +439,7 @@ fun CalendarTabContent(
                     ) {
                         Column {
                             // Urgency countdown indicator ribbon above the card
-                            val badgeText = ExpirationCalendarUtils.getExpirationBadgeText(item.endDate)
+                            val badgeText = ExpirationCalendarUtils.getExpirationBadgeText(item.endDate, s = s)
                             val daysLeft = ExpirationCalendarUtils.daysRemaining(item.endDate, today)
                             val isUrgent = daysLeft != null && daysLeft <= 1L
 
@@ -441,20 +457,20 @@ fun CalendarTabContent(
                                     Icon(
                                         imageVector = if (isUrgent) Icons.Default.LocalFireDepartment else Icons.Default.Schedule,
                                         contentDescription = null,
-                                        tint = if (isUrgent) NeonAmber else MaterialTheme.colorScheme.primary,
+                                        tint = if (isUrgent) CalendarNeonAmber else MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(14.dp)
                                     )
                                     Text(
                                         text = badgeText,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (isUrgent) NeonAmber else MaterialTheme.colorScheme.primary
+                                        color = if (isUrgent) CalendarNeonAmber else MaterialTheme.colorScheme.primary
                                     )
                                 }
 
                                 if (item.numericWorth > 0) {
                                     Text(
-                                        text = "Value: ${item.worth}",
+                                        text = "${s.home.badgeWorthPrefix}: ${item.worth}",
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Medium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -519,30 +535,38 @@ fun CalendarTabContent(
                                     )
                                     Column {
                                         Text(
-                                            text = "Ongoing Giveaways (${ongoingGiveaways.size})",
+                                            text = if (isEs) "Juegos Sin Fecha Límite (${ongoingGiveaways.size})" else "Ongoing Giveaways (${ongoingGiveaways.size})",
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Text(
-                                            text = "Active promotions available until publisher keys run out",
+                                            text = if (isEs) "Promociones activas hasta que se agoten las claves" else "Active promotions available until publisher keys run out",
                                             fontSize = 11.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
 
-                                val chevronRotation by animateFloatAsState(
-                                    targetValue = if (showOngoingGiveaways) 180f else 0f,
-                                    animationSpec = ExpressiveMotion.spatialFast(reducedMotion),
-                                    label = "ongoing_chevron"
-                                )
+                                val chevronRotation = if (reducedMotion) {
+                                    if (showOngoingGiveaways) 180f else 0f
+                                } else {
+                                    animateFloatAsState(
+                                        targetValue = if (showOngoingGiveaways) 180f else 0f,
+                                        animationSpec = ExpressiveMotion.spatialFast(false),
+                                        label = "ongoing_chevron"
+                                    ).value
+                                }
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                     Text(
-                                        text = if (showOngoingGiveaways) "Hide" else "Show",
+                                        text = if (showOngoingGiveaways) {
+                                            if (isEs) "Ocultar" else "Hide"
+                                        } else {
+                                            if (isEs) "Ver" else "Show"
+                                        },
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.primary
@@ -596,364 +620,6 @@ fun CalendarTabContent(
                         }
                     }
                 }
-            }
-        }
-    }
-}
-
-/**
- * Top summary banner for the Calendar Expiration tab.
- */
-@Composable
-private fun CalendarHeroBanner(
-    totalExpiringCount: Int,
-    totalValueUsd: Double,
-    urgentCount: Int,
-    isCompact: Boolean,
-    onToggleCompact: () -> Unit,
-    reducedMotion: Boolean
-) {
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val secondaryColor = MaterialTheme.colorScheme.secondary
-    val surfaceHigh = MaterialTheme.colorScheme.surfaceContainerHigh
-
-    val bannerBrush = remember(primaryColor, secondaryColor, surfaceHigh) {
-        Brush.horizontalGradient(
-            listOf(
-                primaryColor.copy(alpha = 0.14f),
-                secondaryColor.copy(alpha = 0.08f),
-                surfaceHigh.copy(alpha = 0.45f)
-            )
-        )
-    }
-
-    val chevronRot by animateFloatAsState(
-        targetValue = if (isCompact) 0f else 180f,
-        animationSpec = ExpressiveMotion.spatialFast(reducedMotion),
-        label = "cal_hero_chevron"
-    )
-
-    Card(
-        onClick = onToggleCompact,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .testTag("calendar_hero_banner"),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, primaryColor.copy(alpha = 0.35f))
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(bannerBrush)
-                .padding(horizontal = 14.dp, vertical = if (isCompact) 8.dp else 11.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    modifier = Modifier.weight(1f, fill = false),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(if (isCompact) 26.dp else 32.dp)
-                            .clip(RoundedCornerShape(9.dp))
-                            .background(primaryColor.copy(alpha = 0.18f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CalendarMonth,
-                            contentDescription = null,
-                            tint = primaryColor,
-                            modifier = Modifier.size(if (isCompact) 15.dp else 18.dp)
-                        )
-                    }
-
-                    Column {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text(
-                                text = "EXPIRING GAMES RADAR",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Black,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                letterSpacing = 0.5.sp
-                            )
-                            if (urgentCount > 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .background(NeonAmber.copy(alpha = 0.2f))
-                                        .border(0.8.dp, NeonAmber.copy(alpha = 0.4f), RoundedCornerShape(4.dp))
-                                        .padding(horizontal = 5.dp, vertical = 1.dp)
-                                ) {
-                                    Text(
-                                        text = "⚠️ $urgentCount Ending Soon",
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = NeonAmber
-                                    )
-                                }
-                            }
-                        }
-                        AnimatedVisibility(
-                            visible = !isCompact,
-                            enter = ExpressiveMotion.expressiveExpandEnter(reducedMotion),
-                            exit = ExpressiveMotion.expressiveCollapseExit(reducedMotion)
-                        ) {
-                            Text(
-                                text = "$totalExpiringCount game${if (totalExpiringCount != 1) "s" else ""} expiring in next 14 days",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    // Total Value Expiring Pill
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(NeonGreen.copy(alpha = 0.15f))
-                            .border(0.8.dp, NeonGreen.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = String.format(Locale.US, "$%.2f FREE", totalValueUsd),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = NeonGreen
-                        )
-                    }
-
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = if (isCompact) "Show calendar strip" else "Hide calendar strip",
-                        tint = primaryColor,
-                        modifier = Modifier
-                            .size(18.dp)
-                            .graphicsLayer { rotationZ = chevronRot }
-                    )
-                }
-            }
-        }
-    }
-}
-
-/**
- * Individual day chip button in the horizontal day-strip.
- */
-@Composable
-private fun CalendarDayChip(
-    label: String,
-    dateNumber: String,
-    month: String,
-    expiringCount: Int,
-    isSelected: Boolean,
-    isUrgent: Boolean = false,
-    reducedMotion: Boolean = false,
-    onClick: () -> Unit
-) {
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-
-    val borderColor by animateColorAsState(
-        targetValue = when {
-            isSelected -> primaryColor
-            isUrgent -> NeonAmber.copy(alpha = 0.8f)
-            expiringCount > 0 -> primaryColor.copy(alpha = 0.45f)
-            else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.65f)
-        },
-        animationSpec = ExpressiveMotion.effectsDefault(reducedMotion),
-        label = "calendar_chip_border"
-    )
-
-    val containerColor by animateColorAsState(
-        targetValue = when {
-            isSelected -> primaryColor.copy(alpha = 0.18f)
-            isUrgent -> NeonAmber.copy(alpha = 0.12f)
-            else -> MaterialTheme.colorScheme.surface
-        },
-        animationSpec = ExpressiveMotion.effectsDefault(reducedMotion),
-        label = "calendar_chip_container"
-    )
-
-    val chipScale by animateFloatAsState(
-        targetValue = when {
-            isPressed -> 0.91f
-            isSelected -> 1.04f
-            else -> 1f
-        },
-        animationSpec = ExpressiveMotion.spatialFast(reducedMotion),
-        label = "calendar_chip_scale"
-    )
-
-    val chipCorner = rememberExpressiveCornerRadius(
-        isSelected = isSelected,
-        isPressed = isPressed,
-        baseRadius = 12.dp,
-        selectedRadius = 17.dp,
-        pressedRadius = 20.dp,
-        enabled = !reducedMotion
-    )
-
-    Surface(
-        onClick = onClick,
-        interactionSource = interactionSource,
-        shape = RoundedCornerShape(chipCorner),
-        color = containerColor,
-        border = BorderStroke(if (isSelected) 1.8.dp else 1.dp, borderColor),
-        modifier = Modifier
-            .width(62.dp)
-            .height(78.dp)
-            .graphicsLayer {
-                scaleX = chipScale
-                scaleY = chipScale
-            }
-            .testTag("calendar_chip_${label.lowercase()}_$dateNumber")
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(vertical = 6.dp, horizontal = 4.dp)
-        ) {
-            Text(
-                text = label,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = if (isSelected) primaryColor else if (isUrgent) NeonAmber else MaterialTheme.colorScheme.onSurfaceVariant,
-                letterSpacing = 0.5.sp
-            )
-
-            Spacer(modifier = Modifier.height(2.dp))
-
-            Text(
-                text = dateNumber,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Black,
-                color = if (isSelected) primaryColor else MaterialTheme.colorScheme.onSurface
-            )
-
-            Spacer(modifier = Modifier.height(2.dp))
-
-            if (expiringCount > 0) {
-                Box(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(if (isUrgent) NeonAmber else primaryColor)
-                        .padding(horizontal = 6.dp, vertical = 1.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "$expiringCount",
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Black,
-                        color = if (isUrgent) Color(0xFF0B0F19) else MaterialTheme.colorScheme.onPrimary
-                    )
-                }
-            } else {
-                Text(
-                    text = month,
-                    fontSize = 8.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
-
-/**
- * Empty state when no games expire on the selected date or period.
- */
-@Composable
-private fun CalendarEmptyState(
-    selectedDate: LocalDate?,
-    onResetFilter: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-            .testTag("calendar_empty_state_card"),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f))
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(54.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.EventAvailable,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Text(
-                text = if (selectedDate != null) "No Expirations on this Date" else "No Expirations in Selected Range",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Text(
-                text = if (selectedDate != null) {
-                    "No free games are scheduled to end on this day. Check other upcoming dates or view all next 14 days!"
-                } else {
-                    "No giveaways have scheduled end dates in this window. Games may be ongoing until keys are exhausted."
-                },
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                lineHeight = 17.sp
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = onResetFilter,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text(
-                    text = "View All 14 Days",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
             }
         }
     }

@@ -25,7 +25,7 @@ import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -42,6 +42,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
 import com.example.ui.GiveawaysViewModel
 
 @Composable
@@ -50,12 +52,17 @@ fun StorageSettingsCategoryContent(
     onRequestResyncDialog: () -> Unit,
     onRequestClearClaimedDialog: () -> Unit
 ) {
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
     val storageMetrics by viewModel.storageMetrics.collectAsState()
     val isDataSaverMode by viewModel.isDataSaverMode.collectAsState()
     val isAutoPruneExpired by viewModel.isAutoPruneExpired.collectAsState()
 
     // SECTION: Storage & Speed Optimization Suite
-    SectionHeader(title = "STORAGE & PERFORMANCE ACCELERATOR", icon = Icons.Default.Speed)
+    SectionHeader(
+        title = if (isEs) "ACELERADOR DE ALMACENAMIENTO Y RENDIMIENTO" else "STORAGE & PERFORMANCE ACCELERATOR",
+        icon = Icons.Default.Speed
+    )
 
     Spacer(modifier = Modifier.height(8.dp))
 
@@ -77,7 +84,7 @@ fun StorageSettingsCategoryContent(
         ) {
             Column {
                 Text(
-                    text = "Total App Storage Used",
+                    text = s.settings.storageTotalFootprintLabel,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -97,7 +104,7 @@ fun StorageSettingsCategoryContent(
                     .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
                 Text(
-                    text = "OPTIMIZED",
+                    text = if (isEs) "OPTIMIZADO" else "OPTIMIZED",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -121,7 +128,7 @@ fun StorageSettingsCategoryContent(
             ) {
                 Column {
                     Text(
-                        text = "IMAGES",
+                        text = if (isEs) "IMÁGENES" else "IMAGES",
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -145,7 +152,7 @@ fun StorageSettingsCategoryContent(
             ) {
                 Column {
                     Text(
-                        text = "NETWORK",
+                        text = if (isEs) "RED" else "NETWORK",
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -169,7 +176,7 @@ fun StorageSettingsCategoryContent(
             ) {
                 Column {
                     Text(
-                        text = "DATABASE",
+                        text = if (isEs) "BASE DE DATOS" else "DATABASE",
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -203,7 +210,7 @@ fun StorageSettingsCategoryContent(
             ) {
                 Icon(Icons.Default.Bolt, contentDescription = null, modifier = Modifier.size(18.dp))
                 Text(
-                    text = "1-Tap Deep Clean & Vacuum Database",
+                    text = s.settings.storageDeepCleanBtn,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -229,7 +236,11 @@ fun StorageSettingsCategoryContent(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Icon(Icons.Default.Image, contentDescription = null, modifier = Modifier.size(14.dp))
-                    Text("Clear Images", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = if (isEs) "Limpiar Imágenes" else "Clear Images",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
 
@@ -247,12 +258,16 @@ fun StorageSettingsCategoryContent(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Icon(Icons.Default.Storage, contentDescription = null, modifier = Modifier.size(14.dp))
-                    Text("Compact DB", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = if (isEs) "Compactar BD" else "Compact DB",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
         }
 
-        Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
 
         // Data Saver & Low Memory Mode Toggle
         Row(
@@ -262,13 +277,13 @@ fun StorageSettingsCategoryContent(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Data Saver & Low Memory Mode",
+                    text = s.settings.storageDataSaverTitle,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "Downsample thumbnails to 150-375px and cap image disk cache to 12MB. Great for saving mobile data and phone storage.",
+                    text = s.settings.storageDataSaverSub,
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 15.sp
@@ -288,7 +303,7 @@ fun StorageSettingsCategoryContent(
             )
         }
 
-        Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
 
         // Auto-Prune Expired Freebies Toggle
         Row(
@@ -298,13 +313,13 @@ fun StorageSettingsCategoryContent(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Auto-Prune Expired Freebies",
+                    text = s.settings.storageAutoPruneTitle,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "Automatically clean ended giveaways that are not bookmarked or claimed, keeping the database under 100KB.",
+                    text = s.settings.storageAutoPruneSub,
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 15.sp
@@ -328,7 +343,10 @@ fun StorageSettingsCategoryContent(
     Spacer(modifier = Modifier.height(20.dp))
 
     // SECTION: Cloud Backup & Sync (Cloudflare R2 Object Storage)
-    SectionHeader(title = "CLOUD BACKUP (CLOUDFLARE R2)", icon = Icons.Default.Cloud)
+    SectionHeader(
+        title = if (isEs) "RESPALDO EN LA NUBE (CLOUDFLARE R2)" else "CLOUD BACKUP (CLOUDFLARE R2)",
+        icon = Icons.Default.Cloud
+    )
 
     Spacer(modifier = Modifier.height(8.dp))
 
@@ -337,7 +355,10 @@ fun StorageSettingsCategoryContent(
     Spacer(modifier = Modifier.height(20.dp))
 
     // SECTION: Local File Backup & Restore
-    SectionHeader(title = "LOCAL FILE BACKUP & RESTORE", icon = Icons.Default.Sync)
+    SectionHeader(
+        title = s.settings.backupLocalTitle,
+        icon = Icons.Default.Sync
+    )
 
     Spacer(modifier = Modifier.height(8.dp))
 
@@ -346,7 +367,10 @@ fun StorageSettingsCategoryContent(
     Spacer(modifier = Modifier.height(20.dp))
 
     // SECTION: Library & Data Reset
-    SectionHeader(title = "DATA & LIBRARY MANAGEMENT", icon = Icons.Default.Delete)
+    SectionHeader(
+        title = if (isEs) "GESTIÓN DE DATOS Y BIBLIOTECA" else "DATA & LIBRARY MANAGEMENT",
+        icon = Icons.Default.Delete
+    )
 
     Spacer(modifier = Modifier.height(8.dp))
 
@@ -371,7 +395,10 @@ fun StorageSettingsCategoryContent(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
-                Text("Force Re-sync All Freebies from Store APIs", fontSize = 13.sp)
+                Text(
+                    text = if (isEs) "Forzar Re-sincronización desde APIs de Tiendas" else "Force Re-sync All Freebies from Store APIs",
+                    fontSize = 13.sp
+                )
             }
         }
 
@@ -382,7 +409,10 @@ fun StorageSettingsCategoryContent(
             colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
         ) {
-            Text("Clear 'In Library' Claimed Games", fontSize = 13.sp)
+            Text(
+                text = if (isEs) "Limpiar Juegos Reclamados 'En Bóveda'" else "Clear 'In Library' Claimed Games",
+                fontSize = 13.sp
+            )
         }
     }
 }

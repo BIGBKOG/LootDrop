@@ -2,13 +2,11 @@ package com.example.data.remote
 
 import android.content.Context
 import com.squareup.moshi.Moshi
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import okhttp3.Cache
 import okhttp3.ConnectionPool
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
-import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import java.io.File
@@ -18,9 +16,7 @@ object ApiClient {
     private const val BASE_URL = "https://www.gamerpower.com/api/"
     private const val HTTP_CACHE_SIZE = 15L * 1024L * 1024L // 15 MB max HTTP cache
 
-    private val moshi: Moshi = Moshi.Builder()
-        .addLast(KotlinJsonAdapterFactory())
-        .build()
+    private val moshi: Moshi = Moshi.Builder().build()
 
     @Volatile
     private var okHttpClientInstance: OkHttpClient? = null
@@ -61,11 +57,7 @@ object ApiClient {
                     .removeHeader("Pragma")
                     .build()
             })
-            .addInterceptor(
-                HttpLoggingInterceptor().apply {
-                    level = HttpLoggingInterceptor.Level.BASIC
-                }
-            )
+            .let { HttpLoggingConfigurator.configure(it) }
             .build()
     }
 

@@ -190,16 +190,19 @@ fun Modifier.expressivePressScale(
     interactionSource: InteractionSource,
     enabled: Boolean = true,
     pressedScale: Float = 0.94f
-): Modifier = composed {
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) pressedScale else 1f,
-        animationSpec = ExpressiveMotion.spatialFast(reducedMotion = !enabled),
-        label = "expressive_press_scale"
-    )
-    if (scale == 1f) this else this.graphicsLayer {
-        scaleX = scale
-        scaleY = scale
+): Modifier {
+    if (!enabled) return this
+    return composed {
+        val isPressed by interactionSource.collectIsPressedAsState()
+        val scale by animateFloatAsState(
+            targetValue = if (isPressed) pressedScale else 1f,
+            animationSpec = ExpressiveMotion.spatialFast(reducedMotion = false),
+            label = "expressive_press_scale"
+        )
+        if (scale == 1f) this else this.graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+        }
     }
 }
 
@@ -220,9 +223,10 @@ fun rememberExpressiveCornerRadius(
         isSelected -> selectedRadius
         else -> baseRadius
     }
+    if (!enabled) return target
     val radius by animateDpAsState(
         targetValue = target,
-        animationSpec = ExpressiveMotion.spatialFast(reducedMotion = !enabled),
+        animationSpec = ExpressiveMotion.spatialFast(reducedMotion = false),
         label = "expressive_corner_radius"
     )
     return radius
@@ -371,26 +375,26 @@ fun rememberCollapsibleHeaderNestedScrollConnection(
 fun Modifier.collapsibleHeaderLayout(
     state: CollapsibleHeaderState,
     applyParallaxFade: Boolean = true
-): Modifier = this
-    .clipToBounds()
-    .layout { measurable, constraints ->
-        val placeable = measurable.measure(constraints.copy(maxHeight = Constraints.Infinity))
-        state.updateMaxHeight(placeable.height.toFloat())
-        val offset = state.heightOffset.roundToInt()
-        val visibleHeight = (placeable.height + offset).coerceIn(0, placeable.height)
-        layout(placeable.width, visibleHeight) {
-            placeable.placeRelative(0, offset)
+): Modifier {
+    val base = this
+        .clipToBounds()
+        .layout { measurable, constraints ->
+            val placeable = measurable.measure(constraints.copy(maxHeight = Constraints.Infinity))
+            state.updateMaxHeight(placeable.height.toFloat())
+            val offset = state.heightOffset.roundToInt()
+            val visibleHeight = (placeable.height + offset).coerceIn(0, placeable.height)
+            layout(placeable.width, visibleHeight) {
+                placeable.placeRelative(0, offset)
+            }
         }
+    return if (!applyParallaxFade) base else base.graphicsLayer {
+        val fraction = state.collapsedFraction
+        alpha = (1f - fraction * 0.9f).coerceIn(0f, 1f)
+        val subtleScale = 1f - fraction * 0.03f
+        scaleX = subtleScale
+        scaleY = subtleScale
     }
-    .graphicsLayer {
-        if (applyParallaxFade) {
-            val fraction = state.collapsedFraction
-            alpha = (1f - fraction * 0.9f).coerceIn(0f, 1f)
-            val subtleScale = 1f - fraction * 0.03f
-            scaleX = subtleScale
-            scaleY = subtleScale
-        }
-    }
+}
 
 /**
  * Computes Material 3 Expressive integer offset for placement animations.

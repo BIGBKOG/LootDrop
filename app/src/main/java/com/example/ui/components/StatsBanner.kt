@@ -60,6 +60,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
 import com.example.ui.UiStats
 import com.example.ui.theme.GamingCardBorder
 import com.example.ui.theme.NeonCyan
@@ -67,6 +69,7 @@ import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
+import com.example.util.LocalLowEndOptimization
 import java.util.Locale
 
 @Composable
@@ -80,24 +83,35 @@ fun StatsBanner(
     onNewTodayClick: (() -> Unit)? = null,
     isAnimationsEnabled: Boolean = true
 ) {
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
+    val effectiveAnimations = isAnimationsEnabled && !LocalLowEndOptimization.current
     // Ambient breathing shimmer on border and glow only if animations enabled
-    val (borderAlpha, badgeScale) = rememberStatsBannerAnimations(enabled = isAnimationsEnabled)
+    val (borderAlpha, badgeScale) = rememberStatsBannerAnimations(enabled = effectiveAnimations)
 
     var localDismissed by rememberSaveable { mutableStateOf(false) }
     val effectiveDismissed = isNewTodayDismissed || localDismissed
 
     // Fluid smooth counter animation for total free worth
-    val animatedWorth by animateFloatAsState(
-        targetValue = stats.totalFreeWorthUsd.toFloat(),
-        animationSpec = ExpressiveMotion.spatialSlow(reducedMotion = !isAnimationsEnabled),
-        label = "animatedWorth"
-    )
+    val animatedWorth = if (effectiveAnimations) {
+        animateFloatAsState(
+            targetValue = stats.totalFreeWorthUsd.toFloat(),
+            animationSpec = ExpressiveMotion.spatialSlow(reducedMotion = false),
+            label = "animatedWorth"
+        ).value
+    } else {
+        stats.totalFreeWorthUsd.toFloat()
+    }
 
-    val animatedCount by animateFloatAsState(
-        targetValue = stats.activeGiveawaysCount.toFloat(),
-        animationSpec = ExpressiveMotion.effectsDefault(reducedMotion = !isAnimationsEnabled),
-        label = "animatedCount"
-    )
+    val animatedCount = if (effectiveAnimations) {
+        animateFloatAsState(
+            targetValue = stats.activeGiveawaysCount.toFloat(),
+            animationSpec = ExpressiveMotion.effectsDefault(reducedMotion = false),
+            label = "animatedCount"
+        ).value
+    } else {
+        stats.activeGiveawaysCount.toFloat()
+    }
 
     val primaryColor = MaterialTheme.colorScheme.primary
     val secondaryColor = MaterialTheme.colorScheme.secondary
@@ -152,7 +166,7 @@ fun StatsBanner(
                         )
                     }
                     Text(
-                        text = "TOTAL FREE VALUE",
+                        text = s.home.statsFreeValue.uppercase(),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = NeonGreen,
@@ -175,7 +189,7 @@ fun StatsBanner(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "FREE",
+                        text = if (isEs) "GRATIS" else "FREE",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = NeonCyan,
@@ -190,28 +204,32 @@ fun StatsBanner(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "${animatedCount.toInt()} active freebies",
+                        text = if (isEs) "${animatedCount.toInt()} ofertas activas" else "${animatedCount.toInt()} active freebies",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     AnimatedVisibility(
                         visible = !effectiveDismissed && stats.newFreebiesCount > 0,
-                        enter = fadeIn(ExpressiveMotion.effectsDefault(!isAnimationsEnabled)) +
-                            expandHorizontally(ExpressiveMotion.spatialFast(!isAnimationsEnabled)) +
-                            scaleIn(initialScale = 0.85f, animationSpec = ExpressiveMotion.spatialFast(!isAnimationsEnabled)),
-                        exit = fadeOut(ExpressiveMotion.effectsFast(!isAnimationsEnabled)) +
-                            shrinkHorizontally(ExpressiveMotion.effectsFast(!isAnimationsEnabled)) +
+                        enter = fadeIn(ExpressiveMotion.effectsDefault(!effectiveAnimations)) +
+                            expandHorizontally(ExpressiveMotion.spatialFast(!effectiveAnimations)) +
+                            scaleIn(initialScale = 0.85f, animationSpec = ExpressiveMotion.spatialFast(!effectiveAnimations)),
+                        exit = fadeOut(ExpressiveMotion.effectsFast(!effectiveAnimations)) +
+                            shrinkHorizontally(ExpressiveMotion.effectsFast(!effectiveAnimations)) +
                             scaleOut(targetScale = 0.85f)
                     ) {
                         val badgeInteraction = remember { MutableInteractionSource() }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
-                                .graphicsLayer {
-                                    scaleX = badgeScale
-                                    scaleY = badgeScale
-                                }
-                                .expressivePressScale(badgeInteraction, enabled = isAnimationsEnabled, pressedScale = 0.92f)
+                                .then(
+                                    if (effectiveAnimations) {
+                                        Modifier.graphicsLayer {
+                                            scaleX = badgeScale
+                                            scaleY = badgeScale
+                                        }
+                                    } else Modifier
+                                )
+                                .expressivePressScale(badgeInteraction, enabled = effectiveAnimations, pressedScale = 0.92f)
                                 .clip(RoundedCornerShape(6.dp))
                                 .background(NeonCyan.copy(alpha = 0.2f))
                                 .border(0.5.dp, NeonCyan.copy(alpha = 0.8f), RoundedCornerShape(6.dp))
@@ -230,7 +248,7 @@ fun StatsBanner(
                                     .padding(start = 7.dp, end = 3.dp, top = 3.dp, bottom = 3.dp)
                             ) {
                                 Text(
-                                    text = "${stats.newFreebiesCount} NEW TODAY",
+                                    text = if (isEs) "${stats.newFreebiesCount} NUEVOS HOY" else "${stats.newFreebiesCount} NEW TODAY",
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = NeonCyan
@@ -256,7 +274,7 @@ fun StatsBanner(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
-                                    contentDescription = "Dismiss New Today alert",
+                                    contentDescription = s.common.dismiss,
                                     tint = NeonCyan,
                                     modifier = Modifier.size(11.dp)
                                 )
@@ -267,7 +285,7 @@ fun StatsBanner(
             }
 
             // Quick actions: Refresh with rotation animation only when refreshing
-            val refreshAngle = if (isRefreshing && isAnimationsEnabled) {
+            val refreshAngle = if (isRefreshing && effectiveAnimations) {
                 val refreshTransition = rememberInfiniteTransition(label = "refreshAnim")
                 val angle by refreshTransition.animateFloat(
                     initialValue = 0f,
@@ -288,7 +306,7 @@ fun StatsBanner(
             ) {
                 Icon(
                     imageVector = Icons.Default.Refresh,
-                    contentDescription = "Refresh Freebies",
+                    contentDescription = s.common.refresh,
                     tint = if (isRefreshing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                     modifier = if (isRefreshing && refreshAngle != 0f) {
                         Modifier.graphicsLayer { rotationZ = refreshAngle }

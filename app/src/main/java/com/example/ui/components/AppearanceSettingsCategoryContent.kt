@@ -1,25 +1,17 @@
 package com.example.ui.components
 
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -30,58 +22,45 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Explore
-import androidx.compose.material.icons.filled.FontDownload
-import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material.icons.filled.ViewAgenda
-import androidx.compose.material.icons.filled.ViewCarousel
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.preferences.AccentCategory
-import com.example.preferences.AccentTheme
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
+import com.example.i18n.localizedDescription
+import com.example.i18n.localizedLabel
+import com.example.i18n.localizedTitle
 import com.example.preferences.BackgroundTheme
 import com.example.preferences.CardDensity
 import com.example.preferences.DpiScaleMode
 import com.example.preferences.ThemeMode
 import com.example.ui.GiveawaysViewModel
 import com.example.ui.MainTab
-import com.example.ui.theme.TextMuted
 
 @Composable
 fun AppearanceSettingsCategoryContent(
     viewModel: GiveawaysViewModel
 ) {
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
     val context = LocalContext.current
     val themeMode by viewModel.themeMode.collectAsState()
     val accentTheme by viewModel.accentTheme.collectAsState()
@@ -90,38 +69,15 @@ fun AppearanceSettingsCategoryContent(
     val cardDensity by viewModel.cardDensity.collectAsState()
     val customFontPath by viewModel.customFontPath.collectAsState()
     val customFontName by viewModel.customFontName.collectAsState()
+    val dpiScaleMode by viewModel.dpiScaleMode.collectAsState()
+    val defaultTab by viewModel.defaultTab.collectAsState()
 
-    var isImportingFont by remember { mutableStateOf(false) }
-    val fontPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) {
-            isImportingFont = true
-            viewModel.importCustomFont(context, uri) { _, message ->
-                isImportingFont = false
-                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
+    val isCurrentDark = themeMode != ThemeMode.LIGHT
 
-    var selectedAccentCategory by remember { mutableStateOf(AccentCategory.ALL) }
-    var accentViewMode by remember { mutableStateOf("grid") } // "grid" or "carousel"
-
-    val isCurrentDark = when (themeMode) {
-        ThemeMode.DARK -> true
-        ThemeMode.LIGHT -> false
-        ThemeMode.SYSTEM -> true
-    }
-
-    // SECTION 1: Theme Mode (Light / Dark / System)
-    SectionHeader(title = "THEME MODE", icon = Icons.Default.BrightnessAuto)
-
+    SectionHeader(title = s.settings.appearanceThemeSection, icon = Icons.Default.BrightnessAuto)
     Spacer(modifier = Modifier.height(8.dp))
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         ThemeMode.values().forEach { mode ->
             val isSelected = mode == themeMode
             val icon = when (mode) {
@@ -129,25 +85,21 @@ fun AppearanceSettingsCategoryContent(
                 ThemeMode.LIGHT -> Icons.Default.LightMode
                 ThemeMode.SYSTEM -> Icons.Default.BrightnessAuto
             }
-
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(12.dp))
                     .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface)
                     .border(
-                        width = if (isSelected) 1.5.dp else 1.dp,
-                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                        shape = RoundedCornerShape(12.dp)
+                        if (isSelected) 1.5.dp else 1.dp,
+                        if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                        RoundedCornerShape(12.dp)
                     )
                     .clickable { viewModel.setThemeMode(mode) }
                     .padding(vertical = 12.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
@@ -155,7 +107,7 @@ fun AppearanceSettingsCategoryContent(
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
-                        text = mode.label,
+                        text = mode.localizedLabel(s),
                         fontSize = 12.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                         color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
@@ -167,505 +119,37 @@ fun AppearanceSettingsCategoryContent(
 
     Spacer(modifier = Modifier.height(20.dp))
 
-    // SECTION 2: Accent Color Themes (16 Palettes)
-    SectionHeader(title = "ACCENT COLOR THEME", icon = Icons.Default.Palette)
-
-    Spacer(modifier = Modifier.height(8.dp))
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // 1. Hero Active Theme Spotlight Card
-        val activePrimary = accentTheme.primary(isCurrentDark)
-        val activeSecondary = accentTheme.secondary(isCurrentDark)
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(
-                            activePrimary.copy(alpha = 0.18f),
-                            activeSecondary.copy(alpha = 0.08f),
-                            MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    )
-                )
-                .border(
-                    1.dp,
-                    Brush.horizontalGradient(
-                        listOf(
-                            activePrimary.copy(alpha = 0.7f),
-                            activeSecondary.copy(alpha = 0.35f)
-                        )
-                    ),
-                    RoundedCornerShape(14.dp)
-                )
-                .padding(12.dp)
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Brush.linearGradient(listOf(activePrimary, activeSecondary))
-                                )
-                                .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape)
-                        )
-                        Column {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Text(
-                                    text = accentTheme.title,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(activePrimary.copy(alpha = 0.2f))
-                                        .border(0.5.dp, activePrimary, RoundedCornerShape(6.dp))
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                                ) {
-                                    Text(
-                                        text = "ACTIVE",
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = activePrimary
-                                    )
-                                }
-                            }
-                            Text(
-                                text = accentTheme.description,
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-
-                // Live UI Preview Strip
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(5.dp))
-                            .background(activePrimary)
-                            .padding(horizontal = 7.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = "100% OFF",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFF0B0F19)
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(5.dp))
-                            .background(activeSecondary.copy(alpha = 0.2f))
-                            .border(0.5.dp, activeSecondary, RoundedCornerShape(5.dp))
-                            .padding(horizontal = 7.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = "Free Claim",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = activeSecondary
-                        )
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
-                    Text(
-                        text = "Live Preview",
-                        fontSize = 10.sp,
-                        color = TextMuted
-                    )
-                }
-            }
-        }
-
-        // 2. Category Filter & View Mode Controls
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            // Category tabs
-            LazyRow(
-                modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                items(AccentCategory.values()) { category ->
-                    val isSelected = category == selectedAccentCategory
-                    val categoryBg = if (isSelected) activePrimary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant
-                    val categoryBorder = if (isSelected) activePrimary else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
-                    val categoryTextColor = if (isSelected) activePrimary else MaterialTheme.colorScheme.onSurfaceVariant
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(categoryBg)
-                            .border(1.dp, categoryBorder, RoundedCornerShape(8.dp))
-                            .clickable { selectedAccentCategory = category }
-                            .padding(horizontal = 9.dp, vertical = 5.dp)
-                    ) {
-                        Text(
-                            text = category.label,
-                            fontSize = 11.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = categoryTextColor
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.width(6.dp))
-
-            // View Switcher (Swatches Grid vs Carousel Cards)
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
-                    .padding(2.dp),
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (accentViewMode == "grid") activePrimary else Color.Transparent)
-                        .clickable { accentViewMode = "grid" }
-                        .padding(4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.GridView,
-                        contentDescription = "Grid View",
-                        tint = if (accentViewMode == "grid") Color(0xFF0B0F19) else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (accentViewMode == "carousel") activePrimary else Color.Transparent)
-                        .clickable { accentViewMode = "carousel" }
-                        .padding(4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ViewCarousel,
-                        contentDescription = "Carousel View",
-                        tint = if (accentViewMode == "carousel") Color(0xFF0B0F19) else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-        }
-
-        // 3. Color Presentation: Swatches Grid (4x4 = 16 even) OR Carousel Cards
-        val displayedThemes = remember(selectedAccentCategory) {
-            if (selectedAccentCategory == AccentCategory.ALL) {
-                AccentTheme.values().toList()
-            } else {
-                AccentTheme.values().filter { it.category == selectedAccentCategory }
-            }
-        }
-
-        if (accentViewMode == "grid") {
-            // Symmetrical 4-column Circular Palette Grid (clean, un-cluttered, exactly 4x4 for All 16!)
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                displayedThemes.chunked(4).forEach { rowThemes ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        rowThemes.forEach { theme ->
-                            val isSelected = theme == accentTheme
-                            val isUnlocked = viewModel.preferences.isAccentThemeUnlocked(theme)
-                            val primary = theme.primary(isCurrentDark)
-                            val secondary = theme.secondary(isCurrentDark)
-
-                            Column(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable {
-                                        if (isUnlocked) {
-                                            viewModel.setAccentTheme(theme)
-                                        } else {
-                                            Toast.makeText(
-                                                context,
-                                                "🔒 Complete a row or blackout in Backlog Challenge to unlock ${theme.title}!",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                    }
-                                    .padding(vertical = 4.dp)
-                                    .testTag("accent_theme_${theme.name.lowercase()}"),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(46.dp)
-                                        .clip(CircleShape)
-                                        .background(if (isSelected) primary.copy(alpha = 0.22f) else MaterialTheme.colorScheme.surfaceVariant)
-                                        .border(
-                                            width = if (isSelected) 2.5.dp else 1.dp,
-                                            color = if (isSelected) primary else if (!isUnlocked) Color(0xFF64748B) else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
-                                            shape = CircleShape
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(28.dp)
-                                            .clip(CircleShape)
-                                            .background(
-                                                Brush.linearGradient(
-                                                    colors = if (isUnlocked) listOf(primary, secondary) else listOf(primary.copy(alpha = 0.4f), secondary.copy(alpha = 0.4f))
-                                                )
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        if (isSelected) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(16.dp)
-                                                    .clip(CircleShape)
-                                                    .background(Color.Black.copy(alpha = 0.45f)),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Check,
-                                                    contentDescription = "Selected",
-                                                    tint = Color.White,
-                                                    modifier = Modifier.size(12.dp)
-                                                )
-                                            }
-                                        } else if (!isUnlocked) {
-                                            Icon(
-                                                imageVector = Icons.Default.Lock,
-                                                contentDescription = "Locked",
-                                                tint = Color.White,
-                                                modifier = Modifier.size(12.dp)
-                                            )
-                                        }
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(4.dp))
-
-                                Text(
-                                    text = if (!isUnlocked) "🔒 ${theme.shortName}" else theme.shortName,
-                                    fontSize = 11.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) primary else if (!isUnlocked) Color(0xFF94A3B8) else MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                        }
-
-                        // Keep column width strictly identical for rows with fewer than 4 items
-                        repeat(4 - rowThemes.size) {
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
-                    }
-                }
-            }
-        } else {
-            // Interactive Card Carousel: horizontal scroll with full descriptions
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                contentPadding = PaddingValues(vertical = 4.dp)
-            ) {
-                items(displayedThemes) { theme ->
-                    val isSelected = theme == accentTheme
-                    val isUnlocked = viewModel.preferences.isAccentThemeUnlocked(theme)
-                    val primary = theme.primary(isCurrentDark)
-                    val secondary = theme.secondary(isCurrentDark)
-
-                    Box(
-                        modifier = Modifier
-                            .width(155.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(if (isSelected) primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant)
-                            .border(
-                                width = if (isSelected) 2.dp else 1.dp,
-                                color = if (isSelected) primary else if (!isUnlocked) Color(0xFF64748B) else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
-                                shape = RoundedCornerShape(14.dp)
-                            )
-                            .clickable {
-                                if (isUnlocked) {
-                                    viewModel.setAccentTheme(theme)
-                                } else {
-                                    Toast.makeText(
-                                        context,
-                                        "🔒 Complete a row or blackout in Backlog Challenge to unlock ${theme.title}!",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            }
-                            .padding(12.dp)
-                            .testTag("accent_theme_${theme.name.lowercase()}")
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(26.dp)
-                                        .clip(CircleShape)
-                                        .background(Brush.linearGradient(listOf(primary, secondary))),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    if (!isUnlocked) {
-                                        Icon(
-                                            imageVector = Icons.Default.Lock,
-                                            contentDescription = "Locked",
-                                            tint = Color.White,
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                    }
-                                }
-                                if (isSelected) {
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(5.dp))
-                                            .background(primary)
-                                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                                    ) {
-                                        Text(
-                                            text = "ACTIVE",
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF0B0F19)
-                                        )
-                                    }
-                                } else if (!isUnlocked) {
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(5.dp))
-                                            .background(Color(0xFF334155))
-                                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                                    ) {
-                                        Text(
-                                            text = "LOCKED",
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color(0xFFCBD5E1)
-                                        )
-                                    }
-                                }
-                            }
-
-                            Text(
-                                text = theme.title,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isSelected) primary else if (!isUnlocked) Color(0xFF94A3B8) else MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1
-                            )
-
-                            Text(
-                                text = if (!isUnlocked) "Unlock via Backlog Challenge" else theme.description,
-                                fontSize = 11.sp,
-                                color = if (!isUnlocked) Color(0xFFFBBF24) else MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 2,
-                                lineHeight = 14.sp
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
+    AccentThemePickerSection(
+        accentTheme = accentTheme,
+        isCurrentDark = isCurrentDark,
+        viewModel = viewModel,
+        context = context
+    )
 
     Spacer(modifier = Modifier.height(20.dp))
 
-    // SECTION 3: Background Surface Styles
     SectionHeader(
-        title = if (themeMode == ThemeMode.LIGHT) "LIGHT BACKGROUND STYLE" else "DARK BACKGROUND STYLE",
+        title = if (themeMode == ThemeMode.LIGHT) s.settings.appearanceBgLightSection else s.settings.appearanceBgDarkSection,
         icon = Icons.Default.ColorLens
     )
-
     Spacer(modifier = Modifier.height(8.dp))
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        val availableThemes = if (themeMode == ThemeMode.LIGHT) {
-            BackgroundTheme.values().filter { !it.isDark }
-        } else {
-            BackgroundTheme.values().filter { it.isDark }
+    SettingsOptionCard {
+        val availableThemes = BackgroundTheme.values().filter {
+            if (themeMode == ThemeMode.LIGHT) !it.isDark else it.isDark
         }
-
         availableThemes.forEach { bg ->
             val isSelected = if (themeMode == ThemeMode.LIGHT) bg == lightBgTheme else bg == darkBgTheme
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent)
-                    .border(
-                        width = if (isSelected) 1.5.dp else 1.dp,
-                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .clickable {
-                        if (themeMode == ThemeMode.LIGHT) {
-                            viewModel.setLightBackgroundTheme(bg)
-                        } else {
-                            viewModel.setDarkBackgroundTheme(bg)
-                        }
-                    }
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
-                    .testTag("bg_theme_${bg.name.lowercase()}"),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+            SelectableOptionRow(
+                title = bg.localizedTitle(s),
+                subtitle = null,
+                selected = isSelected,
+                testTag = "bg_theme_${bg.name.lowercase()}",
+                onClick = {
+                    if (themeMode == ThemeMode.LIGHT) viewModel.setLightBackgroundTheme(bg)
+                    else viewModel.setDarkBackgroundTheme(bg)
+                },
+                leadingContent = {
                     Box(
                         modifier = Modifier
                             .size(24.dp)
@@ -673,443 +157,191 @@ fun AppearanceSettingsCategoryContent(
                             .background(bg.backgroundColor)
                             .border(1.dp, bg.borderColor, RoundedCornerShape(6.dp))
                     )
-                    Text(
-                        text = bg.title,
-                        fontSize = 14.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
                 }
-
-                if (isSelected) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
+            )
         }
     }
 
     Spacer(modifier = Modifier.height(20.dp))
 
-    // SECTION 3.5: Custom App Font
-    val hasCustomFont = customFontPath.isNotBlank()
-    SectionHeader(title = "CUSTOM APP FONT", icon = Icons.Default.TextFields)
-
-    Spacer(modifier = Modifier.height(8.dp))
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
-            .padding(14.dp)
-            .testTag("custom_font_settings_card"),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f))
-                        .border(
-                            1.dp,
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
-                            RoundedCornerShape(10.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.FontDownload,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = if (hasCustomFont) {
-                                customFontName.ifBlank { "Custom Font" }
-                            } else {
-                                "System Default Font"
-                            },
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false)
-                        )
-                        if (hasCustomFont) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f))
-                                    .border(
-                                        0.8.dp,
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.55f),
-                                        RoundedCornerShape(6.dp)
-                                    )
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = "CUSTOM",
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                    }
-                    Text(
-                        text = if (hasCustomFont) {
-                            "Applied across all screens, cards & menus"
-                        } else {
-                            "Import a .ttf or .otf file to customize all text"
-                        },
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-
-        // Live Typography Preview Box
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                .border(
-                    1.dp,
-                    MaterialTheme.colorScheme.outlineVariant,
-                    RoundedCornerShape(12.dp)
-                )
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(3.dp)
-        ) {
-            Text(
-                text = "Aa Bb Cc 123 • LootDrop",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = "The quick brown fox claims free PC & Steam drops.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        // Import & Reset Actions
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Button(
-                onClick = {
-                    fontPickerLauncher.launch(
-                        arrayOf(
-                            "font/ttf",
-                            "font/otf",
-                            "font/sfnt",
-                            "application/x-font-ttf",
-                            "application/x-font-opentype",
-                            "application/font-sfnt",
-                            "application/octet-stream",
-                            "*/*"
-                        )
-                    )
-                },
-                enabled = !isImportingFont,
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                modifier = Modifier
-                    .weight(1f)
-                    .minimumInteractiveComponentSize()
-                    .testTag("btn_import_custom_font")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.UploadFile,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = if (isImportingFont) {
-                        "Importing..."
-                    } else if (hasCustomFont) {
-                        "Change Font"
-                    } else {
-                        "Import Font File"
-                    },
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            if (hasCustomFont) {
-                OutlinedButton(
-                    onClick = {
-                        viewModel.resetCustomFont(context)
-                        Toast.makeText(context, "Restored default system font", Toast.LENGTH_SHORT).show()
-                    },
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                    modifier = Modifier
-                        .minimumInteractiveComponentSize()
-                        .testTag("btn_reset_custom_font")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.RestartAlt,
-                        contentDescription = "Reset Font",
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "Reset",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-        }
-    }
+    CustomFontSettingsCard(
+        customFontPath = customFontPath,
+        customFontName = customFontName,
+        viewModel = viewModel,
+        context = context
+    )
 
     Spacer(modifier = Modifier.height(20.dp))
 
-    // SECTION 4: Card Layout Density (Rich vs Compact vs Minimal)
-    SectionHeader(title = "CARD LAYOUT DENSITY", icon = Icons.Default.ViewAgenda)
-
+    SectionHeader(title = s.settings.appearanceDensitySection, icon = Icons.Default.ViewAgenda)
     Spacer(modifier = Modifier.height(8.dp))
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
+    SettingsOptionCard {
         CardDensity.values().forEach { density ->
-            val isSelected = density == cardDensity
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent)
-                    .border(
-                        width = if (isSelected) 1.5.dp else 1.dp,
-                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .clickable { viewModel.setCardDensity(density) }
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
-                    .testTag("density_${density.name.lowercase()}"),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text(
-                        text = density.label,
-                        fontSize = 14.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = density.description,
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                if (isSelected) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
+            SelectableOptionRow(
+                title = density.localizedLabel(s),
+                subtitle = density.localizedDescription(s),
+                selected = density == cardDensity,
+                testTag = "density_${density.name.lowercase()}",
+                onClick = { viewModel.setCardDensity(density) }
+            )
         }
     }
 
     Spacer(modifier = Modifier.height(20.dp))
 
-    // SECTION 5: UI Scale & Screen Footprint
-    val dpiScaleMode by viewModel.dpiScaleMode.collectAsState()
-    SectionHeader(title = "UI SCALE & SCREEN FOOTPRINT", icon = Icons.Default.Tune)
-
+    SectionHeader(
+        title = if (isEs) "ESCALA DE UI Y TAMAÑO EN PANTALLA" else "UI SCALE & SCREEN FOOTPRINT",
+        icon = Icons.Default.Tune
+    )
     Spacer(modifier = Modifier.height(8.dp))
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
+    SettingsOptionCard {
         DpiScaleMode.values().forEach { mode ->
-            val isSelected = mode == dpiScaleMode
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent)
-                    .border(
-                        width = if (isSelected) 1.5.dp else 1.dp,
-                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .clickable { viewModel.setDpiScaleMode(mode) }
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
-                    .testTag("dpi_scale_${mode.name.lowercase()}"),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = mode.label,
-                        fontSize = 14.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = mode.description,
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                if (isSelected) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
+            SelectableOptionRow(
+                title = mode.localizedLabel(s),
+                subtitle = mode.localizedDescription(s),
+                selected = mode == dpiScaleMode,
+                testTag = "dpi_scale_${mode.name.lowercase()}",
+                onClick = { viewModel.setDpiScaleMode(mode) }
+            )
         }
     }
 
     Spacer(modifier = Modifier.height(20.dp))
 
-    // SECTION 6: Default Starting Tab
-    val defaultTab by viewModel.defaultTab.collectAsState()
-    SectionHeader(title = "DEFAULT STARTING TAB", icon = Icons.Default.Home)
-
+    SectionHeader(title = s.settings.appearanceStartTabSection, icon = Icons.Default.Home)
     Spacer(modifier = Modifier.height(8.dp))
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        val tabDetails = listOf(
-            Triple(MainTab.HOME, Icons.Default.Home to "Home (Recommended)", "Dashboard with recent Steam activity & top free game picks"),
-            Triple(MainTab.DISCOVER, Icons.Default.Explore to "Discover", "Browse all active PC, console & mobile free giveaways"),
-            Triple(MainTab.CALENDAR, Icons.Default.CalendarMonth to "Calendar", "Expiration radar & timeline for ending-soon deals"),
-            Triple(MainTab.CLAIMED, Icons.Default.CheckCircle to "In Library", "Your saved game vault and unlocked achievements"),
-            Triple(MainTab.SETTINGS, Icons.Default.Settings to "Settings", "App preferences, appearance, and configuration")
-        )
-
-        tabDetails.forEach { (tab, iconAndLabel, description) ->
+    SettingsOptionCard {
+        listOf(
+            Triple(
+                MainTab.HOME,
+                Icons.Default.Home to (if (isEs) "Inicio (Recomendado)" else "Home (Recommended)"),
+                if (isEs) "Panel con tu actividad Steam y los mejores juegos gratis" else "Dashboard with recent Steam activity & top free game picks"
+            ),
+            Triple(
+                MainTab.DISCOVER,
+                Icons.Default.Explore to s.common.tabDiscover,
+                if (isEs) "Explora todas las ofertas gratis en PC, consolas y móvil" else "Browse all active PC, console & mobile free giveaways"
+            ),
+            Triple(
+                MainTab.CALENDAR,
+                Icons.Default.CalendarMonth to s.common.tabCalendar,
+                if (isEs) "Radar de vencimiento y calendario de ofertas por terminar" else "Expiration radar & timeline for ending-soon deals"
+            ),
+            Triple(
+                MainTab.CLAIMED,
+                Icons.Default.CheckCircle to s.common.tabClaimed,
+                if (isEs) "Tu bóveda personal de juegos y logros desbloqueados" else "Your saved game vault and unlocked achievements"
+            ),
+            Triple(
+                MainTab.SETTINGS,
+                Icons.Default.Settings to s.common.tabSettings,
+                if (isEs) "Preferencias de la app, apariencia y configuración" else "App preferences, appearance, and configuration"
+            )
+        ).forEach { (tab, iconAndLabel, description) ->
             val (icon, label) = iconAndLabel
             val isSelected = tab == defaultTab
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent)
-                    .border(
-                        width = if (isSelected) 1.5.dp else 1.dp,
-                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .clickable { viewModel.setDefaultTab(tab) }
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
-                    .testTag("default_tab_${tab.name.lowercase()}"),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceVariant),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+            SelectableOptionRow(
+                title = label,
+                subtitle = description,
+                selected = isSelected,
+                testTag = "default_tab_${tab.name.lowercase()}",
+                onClick = { viewModel.setDefaultTab(tab) },
+                leadingContent = { TabOptionIcon(icon = icon, selected = isSelected) }
+            )
+        }
+    }
+}
 
-                    Column {
-                        Text(
-                            text = label,
-                            fontSize = 14.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = description,
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+@Composable
+private fun SettingsOptionCard(content: @Composable () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        content()
+    }
+}
 
-                if (isSelected) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "Selected",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
+@Composable
+private fun SelectableOptionRow(
+    title: String,
+    subtitle: String?,
+    selected: Boolean,
+    testTag: String,
+    onClick: () -> Unit,
+    leadingContent: (@Composable () -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent)
+            .border(
+                width = if (selected) 1.5.dp else 1.dp,
+                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(12.dp)
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 10.dp)
+            .testTag(testTag),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            leadingContent?.invoke()
+            Column {
+                Text(
+                    text = title,
+                    fontSize = 14.sp,
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                    color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                )
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
         }
+        if (selected) {
+            Icon(
+                Icons.Default.Check,
+                contentDescription = if (LocalAppStrings.current.language == com.example.i18n.AppLanguage.SPANISH) "Seleccionado" else "Selected",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun TabOptionIcon(icon: ImageVector, selected: Boolean) {
+    Box(
+        modifier = Modifier
+            .size(34.dp)
+            .clip(CircleShape)
+            .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp)
+        )
     }
 }

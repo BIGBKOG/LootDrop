@@ -56,7 +56,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.i18n.LocalAppStrings
 import com.example.ui.MainTab
+import com.example.util.LocalLowEndOptimization
 
 @Composable
 fun ExpressiveFloatingNavBar(
@@ -67,6 +69,8 @@ fun ExpressiveFloatingNavBar(
     isLowEndOptimization: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val s = LocalAppStrings.current
+    val effectiveLowEnd = isLowEndOptimization || LocalLowEndOptimization.current
     val navBarWidth = 372.dp
     val navBarHeight = 64.dp
     val tabCount = 5
@@ -83,18 +87,26 @@ fun ExpressiveFloatingNavBar(
     val themeSecondary = MaterialTheme.colorScheme.secondary
     val chromeSurface = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f)
 
-    val animatedIndex by animateFloatAsState(
-        targetValue = targetIndex.toFloat(),
-        animationSpec = ExpressiveMotion.spatialDefault(reducedMotion = isLowEndOptimization),
-        label = "sliding_nav_indicator_index"
-    )
+    val animatedIndex = if (effectiveLowEnd) {
+        targetIndex.toFloat()
+    } else {
+        animateFloatAsState(
+            targetValue = targetIndex.toFloat(),
+            animationSpec = ExpressiveMotion.spatialDefault(reducedMotion = false),
+            label = "sliding_nav_indicator_index"
+        ).value
+    }
     // Playful M3 Expressive indicator stretch while gliding between tabs
-    val glideDistance = abs(targetIndex.toFloat() - animatedIndex).coerceIn(0f, 1f)
-    val pillCornerRadius by animateDpAsState(
-        targetValue = if (glideDistance > 0.08f) 18.dp else 24.dp,
-        animationSpec = ExpressiveMotion.spatialFast(reducedMotion = isLowEndOptimization),
-        label = "nav_pill_corner"
-    )
+    val glideDistance = if (effectiveLowEnd) 0f else abs(targetIndex.toFloat() - animatedIndex).coerceIn(0f, 1f)
+    val pillCornerRadius = if (effectiveLowEnd) {
+        24.dp
+    } else {
+        animateDpAsState(
+            targetValue = if (glideDistance > 0.08f) 18.dp else 24.dp,
+            animationSpec = ExpressiveMotion.spatialFast(reducedMotion = false),
+            label = "nav_pill_corner"
+        ).value
+    }
 
     val activePillBrush = remember(themePrimary, themeSecondary) {
         Brush.horizontalGradient(
@@ -105,25 +117,33 @@ fun ExpressiveFloatingNavBar(
         )
     }
 
-    val activePillBorderColor by animateColorAsState(
-        targetValue = themePrimary.copy(alpha = 0.60f),
-        animationSpec = ExpressiveMotion.effectsDefault(reducedMotion = isLowEndOptimization),
-        label = "nav_pill_border_color"
-    )
+    val activePillBorderColor = if (effectiveLowEnd) {
+        themePrimary.copy(alpha = 0.60f)
+    } else {
+        animateColorAsState(
+            targetValue = themePrimary.copy(alpha = 0.60f),
+            animationSpec = ExpressiveMotion.effectsDefault(reducedMotion = false),
+            label = "nav_pill_border_color"
+        ).value
+    }
 
-    val outerBorderColor by animateColorAsState(
-        targetValue = themePrimary.copy(alpha = 0.30f),
-        animationSpec = ExpressiveMotion.effectsDefault(reducedMotion = isLowEndOptimization),
-        label = "nav_outer_border_color"
-    )
+    val outerBorderColor = if (effectiveLowEnd) {
+        themePrimary.copy(alpha = 0.30f)
+    } else {
+        animateColorAsState(
+            targetValue = themePrimary.copy(alpha = 0.30f),
+            animationSpec = ExpressiveMotion.effectsDefault(reducedMotion = false),
+            label = "nav_outer_border_color"
+        ).value
+    }
 
     Surface(
         modifier = modifier
             .width(navBarWidth)
             .height(navBarHeight)
             .then(
-                if (isLowEndOptimization) {
-                    Modifier.shadow(elevation = 4.dp, shape = RoundedCornerShape(36.dp))
+                if (effectiveLowEnd) {
+                    Modifier
                 } else {
                     Modifier.shadow(
                         elevation = 14.dp,
@@ -141,7 +161,7 @@ fun ExpressiveFloatingNavBar(
             .testTag("bottom_nav_bar"),
         shape = RoundedCornerShape(36.dp),
         color = chromeSurface,
-        tonalElevation = if (isLowEndOptimization) 0.dp else 4.dp
+        tonalElevation = if (effectiveLowEnd) 0.dp else 4.dp
     ) {
         BoxWithConstraints(
             modifier = Modifier
@@ -156,12 +176,14 @@ fun ExpressiveFloatingNavBar(
                     .offset(x = singleTabWidth * animatedIndex)
                     .width(singleTabWidth)
                     .fillMaxHeight()
-                    .graphicsLayer {
-                        if (!isLowEndOptimization && glideDistance > 0.01f) {
-                            scaleX = 1f + glideDistance * 0.14f
-                            scaleY = 1f - glideDistance * 0.06f
-                        }
-                    }
+                    .then(
+                        if (!effectiveLowEnd && glideDistance > 0.01f) {
+                            Modifier.graphicsLayer {
+                                scaleX = 1f + glideDistance * 0.14f
+                                scaleY = 1f - glideDistance * 0.06f
+                            }
+                        } else Modifier
+                    )
                     .padding(horizontal = 2.dp, vertical = 2.dp)
                     .clip(RoundedCornerShape(pillCornerRadius))
                     .background(activePillBrush)
@@ -179,63 +201,63 @@ fun ExpressiveFloatingNavBar(
             ) {
                 ExpressiveNavTab(
                     tab = MainTab.HOME,
-                    title = "Home",
+                    title = s.common.tabHome,
                     icon = Icons.Default.Home,
                     isSelected = selectedTab == MainTab.HOME,
                     activeColor = themePrimary,
                     onClick = { onTabSelected(MainTab.HOME) },
                     testTag = "nav_tab_home",
-                    isLowEndOptimization = isLowEndOptimization,
+                    isLowEndOptimization = effectiveLowEnd,
                     modifier = Modifier.weight(1f).fillMaxHeight()
                 )
 
                 ExpressiveNavTab(
                     tab = MainTab.DISCOVER,
-                    title = "Discover",
+                    title = s.common.tabDiscover,
                     icon = Icons.Default.Explore,
                     isSelected = selectedTab == MainTab.DISCOVER,
                     activeColor = themePrimary,
                     onClick = { onTabSelected(MainTab.DISCOVER) },
                     testTag = "nav_tab_discover",
-                    isLowEndOptimization = isLowEndOptimization,
+                    isLowEndOptimization = effectiveLowEnd,
                     modifier = Modifier.weight(1f).fillMaxHeight()
                 )
 
                 ExpressiveNavTab(
                     tab = MainTab.CALENDAR,
-                    title = "Calendar",
+                    title = s.common.tabCalendar,
                     icon = Icons.Default.CalendarMonth,
                     isSelected = selectedTab == MainTab.CALENDAR,
                     activeColor = themePrimary,
                     onClick = { onTabSelected(MainTab.CALENDAR) },
                     testTag = "nav_tab_calendar",
                     badgeCount = if (expiringSoonCount > 0) expiringSoonCount else null,
-                    isLowEndOptimization = isLowEndOptimization,
+                    isLowEndOptimization = effectiveLowEnd,
                     modifier = Modifier.weight(1f).fillMaxHeight()
                 )
 
                 ExpressiveNavTab(
                     tab = MainTab.CLAIMED,
-                    title = "In Library",
+                    title = s.common.tabClaimed,
                     icon = Icons.Default.CheckCircle,
                     isSelected = selectedTab == MainTab.CLAIMED,
                     activeColor = themePrimary,
                     onClick = { onTabSelected(MainTab.CLAIMED) },
                     testTag = "nav_tab_claimed",
                     badgeCount = if (claimedCount > 0) claimedCount else null,
-                    isLowEndOptimization = isLowEndOptimization,
+                    isLowEndOptimization = effectiveLowEnd,
                     modifier = Modifier.weight(1f).fillMaxHeight()
                 )
 
                 ExpressiveNavTab(
                     tab = MainTab.SETTINGS,
-                    title = "Settings",
+                    title = s.common.tabSettings,
                     icon = Icons.Default.Settings,
                     isSelected = selectedTab == MainTab.SETTINGS,
                     activeColor = themePrimary,
                     onClick = { onTabSelected(MainTab.SETTINGS) },
                     testTag = "nav_tab_settings",
-                    isLowEndOptimization = isLowEndOptimization,
+                    isLowEndOptimization = effectiveLowEnd,
                     modifier = Modifier.weight(1f).fillMaxHeight()
                 )
             }
@@ -257,39 +279,56 @@ private fun ExpressiveNavTab(
     isLowEndOptimization: Boolean = false
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
     val density = LocalDensity.current
+    val targetContentColor = if (isSelected) activeColor else MaterialTheme.colorScheme.onSurfaceVariant
 
-    val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.89f else 1.0f,
-        animationSpec = ExpressiveMotion.spatialFast(reducedMotion = isLowEndOptimization),
-        label = "nav_tab_press_${tab.name}"
-    )
+    val pressScale: Float
+    val iconScale: Float
+    val iconLiftPx: Float
+    val contentColor: Color
+    if (isLowEndOptimization) {
+        pressScale = 1.0f
+        iconScale = if (isSelected) 1.08f else 1.0f
+        iconLiftPx = 0f
+        contentColor = targetContentColor
+    } else {
+        val isPressed by interactionSource.collectIsPressedAsState()
+        pressScale = animateFloatAsState(
+            targetValue = if (isPressed) 0.89f else 1.0f,
+            animationSpec = ExpressiveMotion.spatialFast(reducedMotion = false),
+            label = "nav_tab_press_${tab.name}"
+        ).value
+        iconScale = animateFloatAsState(
+            targetValue = if (isSelected) 1.13f else 0.98f,
+            animationSpec = ExpressiveMotion.spatialFast(reducedMotion = false),
+            label = "nav_tab_icon_scale_${tab.name}"
+        ).value
+        iconLiftPx = animateFloatAsState(
+            targetValue = if (isSelected) with(density) { (-1.5).dp.toPx() } else 0f,
+            animationSpec = ExpressiveMotion.spatialFast(reducedMotion = false),
+            label = "nav_tab_icon_lift_${tab.name}"
+        ).value
+        contentColor = animateColorAsState(
+            targetValue = targetContentColor,
+            animationSpec = ExpressiveMotion.effectsDefault(reducedMotion = false),
+            label = "nav_tab_content_${tab.name}"
+        ).value
+    }
 
-    val iconScale by animateFloatAsState(
-        targetValue = if (isSelected) 1.13f else 0.98f,
-        animationSpec = ExpressiveMotion.spatialFast(reducedMotion = isLowEndOptimization),
-        label = "nav_tab_icon_scale_${tab.name}"
-    )
-
-    val iconLiftPx by animateFloatAsState(
-        targetValue = if (isSelected && !isLowEndOptimization) with(density) { (-1.5).dp.toPx() } else 0f,
-        animationSpec = ExpressiveMotion.spatialFast(reducedMotion = isLowEndOptimization),
-        label = "nav_tab_icon_lift_${tab.name}"
-    )
-
-    val contentColor by animateColorAsState(
-        targetValue = if (isSelected) activeColor else MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = ExpressiveMotion.effectsDefault(reducedMotion = isLowEndOptimization),
-        label = "nav_tab_content_${tab.name}"
-    )
+    val pressModifier = if (!isLowEndOptimization && pressScale != 1f) {
+        Modifier.graphicsLayer { scaleX = pressScale; scaleY = pressScale }
+    } else Modifier
+    val iconModifier = if (iconScale != 1f || iconLiftPx != 0f) {
+        Modifier.size(22.dp).graphicsLayer {
+            scaleX = iconScale
+            scaleY = iconScale
+            translationY = iconLiftPx
+        }
+    } else Modifier.size(22.dp)
 
     Box(
         modifier = modifier
-            .graphicsLayer {
-                scaleX = pressScale
-                scaleY = pressScale
-            }
+            .then(pressModifier)
             .clip(RoundedCornerShape(24.dp))
             .clickable(
                 interactionSource = interactionSource,
@@ -311,16 +350,25 @@ private fun ExpressiveNavTab(
                             contentColor = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.padding(bottom = 2.dp)
                         ) {
-                            AnimatedContent(
-                                targetState = if (badgeCount > 99) "99+" else badgeCount.toString(),
-                                transitionSpec = { ExpressiveMotion.popNumberTransform(isLowEndOptimization) },
-                                label = "nav_badge_count_${tab.name}"
-                            ) { countText ->
+                            val badgeLabel = if (badgeCount > 99) "99+" else badgeCount.toString()
+                            if (isLowEndOptimization) {
                                 Text(
-                                    text = countText,
+                                    text = badgeLabel,
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold
                                 )
+                            } else {
+                                AnimatedContent(
+                                    targetState = badgeLabel,
+                                    transitionSpec = { ExpressiveMotion.popNumberTransform(false) },
+                                    label = "nav_badge_count_${tab.name}"
+                                ) { countText ->
+                                    Text(
+                                        text = countText,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
                     }
@@ -329,13 +377,7 @@ private fun ExpressiveNavTab(
                         imageVector = icon,
                         contentDescription = title,
                         tint = contentColor,
-                        modifier = Modifier
-                            .size(22.dp)
-                            .graphicsLayer {
-                                scaleX = iconScale
-                                scaleY = iconScale
-                                translationY = iconLiftPx
-                            }
+                        modifier = iconModifier
                     )
                 }
             } else {
@@ -343,13 +385,7 @@ private fun ExpressiveNavTab(
                     imageVector = icon,
                     contentDescription = title,
                     tint = contentColor,
-                    modifier = Modifier
-                        .size(22.dp)
-                        .graphicsLayer {
-                            scaleX = iconScale
-                            scaleY = iconScale
-                            translationY = iconLiftPx
-                        }
+                    modifier = iconModifier
                 )
             }
 

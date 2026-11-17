@@ -353,7 +353,8 @@ object ReviewModerationFilter {
     fun validateReviewInput(
         title: String,
         comment: String,
-        authorName: String
+        authorName: String,
+        isSpanish: Boolean = false
     ): ValidationResult {
         val cleanTitle = title.trim()
         val cleanComment = comment.trim()
@@ -362,7 +363,11 @@ object ReviewModerationFilter {
         if (cleanComment.isBlank() && cleanTitle.isBlank()) {
             return ValidationResult(
                 isAllowed = false,
-                errorMessage = "Please write a review headline or comment."
+                errorMessage = if (isSpanish) {
+                    "Por favor escribe un título o comentario."
+                } else {
+                    "Please write a review headline or comment."
+                }
             )
         }
 
@@ -371,21 +376,37 @@ object ReviewModerationFilter {
         val commentHasPii = containsAddress(cleanComment) || containsPhoneNumber(cleanComment)
         val authorHasPii = containsAddress(cleanAuthor) || containsPhoneNumber(cleanAuthor)
 
-        if (titleHasPii || containsProfanityOrSlur(cleanTitle)) flagged.add("headline")
-        if (commentHasPii || containsProfanityOrSlur(cleanComment)) flagged.add("review comment")
-        if (authorHasPii || containsProfanityOrSlur(cleanAuthor)) flagged.add("gamer tag")
+        if (titleHasPii || containsProfanityOrSlur(cleanTitle)) flagged.add(if (isSpanish) "título" else "headline")
+        if (commentHasPii || containsProfanityOrSlur(cleanComment)) flagged.add(if (isSpanish) "comentario" else "review comment")
+        if (authorHasPii || containsProfanityOrSlur(cleanAuthor)) flagged.add(if (isSpanish) "gamer tag" else "gamer tag")
 
         if (flagged.isNotEmpty()) {
-            val fieldList = when (flagged.size) {
-                1 -> flagged[0]
-                2 -> "${flagged[0]} and ${flagged[1]}"
-                else -> "${flagged[0]}, ${flagged[1]}, and ${flagged[2]}"
+            val fieldList = if (isSpanish) {
+                when (flagged.size) {
+                    1 -> flagged[0]
+                    2 -> "${flagged[0]} y ${flagged[1]}"
+                    else -> "${flagged[0]}, ${flagged[1]} y ${flagged[2]}"
+                }
+            } else {
+                when (flagged.size) {
+                    1 -> flagged[0]
+                    2 -> "${flagged[0]} and ${flagged[1]}"
+                    else -> "${flagged[0]}, ${flagged[1]}, and ${flagged[2]}"
+                }
             }
             val hasPii = titleHasPii || commentHasPii || authorHasPii
-            val message = if (hasPii) {
-                "Blacklisted content (addresses or phone numbers) detected in your $fieldList. Addresses, phone numbers, swears, slurs, and restricted slang are not allowed in community reviews."
+            val message = if (isSpanish) {
+                if (hasPii) {
+                    "Se detectó contenido restringido (direcciones o teléfonos) en tu $fieldList. No se permiten datos personales ni groserías en reseñas."
+                } else {
+                    "Se detectaron palabras prohibidas en tu $fieldList. No se permiten groserías ni términos ofensivos en reseñas."
+                }
             } else {
-                "Blacklisted words detected in your $fieldList. Swears, slurs, and restricted slang are not allowed in community reviews."
+                if (hasPii) {
+                    "Blacklisted content (addresses or phone numbers) detected in your $fieldList. Addresses, phone numbers, swears, slurs, and restricted slang are not allowed in community reviews."
+                } else {
+                    "Blacklisted words detected in your $fieldList. Swears, slurs, and restricted slang are not allowed in community reviews."
+                }
             }
             return ValidationResult(
                 isAllowed = false,

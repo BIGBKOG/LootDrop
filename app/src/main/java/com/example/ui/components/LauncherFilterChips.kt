@@ -44,6 +44,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.LauncherType
+import com.example.i18n.LocalAppStrings
+import com.example.i18n.localizedDisplayName
 import com.example.ui.theme.GamingDarkSurface
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.TextMuted
@@ -57,6 +59,7 @@ fun LauncherFilterChips(
     counts: Map<LauncherType, Int>,
     modifier: Modifier = Modifier
 ) {
+    val s = LocalAppStrings.current
     LazyRow(
         modifier = modifier
             .fillMaxWidth()
@@ -143,7 +146,7 @@ fun LauncherFilterChips(
                     }
 
                     Text(
-                        text = launcher.displayName,
+                        text = launcher.localizedDisplayName(s),
                         fontSize = 13.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                         color = if (isSelected) TextPrimary else TextSecondary

@@ -60,21 +60,29 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.example.data.local.SteamAchievementEntity
 import com.example.data.local.SteamGameEntity
 import com.example.data.model.TrophyRarityTier
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 import com.example.util.AchievementWalkthroughHelper
+import com.example.util.LocalLowEndOptimization
 
 private enum class AchievementFilterTab(val label: String) {
     ALL("All"),
     LOCKED("Locked (Walkthroughs)"),
-    UNLOCKED("Unlocked")
+    UNLOCKED("Unlocked");
+
+    fun localized(isEs: Boolean): String = if (!isEs) label else when (this) {
+        ALL -> "Todos"
+        LOCKED -> "Bloqueados (Guías)"
+        UNLOCKED -> "Desbloqueados"
+    }
 }
 
 @Composable
@@ -86,6 +94,18 @@ fun GameAchievementsDialog(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
+    val lowEnd = LocalLowEndOptimization.current
+    val headerImageRequest = remember(context, game.headerImageUrl, lowEnd) {
+        buildGiveawayImageRequest(
+            context = context,
+            url = game.headerImageUrl,
+            isLowEndOptimization = lowEnd,
+            width = if (lowEnd) 460 else 640,
+            height = if (lowEnd) 190 else 260
+        )
+    }
     var selectedFilterTab by remember { mutableStateOf(AchievementFilterTab.ALL) }
 
     val unlockedCount = achievements.count { it.isAchieved }
@@ -129,10 +149,7 @@ fun GameAchievementsDialog(
                         .height(130.dp)
                 ) {
                     AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(game.headerImageUrl)
-                            .crossfade(true)
-                            .build(),
+                        model = headerImageRequest,
                         contentDescription = game.name,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxWidth()
@@ -166,7 +183,7 @@ fun GameAchievementsDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
+                            contentDescription = s.common.close,
                             tint = Color.White,
                             modifier = Modifier.size(18.dp)
                         )
@@ -201,7 +218,7 @@ fun GameAchievementsDialog(
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                 ) {
                                     Text(
-                                        text = "🔥 $remainingToHundred AWAY FROM 100%!",
+                                        text = if (isEs) "🔥 ¡A $remainingToHundred DEL 100%!" else "🔥 $remainingToHundred AWAY FROM 100%!",
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = NeonCyan
@@ -216,7 +233,7 @@ fun GameAchievementsDialog(
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                 ) {
                                     Text(
-                                        text = "👑 100% MASTERED",
+                                        text = if (isEs) "👑 100% COMPLETADO" else "👑 100% MASTERED",
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = NeonGreen
@@ -232,7 +249,7 @@ fun GameAchievementsDialog(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                text = "${game.playtimeHours} played • $unlockedCount / $totalCount Achievements ($percent%)",
+                                text = "${String.format(s.home.cardPlaytimeFormat, game.playtimeHours)} • ${String.format(s.library.gameAchievementsSummaryFormat, unlockedCount, totalCount, percent)}",
                                 fontSize = 12.sp,
                                 color = TextSecondary
                             )
@@ -266,7 +283,7 @@ fun GameAchievementsDialog(
                             onClick = { selectedFilterTab = tab },
                             label = {
                                 Text(
-                                    text = tab.label,
+                                    text = tab.localized(isEs),
                                     fontSize = 11.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                                 )
@@ -304,7 +321,7 @@ fun GameAchievementsDialog(
                             modifier = Modifier.size(13.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("All Steam Guides", fontSize = 11.sp, color = Color(0xFF66C0F4), fontWeight = FontWeight.SemiBold)
+                        Text(if (isEs) "Guías en Steam" else "All Steam Guides", fontSize = 11.sp, color = Color(0xFF66C0F4), fontWeight = FontWeight.SemiBold)
                     }
                 }
 
@@ -319,7 +336,7 @@ fun GameAchievementsDialog(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             CircularProgressIndicator(color = NeonCyan, modifier = Modifier.size(28.dp))
                             Spacer(modifier = Modifier.height(10.dp))
-                            Text("Fetching achievements & global percentages from Steam...", fontSize = 12.sp, color = TextSecondary)
+                            Text(s.library.gameAchievementsLoading, fontSize = 12.sp, color = TextSecondary)
                         }
                     }
                 } else if (displayedAchievements.isEmpty()) {
@@ -331,7 +348,7 @@ fun GameAchievementsDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "No achievements match this filter.",
+                            text = if (isEs) "No hay logros que coincidan con este filtro." else "No achievements match this filter.",
                             fontSize = 13.sp,
                             color = TextMuted
                         )
@@ -374,6 +391,8 @@ private fun AchievementItemRow(
     onOpenYouTubeGuide: () -> Unit,
     onOpenWebGuide: () -> Unit
 ) {
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
     val tier = achievement.rarityTier
     val tierColor = tier.color
     val isUnlocked = achievement.isAchieved
@@ -419,14 +438,14 @@ private fun AchievementItemRow(
                     if (isUnlocked) {
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "Unlocked",
+                            contentDescription = if (isEs) "Desbloqueado" else "Unlocked",
                             tint = NeonGreen,
                             modifier = Modifier.size(20.dp)
                         )
                     } else {
                         Icon(
                             imageVector = Icons.Default.Lock,
-                            contentDescription = "Locked",
+                            contentDescription = if (isEs) "Bloqueado" else "Locked",
                             tint = Color(0xFF94A3B8),
                             modifier = Modifier.size(18.dp)
                         )
@@ -489,7 +508,7 @@ private fun AchievementItemRow(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Walkthrough Guides:",
+                    text = if (isEs) "Guías de logros:" else "Walkthrough Guides:",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF94A3B8)
@@ -540,7 +559,7 @@ private fun AchievementItemRow(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                             Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(11.dp))
-                            Text(text = "Guide", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NeonCyan)
+                            Text(text = if (isEs) "Guía" else "Guide", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NeonCyan)
                         }
                     }
                 }

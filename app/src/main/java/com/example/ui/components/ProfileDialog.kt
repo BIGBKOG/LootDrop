@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import android.graphics.Bitmap
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -75,7 +76,10 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import coil.size.Precision
 import com.example.data.model.UserProfile
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
 import com.example.ui.UiStats
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGold
@@ -83,6 +87,7 @@ import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
+import com.example.util.LocalLowEndOptimization
 import java.io.File
 
 @Composable
@@ -100,6 +105,9 @@ fun ProfileDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val s = LocalAppStrings.current
+    val lowEnd = LocalLowEndOptimization.current
+    val isEs = s.language == AppLanguage.SPANISH
     var nameInput by remember(profile.name) { mutableStateOf(profile.name) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var shouldRemoveAvatar by remember { mutableStateOf(false) }
@@ -173,13 +181,13 @@ fun ProfileDialog(
                         }
                         Column {
                             Text(
-                                text = "Gamer Profile",
+                                text = s.library.profileTitle,
                                 fontSize = 17.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary
                             )
                             Text(
-                                text = "Stored locally & in JSON backups",
+                                text = if (isEs) "Guardado localmente y en respaldos JSON" else "Stored locally & in JSON backups",
                                 fontSize = 11.sp,
                                 color = TextSecondary
                             )
@@ -192,7 +200,7 @@ fun ProfileDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
+                            contentDescription = s.common.close,
                             tint = TextMuted,
                             modifier = Modifier.size(20.dp)
                         )
@@ -216,22 +224,36 @@ fun ProfileDialog(
                     val hasExistingFile = !shouldRemoveAvatar && avatarFile != null && avatarFile.exists()
 
                     if (hasPendingUri) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
+                        val pendingRequest = remember(selectedImageUri, lowEnd) {
+                            ImageRequest.Builder(context)
                                 .data(selectedImageUri)
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = "Selected Photo",
+                                .crossfade(!lowEnd)
+                                .bitmapConfig(if (lowEnd) Bitmap.Config.RGB_565 else Bitmap.Config.ARGB_8888)
+                                .allowRgb565(true)
+                                .precision(if (lowEnd) Precision.INEXACT else Precision.AUTOMATIC)
+                                .size(240, 240)
+                                .build()
+                        }
+                        AsyncImage(
+                            model = pendingRequest,
+                            contentDescription = if (isEs) "Foto seleccionada" else "Selected Photo",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize().clip(CircleShape)
                         )
                     } else if (hasExistingFile) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
+                        val avatarRequest = remember(avatarFile, lowEnd) {
+                            ImageRequest.Builder(context)
                                 .data(avatarFile)
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = "Profile Photo",
+                                .crossfade(!lowEnd)
+                                .bitmapConfig(if (lowEnd) Bitmap.Config.RGB_565 else Bitmap.Config.ARGB_8888)
+                                .allowRgb565(true)
+                                .precision(if (lowEnd) Precision.INEXACT else Precision.AUTOMATIC)
+                                .size(240, 240)
+                                .build()
+                        }
+                        AsyncImage(
+                            model = avatarRequest,
+                            contentDescription = if (isEs) "Foto de perfil" else "Profile Photo",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize().clip(CircleShape)
                         )
@@ -245,7 +267,7 @@ fun ProfileDialog(
                     } else {
                         Icon(
                             imageVector = Icons.Default.Person,
-                            contentDescription = "Default Avatar",
+                            contentDescription = if (isEs) "Avatar por defecto" else "Default Avatar",
                             tint = NeonCyan.copy(alpha = 0.8f),
                             modifier = Modifier.size(48.dp)
                         )
@@ -275,7 +297,7 @@ fun ProfileDialog(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (selectedImageUri != null || (avatarFile != null && avatarFile.exists())) "Change Photo" else "Add Photo",
+                            text = if (selectedImageUri != null || (avatarFile != null && avatarFile.exists())) s.library.profileChangePhoto else s.library.profileAddPhoto,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -296,7 +318,7 @@ fun ProfileDialog(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(text = "Remove", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            Text(text = s.library.profileRemovePhoto, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
@@ -304,7 +326,7 @@ fun ProfileDialog(
                 // Name TextField
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "GAMER TAG / NAME",
+                        text = s.library.profileGamerTagLabel.uppercase(),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextSecondary,
@@ -314,7 +336,7 @@ fun ProfileDialog(
                     OutlinedTextField(
                         value = nameInput,
                         onValueChange = { if (it.length <= 30) nameInput = it },
-                        placeholder = { Text("e.g. CyberValkyrie", color = TextMuted) },
+                        placeholder = { Text(s.library.profileGamerTagPlaceholder, color = TextMuted) },
                         singleLine = true,
                         leadingIcon = {
                             Icon(
@@ -361,7 +383,7 @@ fun ProfileDialog(
                                 color = NeonGreen
                             )
                             Text(
-                                text = "Vault Games",
+                                text = s.library.profileGamesClaimed,
                                 fontSize = 10.sp,
                                 color = TextSecondary
                             )
@@ -375,7 +397,7 @@ fun ProfileDialog(
                                 color = NeonGold
                             )
                             Text(
-                                text = "Dollars Saved",
+                                text = s.library.profileMoneySaved,
                                 fontSize = 10.sp,
                                 color = TextSecondary
                             )
@@ -389,7 +411,7 @@ fun ProfileDialog(
                                 color = NeonCyan
                             )
                             Text(
-                                text = "Steam Games",
+                                text = s.library.profileSteamSynced,
                                 fontSize = 10.sp,
                                 color = TextSecondary
                             )
@@ -429,7 +451,7 @@ fun ProfileDialog(
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Text(
-                                    text = "STEAM TROPHIES",
+                                    text = if (isEs) "TROFEOS DE STEAM" else "STEAM TROPHIES",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = Color(0xFFFFD700),
@@ -464,7 +486,11 @@ fun ProfileDialog(
                                             )
                                             Spacer(modifier = Modifier.width(3.dp))
                                             Text(
-                                                text = if (profile.hasCustomTrophySelection) "Edit (${displayedTrophies.size})" else "Choose",
+                                                text = if (profile.hasCustomTrophySelection) {
+                                                    if (isEs) "Editar (${displayedTrophies.size})" else "Edit (${displayedTrophies.size})"
+                                                } else {
+                                                    if (isEs) "Elegir" else "Choose"
+                                                },
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = NeonCyan
@@ -481,8 +507,12 @@ fun ProfileDialog(
                                     ) {
                                         Text(
                                             text = if (steamTrophies.isNotEmpty()) {
-                                                if (profile.hasCustomTrophySelection) "${displayedTrophies.size} Displayed" else "${steamTrophies.size} Unlocked"
-                                            } else "Linked",
+                                                if (profile.hasCustomTrophySelection) {
+                                                    if (isEs) "${displayedTrophies.size} Mostrados" else "${displayedTrophies.size} Displayed"
+                                                } else {
+                                                    if (isEs) "${steamTrophies.size} Desbloqueados" else "${steamTrophies.size} Unlocked"
+                                                }
+                                            } else s.library.steamLinkedBadge,
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = NeonCyan
@@ -496,7 +526,7 @@ fun ProfileDialog(
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Sync,
-                                                contentDescription = "Sync Steam Trophies",
+                                                contentDescription = s.library.steamSyncCd,
                                                 tint = TextSecondary,
                                                 modifier = Modifier.size(14.dp)
                                             )
@@ -518,9 +548,20 @@ fun ProfileDialog(
                                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        val mythicCount = displayedTrophies.count { it.rarityTier == TrophyRarityTier.MYTHIC }
-                                        val goldCount = displayedTrophies.count { it.rarityTier == TrophyRarityTier.GOLD }
-                                        val silverCount = displayedTrophies.count { it.rarityTier == TrophyRarityTier.SILVER }
+                                        val (mythicCount, goldCount, silverCount) = remember(displayedTrophies) {
+                                            var mythic = 0
+                                            var gold = 0
+                                            var silver = 0
+                                            displayedTrophies.forEach { trophy ->
+                                                when (trophy.rarityTier) {
+                                                    TrophyRarityTier.MYTHIC -> mythic++
+                                                    TrophyRarityTier.GOLD -> gold++
+                                                    TrophyRarityTier.SILVER -> silver++
+                                                    else -> Unit
+                                                }
+                                            }
+                                            Triple(mythic, gold, silver)
+                                        }
 
                                         if (mythicCount > 0) {
                                             Box(
@@ -531,7 +572,7 @@ fun ProfileDialog(
                                                     .padding(horizontal = 7.dp, vertical = 2.dp)
                                             ) {
                                                 Text(
-                                                    text = "💎 $mythicCount Mythic",
+                                                    text = if (isEs) "💎 $mythicCount Mítico" else "💎 $mythicCount Mythic",
                                                     fontSize = 10.sp,
                                                     fontWeight = FontWeight.ExtraBold,
                                                     color = Color(0xFFE040FB)
@@ -547,7 +588,7 @@ fun ProfileDialog(
                                                     .padding(horizontal = 7.dp, vertical = 2.dp)
                                             ) {
                                                 Text(
-                                                    text = "🥇 $goldCount Gold",
+                                                    text = if (isEs) "🥇 $goldCount Oro" else "🥇 $goldCount Gold",
                                                     fontSize = 10.sp,
                                                     fontWeight = FontWeight.ExtraBold,
                                                     color = Color(0xFFFFD700)
@@ -563,7 +604,7 @@ fun ProfileDialog(
                                                     .padding(horizontal = 7.dp, vertical = 2.dp)
                                             ) {
                                                 Text(
-                                                    text = "🥈 $silverCount Silver",
+                                                    text = if (isEs) "🥈 $silverCount Plata" else "🥈 $silverCount Silver",
                                                     fontSize = 10.sp,
                                                     fontWeight = FontWeight.Bold,
                                                     color = Color(0xFFCFD8DC)
@@ -581,7 +622,7 @@ fun ProfileDialog(
                                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                                         ) {
                                             Text(
-                                                text = "⭐ Custom Showcase",
+                                                text = if (isEs) "⭐ Vitrina Propia" else "⭐ Custom Showcase",
                                                 fontSize = 9.5.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = NeonGreen
@@ -606,7 +647,7 @@ fun ProfileDialog(
                                             verticalArrangement = Arrangement.spacedBy(6.dp)
                                         ) {
                                             Text(
-                                                text = "No trophies chosen for your showcase",
+                                                text = if (isEs) "Sin trofeos elegidos en tu vitrina" else "No trophies chosen for your showcase",
                                                 fontSize = 12.sp,
                                                 color = TextSecondary,
                                                 fontWeight = FontWeight.SemiBold
@@ -620,7 +661,7 @@ fun ProfileDialog(
                                             ) {
                                                 Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(13.dp))
                                                 Spacer(modifier = Modifier.width(4.dp))
-                                                Text(text = "Choose Trophies", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                                Text(text = s.library.profileManageTrophies, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                             }
                                         }
                                     }
@@ -647,7 +688,7 @@ fun ProfileDialog(
                                     verticalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     Text(
-                                        text = "Steam linked (${steamUserId.take(8)}...), but trophies haven't synced yet.",
+                                        text = if (isEs) "Steam vinculado (${steamUserId.take(8)}...), pero los trofeos aún no se han sincronizado." else "Steam linked (${steamUserId.take(8)}...), but trophies haven't synced yet.",
                                         fontSize = 11.sp,
                                         color = TextSecondary,
                                         textAlign = TextAlign.Center
@@ -662,7 +703,7 @@ fun ProfileDialog(
                                         ) {
                                             Icon(imageVector = Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(14.dp))
                                             Spacer(modifier = Modifier.width(4.dp))
-                                            Text(text = "Sync Trophies", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                            Text(text = s.library.steamSyncCd, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                         }
                                     }
                                 }
@@ -677,7 +718,7 @@ fun ProfileDialog(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Text(
-                                    text = "Connect your Steam account to display your rarest trophies & unlocked achievements directly on your profile.",
+                                    text = s.library.profileTrophyShowcaseEmpty,
                                     fontSize = 11.5.sp,
                                     color = TextSecondary,
                                     textAlign = TextAlign.Center,
@@ -700,7 +741,7 @@ fun ProfileDialog(
                                             modifier = Modifier.size(16.dp)
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
-                                        Text(text = "Link Steam Account", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        Text(text = s.home.vaultSyncSteamBtn, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }
@@ -713,7 +754,7 @@ fun ProfileDialog(
                     onClick = {
                         val trimmed = nameInput.trim()
                         onSaveProfile(trimmed, selectedImageUri, shouldRemoveAvatar)
-                        Toast.makeText(context, "Profile saved!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, s.library.profileSavedToast, Toast.LENGTH_SHORT).show()
                         onDismiss()
                     },
                     modifier = Modifier
@@ -727,7 +768,7 @@ fun ProfileDialog(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
-                        text = "Save Profile",
+                        text = s.library.profileSaveProfile,
                         fontWeight = FontWeight.Black,
                         fontSize = 14.sp
                     )
@@ -755,7 +796,7 @@ fun ProfileDialog(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Replay Feature Tour",
+                        text = s.library.profileReplayTour,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -797,8 +838,10 @@ private fun ProfileTrophyCard(trophy: SteamAchievementEntity) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                val s = LocalAppStrings.current
+                val isEs = s.language == AppLanguage.SPANISH
                 Text(
-                    text = trophy.gameName.ifBlank { "Steam Game" },
+                    text = trophy.gameName.ifBlank { if (isEs) "Juego de Steam" else "Steam Game" },
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextSecondary,
@@ -835,8 +878,13 @@ private fun ProfileTrophyCard(trophy: SteamAchievementEntity) {
                     contentAlignment = Alignment.Center
                 ) {
                     if (trophy.effectiveIconUrl.isNotBlank()) {
+                        val context = LocalContext.current
+                        val lowEnd = LocalLowEndOptimization.current
+                        val trophyIconRequest = remember(trophy.effectiveIconUrl, lowEnd) {
+                            buildGiveawayImageRequest(context, trophy.effectiveIconUrl, lowEnd, 128, 128)
+                        }
                         AsyncImage(
-                            model = trophy.effectiveIconUrl,
+                            model = trophyIconRequest,
                             contentDescription = trophy.displayName,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp))

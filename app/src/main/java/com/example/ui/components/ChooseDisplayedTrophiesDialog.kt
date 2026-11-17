@@ -60,6 +60,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -71,12 +72,16 @@ import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.example.data.local.SteamAchievementEntity
 import com.example.data.model.TrophyRarityTier
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
+import com.example.i18n.localizedLabel
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.SteamBlue
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
+import com.example.util.LocalLowEndOptimization
 
 /**
  * Modal dialog that allows users to pick exactly which unlocked Steam trophies
@@ -90,6 +95,8 @@ fun ChooseDisplayedTrophiesDialog(
     onSave: (hasCustom: Boolean, selectedKeys: Set<String>) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
     // If user has not yet customized, pre-populate with currently showcased items (top 15) so they can easily tweak
     var tempSelectedKeys by remember {
         mutableStateOf(
@@ -103,6 +110,23 @@ fun ChooseDisplayedTrophiesDialog(
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedTierFilter by remember { mutableStateOf<TrophyRarityTier?>(null) }
+
+    val tierCounts = remember(allTrophies) {
+        var mythic = 0
+        var gold = 0
+        var silver = 0
+        var bronze = 0
+        for (t in allTrophies) {
+            when (t.rarityTier) {
+                TrophyRarityTier.MYTHIC -> mythic++
+                TrophyRarityTier.GOLD -> gold++
+                TrophyRarityTier.SILVER -> silver++
+                TrophyRarityTier.BRONZE -> bronze++
+                TrophyRarityTier.COMMON -> Unit
+            }
+        }
+        intArrayOf(mythic, gold, silver, bronze)
+    }
 
     val filteredTrophies = remember(allTrophies, searchQuery, selectedTierFilter) {
         allTrophies.filter { trophy ->
@@ -162,13 +186,13 @@ fun ChooseDisplayedTrophiesDialog(
                         }
                         Column {
                             Text(
-                                text = "Choose Showcase Trophies",
+                                text = s.library.chooseTrophiesTitle,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary
                             )
                             Text(
-                                text = "Select which achievements appear on your profile",
+                                text = if (isEs) "Elige qué logros aparecen en tu perfil" else "Select which achievements appear on your profile",
                                 fontSize = 11.sp,
                                 color = TextSecondary
                             )
@@ -183,7 +207,7 @@ fun ChooseDisplayedTrophiesDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
+                            contentDescription = s.common.close,
                             tint = TextMuted,
                             modifier = Modifier.size(20.dp)
                         )
@@ -212,7 +236,7 @@ fun ChooseDisplayedTrophiesDialog(
                                 .padding(horizontal = 8.dp, vertical = 3.dp)
                         ) {
                             Text(
-                                text = "${tempSelectedKeys.size} / ${allTrophies.size} Selected",
+                                text = if (isEs) "${tempSelectedKeys.size} / ${allTrophies.size} elegidos" else "${tempSelectedKeys.size} / ${allTrophies.size} Selected",
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = if (tempSelectedKeys.isNotEmpty()) NeonCyan else TextMuted
@@ -231,7 +255,7 @@ fun ChooseDisplayedTrophiesDialog(
                             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
                             modifier = Modifier.testTag("choose_trophies_select_all_btn")
                         ) {
-                            Text("All", fontSize = 11.sp, color = NeonCyan, fontWeight = FontWeight.Bold)
+                            Text(if (isEs) "Todos" else "All", fontSize = 11.sp, color = NeonCyan, fontWeight = FontWeight.Bold)
                         }
 
                         TextButton(
@@ -244,7 +268,7 @@ fun ChooseDisplayedTrophiesDialog(
                             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
                             modifier = Modifier.testTag("choose_trophies_rarest_btn")
                         ) {
-                            Text("Rarest", fontSize = 11.sp, color = Color(0xFFFFD700), fontWeight = FontWeight.Bold)
+                            Text(if (isEs) "Raros" else "Rarest", fontSize = 11.sp, color = Color(0xFFFFD700), fontWeight = FontWeight.Bold)
                         }
 
                         TextButton(
@@ -254,7 +278,7 @@ fun ChooseDisplayedTrophiesDialog(
                             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
                             modifier = Modifier.testTag("choose_trophies_clear_btn")
                         ) {
-                            Text("Clear", fontSize = 11.sp, color = TextMuted, fontWeight = FontWeight.SemiBold)
+                            Text(s.common.clear, fontSize = 11.sp, color = TextMuted, fontWeight = FontWeight.SemiBold)
                         }
 
                         TextButton(
@@ -276,7 +300,7 @@ fun ChooseDisplayedTrophiesDialog(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search trophies or games...", color = TextMuted, fontSize = 12.sp) },
+                    placeholder = { Text(if (isEs) "Buscar trofeos o juegos..." else "Search trophies or games...", color = TextMuted, fontSize = 12.sp) },
                     singleLine = true,
                     leadingIcon = {
                         Icon(
@@ -291,7 +315,7 @@ fun ChooseDisplayedTrophiesDialog(
                             IconButton(onClick = { searchQuery = "" }, modifier = Modifier.size(24.dp)) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
-                                    contentDescription = "Clear search",
+                                    contentDescription = s.common.clearSearchCd,
                                     tint = TextMuted,
                                     modifier = Modifier.size(16.dp)
                                 )
@@ -324,7 +348,7 @@ fun ChooseDisplayedTrophiesDialog(
                     FilterChip(
                         selected = selectedTierFilter == null,
                         onClick = { selectedTierFilter = null },
-                        label = { Text("All (${allTrophies.size})", fontSize = 11.sp) },
+                        label = { Text("${if (isEs) "Todos" else "All"} (${allTrophies.size})", fontSize = 11.sp) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = NeonCyan.copy(alpha = 0.2f),
                             selectedLabelColor = NeonCyan
@@ -337,14 +361,14 @@ fun ChooseDisplayedTrophiesDialog(
                         )
                     )
 
-                    val mythicCount = remember(allTrophies) { allTrophies.count { it.rarityTier == TrophyRarityTier.MYTHIC } }
+                    val mythicCount = tierCounts[0]
                     if (mythicCount > 0) {
                         FilterChip(
                             selected = selectedTierFilter == TrophyRarityTier.MYTHIC,
                             onClick = {
                                 selectedTierFilter = if (selectedTierFilter == TrophyRarityTier.MYTHIC) null else TrophyRarityTier.MYTHIC
                             },
-                            label = { Text("💎 Mythic ($mythicCount)", fontSize = 11.sp) },
+                            label = { Text("💎 ${if (isEs) "Mítico" else "Mythic"} ($mythicCount)", fontSize = 11.sp) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = Color(0x33E040FB),
                                 selectedLabelColor = Color(0xFFE040FB)
@@ -358,14 +382,14 @@ fun ChooseDisplayedTrophiesDialog(
                         )
                     }
 
-                    val goldCount = remember(allTrophies) { allTrophies.count { it.rarityTier == TrophyRarityTier.GOLD } }
+                    val goldCount = tierCounts[1]
                     if (goldCount > 0) {
                         FilterChip(
                             selected = selectedTierFilter == TrophyRarityTier.GOLD,
                             onClick = {
                                 selectedTierFilter = if (selectedTierFilter == TrophyRarityTier.GOLD) null else TrophyRarityTier.GOLD
                             },
-                            label = { Text("🥇 Gold ($goldCount)", fontSize = 11.sp) },
+                            label = { Text("🥇 ${if (isEs) "Oro" else "Gold"} ($goldCount)", fontSize = 11.sp) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = Color(0x33FFD700),
                                 selectedLabelColor = Color(0xFFFFD700)
@@ -379,14 +403,14 @@ fun ChooseDisplayedTrophiesDialog(
                         )
                     }
 
-                    val silverCount = remember(allTrophies) { allTrophies.count { it.rarityTier == TrophyRarityTier.SILVER } }
+                    val silverCount = tierCounts[2]
                     if (silverCount > 0) {
                         FilterChip(
                             selected = selectedTierFilter == TrophyRarityTier.SILVER,
                             onClick = {
                                 selectedTierFilter = if (selectedTierFilter == TrophyRarityTier.SILVER) null else TrophyRarityTier.SILVER
                             },
-                            label = { Text("🥈 Silver ($silverCount)", fontSize = 11.sp) },
+                            label = { Text("🥈 ${if (isEs) "Plata" else "Silver"} ($silverCount)", fontSize = 11.sp) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = Color(0x33CFD8DC),
                                 selectedLabelColor = Color(0xFFCFD8DC)
@@ -400,14 +424,14 @@ fun ChooseDisplayedTrophiesDialog(
                         )
                     }
 
-                    val bronzeCount = remember(allTrophies) { allTrophies.count { it.rarityTier == TrophyRarityTier.BRONZE } }
+                    val bronzeCount = tierCounts[3]
                     if (bronzeCount > 0) {
                         FilterChip(
                             selected = selectedTierFilter == TrophyRarityTier.BRONZE,
                             onClick = {
                                 selectedTierFilter = if (selectedTierFilter == TrophyRarityTier.BRONZE) null else TrophyRarityTier.BRONZE
                             },
-                            label = { Text("🥉 Bronze ($bronzeCount)", fontSize = 11.sp) },
+                            label = { Text("🥉 ${if (isEs) "Bronce" else "Bronze"} ($bronzeCount)", fontSize = 11.sp) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = Color(0x33CD7F32),
                                 selectedLabelColor = Color(0xFFCD7F32)
@@ -441,7 +465,7 @@ fun ChooseDisplayedTrophiesDialog(
                                 modifier = Modifier.size(32.dp)
                             )
                             Text(
-                                text = "No matching trophies found",
+                                text = if (isEs) "No se encontraron trofeos" else "No matching trophies found",
                                 fontSize = 13.sp,
                                 color = TextSecondary,
                                 fontWeight = FontWeight.SemiBold
@@ -451,7 +475,7 @@ fun ChooseDisplayedTrophiesDialog(
                                     searchQuery = ""
                                     selectedTierFilter = null
                                 }) {
-                                    Text("Reset Filters", color = NeonCyan, fontSize = 12.sp)
+                                    Text(s.home.discoverClearFilters, color = NeonCyan, fontSize = 12.sp)
                                 }
                             }
                         }
@@ -505,7 +529,7 @@ fun ChooseDisplayedTrophiesDialog(
                         shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, Color(0xFF252E44))
                     ) {
-                        Text("Cancel", color = TextSecondary, fontWeight = FontWeight.SemiBold)
+                        Text(s.common.cancel, color = TextSecondary, fontWeight = FontWeight.SemiBold)
                     }
 
                     Button(
@@ -530,7 +554,7 @@ fun ChooseDisplayedTrophiesDialog(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Save Showcase (${tempSelectedKeys.size})",
+                            text = if (isEs) "Guardar Vitrina (${tempSelectedKeys.size})" else "Save Showcase (${tempSelectedKeys.size})",
                             fontSize = 13.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF0F131F)
@@ -548,6 +572,8 @@ private fun TrophySelectItemRow(
     isSelected: Boolean,
     onToggle: () -> Unit
 ) {
+    val context = LocalContext.current
+    val lowEnd = LocalLowEndOptimization.current
     val tier = trophy.rarityTier
     val tierColor = tier.color
 
@@ -594,8 +620,17 @@ private fun TrophySelectItemRow(
                 contentAlignment = Alignment.Center
             ) {
                 if (trophy.effectiveIconUrl.isNotBlank()) {
+                    val iconRequest = remember(context, trophy.effectiveIconUrl, lowEnd) {
+                        buildGiveawayImageRequest(
+                            context = context,
+                            url = trophy.effectiveIconUrl,
+                            isLowEndOptimization = lowEnd,
+                            width = 128,
+                            height = 128
+                        )
+                    }
                     AsyncImage(
-                        model = trophy.effectiveIconUrl,
+                        model = iconRequest,
                         contentDescription = trophy.displayName,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
@@ -623,8 +658,10 @@ private fun TrophySelectItemRow(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
+                    val s = LocalAppStrings.current
+                    val isEs = s.language == AppLanguage.SPANISH
                     Text(
-                        text = trophy.gameName.ifBlank { "Steam Game" },
+                        text = trophy.gameName.ifBlank { if (isEs) "Juego de Steam" else "Steam Game" },
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = SteamBlue,

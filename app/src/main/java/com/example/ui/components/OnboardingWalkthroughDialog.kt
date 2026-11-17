@@ -1,22 +1,20 @@
 package com.example.ui.components
 
+import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -38,7 +36,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import com.example.ui.density.LocalScreenDensityInfo
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -46,54 +43,32 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.CardGiftcard
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.NotificationsActive
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Radar
-import androidx.compose.material.icons.filled.Savings
-import androidx.compose.material.icons.filled.SportsEsports
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import com.example.data.model.UserProfile
-import java.io.File
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -103,20 +78,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.example.ui.theme.EpicGamesBlue
-import com.example.ui.theme.GogPurple
+import com.example.data.model.UserProfile
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
+import com.example.ui.density.LocalScreenDensityInfo
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGreen
-import com.example.ui.theme.NintendoRed
-import com.example.ui.theme.PlayStationBlue
-import com.example.ui.theme.SteamBlue
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
-import com.example.ui.theme.XboxGreen
-import kotlinx.coroutines.delay
-import kotlin.math.cos
-import kotlin.math.sin
+import java.io.File
 
 data class OnboardingStep(
     val title: String,
@@ -131,62 +102,20 @@ data class OnboardingStep(
 @Composable
 fun OnboardingWalkthroughDialog(
     initialProfile: UserProfile = UserProfile(),
+    currentLanguage: AppLanguage = LocalAppStrings.current.language,
+    onLanguageChange: ((AppLanguage) -> Unit)? = null,
     onSaveProfile: ((name: String, avatarUri: Uri?, removeAvatar: Boolean) -> Unit)? = null,
     onDismiss: () -> Unit,
     onFinish: () -> Unit
 ) {
-    val steps = remember {
-        listOf(
-            OnboardingStep(
-                title = "Create Your Profile",
-                subtitle = "YOUR GAMER IDENTITY IN LOOTDROP",
-                description = "Set your gamer tag and choose an avatar photo. Stored securely in local app data, displayed on your Home page top-left, and included in your JSON exports.",
-                badge = "STEP 1 • GAMER PROFILE",
-                icon = Icons.Default.Person,
-                tags = listOf("Custom Avatar", "Gamer Tag", "Local App Data", "JSON Export/Import")
-            ),
-            OnboardingStep(
-                title = "PC & Console Free Radar",
-                subtitle = "NEVER MISS A $60 DROP GONE FREE",
-                description = "LootDrop continuously tracks PlayStation (PS5/PS4), Xbox (Series X|S/One), Nintendo Switch, Steam, Epic Games, GOG, and top stores 24/7. When a premium game drops to 100% discount, it appears on your radar immediately.",
-                badge = "REAL-TIME RADAR",
-                icon = Icons.Default.Radar,
-                tags = listOf("PlayStation", "Xbox", "Nintendo", "Steam", "Epic Games", "GOG.com")
-            ),
-            OnboardingStep(
-                title = "Direct 1-Tap Claim",
-                subtitle = "ZERO ADS • OFFICIAL STORE LINKS",
-                description = "Tap 'Claim Free' on any game to instantly open the verified official store page in your browser or launcher. Claim it directly to keep it permanently in your account forever.",
-                badge = "PERMANENT TO KEEP",
-                icon = Icons.Default.CardGiftcard,
-                tags = listOf("1-Tap Store Link", "Permanent Keep", "Zero Paywalls", "Anti-Scam Verified")
-            ),
-            OnboardingStep(
-                title = "Track Dollars Saved",
-                subtitle = "YOUR FREE COLLECTION & STATS",
-                description = "Mark claimed games with 'In Library' to calculate your total dollars saved. Watch your personal collection and financial savings grow without spending a single cent.",
-                badge = "SAVINGS CALCULATOR",
-                icon = Icons.Default.Savings,
-                tags = listOf("$$$ Saved Counter", "In Library Tab", "Category Filters", "Sort by Worth")
-            ),
-            OnboardingStep(
-                title = "Custom Alerts & UI",
-                subtitle = "16 CYBER & BRAND THEMES • DROP ALERTS",
-                description = "Get notified the instant flash giveaways drop so you never miss a 24-hour giveaway. Tailor LootDrop with 16 vibrant themes, OLED midnight mode, and rich or compact card views.",
-                badge = "GAMER CUSTOMIZATION",
-                icon = Icons.Default.Palette,
-                tags = listOf("Instant Notifications", "16 Accent Themes", "OLED Dark Mode", "Custom Density")
-            )
-        )
-    }
-
+    val s = LocalAppStrings.current
+    val steps = remember(s) { defaultOnboardingSteps(s) }
     var currentStepIndex by remember { mutableIntStateOf(0) }
     val totalSteps = steps.size
     val screenDensityInfo = LocalScreenDensityInfo.current
     val isCompactHeight = screenDensityInfo.isCompactHeight
     val isUltraCompactHeight = screenDensityInfo.isUltraCompactHeight
     val isSmallPhone = screenDensityInfo.isNarrowScreen || screenDensityInfo.widthDp < 380
-
     val animBoxSize = screenDensityInfo.walkthroughAnimBoxSize
     val buttonHeight = screenDensityInfo.walkthroughButtonHeight
 
@@ -197,14 +126,8 @@ fun OnboardingWalkthroughDialog(
     val avatarFile = remember(initialProfile.avatarPath) {
         if (initialProfile.avatarPath.isNotBlank()) File(initialProfile.avatarPath) else null
     }
-
-    val saveProfile = {
-        onSaveProfile?.invoke(nameInput.trim(), selectedImageUri, shouldRemoveAvatar)
-    }
-
-    val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
+    val saveProfile = { onSaveProfile?.invoke(nameInput.trim(), selectedImageUri, shouldRemoveAvatar) }
+    val photoPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) {
             selectedImageUri = uri
             shouldRemoveAvatar = false
@@ -214,23 +137,12 @@ fun OnboardingWalkthroughDialog(
 
     BackHandler {
         saveProfile()
-        if (currentStepIndex > 0) {
-            currentStepIndex--
-        } else {
-            onDismiss()
-        }
+        if (currentStepIndex > 0) currentStepIndex-- else onDismiss()
     }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false
-        )
-    ) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(
-            modifier = Modifier
-                .fillMaxSize()
-                .testTag("onboarding_walkthrough_dialog"),
+            modifier = Modifier.fillMaxSize().testTag("onboarding_walkthrough_dialog"),
             color = MaterialTheme.colorScheme.background
         ) {
             Box(
@@ -248,34 +160,19 @@ fun OnboardingWalkthroughDialog(
                 contentAlignment = Alignment.Center
             ) {
                 Scaffold(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .widthIn(max = screenDensityInfo.maxDialogWidth)
-                        .fillMaxWidth(),
+                    modifier = Modifier.fillMaxHeight().widthIn(max = screenDensityInfo.maxDialogWidth).fillMaxWidth(),
                     containerColor = Color.Transparent,
                     contentColor = MaterialTheme.colorScheme.onBackground,
                     topBar = {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .statusBarsPadding()
-                                .padding(top = 4.dp)
-                        ) {
-                            // Top App Header & Skip Button
+                        Column(modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(top = 4.dp)) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(
-                                        horizontal = if (isSmallPhone) 12.dp else 18.dp,
-                                        vertical = if (isCompactHeight) 4.dp else 8.dp
-                                    ),
+                                    .padding(horizontal = if (isSmallPhone) 12.dp else 18.dp, vertical = if (isCompactHeight) 4.dp else 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Box(
                                         modifier = Modifier
                                             .size(if (isCompactHeight) 28.dp else 32.dp)
@@ -284,56 +181,56 @@ fun OnboardingWalkthroughDialog(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.AutoAwesome,
+                                            Icons.Default.AutoAwesome,
                                             contentDescription = null,
                                             tint = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.size(if (isCompactHeight) 16.dp else 18.dp)
                                         )
                                     }
-                                    Text(
-                                        text = "LootDrop Feature Tour",
-                                        fontSize = if (isCompactHeight) 13.sp else 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
+                                    Text(s.dialogs.onboardingHeaderTitle, fontSize = if (isCompactHeight) 13.sp else 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(4.dp))
                                             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
                                             .padding(horizontal = 4.dp, vertical = 1.5.dp)
                                     ) {
-                                        Text(
-                                            text = "${screenDensityInfo.densityDpi} DPI",
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
+                                        Text("${screenDensityInfo.densityDpi} DPI", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                                     }
                                 }
 
-                                TextButton(
-                                    onClick = {
-                                        saveProfile()
-                                        onFinish()
-                                    },
-                                    modifier = Modifier.testTag("onboarding_skip_button")
-                                ) {
-                                    Text(
-                                        text = "Skip",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    if (onLanguageChange != null) {
+                                        val nextLang = if (currentLanguage == AppLanguage.ENGLISH) AppLanguage.SPANISH else AppLanguage.ENGLISH
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(MaterialTheme.colorScheme.surface)
+                                                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                                                .clickable { onLanguageChange(nextLang) }
+                                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                                .testTag("onboarding_lang_toggle")
+                                        ) {
+                                            Text(
+                                                text = "${currentLanguage.flagEmoji} ${currentLanguage.shortBadge}",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                    TextButton(
+                                        onClick = { saveProfile(); onFinish() },
+                                        modifier = Modifier.testTag("onboarding_skip_button")
+                                    ) {
+                                        Text(s.common.skip, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
                                 }
                             }
 
                             Spacer(modifier = Modifier.height(if (isCompactHeight) 4.dp else 8.dp))
 
-                            // Step Indicator Progress Pills
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = if (isCompactHeight) 4.dp else 6.dp),
+                                modifier = Modifier.fillMaxWidth().padding(vertical = if (isCompactHeight) 4.dp else 6.dp),
                                 horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -342,10 +239,9 @@ fun OnboardingWalkthroughDialog(
                                     val isCompleted = i < currentStepIndex
                                     val pillWidth by animateDpAsState(
                                         targetValue = if (isActive) (if (isSmallPhone) 20.dp else 28.dp) else 8.dp,
-                                        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                                        animationSpec = tween(300, easing = FastOutSlowInEasing),
                                         label = "pillWidth"
                                     )
-
                                     Box(
                                         modifier = Modifier
                                             .padding(horizontal = 4.dp)
@@ -368,57 +264,32 @@ fun OnboardingWalkthroughDialog(
                         }
                     },
                     bottomBar = {
-                        // Bottom Navigation Action Buttons - Lifted cleanly and safely above the bottom edge
                         Surface(
                             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
                             shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-                            border = androidx.compose.foundation.BorderStroke(
-                                1.dp,
-                                MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .navigationBarsPadding()
-                                .padding(bottom = 12.dp)
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
+                            modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 12.dp)
                         ) {
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(
-                                        start = if (isSmallPhone) 14.dp else 20.dp,
-                                        end = if (isSmallPhone) 14.dp else 20.dp,
-                                        top = if (isUltraCompactHeight) 8.dp else 12.dp,
-                                        bottom = if (isUltraCompactHeight) 10.dp else if (isCompactHeight) 14.dp else 16.dp
-                                    ),
+                                modifier = Modifier.fillMaxWidth().padding(
+                                    start = if (isSmallPhone) 14.dp else 20.dp,
+                                    end = if (isSmallPhone) 14.dp else 20.dp,
+                                    top = if (isUltraCompactHeight) 8.dp else 12.dp,
+                                    bottom = if (isUltraCompactHeight) 10.dp else if (isCompactHeight) 14.dp else 16.dp
+                                ),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 if (currentStepIndex > 0) {
                                     OutlinedButton(
                                         onClick = { currentStepIndex-- },
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(buttonHeight)
-                                            .testTag("onboarding_back_button"),
+                                        modifier = Modifier.weight(1f).height(buttonHeight).testTag("onboarding_back_button"),
                                         shape = RoundedCornerShape(12.dp),
-                                        border = androidx.compose.foundation.BorderStroke(
-                                            1.dp,
-                                            MaterialTheme.colorScheme.outline
-                                        )
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                            contentDescription = "Back",
-                                            tint = MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.size(16.dp)
-                                        )
+                                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = s.common.back, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(16.dp))
                                         Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = "Back",
-                                            fontSize = if (isSmallPhone) 12.sp else 14.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
+                                        Text(s.common.back, fontSize = if (isSmallPhone) 12.sp else 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                     }
                                     Spacer(modifier = Modifier.width(10.dp))
                                 }
@@ -426,23 +297,16 @@ fun OnboardingWalkthroughDialog(
                                 Button(
                                     onClick = {
                                         saveProfile()
-                                        if (currentStepIndex < totalSteps - 1) {
-                                            currentStepIndex++
-                                        } else {
-                                            onFinish()
-                                        }
+                                        if (currentStepIndex < totalSteps - 1) currentStepIndex++ else onFinish()
                                     },
-                                    modifier = Modifier
-                                        .weight(if (currentStepIndex > 0) 1.5f else 1f)
-                                        .height(buttonHeight)
-                                        .testTag("onboarding_next_button"),
+                                    modifier = Modifier.weight(if (currentStepIndex > 0) 1.5f else 1f).height(buttonHeight).testTag("onboarding_next_button"),
                                     shape = RoundedCornerShape(12.dp),
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = if (currentStepIndex == totalSteps - 1) NeonGreen else MaterialTheme.colorScheme.primary
                                     )
                                 ) {
                                     Text(
-                                        text = if (currentStepIndex == totalSteps - 1) "Explore Free Loot" else "Next Step",
+                                        text = if (currentStepIndex == totalSteps - 1) s.dialogs.onboardingFinishCta else s.dialogs.onboardingNextStep,
                                         fontSize = if (isSmallPhone) 13.sp else 15.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color(0xFF0B0F19)
@@ -459,41 +323,20 @@ fun OnboardingWalkthroughDialog(
                         }
                     }
                 ) { innerPadding ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding)
-                    ) {
+                    Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
                         AnimatedContent(
                             targetState = currentStepIndex,
                             transitionSpec = {
-                                if (targetState > initialState) {
-                                    (slideInHorizontally(
-                                        initialOffsetX = { it },
-                                        animationSpec = tween(350, easing = FastOutSlowInEasing)
-                                    ) + fadeIn(tween(350))).togetherWith(
-                                        slideOutHorizontally(
-                                            targetOffsetX = { -it },
-                                            animationSpec = tween(350, easing = FastOutSlowInEasing)
-                                        ) + fadeOut(tween(350))
-                                    )
-                                } else {
-                                    (slideInHorizontally(
-                                        initialOffsetX = { -it },
-                                        animationSpec = tween(350, easing = FastOutSlowInEasing)
-                                    ) + fadeIn(tween(350))).togetherWith(
-                                        slideOutHorizontally(
-                                            targetOffsetX = { it },
-                                            animationSpec = tween(350, easing = FastOutSlowInEasing)
-                                        ) + fadeOut(tween(350))
-                                    )
-                                }
+                                val dir = if (targetState > initialState) 1 else -1
+                                (slideInHorizontally(initialOffsetX = { dir * it }, animationSpec = tween(350, easing = FastOutSlowInEasing)) + fadeIn(tween(350)))
+                                    .togetherWith(slideOutHorizontally(targetOffsetX = { -dir * it }, animationSpec = tween(350, easing = FastOutSlowInEasing)) + fadeOut(tween(350)))
                             },
                             modifier = Modifier.fillMaxSize(),
                             label = "onboarding_step_content"
                         ) { stepIdx ->
                             val step = steps[stepIdx]
                             val animScale = (animBoxSize.value / 135f).coerceIn(0.6f, 1.15f)
+                            val hasCustomAvatar = selectedImageUri != null || (avatarFile != null && avatarFile.exists() && !shouldRemoveAvatar)
 
                             Column(
                                 modifier = Modifier
@@ -505,26 +348,16 @@ fun OnboardingWalkthroughDialog(
                             ) {
                                 Spacer(modifier = Modifier.height(if (isUltraCompactHeight) 2.dp else 6.dp))
 
-                                // Custom Animation Canvas per Step (DPI adaptive size and scale)
                                 Box(
                                     modifier = Modifier
                                         .size(animBoxSize)
                                         .clip(RoundedCornerShape(16.dp))
                                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
-                                        .border(
-                                            1.5.dp,
-                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                                            RoundedCornerShape(16.dp)
-                                        ),
+                                        .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .graphicsLayer {
-                                                scaleX = animScale
-                                                scaleY = animScale
-                                            },
+                                        modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = animScale; scaleY = animScale },
                                         contentAlignment = Alignment.Center
                                     ) {
                                         when (stepIdx) {
@@ -533,11 +366,7 @@ fun OnboardingWalkthroughDialog(
                                                 selectedUri = selectedImageUri,
                                                 avatarFile = avatarFile,
                                                 shouldRemove = shouldRemoveAvatar,
-                                                onPickPhoto = {
-                                                    photoPickerLauncher.launch(
-                                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                                    )
-                                                }
+                                                onPickPhoto = { photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
                                             )
                                             1 -> RadarScanAnimation()
                                             2 -> DirectClaimAnimation()
@@ -549,20 +378,12 @@ fun OnboardingWalkthroughDialog(
 
                                 Spacer(modifier = Modifier.height(if (isUltraCompactHeight) 6.dp else if (isCompactHeight) 8.dp else 12.dp))
 
-                                // Badge
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(6.dp))
                                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
-                                        .border(
-                                            1.dp,
-                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                                            RoundedCornerShape(6.dp)
-                                        )
-                                        .padding(
-                                            horizontal = if (isUltraCompactHeight) 8.dp else 10.dp,
-                                            vertical = if (isUltraCompactHeight) 2.dp else 4.dp
-                                        )
+                                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                                        .padding(horizontal = if (isUltraCompactHeight) 8.dp else 10.dp, vertical = if (isUltraCompactHeight) 2.dp else 4.dp)
                                 ) {
                                     Text(
                                         text = step.badge,
@@ -574,8 +395,6 @@ fun OnboardingWalkthroughDialog(
                                 }
 
                                 Spacer(modifier = Modifier.height(if (isUltraCompactHeight) 4.dp else 8.dp))
-
-                                // Main Title
                                 Text(
                                     text = step.title,
                                     fontSize = if (isUltraCompactHeight) 17.sp else if (isCompactHeight) 19.sp else 22.sp,
@@ -583,10 +402,7 @@ fun OnboardingWalkthroughDialog(
                                     color = TextPrimary,
                                     textAlign = TextAlign.Center
                                 )
-
                                 Spacer(modifier = Modifier.height(if (isUltraCompactHeight) 2.dp else 4.dp))
-
-                                // Subtitle
                                 Text(
                                     text = step.subtitle,
                                     fontSize = if (isUltraCompactHeight) 9.5.sp else if (isCompactHeight) 10.5.sp else 11.sp,
@@ -595,10 +411,7 @@ fun OnboardingWalkthroughDialog(
                                     letterSpacing = 1.sp,
                                     textAlign = TextAlign.Center
                                 )
-
                                 Spacer(modifier = Modifier.height(if (isUltraCompactHeight) 4.dp else 8.dp))
-
-                                // Description
                                 Text(
                                     text = step.description,
                                     fontSize = if (isUltraCompactHeight) 11.5.sp else if (isCompactHeight) 12.5.sp else 13.5.sp,
@@ -607,36 +420,23 @@ fun OnboardingWalkthroughDialog(
                                     lineHeight = if (isUltraCompactHeight) 15.sp else if (isCompactHeight) 16.5.sp else 18.sp,
                                     modifier = Modifier.padding(horizontal = 4.dp)
                                 )
-
                                 Spacer(modifier = Modifier.height(if (isUltraCompactHeight) 6.dp else 10.dp))
 
-                                // If Step 0: Render interactive photo buttons and gamer tag text field
                                 if (stepIdx == 0) {
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
+                                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                                         OutlinedButton(
-                                            onClick = {
-                                                photoPickerLauncher.launch(
-                                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                                )
-                                            },
+                                            onClick = { photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                                             shape = RoundedCornerShape(10.dp),
-                                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.6f)),
+                                            border = BorderStroke(1.dp, NeonCyan.copy(alpha = 0.6f)),
                                             colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonCyan),
                                             modifier = Modifier.testTag("onboarding_pick_photo_btn")
                                         ) {
                                             Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
                                             Spacer(modifier = Modifier.width(6.dp))
-                                            Text(
-                                                text = if (selectedImageUri != null || (avatarFile != null && avatarFile.exists() && !shouldRemoveAvatar)) "Change Photo" else "Add Photo",
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
+                                            Text(if (hasCustomAvatar) s.dialogs.onboardingChangePhoto else s.dialogs.onboardingAddPhoto, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                         }
 
-                                        if (selectedImageUri != null || (avatarFile != null && avatarFile.exists() && !shouldRemoveAvatar)) {
+                                        if (hasCustomAvatar) {
                                             TextButton(
                                                 onClick = {
                                                     selectedImageUri = null
@@ -648,7 +448,7 @@ fun OnboardingWalkthroughDialog(
                                             ) {
                                                 Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
                                                 Spacer(modifier = Modifier.width(4.dp))
-                                                Text(text = "Remove", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                                Text(s.common.remove, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                                             }
                                         }
                                     }
@@ -663,19 +463,10 @@ fun OnboardingWalkthroughDialog(
                                                 onSaveProfile?.invoke(it.trim(), selectedImageUri, shouldRemoveAvatar)
                                             }
                                         },
-                                        placeholder = { Text("Enter gamer tag or name...", color = TextMuted) },
+                                        placeholder = { Text(s.dialogs.onboardingNamePlaceholder, color = TextMuted) },
                                         singleLine = true,
-                                        leadingIcon = {
-                                            Icon(
-                                                imageVector = Icons.Default.Person,
-                                                contentDescription = null,
-                                                tint = NeonCyan,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .testTag("onboarding_profile_name_input"),
+                                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(18.dp)) },
+                                        modifier = Modifier.fillMaxWidth().testTag("onboarding_profile_name_input"),
                                         shape = RoundedCornerShape(12.dp),
                                         colors = OutlinedTextFieldDefaults.colors(
                                             focusedBorderColor = NeonCyan,
@@ -686,11 +477,9 @@ fun OnboardingWalkthroughDialog(
                                             unfocusedTextColor = TextPrimary
                                         )
                                     )
-
                                     Spacer(modifier = Modifier.height(10.dp))
                                 }
 
-                                // Highlight Chips
                                 FlowRow(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.Center,
@@ -702,11 +491,7 @@ fun OnboardingWalkthroughDialog(
                                                 .padding(horizontal = 3.dp)
                                                 .clip(RoundedCornerShape(8.dp))
                                                 .background(MaterialTheme.colorScheme.surface)
-                                                .border(
-                                                    1.dp,
-                                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.7f),
-                                                    RoundedCornerShape(8.dp)
-                                                )
+                                                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
                                                 .padding(
                                                     horizontal = if (isUltraCompactHeight) 7.dp else 9.dp,
                                                     vertical = if (isUltraCompactHeight) 3.dp else 5.dp
@@ -721,7 +506,6 @@ fun OnboardingWalkthroughDialog(
                                         }
                                     }
                                 }
-
                                 Spacer(modifier = Modifier.height(if (isUltraCompactHeight) 10.dp else 24.dp))
                             }
                         }
@@ -731,532 +515,3 @@ fun OnboardingWalkthroughDialog(
         }
     }
 }
-
-/**
- * Animated Live Radar Display
- * Sweep line rotating 360 degrees, pulsing radar rings, and blinking game target markers.
- */
-@Composable
-fun RadarScanAnimation() {
-    val infiniteTransition = rememberInfiniteTransition(label = "radar")
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 3000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "radarSweep"
-    )
-
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "radarPulse"
-    )
-
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.8f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "radarPulseAlpha"
-    )
-
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val neonGreen = NeonGreen
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(4.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val center = Offset(size.width / 2, size.height / 2)
-            val maxRadius = size.width / 2 - 12.dp.toPx()
-
-            // Concentric radar circles
-            for (i in 1..3) {
-                drawCircle(
-                    color = primaryColor.copy(alpha = 0.25f),
-                    radius = maxRadius * (i / 3f),
-                    center = center,
-                    style = Stroke(width = 1.5.dp.toPx())
-                )
-            }
-
-            // Expanding sonar pulse wave
-            drawCircle(
-                color = neonGreen.copy(alpha = pulseAlpha),
-                radius = maxRadius * pulseScale,
-                center = center,
-                style = Stroke(width = 2.dp.toPx())
-            )
-
-            // Crosshair lines
-            drawLine(
-                color = primaryColor.copy(alpha = 0.3f),
-                start = Offset(center.x, center.y - maxRadius),
-                end = Offset(center.x, center.y + maxRadius),
-                strokeWidth = 1.dp.toPx()
-            )
-            drawLine(
-                color = primaryColor.copy(alpha = 0.3f),
-                start = Offset(center.x - maxRadius, center.y),
-                end = Offset(center.x + maxRadius, center.y),
-                strokeWidth = 1.dp.toPx()
-            )
-
-            // Radar Sweep line
-            val rad = Math.toRadians(rotation.toDouble())
-            val lineEnd = Offset(
-                x = (center.x + maxRadius * cos(rad)).toFloat(),
-                y = (center.y + maxRadius * sin(rad)).toFloat()
-            )
-            drawLine(
-                brush = Brush.radialGradient(
-                    colors = listOf(neonGreen, primaryColor, Color.Transparent),
-                    center = center,
-                    radius = maxRadius
-                ),
-                start = center,
-                end = lineEnd,
-                strokeWidth = 3.dp.toPx(),
-                cap = StrokeCap.Round
-            )
-
-            // Target Loot nodes (PlayStation, Xbox, Nintendo, Steam, Epic blips)
-            val blipPs = Offset(center.x - maxRadius * 0.45f, center.y - maxRadius * 0.4f)
-            val blipXbox = Offset(center.x + maxRadius * 0.55f, center.y - maxRadius * 0.35f)
-            val blipNintendo = Offset(center.x, center.y + maxRadius * 0.55f)
-            val blipSteam = Offset(center.x - maxRadius * 0.55f, center.y + maxRadius * 0.35f)
-            val blipEpic = Offset(center.x + maxRadius * 0.45f, center.y + maxRadius * 0.4f)
-
-            drawCircle(color = PlayStationBlue, radius = 5.dp.toPx(), center = blipPs)
-            drawCircle(color = XboxGreen, radius = 5.dp.toPx(), center = blipXbox)
-            drawCircle(color = NintendoRed, radius = 6.dp.toPx(), center = blipNintendo)
-            drawCircle(color = SteamBlue, radius = 5.dp.toPx(), center = blipSteam)
-            drawCircle(color = EpicGamesBlue, radius = 5.dp.toPx(), center = blipEpic)
-        }
-
-        // Center hub radar dot
-        Box(
-            modifier = Modifier
-                .size(14.dp)
-                .clip(CircleShape)
-                .background(neonGreen)
-        )
-    }
-}
-
-/**
- * Animated 1-Tap Claim Showcase
- * Floating drop box + particle burst + animated button clicking into "CLAIMED!"
- */
-@Composable
-fun DirectClaimAnimation() {
-    val infiniteTransition = rememberInfiniteTransition(label = "claim")
-    val bounceY by infiniteTransition.animateFloat(
-        initialValue = -10f,
-        targetValue = 10f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "bounce"
-    )
-
-    var isSimulatedClaimed by remember { androidx.compose.runtime.mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(1800)
-            isSimulatedClaimed = true
-            delay(1800)
-            isSimulatedClaimed = false
-        }
-    }
-
-    val buttonColor by androidx.compose.animation.animateColorAsState(
-        targetValue = if (isSimulatedClaimed) NeonGreen else MaterialTheme.colorScheme.primary,
-        animationSpec = tween(400),
-        label = "btnColor"
-    )
-
-    val buttonScale by animateFloatAsState(
-        targetValue = if (isSimulatedClaimed) 1.05f else 1.0f,
-        animationSpec = tween(300),
-        label = "btnScale"
-    )
-
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        // Floating Loot Drop Chest / Gamepad
-        Box(
-            modifier = Modifier
-                .graphicsLayer { translationY = bounceY }
-                .size(72.dp)
-                .clip(RoundedCornerShape(18.dp))
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
-                            Color(0xFF131A2A)
-                        )
-                    )
-                )
-                .border(
-                    2.dp,
-                    if (isSimulatedClaimed) NeonGreen else MaterialTheme.colorScheme.primary,
-                    RoundedCornerShape(18.dp)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = if (isSimulatedClaimed) Icons.Default.CheckCircle else Icons.Default.SportsEsports,
-                contentDescription = null,
-                tint = if (isSimulatedClaimed) NeonGreen else MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(38.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        // Simulated Claim Button
-        Box(
-            modifier = Modifier
-                .scale(buttonScale)
-                .clip(RoundedCornerShape(10.dp))
-                .background(buttonColor)
-                .padding(horizontal = 18.dp, vertical = 9.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Icon(
-                    imageVector = if (isSimulatedClaimed) Icons.Default.CheckCircle else Icons.Default.CardGiftcard,
-                    contentDescription = null,
-                    tint = Color(0xFF0B0F19),
-                    modifier = Modifier.size(16.dp)
-                )
-                Text(
-                    text = if (isSimulatedClaimed) "100% CLAIMED!" else "CLAIM FREE ($59.99 -> $0)",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color(0xFF0B0F19)
-                )
-            }
-        }
-    }
-}
-
-/**
- * Animated Dollar Savings Tracker Showcase
- * Counting up money saved with a glowing green vault bar.
- */
-@Composable
-fun SavingsTrackerAnimation() {
-    var animatedDollars by remember { mutableFloatStateOf(0f) }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            animatedDollars = 0f
-            delay(300)
-            val targets = listOf(29.99f, 89.98f, 159.97f, 329.95f, 489.92f)
-            for (t in targets) {
-                animatedDollars = t
-                delay(600)
-            }
-            delay(1500)
-        }
-    }
-
-    val displayDollars by animateFloatAsState(
-        targetValue = animatedDollars,
-        animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing),
-        label = "dollars"
-    )
-
-    val progressFraction = (displayDollars / 500f).coerceIn(0.1f, 1f)
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .size(54.dp)
-                .clip(CircleShape)
-                .background(NeonGreen.copy(alpha = 0.2f))
-                .border(1.5.dp, NeonGreen, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Savings,
-                contentDescription = null,
-                tint = NeonGreen,
-                modifier = Modifier.size(30.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            text = "$${String.format(java.util.Locale.US, "%.2f", displayDollars)}",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Black,
-            color = NeonGreen
-        )
-
-        Text(
-            text = "SAVED IN FREE GAMES",
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextMuted,
-            letterSpacing = 1.sp
-        )
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // Animated collection progress bar
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(0.85f)
-                .height(8.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(Color(0xFF1E293B))
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(progressFraction)
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(
-                        Brush.horizontalGradient(
-                            colors = listOf(NeonGreen, MaterialTheme.colorScheme.primary)
-                        )
-                    )
-            )
-        }
-    }
-}
-
-/**
- * Animated Notification Alerts & Cyber Theming Showcase
- * Swinging notification bell and morphing accent theme color swatches.
- */
-@Composable
-fun AlertsAndThemesAnimation() {
-    val infiniteTransition = rememberInfiniteTransition(label = "alerts")
-    val bellRotation by infiniteTransition.animateFloat(
-        initialValue = -18f,
-        targetValue = 18f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(350, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "bell"
-    )
-
-    val waveScale by infiniteTransition.animateFloat(
-        initialValue = 0.6f,
-        targetValue = 1.4f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "wave"
-    )
-
-    val waveAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.8f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "waveAlpha"
-    )
-
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        // Bell with expanding notification wave
-        Box(
-            modifier = Modifier.size(70.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            // Pulse wave
-            Box(
-                modifier = Modifier
-                    .size(54.dp)
-                    .scale(waveScale)
-                    .clip(CircleShape)
-                    .border(
-                        2.dp,
-                        MaterialTheme.colorScheme.primary.copy(alpha = waveAlpha),
-                        CircleShape
-                    )
-            )
-
-            // Swinging Bell
-            Box(
-                modifier = Modifier
-                    .graphicsLayer { rotationZ = bellRotation }
-                    .size(46.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.NotificationsActive,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(26.dp)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Cyber theme color circles
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val themeColors = listOf(
-                NeonCyan,
-                NeonGreen,
-                NintendoRed,
-                SteamBlue,
-                GogPurple,
-                Color(0xFFFBBF24)
-            )
-            themeColors.forEach { color ->
-                Box(
-                    modifier = Modifier
-                        .size(18.dp)
-                        .clip(CircleShape)
-                        .background(color)
-                        .border(1.5.dp, Color(0xFF0F172A), CircleShape)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ProfileAvatarTourPreview(
-    name: String,
-    selectedUri: Uri?,
-    avatarFile: File?,
-    shouldRemove: Boolean,
-    onPickPhoto: () -> Unit
-) {
-    val context = LocalContext.current
-    val infiniteTransition = rememberInfiniteTransition(label = "profile_glow")
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 0.9f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulseAlpha"
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .clickable { onPickPhoto() },
-        contentAlignment = Alignment.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .size(96.dp)
-                .clip(CircleShape)
-                .border(
-                    2.dp,
-                    Brush.sweepGradient(
-                        listOf(
-                            NeonCyan.copy(alpha = pulseAlpha),
-                            NeonGreen.copy(alpha = pulseAlpha),
-                            NeonCyan.copy(alpha = pulseAlpha)
-                        )
-                    ),
-                    CircleShape
-                )
-                .background(Color(0xFF0F121A)),
-            contentAlignment = Alignment.Center
-        ) {
-            val hasPending = selectedUri != null
-            val hasFile = !shouldRemove && avatarFile != null && avatarFile.exists()
-
-            if (hasPending) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context).data(selectedUri).crossfade(true).build(),
-                    contentDescription = "Selected Photo",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().clip(CircleShape)
-                )
-            } else if (hasFile) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context).data(avatarFile).crossfade(true).build(),
-                    contentDescription = "Profile Photo",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().clip(CircleShape)
-                )
-            } else if (name.isNotBlank()) {
-                Text(
-                    text = name.trim().take(1).uppercase(),
-                    fontSize = 38.sp,
-                    fontWeight = FontWeight.Black,
-                    color = NeonCyan
-                )
-            } else {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = "Default Avatar",
-                    tint = NeonCyan,
-                    modifier = Modifier.size(50.dp)
-                )
-            }
-
-            // Camera Overlay badge
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .align(Alignment.BottomEnd)
-                    .clip(CircleShape)
-                    .background(Color(0xFF0B0E17))
-                    .border(1.dp, NeonCyan, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.CameraAlt,
-                    contentDescription = "Add or Change Photo",
-                    tint = NeonCyan,
-                    modifier = Modifier.size(15.dp)
-                )
-            }
-        }
-    }
-}
-

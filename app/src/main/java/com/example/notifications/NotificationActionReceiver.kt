@@ -37,10 +37,11 @@ class NotificationActionReceiver : BroadcastReceiver() {
                         if (giveawayId != -1) {
                             db.giveawayDao().setBookmarked(giveawayId, true)
                             NotificationManagerCompat.from(context).cancel(giveawayId)
+                            val s = com.example.i18n.AppStringsRegistry.forContext(context)
                             Handler(Looper.getMainLooper()).post {
                                 Toast.makeText(
                                     context,
-                                    "★ '$giveawayTitle' saved to your Bookmarks!",
+                                    String.format(s.system.notifBookmarkSavedToastFormat, giveawayTitle),
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }

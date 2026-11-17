@@ -37,10 +37,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -69,6 +67,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.GameCategory
 import com.example.data.model.GiveawayItem
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
+import com.example.i18n.localizedDescription
+import com.example.i18n.localizedDisplayName
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.TextMuted
@@ -85,26 +87,30 @@ fun CategoryMultiSelectSheet(
     giveaways: List<GiveawayItem>,
     onDismiss: () -> Unit
 ) {
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var searchQuery by remember { mutableStateOf("") }
 
     // Count of games per category
     val categoryCounts = remember(giveaways) {
         val map = mutableMapOf<GameCategory, Int>()
-        GameCategory.values().forEach { cat ->
+        GameCategory.entries.forEach { cat ->
             map[cat] = giveaways.count { it.categories.contains(cat) }
         }
         map
     }
 
-    val filteredCategories = remember(searchQuery) {
+    val filteredCategories = remember(searchQuery, s.language) {
         if (searchQuery.isBlank()) {
-            GameCategory.values().toList()
+            GameCategory.entries
         } else {
             val q = searchQuery.trim().lowercase()
-            GameCategory.values().filter {
+            GameCategory.entries.filter {
                 it.displayName.lowercase().contains(q) ||
-                it.description.lowercase().contains(q)
+                it.description.lowercase().contains(q) ||
+                it.localizedDisplayName(s).lowercase().contains(q) ||
+                it.localizedDescription(s).lowercase().contains(q)
             }
         }
     }
@@ -148,16 +154,16 @@ fun CategoryMultiSelectSheet(
 
                     Column {
                         Text(
-                            text = "Filter by Categories",
+                            text = s.home.categoriesSheetTitle,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
                         )
                         Text(
                             text = if (selectedCategories.isEmpty()) {
-                                "All categories active (${GameCategory.values().size} total)"
+                                if (isEs) "Todas las categorías activas (${GameCategory.entries.size})" else "All categories active (${GameCategory.entries.size} total)"
                             } else {
-                                "${selectedCategories.size} of ${GameCategory.values().size} categories selected"
+                                if (isEs) "${selectedCategories.size} de ${GameCategory.entries.size} seleccionadas" else "${selectedCategories.size} of ${GameCategory.entries.size} categories selected"
                             },
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
@@ -172,7 +178,7 @@ fun CategoryMultiSelectSheet(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Close",
+                        contentDescription = s.common.close,
                         tint = TextMuted,
                         modifier = Modifier.size(20.dp)
                     )
@@ -185,7 +191,13 @@ fun CategoryMultiSelectSheet(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Search categories (e.g. RPG, Shooter, Action)", fontSize = 12.sp, color = TextMuted) },
+                placeholder = {
+                    Text(
+                        text = if (isEs) "Buscar géneros (ej. RPG, Disparos, Acción)" else "Search categories (e.g. RPG, Shooter, Action)",
+                        fontSize = 12.sp,
+                        color = TextMuted
+                    )
+                },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
@@ -197,7 +209,7 @@ fun CategoryMultiSelectSheet(
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
                         IconButton(onClick = { searchQuery = "" }, modifier = Modifier.size(24.dp)) {
-                            Icon(imageVector = Icons.Default.Clear, contentDescription = "Clear", tint = TextMuted, modifier = Modifier.size(16.dp))
+                            Icon(imageVector = Icons.Default.Clear, contentDescription = s.common.clear, tint = TextMuted, modifier = Modifier.size(16.dp))
                         }
                     }
                 },
@@ -231,7 +243,7 @@ fun CategoryMultiSelectSheet(
                     ) {
                         Icon(imageVector = Icons.Default.DoneAll, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Select All", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text(s.home.categoriesSelectAll, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
 
                     if (selectedCategories.isNotEmpty()) {
@@ -242,7 +254,7 @@ fun CategoryMultiSelectSheet(
                         ) {
                             Icon(imageVector = Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color(0xFFFF5252))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Clear", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF5252))
+                            Text(s.common.clear, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF5252))
                         }
                     }
                 }
@@ -254,7 +266,11 @@ fun CategoryMultiSelectSheet(
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = if (selectedCategories.isEmpty()) "ALL ACTIVE" else "${selectedCategories.size} ACTIVE",
+                        text = if (selectedCategories.isEmpty()) {
+                            if (isEs) "TODAS ACTIVAS" else "ALL ACTIVE"
+                        } else {
+                            if (isEs) "${selectedCategories.size} ACTIVAS" else "${selectedCategories.size} ACTIVE"
+                        },
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Black,
                         color = MaterialTheme.colorScheme.primary,
@@ -264,7 +280,7 @@ fun CategoryMultiSelectSheet(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), thickness = 0.5.dp)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), thickness = 0.5.dp)
             Spacer(modifier = Modifier.height(8.dp))
 
             // Multi-Select Category List
@@ -323,7 +339,7 @@ fun CategoryMultiSelectSheet(
                                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
                                         Text(
-                                            text = category.displayName,
+                                            text = category.localizedDisplayName(s),
                                             fontSize = 14.sp,
                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
                                             color = if (isSelected) MaterialTheme.colorScheme.primary else TextPrimary
@@ -338,7 +354,7 @@ fun CategoryMultiSelectSheet(
                                         }
                                     }
                                     Text(
-                                        text = category.description,
+                                        text = category.localizedDescription(s),
                                         fontSize = 11.sp,
                                         color = TextSecondary,
                                         maxLines = 1
@@ -383,9 +399,13 @@ fun CategoryMultiSelectSheet(
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = if (selectedCategories.isEmpty()) {
-                        "Show All Categories"
+                        s.home.filterCategoriesSelectAll
                     } else {
-                        "Apply ${selectedCategories.size} Categor${if (selectedCategories.size > 1) "ies" else "y"}"
+                        if (isEs) {
+                            "Aplicar ${selectedCategories.size} Categoría${if (selectedCategories.size > 1) "s" else ""}"
+                        } else {
+                            "Apply ${selectedCategories.size} Categor${if (selectedCategories.size > 1) "ies" else "y"}"
+                        }
                     },
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold

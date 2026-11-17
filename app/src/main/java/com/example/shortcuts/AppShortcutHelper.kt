@@ -43,6 +43,8 @@ object AppShortcutHelper {
         vaultCount: Int? = null
     ) {
         try {
+            val s = com.example.i18n.AppStringsRegistry.forContext(context)
+
             val expiringIntent = Intent(context, MainActivity::class.java).apply {
                 action = ACTION_EXPIRING_SOON
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -50,13 +52,13 @@ object AppShortcutHelper {
             }
 
             val expiringLongLabel = if (expiringCount != null && expiringCount > 0) {
-                "Expiring Soon ($expiringCount Deals)"
+                String.format(s.system.shortcutExpiringLongCountFormat, expiringCount)
             } else {
-                "Expiring Soon Deals"
+                s.system.shortcutExpiringLongDefault
             }
 
             val expiringShortcut = ShortcutInfoCompat.Builder(context, ID_EXPIRING_SOON)
-                .setShortLabel("Expiring Soon")
+                .setShortLabel(s.system.shortcutExpiringShort)
                 .setLongLabel(expiringLongLabel)
                 .setIcon(IconCompat.createWithResource(context, R.drawable.ic_shortcut_calendar))
                 .setIntent(expiringIntent)
@@ -71,13 +73,13 @@ object AppShortcutHelper {
             }
 
             val dropsLongLabel = if (newDropsCount != null && newDropsCount > 0) {
-                "Today's Drops ($newDropsCount New)"
+                String.format(s.system.shortcutDropsLongCountFormat, newDropsCount)
             } else {
-                "Today's Free Drops (Newest)"
+                s.system.shortcutDropsLongDefault
             }
 
             val dropsShortcut = ShortcutInfoCompat.Builder(context, ID_TODAYS_DROPS)
-                .setShortLabel("Today's Drops")
+                .setShortLabel(s.system.shortcutDropsShort)
                 .setLongLabel(dropsLongLabel)
                 .setIcon(IconCompat.createWithResource(context, R.drawable.ic_shortcut_drops))
                 .setIntent(dropsIntent)
@@ -91,13 +93,13 @@ object AppShortcutHelper {
             }
 
             val vaultLongLabel = if (vaultCount != null && vaultCount > 0) {
-                "My Vault ($vaultCount Claimed)"
+                String.format(s.system.shortcutVaultLongCountFormat, vaultCount)
             } else {
-                "My Vault (Claimed Library)"
+                s.system.shortcutVaultLongDefault
             }
 
             val vaultShortcut = ShortcutInfoCompat.Builder(context, ID_MY_VAULT)
-                .setShortLabel("My Vault")
+                .setShortLabel(s.system.shortcutVaultShort)
                 .setLongLabel(vaultLongLabel)
                 .setIcon(IconCompat.createWithResource(context, R.drawable.ic_shortcut_vault))
                 .setIntent(vaultIntent)

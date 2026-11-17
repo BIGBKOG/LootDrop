@@ -1,11 +1,9 @@
 package com.example.ui.components
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -26,21 +24,20 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.Nightlight
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -64,7 +61,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
 import com.example.notifications.NotificationHelper
 import com.example.notifications.NotificationScheduler
 import com.example.preferences.AppPreferences
@@ -91,6 +89,8 @@ fun NotificationSettingsSheet(
     onDismiss: () -> Unit,
     onOpenInbox: (() -> Unit)? = null
 ) {
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
     val context = LocalContext.current
     val appPrefs = remember { AppPreferences(context) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -118,16 +118,46 @@ fun NotificationSettingsSheet(
     var syncIntervalHours by remember { mutableStateOf(appPrefs.backgroundSyncIntervalHours) }
     var wifiOnly by remember { mutableStateOf(appPrefs.backgroundSyncWifiOnly) }
 
-    // Permission launcher for Android 13+
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
-        if (isGranted) {
-            Toast.makeText(context, "Notification permission granted!", Toast.LENGTH_SHORT).show()
+        val msg = if (isGranted) {
+            if (isEs) "¡Permiso de notificaciones concedido!" else "Notification permission granted!"
         } else {
-            Toast.makeText(context, "Notification permission denied. Enable in system settings.", Toast.LENGTH_SHORT).show()
+            if (isEs) "Permiso denegado. Actívalo en los ajustes del sistema." else "Notification permission denied. Enable in system settings."
         }
+        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
     }
+
+    val storeSpecs = listOf(
+        StoreAlertSpec("PlayStation Store (PS5 / PS4)", if (isEs) "Ofertas y rebajas al 100% en PS Store" else "PS Store giveaways & 100% discount promotions", PlayStationBlue, isNotifyPlayStation) {
+            isNotifyPlayStation = it; notificationHelper.isNotifyPlayStation = it
+        },
+        StoreAlertSpec("Xbox Series X|S & Xbox One", if (isEs) "Promociones gratis en tienda Xbox" else "Xbox Marketplace free game promotions", XboxGreen, isNotifyXbox) {
+            isNotifyXbox = it; notificationHelper.isNotifyXbox = it
+        },
+        StoreAlertSpec("Nintendo Switch eShop", if (isEs) "Juegos gratis al 100% y drops en Switch" else "Nintendo Switch 100% discount freebies & drops", NintendoRed, isNotifyNintendo) {
+            isNotifyNintendo = it; notificationHelper.isNotifyNintendo = it
+        },
+        StoreAlertSpec("Steam", if (isEs) "Promociones gratis en Steam y 100% descuento" else "Steam store free promotions & 100% off deals", SteamBlue, isNotifySteam) {
+            isNotifySteam = it; notificationHelper.isNotifySteam = it
+        },
+        StoreAlertSpec("Epic Games Store", if (isEs) "Juegos gratis semanales y títulos misteriosos" else "Weekly free games vault & mystery deals", EpicGamesBlue, isNotifyEpic) {
+            isNotifyEpic = it; notificationHelper.isNotifyEpic = it
+        },
+        StoreAlertSpec("GOG.com", if (isEs) "Juegos clásicos e indies sin DRM en PC" else "DRM-free PC classic and indie game drops", GogPurple, isNotifyGog) {
+            isNotifyGog = it; notificationHelper.isNotifyGog = it
+        },
+        StoreAlertSpec("Google Play / Android", if (isEs) "Juegos móviles, apps y paquetes gratis" else "Android mobile games, apps & in-game pack promotions", Color(0xFF3DDC84), isNotifyAndroid) {
+            isNotifyAndroid = it; notificationHelper.isNotifyAndroid = it
+        },
+        StoreAlertSpec("Apple App Store / iOS", if (isEs) "Títulos gratis y promos para iPhone y iPad" else "iOS (iPhone & iPad) free titles & giveaway promos", Color(0xFF007AFF), isNotifyIos) {
+            isNotifyIos = it; notificationHelper.isNotifyIos = it
+        },
+        StoreAlertSpec(if (isEs) "Otros Launchers de PC" else "Other PC Launchers", "Ubisoft, itch.io, EA App, Prime Gaming", NeonGreen, isNotifyOthers) {
+            isNotifyOthers = it; notificationHelper.isNotifyOthers = it
+        }
+    )
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -160,37 +190,21 @@ fun NotificationSettingsSheet(
                             .background(NeonCyan.copy(alpha = 0.2f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.NotificationsActive,
-                            contentDescription = null,
-                            tint = NeonCyan,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(20.dp))
                     }
-
                     Column {
-                        Text(
-                            text = "Notification Hub & Alerts",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                        Text(
-                            text = "Smart push alerts, rich game artwork & channels",
-                            fontSize = 12.sp,
-                            color = TextSecondary
-                        )
+                        Text(if (isEs) "Centro de Notificaciones y Alertas" else "Notification Hub & Alerts", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                        Text(if (isEs) "Alertas inteligentes, portadas y canales" else "Smart push alerts, rich game artwork & channels", fontSize = 12.sp, color = TextSecondary)
                     }
                 }
-
                 IconButton(onClick = onDismiss) {
-                    Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = TextPrimary)
+                    Icon(Icons.Default.Close, contentDescription = s.common.close, tint = TextPrimary)
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Main Notification Master Switch
+            // Master Switch
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -205,19 +219,9 @@ fun NotificationSettingsSheet(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Enable Smart Push Alerts",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                        Text(
-                            text = "Receive rich alerts with game artwork when free deals drop",
-                            fontSize = 12.sp,
-                            color = TextSecondary
-                        )
+                        Text(if (isEs) "Activar Alertas Inteligentes" else "Enable Smart Push Alerts", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                        Text(if (isEs) "Recibe alertas con portada cuando salgan juegos gratis" else "Receive rich alerts with game artwork when free deals drop", fontSize = 12.sp, color = TextSecondary)
                     }
-
                     Switch(
                         checked = isNotificationsEnabled,
                         onCheckedChange = { checked ->
@@ -225,15 +229,7 @@ fun NotificationSettingsSheet(
                             notificationHelper.isNotificationsEnabled = checked
                             if (checked) {
                                 NotificationScheduler.schedulePeriodicSync(context)
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                    val hasPermission = ContextCompat.checkSelfPermission(
-                                        context,
-                                        Manifest.permission.POST_NOTIFICATIONS
-                                    ) == PackageManager.PERMISSION_GRANTED
-                                    if (!hasPermission) {
-                                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                    }
-                                }
+                                hasOrRequestNotificationPermission(context, permissionLauncher)
                             } else {
                                 NotificationScheduler.cancelPeriodicSync(context)
                             }
@@ -251,7 +247,7 @@ fun NotificationSettingsSheet(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Notification Channels Indicator Card
+            // Channels Card
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -262,42 +258,27 @@ fun NotificationSettingsSheet(
             ) {
                 Column {
                     Text(
-                        text = "ACTIVE NOTIFICATION CHANNELS (ANDROID 8+)",
+                        text = if (isEs) "CANALES DE NOTIFICACIÓN ACTIVOS" else "ACTIVE NOTIFICATION CHANNELS",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = TextMuted,
                         letterSpacing = 1.sp
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        ChannelStatusBadge("🔥 Games", NeonCyan, Modifier.weight(1f))
-                        ChannelStatusBadge("⏳ Ending Soon", Color(0xFFFF5252), Modifier.weight(1f))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ChannelStatusBadge(if (isEs) "🔥 Juegos" else "🔥 Games", NeonCyan, Modifier.weight(1f))
+                        ChannelStatusBadge(if (isEs) "⏳ Por Vencer" else "⏳ Ending Soon", Color(0xFFFF5252), Modifier.weight(1f))
                     }
                     Spacer(modifier = Modifier.height(6.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        ChannelStatusBadge("🎁 DLC & Loot", Color(0xFFB388FF), Modifier.weight(1f))
-                        ChannelStatusBadge("🔔 System Sync", NeonGreen, Modifier.weight(1f))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ChannelStatusBadge(if (isEs) "🎁 DLC y Botín" else "🎁 DLC & Loot", Color(0xFFB388FF), Modifier.weight(1f))
+                        ChannelStatusBadge(if (isEs) "🔔 Sistema" else "🔔 System Sync", NeonGreen, Modifier.weight(1f))
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-
-            // Platform Filters section
-            Text(
-                text = "STORE LAUNCHERS TO TRACK",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextMuted,
-                letterSpacing = 1.sp
-            )
-
+            Text(s.settings.alertsPlatformsSection, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
             Spacer(modifier = Modifier.height(8.dp))
 
             Box(
@@ -309,143 +290,28 @@ fun NotificationSettingsSheet(
                     .padding(horizontal = 14.dp, vertical = 6.dp)
             ) {
                 Column {
-                    NotificationSettingRow(
-                        title = "PlayStation Store (PS5 / PS4)",
-                        subtitle = "PS Store giveaways & 100% discount promotions",
-                        color = PlayStationBlue,
-                        checked = isNotifyPlayStation,
-                        enabled = isNotificationsEnabled,
-                        onCheckedChange = {
-                            isNotifyPlayStation = it
-                            notificationHelper.isNotifyPlayStation = it
+                    storeSpecs.forEachIndexed { idx, spec ->
+                        SettingToggleRow(
+                            title = spec.title,
+                            subtitle = spec.subtitle,
+                            color = spec.color,
+                            checked = spec.checked,
+                            enabled = isNotificationsEnabled,
+                            onCheckedChange = spec.onToggle,
+                            titleColor = TextPrimary,
+                            subtitleColor = TextSecondary,
+                            thumbColor = GamingDarkBackground,
+                            trackColor = NeonCyan
+                        )
+                        if (idx < storeSpecs.lastIndex) {
+                            HorizontalDivider(color = GamingCardBorder, thickness = 0.5.dp)
                         }
-                    )
-
-                    Divider(color = GamingCardBorder, thickness = 0.5.dp)
-
-                    NotificationSettingRow(
-                        title = "Xbox Series X|S & Xbox One",
-                        subtitle = "Xbox Marketplace free game promotions",
-                        color = XboxGreen,
-                        checked = isNotifyXbox,
-                        enabled = isNotificationsEnabled,
-                        onCheckedChange = {
-                            isNotifyXbox = it
-                            notificationHelper.isNotifyXbox = it
-                        }
-                    )
-
-                    Divider(color = GamingCardBorder, thickness = 0.5.dp)
-
-                    NotificationSettingRow(
-                        title = "Nintendo Switch eShop",
-                        subtitle = "Nintendo Switch 100% discount freebies & drops",
-                        color = NintendoRed,
-                        checked = isNotifyNintendo,
-                        enabled = isNotificationsEnabled,
-                        onCheckedChange = {
-                            isNotifyNintendo = it
-                            notificationHelper.isNotifyNintendo = it
-                        }
-                    )
-
-                    Divider(color = GamingCardBorder, thickness = 0.5.dp)
-
-                    NotificationSettingRow(
-                        title = "Steam",
-                        subtitle = "Steam store free promotions & 100% off deals",
-                        color = SteamBlue,
-                        checked = isNotifySteam,
-                        enabled = isNotificationsEnabled,
-                        onCheckedChange = {
-                            isNotifySteam = it
-                            notificationHelper.isNotifySteam = it
-                        }
-                    )
-
-                    Divider(color = GamingCardBorder, thickness = 0.5.dp)
-
-                    NotificationSettingRow(
-                        title = "Epic Games Store",
-                        subtitle = "Weekly free games vault & mystery deals",
-                        color = EpicGamesBlue,
-                        checked = isNotifyEpic,
-                        enabled = isNotificationsEnabled,
-                        onCheckedChange = {
-                            isNotifyEpic = it
-                            notificationHelper.isNotifyEpic = it
-                        }
-                    )
-
-                    Divider(color = GamingCardBorder, thickness = 0.5.dp)
-
-                    NotificationSettingRow(
-                        title = "GOG.com",
-                        subtitle = "DRM-free PC classic and indie game drops",
-                        color = GogPurple,
-                        checked = isNotifyGog,
-                        enabled = isNotificationsEnabled,
-                        onCheckedChange = {
-                            isNotifyGog = it
-                            notificationHelper.isNotifyGog = it
-                        }
-                    )
-
-                    Divider(color = GamingCardBorder, thickness = 0.5.dp)
-
-                    NotificationSettingRow(
-                        title = "Google Play / Android",
-                        subtitle = "Android mobile games, apps & in-game pack promotions",
-                        color = Color(0xFF3DDC84),
-                        checked = isNotifyAndroid,
-                        enabled = isNotificationsEnabled,
-                        onCheckedChange = {
-                            isNotifyAndroid = it
-                            notificationHelper.isNotifyAndroid = it
-                        }
-                    )
-
-                    Divider(color = GamingCardBorder, thickness = 0.5.dp)
-
-                    NotificationSettingRow(
-                        title = "Apple App Store / iOS",
-                        subtitle = "iOS (iPhone & iPad) free titles & giveaway promos",
-                        color = Color(0xFF007AFF),
-                        checked = isNotifyIos,
-                        enabled = isNotificationsEnabled,
-                        onCheckedChange = {
-                            isNotifyIos = it
-                            notificationHelper.isNotifyIos = it
-                        }
-                    )
-
-                    Divider(color = GamingCardBorder, thickness = 0.5.dp)
-
-                    NotificationSettingRow(
-                        title = "Other PC Launchers",
-                        subtitle = "Ubisoft, itch.io, EA App, and Prime Gaming",
-                        color = NeonGreen,
-                        checked = isNotifyOthers,
-                        enabled = isNotificationsEnabled,
-                        onCheckedChange = {
-                            isNotifyOthers = it
-                            notificationHelper.isNotifyOthers = it
-                        }
-                    )
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-
-            // Smart Alert Tuning
-            Text(
-                text = "SMART ALERT TUNING",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextMuted,
-                letterSpacing = 1.sp
-            )
-
+            Text(if (isEs) "AJUSTE FINO DE ALERTAS" else "SMART ALERT TUNING", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
             Spacer(modifier = Modifier.height(8.dp))
 
             Box(
@@ -456,283 +322,127 @@ fun NotificationSettingsSheet(
                     .border(1.dp, GamingCardBorder, RoundedCornerShape(14.dp))
                     .padding(14.dp)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    // Ending Soon Alerts
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(imageVector = Icons.Default.HourglassTop, contentDescription = null, tint = Color(0xFFFF5252), modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "24h Expiring Soon Reminders",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isNotificationsEnabled) TextPrimary else TextMuted
-                                )
-                            }
-                            Text(
-                                text = "Alert before giveaways in your library or tracked stores expire",
-                                fontSize = 11.sp,
-                                color = if (isNotificationsEnabled) TextSecondary else TextMuted
-                            )
-                        }
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SimpleSettingSwitchRow(
+                        title = s.settings.alertsEndingSoonTitle,
+                        subtitle = s.settings.alertsEndingSoonSub,
+                        checked = isNotifyEndingSoon,
+                        enabled = isNotificationsEnabled,
+                        titleFontWeight = FontWeight.Bold,
+                        titleColor = TextPrimary,
+                        subtitleColor = TextSecondary,
+                        mutedColor = TextMuted,
+                        thumbColor = GamingDarkBackground,
+                        trackColor = Color(0xFFFF5252),
+                        leadingContent = {
+                            Icon(Icons.Default.HourglassTop, contentDescription = null, tint = Color(0xFFFF5252), modifier = Modifier.size(16.dp))
+                        },
+                        onCheckedChange = { isNotifyEndingSoon = it; notificationHelper.isNotifyEndingSoon = it }
+                    )
+                    HorizontalDivider(color = GamingCardBorder, thickness = 0.5.dp)
 
-                        Switch(
-                            checked = isNotifyEndingSoon,
-                            enabled = isNotificationsEnabled,
-                            onCheckedChange = {
-                                isNotifyEndingSoon = it
-                                notificationHelper.isNotifyEndingSoon = it
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = GamingDarkBackground,
-                                checkedTrackColor = Color(0xFFFF5252)
-                            )
-                        )
-                    }
+                    SimpleSettingSwitchRow(
+                        title = s.settings.alertsGamesOnlyTitle,
+                        subtitle = s.settings.alertsGamesOnlySub,
+                        checked = isGamesOnly,
+                        enabled = isNotificationsEnabled,
+                        titleColor = TextPrimary,
+                        subtitleColor = TextSecondary,
+                        mutedColor = TextMuted,
+                        thumbColor = GamingDarkBackground,
+                        trackColor = NeonCyan,
+                        onCheckedChange = { isGamesOnly = it; notificationHelper.isGamesOnly = it }
+                    )
+                    HorizontalDivider(color = GamingCardBorder, thickness = 0.5.dp)
 
-                    Divider(color = GamingCardBorder, thickness = 0.5.dp)
+                    SimpleSettingSwitchRow(
+                        title = s.settings.alertsKeepForeverTitle,
+                        subtitle = s.settings.alertsKeepForeverSub,
+                        checked = isKeepForeverOnly,
+                        enabled = isNotificationsEnabled,
+                        titleColor = TextPrimary,
+                        subtitleColor = TextSecondary,
+                        mutedColor = TextMuted,
+                        thumbColor = GamingDarkBackground,
+                        trackColor = NeonCyan,
+                        onCheckedChange = { isKeepForeverOnly = it; notificationHelper.isKeepForeverOnly = it }
+                    )
+                    HorizontalDivider(color = GamingCardBorder, thickness = 0.5.dp)
 
-                    // Full Games Only
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Full Games Only",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = if (isNotificationsEnabled) TextPrimary else TextMuted
-                            )
-                            Text(
-                                text = "Mute DLC packs, cosmetic skins, and beta keys",
-                                fontSize = 11.sp,
-                                color = if (isNotificationsEnabled) TextSecondary else TextMuted
-                            )
-                        }
+                    SimpleSettingSwitchRow(
+                        title = s.settings.alertsSoundTitle,
+                        subtitle = if (isEs) "Reproduce tono cuando llegan ofertas nuevas" else "Play audio chime when new giveaways drop",
+                        checked = isSoundEnabled,
+                        enabled = isNotificationsEnabled,
+                        titleColor = TextPrimary,
+                        subtitleColor = TextSecondary,
+                        mutedColor = TextMuted,
+                        thumbColor = GamingDarkBackground,
+                        trackColor = NeonCyan,
+                        onCheckedChange = { isSoundEnabled = it; notificationHelper.isNotificationSoundEnabled = it }
+                    )
+                    HorizontalDivider(color = GamingCardBorder, thickness = 0.5.dp)
 
-                        Switch(
-                            checked = isGamesOnly,
-                            enabled = isNotificationsEnabled,
-                            onCheckedChange = {
-                                isGamesOnly = it
-                                notificationHelper.isGamesOnly = it
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = GamingDarkBackground,
-                                checkedTrackColor = NeonCyan
-                            )
-                        )
-                    }
+                    SimpleSettingSwitchRow(
+                        title = s.settings.alertsVibrateTitle,
+                        subtitle = if (isEs) "Vibra cuando llega un juego gratis nuevo" else "Vibrate on new free game arrival",
+                        checked = isVibrateEnabled,
+                        enabled = isNotificationsEnabled,
+                        titleColor = TextPrimary,
+                        subtitleColor = TextSecondary,
+                        mutedColor = TextMuted,
+                        thumbColor = GamingDarkBackground,
+                        trackColor = NeonCyan,
+                        onCheckedChange = { isVibrateEnabled = it; notificationHelper.isNotificationVibrateEnabled = it }
+                    )
+                    HorizontalDivider(color = GamingCardBorder, thickness = 0.5.dp)
 
-                    Divider(color = GamingCardBorder, thickness = 0.5.dp)
+                    SimpleSettingSwitchRow(
+                        title = s.settings.alertsRichArtTitle,
+                        subtitle = if (isEs) "Muestra portadas en alta calidad en la notificación" else "Display BigPicture artwork inside notifications",
+                        checked = isRichArtEnabled,
+                        enabled = isNotificationsEnabled,
+                        titleColor = TextPrimary,
+                        subtitleColor = TextSecondary,
+                        mutedColor = TextMuted,
+                        thumbColor = GamingDarkBackground,
+                        trackColor = NeonCyan,
+                        onCheckedChange = { isRichArtEnabled = it; notificationHelper.isNotificationRichArtwork = it }
+                    )
+                    HorizontalDivider(color = GamingCardBorder, thickness = 0.5.dp)
 
-                    // Keep Forever Games Only
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Keep-Forever Games Only",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = if (isNotificationsEnabled) TextPrimary else TextMuted
-                            )
-                            Text(
-                                text = "Filter out temporary free weekends and trial promotions",
-                                fontSize = 11.sp,
-                                color = if (isNotificationsEnabled) TextSecondary else TextMuted
-                            )
-                        }
+                    SimpleSettingSwitchRow(
+                        title = s.settings.alertsActionBtnsTitle,
+                        subtitle = if (isEs) "Incluye botones de 'Reclamar', '★ Guardar' y 'Compartir'" else "Include 'Claim Free', '★ Bookmark', and 'Share' buttons in alerts",
+                        checked = isActionsEnabled,
+                        enabled = isNotificationsEnabled,
+                        titleColor = TextPrimary,
+                        subtitleColor = TextSecondary,
+                        mutedColor = TextMuted,
+                        thumbColor = GamingDarkBackground,
+                        trackColor = NeonCyan,
+                        onCheckedChange = { isActionsEnabled = it; notificationHelper.isNotificationActionsEnabled = it }
+                    )
+                    HorizontalDivider(color = GamingCardBorder, thickness = 0.5.dp)
 
-                        Switch(
-                            checked = isKeepForeverOnly,
-                            enabled = isNotificationsEnabled,
-                            onCheckedChange = {
-                                isKeepForeverOnly = it
-                                notificationHelper.isKeepForeverOnly = it
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = GamingDarkBackground,
-                                checkedTrackColor = NeonCyan
-                            )
-                        )
-                    }
-
-                    Divider(color = GamingCardBorder, thickness = 0.5.dp)
-
-                    // Sound Effects
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Notification Sound Effects",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = if (isNotificationsEnabled) TextPrimary else TextMuted
-                            )
-                            Text(
-                                text = "Play audio chime when new giveaways drop",
-                                fontSize = 11.sp,
-                                color = if (isNotificationsEnabled) TextSecondary else TextMuted
-                            )
-                        }
-
-                        Switch(
-                            checked = isSoundEnabled,
-                            enabled = isNotificationsEnabled,
-                            onCheckedChange = {
-                                isSoundEnabled = it
-                                notificationHelper.isNotificationSoundEnabled = it
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = GamingDarkBackground,
-                                checkedTrackColor = NeonCyan
-                            )
-                        )
-                    }
-
-                    Divider(color = GamingCardBorder, thickness = 0.5.dp)
-
-                    // Haptic Vibration
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Haptic Vibration Feedback",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = if (isNotificationsEnabled) TextPrimary else TextMuted
-                            )
-                            Text(
-                                text = "Vibrate on new free game arrival",
-                                fontSize = 11.sp,
-                                color = if (isNotificationsEnabled) TextSecondary else TextMuted
-                            )
-                        }
-
-                        Switch(
-                            checked = isVibrateEnabled,
-                            enabled = isNotificationsEnabled,
-                            onCheckedChange = {
-                                isVibrateEnabled = it
-                                notificationHelper.isNotificationVibrateEnabled = it
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = GamingDarkBackground,
-                                checkedTrackColor = NeonCyan
-                            )
-                        )
-                    }
-
-                    Divider(color = GamingCardBorder, thickness = 0.5.dp)
-
-                    // Rich Artwork
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Rich Game Poster Artwork",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = if (isNotificationsEnabled) TextPrimary else TextMuted
-                            )
-                            Text(
-                                text = "Display BigPicture artwork inside notifications",
-                                fontSize = 11.sp,
-                                color = if (isNotificationsEnabled) TextSecondary else TextMuted
-                            )
-                        }
-
-                        Switch(
-                            checked = isRichArtEnabled,
-                            enabled = isNotificationsEnabled,
-                            onCheckedChange = {
-                                isRichArtEnabled = it
-                                notificationHelper.isNotificationRichArtwork = it
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = GamingDarkBackground,
-                                checkedTrackColor = NeonCyan
-                            )
-                        )
-                    }
-
-                    Divider(color = GamingCardBorder, thickness = 0.5.dp)
-
-                    // Action Buttons
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "1-Tap Quick Action Buttons",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = if (isNotificationsEnabled) TextPrimary else TextMuted
-                            )
-                            Text(
-                                text = "Include 'Claim Free', '★ Bookmark', and 'Share' buttons in alerts",
-                                fontSize = 11.sp,
-                                color = if (isNotificationsEnabled) TextSecondary else TextMuted
-                            )
-                        }
-
-                        Switch(
-                            checked = isActionsEnabled,
-                            enabled = isNotificationsEnabled,
-                            onCheckedChange = {
-                                isActionsEnabled = it
-                                notificationHelper.isNotificationActionsEnabled = it
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = GamingDarkBackground,
-                                checkedTrackColor = NeonCyan
-                            )
-                        )
-                    }
-
-                    Divider(color = GamingCardBorder, thickness = 0.5.dp)
-
-                    // Minimum Value Filter
                     Column {
                         Text(
-                            text = "Minimum Original Game Value:",
+                            text = if (isEs) "Valor Mínimo Original del Juego:" else "Minimum Original Game Value:",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
                             color = if (isNotificationsEnabled) TextPrimary else TextMuted
                         )
                         Spacer(modifier = Modifier.height(6.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            listOf(
-                                0f to "Any Value",
-                                5f to "Worth $5+",
-                                10f to "Worth $10+",
-                                20f to "Worth $20+",
-                                30f to "Worth $30+ (AAA)"
-                            ).forEach { (threshold, label) ->
-                                val selected = minWorthThreshold == threshold
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(
+                                if (isEs) {
+                                    listOf(0f to "Cualquiera", 5f to "Valor $5+", 10f to "Valor $10+", 20f to "Valor $20+", 30f to "Valor $30+ (AAA)")
+                                } else {
+                                    listOf(0f to "Any Value", 5f to "Worth $5+", 10f to "Worth $10+", 20f to "Worth $20+", 30f to "Worth $30+ (AAA)")
+                                }
+                            ) { (threshold, label) ->
                                 FilterChip(
-                                    selected = selected,
+                                    selected = minWorthThreshold == threshold,
                                     enabled = isNotificationsEnabled,
                                     onClick = {
                                         minWorthThreshold = threshold
@@ -749,60 +459,28 @@ fun NotificationSettingsSheet(
                             }
                         }
                     }
+                    HorizontalDivider(color = GamingCardBorder, thickness = 0.5.dp)
 
-                    Divider(color = GamingCardBorder, thickness = 0.5.dp)
-
-                    // Quiet Hours (Do Not Disturb)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(imageVector = Icons.Default.Nightlight, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "Quiet Hours (11 PM - 8 AM)",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = if (isNotificationsEnabled) TextPrimary else TextMuted
-                                )
-                            }
-                            Text(
-                                text = "Silence alert sounds & notifications while you sleep",
-                                fontSize = 11.sp,
-                                color = if (isNotificationsEnabled) TextSecondary else TextMuted
-                            )
-                        }
-
-                        Switch(
-                            checked = isQuietHours,
-                            enabled = isNotificationsEnabled,
-                            onCheckedChange = {
-                                isQuietHours = it
-                                notificationHelper.isQuietHoursEnabled = it
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = GamingDarkBackground,
-                                checkedTrackColor = NeonCyan
-                            )
-                        )
-                    }
+                    SimpleSettingSwitchRow(
+                        title = if (isEs) "Horas Silenciosas (23:00 - 8:00)" else "Quiet Hours (11 PM - 8 AM)",
+                        subtitle = if (isEs) "Silencia sonidos y alertas mientras duermes" else "Silence alert sounds & notifications while you sleep",
+                        checked = isQuietHours,
+                        enabled = isNotificationsEnabled,
+                        titleColor = TextPrimary,
+                        subtitleColor = TextSecondary,
+                        mutedColor = TextMuted,
+                        thumbColor = GamingDarkBackground,
+                        trackColor = NeonCyan,
+                        leadingContent = {
+                            Icon(Icons.Default.Nightlight, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(16.dp))
+                        },
+                        onCheckedChange = { isQuietHours = it; notificationHelper.isQuietHoursEnabled = it }
+                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-
-            // Background Scanning & Frequency
-            Text(
-                text = "BACKGROUND SCANNER INTERVAL",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextMuted,
-                letterSpacing = 1.sp
-            )
-
+            Text(s.settings.alertsBgSyncSection, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
             Spacer(modifier = Modifier.height(8.dp))
 
             Box(
@@ -814,14 +492,11 @@ fun NotificationSettingsSheet(
                     .padding(14.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(imageVector = Icons.Default.Sync, contentDescription = null, tint = NeonGreen, modifier = Modifier.size(16.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Sync, contentDescription = null, tint = NeonGreen, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Automatic Check Frequency:",
+                            text = if (isEs) "Frecuencia Automática de Revisión:" else "Automatic Check Frequency:",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
                             color = if (isNotificationsEnabled) TextPrimary else TextMuted
@@ -829,16 +504,25 @@ fun NotificationSettingsSheet(
                     }
 
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        items(listOf(2 to "2 Hours", 4 to "4 Hours", 8 to "8 Hours", 24 to "Daily", 0 to "Manual")) { (hours, label) ->
-                            val selected = syncIntervalHours == hours
+                        items(
+                            if (isEs) {
+                                listOf(2 to "2 Horas", 4 to "4 Horas", 8 to "8 Horas", 24 to "Diario", 0 to "Manual")
+                            } else {
+                                listOf(2 to "2 Hours", 4 to "4 Hours", 8 to "8 Hours", 24 to "Daily", 0 to "Manual")
+                            }
+                        ) { (hours, label) ->
                             FilterChip(
-                                selected = selected,
+                                selected = syncIntervalHours == hours,
                                 enabled = isNotificationsEnabled,
                                 onClick = {
                                     syncIntervalHours = hours
                                     appPrefs.backgroundSyncIntervalHours = hours
                                     NotificationScheduler.schedulePeriodicSync(context)
-                                    Toast.makeText(context, "Background sync set to $label", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(
+                                        context,
+                                        if (isEs) "Sincronización ajustada a $label" else "Background sync set to $label",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 },
                                 label = { Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold) },
                                 colors = FilterChipDefaults.filterChipColors(
@@ -851,142 +535,84 @@ fun NotificationSettingsSheet(
                         }
                     }
 
-                    Divider(color = GamingCardBorder, thickness = 0.5.dp)
+                    HorizontalDivider(color = GamingCardBorder, thickness = 0.5.dp)
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                            Icon(imageVector = Icons.Default.Wifi, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Column {
-                                Text(
-                                    text = "Require Unmetered Wi-Fi",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = if (isNotificationsEnabled) TextPrimary else TextMuted
-                                )
-                                Text(
-                                    text = "Only check in background when connected to Wi-Fi",
-                                    fontSize = 11.sp,
-                                    color = if (isNotificationsEnabled) TextSecondary else TextMuted
-                                )
-                            }
-                        }
-
-                        Switch(
-                            checked = wifiOnly,
-                            enabled = isNotificationsEnabled,
-                            onCheckedChange = {
-                                wifiOnly = it
-                                appPrefs.backgroundSyncWifiOnly = it
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = GamingDarkBackground,
-                                checkedTrackColor = NeonCyan
-                            )
-                        )
-                    }
+                    SimpleSettingSwitchRow(
+                        title = s.settings.alertsWifiOnlyTitle,
+                        subtitle = if (isEs) "Comprobar en segundo plano solo con Wi-Fi" else "Only check in background when connected to Wi-Fi",
+                        checked = wifiOnly,
+                        enabled = isNotificationsEnabled,
+                        titleColor = TextPrimary,
+                        subtitleColor = TextSecondary,
+                        mutedColor = TextMuted,
+                        thumbColor = GamingDarkBackground,
+                        trackColor = NeonCyan,
+                        leadingContent = {
+                            Icon(Icons.Default.Wifi, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(16.dp))
+                        },
+                        onCheckedChange = { wifiOnly = it; appPrefs.backgroundSyncWifiOnly = it }
+                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            // Test & Inbox Action Buttons
             if (onOpenInbox != null) {
                 Button(
-                    onClick = {
-                        onDismiss()
-                        onOpenInbox()
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .testTag("open_alert_inbox_from_settings_button"),
+                    onClick = { onDismiss(); onOpenInbox() },
+                    modifier = Modifier.fillMaxWidth().height(48.dp).testTag("open_alert_inbox_from_settings_button"),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(imageVector = Icons.Default.History, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Text("Open Alert Inbox & History", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    }
+                    Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(
+                        if (isEs) "  Abrir Bandeja e Historial" else "  Open Alert Inbox & History",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
                 Spacer(modifier = Modifier.height(10.dp))
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(
                     onClick = {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            val hasPermission = ContextCompat.checkSelfPermission(
+                        if (hasOrRequestNotificationPermission(context, permissionLauncher)) {
+                            notificationHelper.sendTestNotification(isRichPreview = true)
+                            Toast.makeText(
                                 context,
-                                Manifest.permission.POST_NOTIFICATIONS
-                            ) == PackageManager.PERMISSION_GRANTED
-                            if (!hasPermission) {
-                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                return@OutlinedButton
-                            }
+                                if (isEs) "¡Alerta rica enviada! Revisa la barra." else "Rich BigPicture notification sent! Check drawer.",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
-                        notificationHelper.sendTestNotification(isRichPreview = true)
-                        Toast.makeText(context, "Rich BigPicture notification sent! Check drawer.", Toast.LENGTH_SHORT).show()
                     },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp)
-                        .testTag("send_test_notification_button"),
+                    modifier = Modifier.weight(1f).height(48.dp).testTag("send_test_notification_button"),
                     shape = RoundedCornerShape(12.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan),
+                    border = BorderStroke(1.dp, NeonCyan),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonCyan)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(imageVector = Icons.Default.Send, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Text("Rich Game Alert", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    }
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Text(if (isEs) "  Alerta Juego" else "  Rich Game Alert", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
 
                 OutlinedButton(
                     onClick = {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            val hasPermission = ContextCompat.checkSelfPermission(
+                        if (hasOrRequestNotificationPermission(context, permissionLauncher)) {
+                            notificationHelper.sendTestEndingSoonNotification()
+                            Toast.makeText(
                                 context,
-                                Manifest.permission.POST_NOTIFICATIONS
-                            ) == PackageManager.PERMISSION_GRANTED
-                            if (!hasPermission) {
-                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                return@OutlinedButton
-                            }
+                                if (isEs) "¡Alerta urgente enviada! Revisa la barra." else "Ending Soon notification sent! Check drawer.",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
-                        notificationHelper.sendTestEndingSoonNotification()
-                        Toast.makeText(context, "Ending Soon notification sent! Check drawer.", Toast.LENGTH_SHORT).show()
                     },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp)
-                        .testTag("send_test_ending_soon_button"),
+                    modifier = Modifier.weight(1f).height(48.dp).testTag("send_test_ending_soon_button"),
                     shape = RoundedCornerShape(12.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFF5252)),
+                    border = BorderStroke(1.dp, Color(0xFFFF5252)),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF5252))
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(imageVector = Icons.Default.HourglassTop, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Text("Ending Alert", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    }
+                    Icon(Icons.Default.HourglassTop, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Text(if (isEs) "  Alerta Urgente" else "  Ending Alert", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -1008,72 +634,8 @@ private fun ChannelStatusBadge(name: String, color: Color, modifier: Modifier = 
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(6.dp)
-                    .clip(CircleShape)
-                    .background(color)
-            )
-            Text(
-                text = name,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary
-            )
+            Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(color))
+            Text(text = name, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
         }
-    }
-}
-
-@Composable
-private fun NotificationSettingRow(
-    title: String,
-    subtitle: String,
-    color: Color,
-    checked: Boolean,
-    enabled: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.weight(1f)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(10.dp)
-                    .clip(RoundedCornerShape(5.dp))
-                    .background(color)
-            )
-            Column {
-                Text(
-                    text = title,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = if (enabled) TextPrimary else TextMuted
-                )
-                Text(
-                    text = subtitle,
-                    fontSize = 11.sp,
-                    color = if (enabled) TextSecondary else TextMuted
-                )
-            }
-        }
-
-        Switch(
-            checked = checked,
-            enabled = enabled,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = GamingDarkBackground,
-                checkedTrackColor = NeonCyan
-            )
-        )
     }
 }

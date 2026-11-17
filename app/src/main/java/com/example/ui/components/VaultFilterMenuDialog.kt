@@ -48,6 +48,9 @@ import com.example.data.model.LibraryPlayFilter
 import com.example.data.model.LibraryViewMode
 import com.example.data.model.PlayabilityFilter
 import com.example.data.model.StorageFilter
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
+import com.example.i18n.localizedLabel
 import com.example.ui.UiStats
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGreen
@@ -72,6 +75,8 @@ fun VaultFilterMenuDialog(
     viewMode: LibraryViewMode,
     onDismiss: () -> Unit
 ) {
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
     val isAllPaid = viewMode == LibraryViewMode.ALL_PAID
     val isAnyFilterActive = selectedFilter != LibraryPlayFilter.ALL ||
             selectedPlayability != PlayabilityFilter.ALL ||
@@ -133,13 +138,17 @@ fun VaultFilterMenuDialog(
                         }
                         Column {
                             Text(
-                                text = if (isAllPaid) "Steam Library Filters" else "Vault Filters",
+                                text = if (isAllPaid) {
+                                    if (isEs) "Filtros de Steam" else "Steam Library Filters"
+                                } else {
+                                    s.library.vaultFiltersBtn
+                                },
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary
                             )
                             Text(
-                                text = "Filter by status, hardware & storage size",
+                                text = if (isEs) "Filtra por estado, hardware y espacio en disco" else "Filter by status, hardware & storage size",
                                 fontSize = 11.sp,
                                 color = TextSecondary
                             )
@@ -163,7 +172,7 @@ fun VaultFilterMenuDialog(
                                     modifier = Modifier.size(14.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Reset", color = NeonCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(s.common.reset, color = NeonCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
                         }
 
@@ -173,7 +182,7 @@ fun VaultFilterMenuDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Close",
+                                contentDescription = s.common.close,
                                 tint = TextSecondary
                             )
                         }
@@ -192,7 +201,7 @@ fun VaultFilterMenuDialog(
                 ) {
                     // Category 1: Play Status
                     FilterCategorySection(
-                        title = "🎮 PLAY STATUS",
+                        title = "🎮 ${s.library.filterPlayStatusSection}",
                         color = NeonCyan
                     ) {
                         FlowChipRow {
@@ -225,7 +234,7 @@ fun VaultFilterMenuDialog(
                                 }
 
                                 SelectablePill(
-                                    label = filter.displayName,
+                                    label = if (isEs) filter.localizedLabel(s) else filter.displayName,
                                     count = count,
                                     isSelected = isSelected,
                                     activeColor = chipColor,
@@ -238,7 +247,7 @@ fun VaultFilterMenuDialog(
 
                     // Category 2: Hardware Readiness & Steam Deck
                     FilterCategorySection(
-                        title = "⚡ HARDWARE & PLAYABILITY",
+                        title = "⚡ ${s.library.filterHardwareSection}",
                         color = NeonGreen
                     ) {
                         FlowChipRow {
@@ -258,7 +267,7 @@ fun VaultFilterMenuDialog(
                                 }
 
                                 SelectablePill(
-                                    label = "${playTag.iconEmoji} ${playTag.label}",
+                                    label = "${playTag.iconEmoji} ${playTag.localizedLabel(s)}",
                                     count = count,
                                     isSelected = isSelected,
                                     activeColor = tagColor,
@@ -271,7 +280,7 @@ fun VaultFilterMenuDialog(
 
                     // Category 3: Storage Footprint Tracker
                     FilterCategorySection(
-                        title = "💾 STORAGE FOOTPRINT",
+                        title = "💾 ${s.library.filterDriveSpaceSection}",
                         color = Color(0xFFFFB300)
                     ) {
                         FlowChipRow {
@@ -293,7 +302,7 @@ fun VaultFilterMenuDialog(
                                 }
 
                                 SelectablePill(
-                                    label = "💾 ${storageTag.label}",
+                                    label = "💾 ${storageTag.localizedLabel(s)}",
                                     count = count,
                                     isSelected = isSelected,
                                     activeColor = storageColor,
@@ -321,7 +330,11 @@ fun VaultFilterMenuDialog(
                     shape = RoundedCornerShape(14.dp)
                 ) {
                     Text(
-                        text = if (isAnyFilterActive) "Apply Filters" else "Close",
+                        text = if (isAnyFilterActive) {
+                            if (isEs) "Aplicar Filtros" else "Apply Filters"
+                        } else {
+                            s.common.close
+                        },
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp
                     )

@@ -66,13 +66,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.example.data.local.SteamGameEntity
 import com.example.data.model.PlayStatus
 import com.example.data.model.SteamDeckStatus
 import com.example.data.model.ControllerSupport
 import com.example.data.model.SessionStyle
 import com.example.data.model.StorageTier
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
+import com.example.i18n.localizedLabel
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.TextMuted
@@ -80,6 +82,7 @@ import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 import com.example.ui.theme.ExpressiveMotion
 import com.example.ui.theme.expressivePressScale
+import com.example.util.LocalLowEndOptimization
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.SdStorage
 import androidx.compose.material3.OutlinedTextField
@@ -100,29 +103,51 @@ fun SteamGameCard(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
     var isStatusMenuOpen by remember { mutableStateOf(false) }
     var isStorageDialogOpen by remember { mutableStateOf(false) }
     var storageInputText by remember(game.manualInstallSizeGb) {
         mutableStateOf(game.manualInstallSizeGb?.toString() ?: "")
     }
 
-    val reducedMotion = !isAnimationsEnabled || isLowEndOptimization
+    val effectiveLowEnd = isLowEndOptimization || LocalLowEndOptimization.current
+    val reducedMotion = !isAnimationsEnabled || effectiveLowEnd
     val hardware = game.hardwareProfile
-    val statusColor by animateColorAsState(
-        targetValue = Color(game.playStatus.badgeColorHex),
-        animationSpec = ExpressiveMotion.effectsDefault(reducedMotion),
-        label = "steam_status_color"
-    )
-    val cardBorderColor by animateColorAsState(
-        targetValue = when (game.playStatus) {
-            PlayStatus.BEATEN -> NeonGreen.copy(alpha = 0.7f)
-            PlayStatus.PLAYING -> NeonCyan.copy(alpha = 0.7f)
-            PlayStatus.NOT_STARTED -> MaterialTheme.colorScheme.outline.copy(alpha = 0.65f)
-            PlayStatus.DROPPED -> Color(0xFFEF4444).copy(alpha = 0.55f)
-        },
-        animationSpec = ExpressiveMotion.effectsDefault(reducedMotion),
-        label = "steam_card_border"
-    )
+    val targetStatusColor = Color(game.playStatus.badgeColorHex)
+    val statusColor = if (reducedMotion) {
+        targetStatusColor
+    } else {
+        animateColorAsState(
+            targetValue = targetStatusColor,
+            animationSpec = ExpressiveMotion.effectsDefault(false),
+            label = "steam_status_color"
+        ).value
+    }
+    val targetBorderColor = when (game.playStatus) {
+        PlayStatus.BEATEN -> NeonGreen.copy(alpha = 0.7f)
+        PlayStatus.PLAYING -> NeonCyan.copy(alpha = 0.7f)
+        PlayStatus.NOT_STARTED -> MaterialTheme.colorScheme.outline.copy(alpha = 0.65f)
+        PlayStatus.DROPPED -> Color(0xFFEF4444).copy(alpha = 0.55f)
+    }
+    val cardBorderColor = if (reducedMotion) {
+        targetBorderColor
+    } else {
+        animateColorAsState(
+            targetValue = targetBorderColor,
+            animationSpec = ExpressiveMotion.effectsDefault(false),
+            label = "steam_card_border"
+        ).value
+    }
+    val headerImageRequest = remember(context, game.headerImageUrl, effectiveLowEnd) {
+        buildGiveawayImageRequest(
+            context = context,
+            url = game.headerImageUrl,
+            isLowEndOptimization = effectiveLowEnd,
+            width = if (effectiveLowEnd) 460 else 640,
+            height = if (effectiveLowEnd) 215 else 300
+        )
+    }
 
     Card(
         modifier = modifier
@@ -146,10 +171,7 @@ fun SteamGameCard(
                     .background(Color(0xFF171A21))
             ) {
                 AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(game.headerImageUrl)
-                        .crossfade(true)
-                        .build(),
+                    model = headerImageRequest,
                     contentDescription = game.name,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
@@ -209,7 +231,7 @@ fun SteamGameCard(
                                 .padding(horizontal = 6.dp, vertical = 2.5.dp)
                         ) {
                             Text(
-                                text = "🎁 LOOTDROP CLAIMED",
+                                text = if (isEs) "🎁 RECLAMADO EN LOOTDROP" else "🎁 LOOTDROP CLAIMED",
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = NeonGreen
@@ -229,7 +251,11 @@ fun SteamGameCard(
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
-                        text = if (game.playtimeMinutes > 0) "${game.playtimeHours} played" else "Unplayed",
+                        text = if (game.playtimeMinutes > 0) {
+                            s.library.steamHoursPlayedFormat.format(game.playtimeHours)
+                        } else {
+                            s.home.cardNeverPlayed
+                        },
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (game.playtimeMinutes > 0) NeonCyan else Color(0xFF94A3B8)
@@ -259,14 +285,14 @@ fun SteamGameCard(
                                 .background(statusColor)
                         )
                         Text(
-                            text = game.playStatus.label,
+                            text = game.playStatus.localizedLabel(s),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = statusColor
                         )
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowDown,
-                            contentDescription = "Change status",
+                            contentDescription = s.library.steamChangeStatus,
                             tint = statusColor,
                             modifier = Modifier.size(14.dp)
                         )
@@ -293,7 +319,7 @@ fun SteamGameCard(
                                                 .background(itemColor)
                                         )
                                         Text(
-                                            text = status.label,
+                                            text = status.localizedLabel(s),
                                             fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
                                             color = if (isCurrent) itemColor else MaterialTheme.colorScheme.onSurface
                                         )
@@ -354,13 +380,17 @@ fun SteamGameCard(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Text(
-                                    text = "Achievements: ${game.achievementsUnlocked}/${game.achievementsTotal}",
+                                    text = if (isEs) {
+                                        "Logros: ${game.achievementsUnlocked}/${game.achievementsTotal}"
+                                    } else {
+                                        "Achievements: ${game.achievementsUnlocked}/${game.achievementsTotal}"
+                                    },
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 if (onOpenAchievements != null) {
                                     Text(
-                                        text = "• Walkthroughs ➔",
+                                        text = if (isEs) "• Guías ➔" else "• Walkthroughs ➔",
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = NeonCyan
@@ -420,7 +450,7 @@ fun SteamGameCard(
                             .padding(horizontal = 6.dp, vertical = 2.5.dp)
                     ) {
                         Text(
-                            text = hardware.deckStatus.pillLabel,
+                            text = if (isEs) hardware.deckStatus.localizedLabel(s) else hardware.deckStatus.pillLabel,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = when (hardware.deckStatus) {
@@ -441,7 +471,7 @@ fun SteamGameCard(
                             .padding(horizontal = 6.dp, vertical = 2.5.dp)
                     ) {
                         Text(
-                            text = hardware.controllerSupport.label,
+                            text = hardware.controllerSupport.localizedLabel(s),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Medium,
                             color = Color(0xFF66C0F4)
@@ -458,7 +488,7 @@ fun SteamGameCard(
                                 .padding(horizontal = 6.dp, vertical = 2.5.dp)
                         ) {
                             Text(
-                                text = "⚡ Quick Session",
+                                text = "⚡ ${SessionStyle.QUICK_SESSION.localizedLabel(s)}",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = Color(0xFFF59E0B)
@@ -488,14 +518,14 @@ fun SteamGameCard(
                         )
                         if (hardware.isManualOverride) {
                             Text(
-                                text = "(custom)",
+                                text = if (isEs) "(manual)" else "(custom)",
                                 fontSize = 9.sp,
                                 color = Color(0xFFC4B5FD)
                             )
                         }
                         Icon(
                             imageVector = Icons.Default.Edit,
-                            contentDescription = "Edit install size",
+                            contentDescription = s.library.hardwareSetCustomSize,
                             tint = Color(0xFFA78BFA),
                             modifier = Modifier.size(10.dp)
                         )
@@ -548,7 +578,7 @@ fun SteamGameCard(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Play",
+                            text = if (isEs) "Jugar" else "Play",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1
@@ -573,12 +603,12 @@ fun SteamGameCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Extension,
-                                contentDescription = "View DLCs for ${game.name}",
+                                contentDescription = if (isEs) "Ver DLCs de ${game.name}" else "View DLCs for ${game.name}",
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "DLCs",
+                                text = s.library.steamFindDlcs,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1
@@ -608,12 +638,12 @@ fun SteamGameCard(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                            contentDescription = "Open ${game.name} on Steam Store",
+                            contentDescription = if (isEs) "Abrir ${game.name} en Steam" else "Open ${game.name} on Steam Store",
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Store",
+                            text = if (isEs) "Tienda" else "Store",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                             maxLines = 1
@@ -661,7 +691,7 @@ fun SteamGameCard(
                         }
                         Column {
                             Text(
-                                text = "Storage Footprint Tracker",
+                                text = s.library.hardwareStorageTitle,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -677,7 +707,11 @@ fun SteamGameCard(
                     }
 
                     Text(
-                        text = "Track the exact install size on your Steam Deck, ROG Ally, or PC drive. Enter manual gigabytes (GB) or reset to restore estimated size (${hardware.estimatedSizeGb} GB).",
+                        text = if (isEs) {
+                            "Registra el tamaño exacto en tu Steam Deck, ROG Ally o PC. Ingresa gigabytes (GB) o restablece al valor estimado (${hardware.estimatedSizeGb} GB)."
+                        } else {
+                            "Track the exact install size on your Steam Deck, ROG Ally, or PC drive. Enter manual gigabytes (GB) or reset to restore estimated size (${hardware.estimatedSizeGb} GB)."
+                        },
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         lineHeight = 18.sp
@@ -686,8 +720,8 @@ fun SteamGameCard(
                     OutlinedTextField(
                         value = storageInputText,
                         onValueChange = { storageInputText = it },
-                        label = { Text("Install Size (GB)") },
-                        placeholder = { Text("e.g. 15.5") },
+                        label = { Text(s.library.hardwareEnterGbLabel) },
+                        placeholder = { Text(if (isEs) "ej. 15.5" else "e.g. 15.5") },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = MaterialTheme.colorScheme.primary,
@@ -708,12 +742,12 @@ fun SteamGameCard(
                                     isStorageDialogOpen = false
                                 }
                             ) {
-                                Text("Reset to Auto", color = Color(0xFFEF4444))
+                                Text(s.library.hardwareResetAuto, color = Color(0xFFEF4444))
                             }
                             Spacer(modifier = Modifier.weight(1f))
                         }
                         TextButton(onClick = { isStorageDialogOpen = false }) {
-                            Text("Cancel")
+                            Text(s.common.cancel)
                         }
                         Button(
                             onClick = {
@@ -723,7 +757,7 @@ fun SteamGameCard(
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                         ) {
-                            Text("Save Size")
+                            Text(s.common.save)
                         }
                     }
                 }

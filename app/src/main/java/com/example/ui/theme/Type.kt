@@ -6,10 +6,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-val DisplayFontFamily = FontFamily.Default
-
-val BodyFontFamily = FontFamily.Default
-
 fun createLootDropTypography(fontFamily: FontFamily = FontFamily.Default): Typography {
     return Typography(
         displayLarge = TextStyle(

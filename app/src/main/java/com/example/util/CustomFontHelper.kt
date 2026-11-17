@@ -6,6 +6,8 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.Typeface as ComposeTypeface
+import com.example.i18n.AppLanguage
+import com.example.preferences.AppPreferences
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -27,11 +29,15 @@ object CustomFontHelper {
     }
 
     fun importFontFromUri(context: Context, uri: Uri): ImportResult {
+        val isEs = AppPreferences(context).appLanguage == AppLanguage.SPANISH
         val displayName = resolveDisplayName(context, uri)
         val lowerName = displayName.lowercase()
 
         if (lowerName.endsWith(".woff") || lowerName.endsWith(".woff2")) {
-            return ImportResult.Error("WOFF/WOFF2 web fonts are not supported on Android. Please import a .ttf or .otf font file.")
+            return ImportResult.Error(
+                if (isEs) "Las fuentes web WOFF/WOFF2 no son compatibles en Android. Importa un archivo .ttf u .otf."
+                else "WOFF/WOFF2 web fonts are not supported on Android. Please import a .ttf or .otf font file."
+            )
         }
 
         val extension = when {
@@ -45,7 +51,10 @@ object CustomFontHelper {
 
         return try {
             val input = context.contentResolver.openInputStream(uri)
-                ?: return ImportResult.Error("Could not read the selected font file.")
+                ?: return ImportResult.Error(
+                    if (isEs) "No se pudo leer el archivo de fuente seleccionado."
+                    else "Could not read the selected font file."
+                )
 
             var totalBytes = 0L
             input.use { inStream ->
@@ -57,7 +66,10 @@ object CustomFontHelper {
                         totalBytes += read
                         if (totalBytes > MAX_FONT_BYTES) {
                             tempFile.delete()
-                            return ImportResult.Error("Font file is too large (max 20 MB).")
+                            return ImportResult.Error(
+                                if (isEs) "El archivo de fuente es demasiado grande (máx. 20 MB)."
+                                else "Font file is too large (max 20 MB)."
+                            )
                         }
                         outStream.write(buffer, 0, read)
                     }
@@ -67,13 +79,19 @@ object CustomFontHelper {
 
             if (totalBytes < 12L || !hasValidFontHeader(tempFile)) {
                 tempFile.delete()
-                return ImportResult.Error("Invalid font file. Please select a valid .ttf or .otf font.")
+                return ImportResult.Error(
+                    if (isEs) "Archivo inválido. Selecciona una fuente .ttf u .otf válida."
+                    else "Invalid font file. Please select a valid .ttf or .otf font."
+                )
             }
 
             val parsedTypeface = runCatching { Typeface.createFromFile(tempFile) }.getOrNull()
             if (parsedTypeface == null) {
                 tempFile.delete()
-                return ImportResult.Error("Android could not parse this font file. Try another .ttf or .otf font.")
+                return ImportResult.Error(
+                    if (isEs) "Android no pudo leer esta fuente. Prueba con otro archivo .ttf u .otf."
+                    else "Android could not parse this font file. Try another .ttf or .otf font."
+                )
             }
 
             // Remove old imported fonts so storage stays clean
@@ -95,7 +113,10 @@ object CustomFontHelper {
             )
         } catch (e: Exception) {
             tempFile.delete()
-            ImportResult.Error("Failed to import font: ${e.message ?: "Unknown error"}")
+            ImportResult.Error(
+                if (isEs) "Error al importar fuente: ${e.message ?: "Error desconocido"}"
+                else "Failed to import font: ${e.message ?: "Unknown error"}"
+            )
         }
     }
 

@@ -66,7 +66,7 @@ class NotificationSyncReceiver : BroadcastReceiver() {
                 if (prefs.lastActiveBacklogWeekKey.isNotBlank() && prefs.lastActiveBacklogWeekKey != currentWeek) {
                     prefs.lastActiveBacklogWeekKey = currentWeek
                     helper.sendWeeklyBacklogChallengeNotification(
-                        com.example.util.BacklogChallengeManager.getWeekDisplayName(currentWeek)
+                        com.example.util.BacklogChallengeManager.getWeekDisplayName(currentWeek, prefs.appLanguage)
                     )
                 } else if (prefs.lastActiveBacklogWeekKey.isBlank()) {
                     prefs.lastActiveBacklogWeekKey = currentWeek

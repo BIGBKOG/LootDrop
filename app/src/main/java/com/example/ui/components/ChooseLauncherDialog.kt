@@ -28,14 +28,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.SportsEsports
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -61,10 +58,11 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.example.data.model.GiveawayItem
 import com.example.data.model.LauncherOption
 import com.example.data.model.LauncherType
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
 import com.example.ui.theme.GamingCardBorder
 import com.example.ui.theme.GamingDarkSurface
 import com.example.ui.theme.NeonCyan
@@ -72,6 +70,7 @@ import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
+import com.example.util.LocalLowEndOptimization
 
 @Composable
 fun ChooseLauncherDialog(
@@ -79,43 +78,54 @@ fun ChooseLauncherDialog(
     ownershipStatus: com.example.ui.GiveawaysViewModel.OwnershipStatus? = null,
     onDismiss: () -> Unit,
     onLauncherClaimed: (url: String, launcherName: String) -> Unit,
-    launchers: List<LauncherOption> = item.availableLaunchers
+    launchers: List<LauncherOption> = item.getAvailableLaunchers(LocalAppStrings.current.language == AppLanguage.SPANISH)
 ) {
     val context = LocalContext.current
-    var dialogVisible by remember { androidx.compose.runtime.mutableStateOf(false) }
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        dialogVisible = true
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
+    val lowEnd = LocalLowEndOptimization.current
+    val dialogContainerModifier = if (lowEnd) {
+        Modifier
+            .fillMaxWidth(0.94f)
+            .clip(RoundedCornerShape(20.dp))
+            .border(1.dp, GamingCardBorder, RoundedCornerShape(20.dp))
+            .testTag("choose_launcher_dialog")
+    } else {
+        var dialogVisible by remember { androidx.compose.runtime.mutableStateOf(false) }
+        androidx.compose.runtime.LaunchedEffect(Unit) {
+            dialogVisible = true
+        }
+        val dialogScale by animateFloatAsState(
+            targetValue = if (dialogVisible) 1f else 0.88f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            ),
+            label = "choose_launcher_dialog_scale"
+        )
+        val dialogAlpha by animateFloatAsState(
+            targetValue = if (dialogVisible) 1f else 0f,
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+            label = "choose_launcher_dialog_alpha"
+        )
+        Modifier
+            .fillMaxWidth(0.94f)
+            .graphicsLayer {
+                scaleX = dialogScale
+                scaleY = dialogScale
+                alpha = dialogAlpha
+            }
+            .clip(RoundedCornerShape(20.dp))
+            .border(1.dp, GamingCardBorder, RoundedCornerShape(20.dp))
+            .testTag("choose_launcher_dialog")
     }
-
-    val dialogScale by animateFloatAsState(
-        targetValue = if (dialogVisible) 1f else 0.88f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMediumLow
-        ),
-        label = "choose_launcher_dialog_scale"
-    )
-    val dialogAlpha by animateFloatAsState(
-        targetValue = if (dialogVisible) 1f else 0f,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-        label = "choose_launcher_dialog_alpha"
-    )
 
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(
-            modifier = Modifier
-                .fillMaxWidth(0.94f)
-                .graphicsLayer {
-                    scaleX = dialogScale
-                    scaleY = dialogScale
-                    alpha = dialogAlpha
-                }
-                .clip(RoundedCornerShape(20.dp))
-                .border(1.dp, GamingCardBorder, RoundedCornerShape(20.dp))
-                .testTag("choose_launcher_dialog"),
+            modifier = dialogContainerModifier,
             color = GamingDarkSurface
         ) {
             Column(
@@ -151,13 +161,14 @@ fun ChooseLauncherDialog(
 
                         Column {
                             Text(
-                                text = "Choose Store / Launcher",
+                                text = s.dialogs.chooseLauncherTitle,
                                 fontSize = 17.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary
                             )
+                            val platformCount = launchers.filter { it.launcherType != LauncherType.OTHER }.size
                             Text(
-                                text = "Available on ${launchers.filter { it.launcherType != LauncherType.OTHER }.size} platforms",
+                                text = if (isEs) "Disponible en $platformCount plataformas" else "Available on $platformCount platforms",
                                 fontSize = 12.sp,
                                 color = NeonGreen,
                                 fontWeight = FontWeight.SemiBold
@@ -173,7 +184,7 @@ fun ChooseLauncherDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
+                            contentDescription = s.common.close,
                             tint = TextSecondary
                         )
                     }
@@ -197,11 +208,18 @@ fun ChooseLauncherDialog(
                             .size(46.dp)
                             .clip(RoundedCornerShape(8.dp))
                     ) {
+                        val thumbUrl = if (item.thumbnail.isNotBlank()) item.thumbnail else item.image
+                        val thumbRequest = remember(context, thumbUrl, lowEnd) {
+                            buildGiveawayImageRequest(
+                                context = context,
+                                url = thumbUrl,
+                                isLowEndOptimization = lowEnd,
+                                width = 128,
+                                height = 128
+                            )
+                        }
                         AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(if (item.thumbnail.isNotBlank()) item.thumbnail else item.image)
-                                .crossfade(true)
-                                .build(),
+                            model = thumbRequest,
                             contentDescription = item.title,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize()
@@ -222,7 +240,7 @@ fun ChooseLauncherDialog(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
-                                text = "100% OFF",
+                                text = if (isEs) "100% GRATIS" else "100% OFF",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = NeonGreen
@@ -261,19 +279,24 @@ fun ChooseLauncherDialog(
                             )
                             Column {
                                 Text(
-                                    text = "YOU ALREADY HAVE THIS",
+                                    text = if (isEs) "YA TIENES ESTE JUEGO" else "YOU ALREADY HAVE THIS",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = Color(0xFF10B981),
                                     letterSpacing = 0.5.sp
                                 )
-                                val sourceText = when {
-                                    ownershipStatus.inVault && ownershipStatus.inSteam ->
-                                        "In your Vault & Steam Library"
-                                    ownershipStatus.inVault ->
-                                        "Already saved in your Vault"
-                                    else ->
-                                        "Already in your Steam Library"
+                                val sourceText = if (isEs) {
+                                    when {
+                                        ownershipStatus.inVault && ownershipStatus.inSteam -> "En tu Bóveda y biblioteca de Steam"
+                                        ownershipStatus.inVault -> "Ya guardado en tu Bóveda"
+                                        else -> "Ya está en tu biblioteca de Steam"
+                                    }
+                                } else {
+                                    when {
+                                        ownershipStatus.inVault && ownershipStatus.inSteam -> "In your Vault & Steam Library"
+                                        ownershipStatus.inVault -> "Already saved in your Vault"
+                                        else -> "Already in your Steam Library"
+                                    }
                                 }
                                 Text(
                                     text = sourceText,
@@ -289,7 +312,7 @@ fun ChooseLauncherDialog(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 Text(
-                    text = "Select which launcher to claim this game on:",
+                    text = if (isEs) "Selecciona en qué tienda reclamar este juego:" else "Select which launcher to claim this game on:",
                     fontSize = 12.sp,
                     color = TextSecondary
                 )
@@ -323,7 +346,7 @@ fun ChooseLauncherDialog(
                         .testTag("dismiss_launcher_chooser_button")
                 ) {
                     Text(
-                        text = "Cancel",
+                        text = s.common.cancel,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = TextSecondary
@@ -339,20 +362,27 @@ private fun LauncherOptionRow(
     option: LauncherOption,
     onClick: () -> Unit
 ) {
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
+    val lowEnd = LocalLowEndOptimization.current
     val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.965f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "launcher_row_scale"
-    )
     val brandColor = Color(option.badgeColorHex)
-
-    Card(
-        modifier = Modifier
+    val rowModifier = if (lowEnd) {
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.dp, brandColor.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
+    } else {
+        val isPressed by interactionSource.collectIsPressedAsState()
+        val scale by animateFloatAsState(
+            targetValue = if (isPressed) 0.965f else 1f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessLow
+            ),
+            label = "launcher_row_scale"
+        )
+        Modifier
             .fillMaxWidth()
             .graphicsLayer {
                 scaleX = scale
@@ -360,6 +390,10 @@ private fun LauncherOptionRow(
             }
             .clip(RoundedCornerShape(12.dp))
             .border(1.dp, brandColor.copy(alpha = if (isPressed) 0.9f else 0.45f), RoundedCornerShape(12.dp))
+    }
+
+    Card(
+        modifier = rowModifier
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -414,15 +448,15 @@ private fun LauncherOptionRow(
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = "Claim",
+                        text = if (isEs) "Reclamar" else "Claim",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = brandColor
                     )
                 }
                 Icon(
-                    imageVector = Icons.Default.OpenInNew,
-                    contentDescription = "Open",
+                    imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                    contentDescription = s.common.open,
                     tint = brandColor,
                     modifier = Modifier.size(16.dp)
                 )

@@ -8,11 +8,15 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import com.example.data.remote.GithubReleaseClient
+import com.example.i18n.AppLanguage
+import com.example.preferences.AppPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -89,15 +93,31 @@ object AppUpdateInstaller {
                 .header("Accept", "application/octet-stream, application/vnd.android.package-archive, */*")
                 .build()
 
+            val isEs = AppPreferences(context).appLanguage == AppLanguage.SPANISH
             httpClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
                     return@withContext Result.failure(
-                        Exception("HTTP error ${response.code} downloading update from GitHub")
+                        Exception(
+                            if (isEs) "Error HTTP ${response.code} al descargar la actualización"
+                            else "HTTP error ${response.code} downloading update from GitHub"
+                        )
+                    )
+                }
+
+                val contentType = response.header("Content-Type")?.lowercase().orEmpty()
+                if (contentType.contains("text/html")) {
+                    return@withContext Result.failure(
+                        Exception(
+                            if (isEs) "El enlace devolvió HTML en lugar de un archivo APK."
+                            else "Download URL returned an HTML web page instead of an APK file. Please check GitHub release assets."
+                        )
                     )
                 }
 
                 val body = response.body
-                    ?: return@withContext Result.failure(Exception("Empty response body from update download"))
+                    ?: return@withContext Result.failure(
+                        Exception(if (isEs) "Respuesta vacía al descargar actualización" else "Empty response body from update download")
+                    )
 
                 val totalBytes = body.contentLength()
                 val targetDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
@@ -131,9 +151,9 @@ object AppUpdateInstaller {
                                     if (downloadedBytes == 0L && bytesRead >= 2) {
                                         if (!isZipMagicHeader(buffer[0], buffer[1])) {
                                             val msg = if (buffer[0] == '<'.code.toByte()) {
-                                                "Download URL returned an HTML web page instead of an APK file. Please check GitHub release assets."
+                                                if (isEs) "El enlace devolvió HTML en lugar de un archivo APK." else "Download URL returned an HTML web page instead of an APK file. Please check GitHub release assets."
                                             } else {
-                                                "Downloaded file is not a valid Android APK package."
+                                                if (isEs) "El archivo descargado no es un paquete APK válido." else "Downloaded file is not a valid Android APK package."
                                             }
                                             return@withContext Result.failure(Exception(msg))
                                         }
@@ -144,9 +164,9 @@ object AppUpdateInstaller {
                                         val first = pendingFirstByte
                                         if (!isZipMagicHeader(first, buffer[0])) {
                                             val msg = if (first == '<'.code.toByte()) {
-                                                "Download URL returned an HTML web page instead of an APK file. Please check GitHub release assets."
+                                                if (isEs) "El enlace devolvió HTML en lugar de un archivo APK." else "Download URL returned an HTML web page instead of an APK file. Please check GitHub release assets."
                                             } else {
-                                                "Downloaded file is not a valid Android APK package."
+                                                if (isEs) "El archivo descargado no es un paquete APK válido." else "Downloaded file is not a valid Android APK package."
                                             }
                                             return@withContext Result.failure(Exception(msg))
                                         }
@@ -175,7 +195,10 @@ object AppUpdateInstaller {
                     if (!hasValidApkFile(stagingFile)) {
                         val actualLen = stagingFile.length()
                         return@withContext Result.failure(
-                            Exception("Downloaded APK file is incomplete or corrupt ($actualLen bytes)")
+                            Exception(
+                                if (isEs) "El archivo APK descargado está incompleto o dañado ($actualLen bytes)"
+                                else "Downloaded APK file is incomplete or corrupt ($actualLen bytes)"
+                            )
                         )
                     }
 
@@ -217,50 +240,61 @@ object AppUpdateInstaller {
         }
     }
 
+    private fun showToast(context: Context, message: String, duration: Int) {
+        runCatching {
+            if (Looper.myLooper() == Looper.getMainLooper()) {
+                Toast.makeText(context, message, duration).show()
+            } else {
+                Handler(Looper.getMainLooper()).post {
+                    runCatching { Toast.makeText(context, message, duration).show() }
+                }
+            }
+        }
+    }
+
     /**
      * Triggers the Android system package installer to install the downloaded APK.
      */
     fun installApk(context: Context, apkFile: File): Boolean {
+        val isEs = runCatching { AppPreferences(context).appLanguage == AppLanguage.SPANISH }.getOrDefault(false)
         return try {
             if (!hasValidApkFile(apkFile)) {
                 Log.e(TAG, "Cannot install: APK file is missing, incomplete, or corrupt (${apkFile.absolutePath})")
-                try {
-                    Toast.makeText(
-                        context,
-                        "APK file is missing or incomplete. Please download again.",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                } catch (_: Exception) {}
+                showToast(
+                    context,
+                    if (isEs) "El archivo APK falta o está incompleto. Vuelve a descargarlo."
+                    else "APK file is missing or incomplete. Please download again.",
+                    Toast.LENGTH_SHORT
+                )
                 return false
             }
 
-            // Check Unknown Sources permission on Android 8.0+
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                if (!context.packageManager.canRequestPackageInstalls()) {
+            // Ensure Unknown Sources permission is granted before launching package installer
+            if (!context.packageManager.canRequestPackageInstalls()) {
+                try {
+                    val manageUnknownSourcesIntent = Intent(
+                        Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        Uri.parse("package:${context.packageName}")
+                    ).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    context.startActivity(manageUnknownSourcesIntent)
+                    showToast(
+                        context,
+                        if (isEs) "Permite que LootDrop instale apps desconocidas — la instalación continuará al volver."
+                        else "Allow LootDrop to install unknown apps — installation will resume automatically when you return.",
+                        Toast.LENGTH_LONG
+                    )
+                } catch (e: Exception) {
+                    Log.w(TAG, "Could not launch ACTION_MANAGE_UNKNOWN_APP_SOURCES", e)
                     try {
-                        val manageUnknownSourcesIntent = Intent(
-                            Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                            Uri.parse("package:${context.packageName}")
-                        ).apply {
+                        val fallbackIntent = Intent(Settings.ACTION_SECURITY_SETTINGS).apply {
                             flags = Intent.FLAG_ACTIVITY_NEW_TASK
                         }
-                        context.startActivity(manageUnknownSourcesIntent)
-                        Toast.makeText(
-                            context,
-                            "Allow LootDrop to install unknown apps — installation will resume automatically when you return.",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Could not launch ACTION_MANAGE_UNKNOWN_APP_SOURCES", e)
-                        try {
-                            val fallbackIntent = Intent(Settings.ACTION_SECURITY_SETTINGS).apply {
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                            }
-                            context.startActivity(fallbackIntent)
-                        } catch (_: Exception) {}
-                    }
-                    return false
+                        context.startActivity(fallbackIntent)
+                    } catch (_: Exception) {}
                 }
+                return false
             }
 
             apkFile.setReadable(true, false)
@@ -277,29 +311,49 @@ object AppUpdateInstaller {
 
             // Grant read permission explicitly to any package installer matching the intent
             try {
-                val resolvedActivities = context.packageManager.queryIntentActivities(
-                    installIntent,
-                    PackageManager.MATCH_DEFAULT_ONLY
-                )
+                val resolvedActivities = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    context.packageManager.queryIntentActivities(
+                        installIntent,
+                        PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong())
+                    )
+                } else {
+                    @Suppress("DEPRECATION")
+                    context.packageManager.queryIntentActivities(installIntent, PackageManager.MATCH_DEFAULT_ONLY)
+                }
                 for (resolveInfo in resolvedActivities) {
                     val packageName = resolveInfo.activityInfo.packageName
                     context.grantUriPermission(packageName, apkUri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
             } catch (_: Exception) {}
 
-            context.startActivity(installIntent)
+            try {
+                context.startActivity(installIntent)
+            } catch (notFound: ActivityNotFoundException) {
+                @Suppress("DEPRECATION")
+                val fallbackInstall = Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
+                    data = apkUri
+                    clipData = ClipData.newRawUri("LootDrop Update APK", apkUri)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true)
+                }
+                context.startActivity(fallbackInstall)
+            }
             true
         } catch (e: ActivityNotFoundException) {
             Log.e(TAG, "No package installer activity available", e)
-            try {
-                Toast.makeText(context, "No package installer found on this device.", Toast.LENGTH_SHORT).show()
-            } catch (_: Exception) {}
+            showToast(
+                context,
+                if (isEs) "No hay instalador de paquetes disponible." else "No package installer found on this device.",
+                Toast.LENGTH_SHORT
+            )
             false
         } catch (e: Exception) {
             Log.e(TAG, "Failed to launch package installer", e)
-            try {
-                Toast.makeText(context, "Install error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
-            } catch (_: Exception) {}
+            showToast(
+                context,
+                if (isEs) "Error de instalación: ${e.localizedMessage}" else "Install error: ${e.localizedMessage}",
+                Toast.LENGTH_SHORT
+            )
             false
         }
     }

@@ -34,19 +34,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.RestartAlt
-import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -71,6 +71,10 @@ import com.example.data.model.GameCategory
 import com.example.data.model.LauncherType
 import com.example.data.model.PlayabilityFilter
 import com.example.data.model.StorageFilter
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
+import com.example.i18n.localizedDisplayName
+import com.example.i18n.localizedLabel
 import com.example.ui.SortOption
 import com.example.ui.TypeFilter
 import com.example.ui.theme.TextMuted
@@ -101,6 +105,8 @@ fun FilterSortBottomSheet(
     onStorageSelect: (StorageFilter) -> Unit = {},
     onDismiss: () -> Unit
 ) {
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
@@ -143,7 +149,7 @@ fun FilterSortBottomSheet(
 
                     Column {
                         Text(
-                            text = "Filter & Sort",
+                            text = s.home.filterSortTitle,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
@@ -157,14 +163,18 @@ fun FilterSortBottomSheet(
                         ) { count ->
                             if (count > 0) {
                                 Text(
-                                    text = "$count active filter${if (count > 1) "s" else ""}",
+                                    text = if (isEs) {
+                                        "$count filtro${if (count > 1) "s" else ""} activo${if (count > 1) "s" else ""}"
+                                    } else {
+                                        "$count active filter${if (count > 1) "s" else ""}"
+                                    },
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             } else {
                                 Text(
-                                    text = "Showing all active free giveaways",
+                                    text = if (isEs) "Mostrando todos los juegos gratis activos" else "Showing all active free giveaways",
                                     fontSize = 11.sp,
                                     color = TextSecondary
                                 )
@@ -198,7 +208,7 @@ fun FilterSortBottomSheet(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Text(
-                                    text = "Clear All",
+                                    text = s.home.filterResetAll,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
@@ -213,7 +223,7 @@ fun FilterSortBottomSheet(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
+                            contentDescription = s.common.close,
                             tint = TextPrimary
                         )
                     }
@@ -223,7 +233,7 @@ fun FilterSortBottomSheet(
             Spacer(modifier = Modifier.height(18.dp))
 
             // SECTION 1: Sort Options
-            FilterSectionHeader(title = "SORT BY", icon = Icons.Default.Sort)
+            FilterSectionHeader(title = s.home.filterSortBySection, icon = Icons.AutoMirrored.Filled.Sort)
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -232,7 +242,7 @@ fun FilterSortBottomSheet(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                SortOption.values().forEach { sort ->
+                SortOption.entries.forEach { sort ->
                     val isSelected = sort == selectedSort
                     val chipScale by animateFloatAsState(
                         targetValue = if (isSelected) 1.04f else 1f,
@@ -247,7 +257,7 @@ fun FilterSortBottomSheet(
                         onClick = { onSortSelected(sort) },
                         label = {
                             Text(
-                                text = sort.label,
+                                text = sort.localizedLabel(s),
                                 fontSize = 12.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                             )
@@ -286,16 +296,16 @@ fun FilterSortBottomSheet(
             }
 
             Spacer(modifier = Modifier.height(18.dp))
-            Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
             Spacer(modifier = Modifier.height(14.dp))
 
             // SECTION 2: Platforms & Stores
-            FilterSectionHeader(title = "PLATFORMS & STORES", icon = Icons.Default.SportsEsports)
+            FilterSectionHeader(title = s.home.filterStoresSection, icon = Icons.Default.SportsEsports)
 
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Select one or combine multiple platforms (e.g. PlayStation + Xbox):",
+                text = if (isEs) "Elige una o combina varias plataformas (ej. PlayStation + Xbox):" else "Select one or combine multiple platforms (e.g. PlayStation + Xbox):",
                 fontSize = 11.sp,
                 color = TextSecondary
             )
@@ -307,7 +317,7 @@ fun FilterSortBottomSheet(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                LauncherType.values().forEach { launcher ->
+                LauncherType.entries.forEach { launcher ->
                     val isSelected = if (launcher == LauncherType.ALL) {
                         selectedLaunchers.isEmpty() || selectedLaunchers.contains(LauncherType.ALL)
                     } else {
@@ -333,7 +343,7 @@ fun FilterSortBottomSheet(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Text(
-                                    text = launcher.displayName,
+                                    text = launcher.localizedDisplayName(s),
                                     fontSize = 12.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                                 )
@@ -388,11 +398,11 @@ fun FilterSortBottomSheet(
             }
 
             Spacer(modifier = Modifier.height(18.dp))
-            Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
             Spacer(modifier = Modifier.height(14.dp))
 
             // SECTION 3: Giveaway Type
-            FilterSectionHeader(title = "GIVEAWAY TYPE", icon = Icons.Default.Tune)
+            FilterSectionHeader(title = s.home.filterLootTypeSection, icon = Icons.Default.Tune)
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -401,7 +411,7 @@ fun FilterSortBottomSheet(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                TypeFilter.values().forEach { type ->
+                TypeFilter.entries.forEach { type ->
                     val isSelected = type == selectedTypeFilter
                     val chipScale by animateFloatAsState(
                         targetValue = if (isSelected) 1.04f else 1f,
@@ -416,7 +426,7 @@ fun FilterSortBottomSheet(
                         onClick = { onTypeFilterSelected(type) },
                         label = {
                             Text(
-                                text = type.label,
+                                text = type.localizedLabel(s),
                                 fontSize = 12.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                             )
@@ -455,16 +465,16 @@ fun FilterSortBottomSheet(
             }
 
             Spacer(modifier = Modifier.height(18.dp))
-            Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
             Spacer(modifier = Modifier.height(14.dp))
 
             // SECTION 4: Categories & Genres (with dedicated multi-category menu button)
-            FilterSectionHeader(title = "CATEGORIES & GENRES", icon = Icons.Default.Category)
+            FilterSectionHeader(title = s.home.filterCategoriesSection, icon = Icons.Default.Category)
 
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Filter free games by genre, game format, or gameplay style:",
+                text = if (isEs) "Filtra juegos gratis por género, formato o estilo de juego:" else "Filter free games by genre, game format, or gameplay style:",
                 fontSize = 11.sp,
                 color = TextSecondary
             )
@@ -509,9 +519,9 @@ fun FilterSortBottomSheet(
                         )
                         Text(
                             text = if (selectedCategories.isEmpty()) {
-                                "Choose Categories (All Active)"
+                                if (isEs) "Elegir Categorías (Todas)" else "Choose Categories (All Active)"
                             } else {
-                                "Choose Categories (${selectedCategories.size} selected)"
+                                if (isEs) "Elegir Categorías (${selectedCategories.size} sel.)" else "Choose Categories (${selectedCategories.size} selected)"
                             },
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
@@ -531,7 +541,11 @@ fun FilterSortBottomSheet(
                             .padding(horizontal = 7.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = if (selectedCategories.isEmpty()) "SELECT ▾" else "${selectedCategories.size} ACTIVE ▾",
+                            text = if (selectedCategories.isEmpty()) {
+                                if (isEs) "ELEGIR ▾" else "SELECT ▾"
+                            } else {
+                                if (isEs) "${selectedCategories.size} ACTIVAS ▾" else "${selectedCategories.size} ACTIVE ▾"
+                            },
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Black,
                             color = if (selectedCategories.isNotEmpty()) MaterialTheme.colorScheme.background else TextMuted
@@ -568,14 +582,14 @@ fun FilterSortBottomSheet(
                                         .background(Color(category.badgeColorHex))
                                 )
                                 Text(
-                                    text = category.displayName,
+                                    text = category.localizedDisplayName(s),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                                 Icon(
                                     imageVector = Icons.Default.Close,
-                                    contentDescription = "Remove",
+                                    contentDescription = s.common.remove,
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(12.dp)
                                 )
@@ -586,11 +600,11 @@ fun FilterSortBottomSheet(
             }
 
             Spacer(modifier = Modifier.height(18.dp))
-            Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
             Spacer(modifier = Modifier.height(14.dp))
 
             // SECTION 5: Steam Deck & Hardware Readiness Tags
-            FilterSectionHeader(title = "STEAM DECK & HARDWARE READINESS", icon = Icons.Default.Gamepad)
+            FilterSectionHeader(title = s.home.filterPlayabilitySection, icon = Icons.Default.Gamepad)
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -599,7 +613,7 @@ fun FilterSortBottomSheet(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                PlayabilityFilter.values().forEach { playTag ->
+                PlayabilityFilter.entries.forEach { playTag ->
                     val isSelected = playTag == selectedPlayability
                     val tagColor = when (playTag) {
                         PlayabilityFilter.ALL -> MaterialTheme.colorScheme.primary
@@ -613,7 +627,7 @@ fun FilterSortBottomSheet(
                         onClick = { onPlayabilitySelect(playTag) },
                         label = {
                             Text(
-                                text = "${playTag.iconEmoji} ${playTag.label}",
+                                text = "${playTag.iconEmoji} ${playTag.localizedLabel(s)}",
                                 fontSize = 12.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                             )
@@ -647,11 +661,11 @@ fun FilterSortBottomSheet(
             }
 
             Spacer(modifier = Modifier.height(18.dp))
-            Divider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 0.5.dp)
             Spacer(modifier = Modifier.height(14.dp))
 
             // SECTION 6: Storage Footprint Tracker
-            FilterSectionHeader(title = "STORAGE FOOTPRINT TRACKER", icon = Icons.Default.SdStorage)
+            FilterSectionHeader(title = s.home.filterStorageSection, icon = Icons.Default.SdStorage)
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -660,7 +674,7 @@ fun FilterSortBottomSheet(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                StorageFilter.values().forEach { storageTag ->
+                StorageFilter.entries.forEach { storageTag ->
                     val isSelected = storageTag == selectedStorage
                     val storageColor = when (storageTag) {
                         StorageFilter.ALL -> MaterialTheme.colorScheme.secondary
@@ -675,7 +689,7 @@ fun FilterSortBottomSheet(
                         onClick = { onStorageSelect(storageTag) },
                         label = {
                             Text(
-                                text = "💾 ${storageTag.label}",
+                                text = "💾 ${storageTag.localizedLabel(s)}",
                                 fontSize = 12.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                             )
@@ -740,7 +754,7 @@ fun FilterSortBottomSheet(
                         label = "apply_button_count"
                     ) { count ->
                         Text(
-                            text = "Apply & View ($count Freebies)",
+                            text = if (isEs) "Aplicar y Ver ($count Ofertas)" else "Apply & View ($count Freebies)",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )

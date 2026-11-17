@@ -1,10 +1,15 @@
 package com.example.ui.calendar
 
 import com.example.data.model.GiveawayItem
+import com.example.i18n.AppLanguage
+import com.example.i18n.AppStrings
+import com.example.i18n.StringsEn
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
+import java.util.Locale
 
 /**
  * Calendar and expiration date calculation utilities for LootDrop.
@@ -13,19 +18,43 @@ import java.time.temporal.ChronoUnit
  */
 object ExpirationCalendarUtils {
 
+    private const val MAX_DATE_CACHE = 256
+    private val cacheLock = Any()
+    private val LOCALE_ES: Locale = Locale.forLanguageTag("es")
+    private val INVALID_DATE_SENTINEL: LocalDate = LocalDate.MIN
+    private val PARSED_DATE_CACHE = object : LinkedHashMap<String, LocalDate>(64, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, LocalDate>?): Boolean = size > MAX_DATE_CACHE
+    }
+
+    fun clearCache() {
+        synchronized(cacheLock) {
+            PARSED_DATE_CACHE.clear()
+        }
+    }
+
     /**
      * Parses the expiration date string from GamerPower API (e.g. "2026-10-25 15:00:00" or "2026-10-25").
      * Returns null if date is "N/A", blank, or invalid.
      */
     fun parseExpirationDate(endDateStr: String?): LocalDate? {
         if (endDateStr.isNullOrBlank() || endDateStr.equals("N/A", ignoreCase = true)) return null
-        return try {
-            val trimmed = endDateStr.trim()
-            val datePart = trimmed.split(Regex("[ T]")).firstOrNull() ?: return null
+        val trimmed = endDateStr.trim()
+        synchronized(cacheLock) {
+            PARSED_DATE_CACHE[trimmed]?.let { cached ->
+                return if (cached === INVALID_DATE_SENTINEL) null else cached
+            }
+        }
+        val parsed = try {
+            val sep = trimmed.indexOfAny(charArrayOf(' ', 'T'))
+            val datePart = if (sep > 0) trimmed.substring(0, sep) else trimmed
             LocalDate.parse(datePart, DateTimeFormatter.ISO_LOCAL_DATE)
         } catch (_: Exception) {
             null
         }
+        synchronized(cacheLock) {
+            PARSED_DATE_CACHE[trimmed] = parsed ?: INVALID_DATE_SENTINEL
+        }
+        return parsed
     }
 
     /**
@@ -61,45 +90,63 @@ object ExpirationCalendarUtils {
     /**
      * Human-readable, gaming-themed countdown string.
      */
-    fun getExpirationBadgeText(endDateStr: String?, now: LocalDateTime = LocalDateTime.now()): String {
+    fun getExpirationBadgeText(
+        endDateStr: String?,
+        now: LocalDateTime = LocalDateTime.now(),
+        s: AppStrings = StringsEn
+    ): String {
         if (endDateStr.isNullOrBlank() || endDateStr.equals("N/A", ignoreCase = true)) {
-            return "Limited Keys"
+            return s.home.expLimitedKeys
         }
+        val isEs = s.language == AppLanguage.SPANISH
         return try {
             val trimmed = endDateStr.trim()
-            val parts = trimmed.split(Regex("[ T]"))
-            val datePart = parts.firstOrNull() ?: return "Expiring"
-            val localDate = LocalDate.parse(datePart, DateTimeFormatter.ISO_LOCAL_DATE)
+            val localDate = parseExpirationDate(trimmed) ?: return s.home.expEndsSoon
             val today = now.toLocalDate()
             val daysBetween = ChronoUnit.DAYS.between(today, localDate)
 
+            val dayShort = if (isEs) {
+                localDate.dayOfWeek.getDisplayName(TextStyle.SHORT, LOCALE_ES).replace(".", "").uppercase()
+            } else {
+                localDate.dayOfWeek.name.take(3)
+            }
+            val monthShort = if (isEs) {
+                localDate.month.getDisplayName(TextStyle.SHORT, LOCALE_ES).replace(".", "").uppercase()
+            } else {
+                localDate.month.name.take(3)
+            }
+
             when {
-                daysBetween < 0 -> "Expired"
+                daysBetween < 0 -> s.home.expExpired
                 daysBetween == 0L -> {
-                    if (parts.size > 1 && parts[1].contains(":")) {
-                        val timeParts = parts[1].split(":")
-                        val hour = timeParts.getOrNull(0)?.toIntOrNull() ?: 23
-                        val min = timeParts.getOrNull(1)?.toIntOrNull() ?: 59
+                    val sep = trimmed.indexOfAny(charArrayOf(' ', 'T'))
+                    val timePart = if (sep > 0 && sep + 1 < trimmed.length) trimmed.substring(sep + 1) else null
+                    if (timePart != null && timePart.contains(":")) {
+                        val colon = timePart.indexOf(':')
+                        val hour = timePart.substring(0, colon).toIntOrNull() ?: 23
+                        val secondColon = timePart.indexOf(':', colon + 1)
+                        val minStr = if (secondColon > 0) timePart.substring(colon + 1, secondColon) else timePart.substring(colon + 1)
+                        val min = minStr.toIntOrNull() ?: 59
                         val targetTime = localDate.atTime(hour, min)
                         val hoursRemaining = ChronoUnit.HOURS.between(now, targetTime)
                         if (hoursRemaining in 1..24) {
-                            "Ends in ${hoursRemaining}h"
+                            s.home.expEndsInHoursFormat.format(hoursRemaining)
                         } else if (hoursRemaining <= 0) {
-                            "Ending now"
+                            s.home.expEndingNow
                         } else {
-                            "Ends Today"
+                            s.home.expEndsToday
                         }
                     } else {
-                        "Ends Today"
+                        s.home.expEndsToday
                     }
                 }
-                daysBetween == 1L -> "Ends Tomorrow"
-                daysBetween in 2..6 -> "Ends in $daysBetween days (${localDate.dayOfWeek.name.take(3)})"
-                daysBetween in 7..14 -> "Ends in $daysBetween days (${localDate.month.name.take(3)} ${localDate.dayOfMonth})"
-                else -> "Ends ${localDate.month.name.take(3)} ${localDate.dayOfMonth}"
+                daysBetween == 1L -> s.home.expEndsTomorrow
+                daysBetween in 2..6 -> "${s.home.expEndsInDaysFormat.format(daysBetween)} ($dayShort)"
+                daysBetween in 7..14 -> "${s.home.expEndsInDaysFormat.format(daysBetween)} ($monthShort ${localDate.dayOfMonth})"
+                else -> s.home.expEndsOnDateFormat.format(monthShort, localDate.dayOfMonth)
             }
         } catch (_: Exception) {
-            "Ends soon"
+            s.home.expEndsSoon
         }
     }
 

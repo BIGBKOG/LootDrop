@@ -59,10 +59,15 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.data.local.SteamAchievementEntity
+import com.example.data.model.TrophyRarityTier
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
+import com.example.i18n.localizedLabel
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
+import com.example.util.LocalLowEndOptimization
 
 /**
  * Custom in-app notification popup / toast banner triggered when background
@@ -134,29 +139,37 @@ private fun MythicToastContent(
     onViewTrophy: () -> Unit
 ) {
     val context = LocalContext.current
+    val s = LocalAppStrings.current
+    val lowEnd = LocalLowEndOptimization.current
+    val isEs = s.language == AppLanguage.SPANISH
     val mythicColor = Color(0xFFE040FB)
     val mythicGold = Color(0xFFFFD700)
 
-    val glowingBorder = Brush.horizontalGradient(
-        colors = listOf(
-            mythicColor,
-            mythicGold,
-            Color(0xFF00E5FF),
-            mythicColor
+    val glowingBorder = remember {
+        Brush.horizontalGradient(
+            colors = listOf(
+                mythicColor,
+                mythicGold,
+                Color(0xFF00E5FF),
+                mythicColor
+            )
         )
-    )
+    }
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .widthIn(max = 600.dp)
-            .shadow(16.dp, RoundedCornerShape(18.dp), ambientColor = mythicColor, spotColor = mythicColor)
+            .then(
+                if (lowEnd) Modifier
+                else Modifier.shadow(16.dp, RoundedCornerShape(18.dp), ambientColor = mythicColor, spotColor = mythicColor)
+            )
             .clip(RoundedCornerShape(18.dp))
             .border(1.6.dp, glowingBorder, RoundedCornerShape(18.dp))
             .clickable(onClick = onViewTrophy)
             .testTag("mythic_achievement_toast"),
         color = Color(0xFF0E131F),
-        tonalElevation = 8.dp
+        tonalElevation = if (lowEnd) 0.dp else 8.dp
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(
@@ -175,11 +188,11 @@ private fun MythicToastContent(
                     contentAlignment = Alignment.Center
                 ) {
                     if (achievement.effectiveIconUrl.isNotBlank()) {
+                        val iconRequest = remember(achievement.effectiveIconUrl, lowEnd) {
+                            buildGiveawayImageRequest(context, achievement.effectiveIconUrl, lowEnd, 128, 128)
+                        }
                         AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(achievement.effectiveIconUrl)
-                                .crossfade(true)
-                                .build(),
+                            model = iconRequest,
                             contentDescription = achievement.displayName,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
@@ -193,7 +206,7 @@ private fun MythicToastContent(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.MilitaryTech,
-                                contentDescription = "Mythic Trophy",
+                                contentDescription = TrophyRarityTier.MYTHIC.localizedLabel(s),
                                 tint = mythicGold,
                                 modifier = Modifier.size(28.dp)
                             )
@@ -235,7 +248,7 @@ private fun MythicToastContent(
                                 .padding(horizontal = 5.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = "💎 MYTHIC UNLOCKED",
+                                text = if (isEs) "💎 MÍTICO DESBLOQUEADO" else "💎 MYTHIC UNLOCKED",
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Black,
                                 color = mythicColor,
@@ -245,7 +258,7 @@ private fun MythicToastContent(
 
                         // Unlock rarity
                         Text(
-                            text = "Top ${achievement.formattedRarity}",
+                            text = if (isEs) "Top ${achievement.formattedRarity} global" else "Top ${achievement.formattedRarity}",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = mythicGold
@@ -264,7 +277,7 @@ private fun MythicToastContent(
                     )
 
                     Text(
-                        text = achievement.gameName.ifBlank { "Steam Library" },
+                        text = achievement.gameName.ifBlank { s.home.homeQuickStatsSteam },
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = NeonCyan,
@@ -297,7 +310,7 @@ private fun MythicToastContent(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Dismiss Mythic Trophy alert",
+                            contentDescription = s.common.dismiss,
                             tint = TextMuted,
                             modifier = Modifier.size(18.dp)
                         )
@@ -326,7 +339,7 @@ private fun MythicToastContent(
                         )
                         Spacer(modifier = Modifier.width(3.dp))
                         Text(
-                            text = "View",
+                            text = if (isEs) "Ver" else "View",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.ExtraBold
                         )

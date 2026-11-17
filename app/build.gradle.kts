@@ -11,13 +11,16 @@ android {
 
   defaultConfig {
     applicationId = "com.aistudio.lootdrop.fkgxwm"
-    minSdk = 26
+    minSdk = 30
     targetSdk = 36
-    versionCode = 51
-    versionName = "3.5.1"
+    versionCode = 52
+    versionName = "4.0.0"
 
-    resourceConfigurations.addAll(listOf("en"))
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+  }
+
+  androidResources {
+    localeFilters += listOf("en", "es")
   }
 
   packaging {
@@ -40,7 +43,10 @@ android {
         "META-INF/**/DEPENDENCIES*",
         "META-INF/**/AL2.0",
         "META-INF/**/LGPL2.1",
-        "**/*.proto"
+        "**/*.proto",
+        "DebugProbesKt.bin",
+        "/kotlin-tooling-metadata.json",
+        "META-INF/com/**"
       )
     }
     jniLibs {
@@ -131,9 +137,9 @@ dependencies {
   implementation(libs.androidx.compose.material3)
   implementation(libs.androidx.compose.ui)
   implementation(libs.androidx.compose.ui.graphics)
-  implementation(libs.androidx.compose.ui.tooling.preview)
+  // implementation(libs.androidx.compose.ui.tooling.preview)
   implementation(libs.androidx.core.ktx)
-  implementation(libs.androidx.lifecycle.runtime.compose)
+  // implementation(libs.androidx.lifecycle.runtime.compose)
   implementation(libs.androidx.lifecycle.runtime.ktx)
   implementation(libs.androidx.lifecycle.viewmodel.compose)
   implementation(libs.androidx.room.ktx)
@@ -142,8 +148,8 @@ dependencies {
   implementation(libs.converter.moshi)
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
-  implementation(libs.logging.interceptor)
-  implementation(libs.moshi.kotlin)
+  debugImplementation(libs.logging.interceptor)
+  // implementation(libs.moshi.kotlin) // Replaced by KSP moshi-kotlin-codegen to eliminate kotlin-reflect (~2.5 MB)
   implementation(libs.okhttp)
   implementation(libs.retrofit)
 

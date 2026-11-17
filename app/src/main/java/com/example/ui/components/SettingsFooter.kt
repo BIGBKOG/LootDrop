@@ -36,6 +36,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.BuildConfig
 import com.example.R
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
 import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.TextMuted
 
@@ -43,6 +45,8 @@ import com.example.ui.theme.TextMuted
 fun SettingsFooter(
     modifier: Modifier = Modifier
 ) {
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
     val context = LocalContext.current
     val patreonUrl = "https://www.patreon.com/cw/LootDrop"
 
@@ -93,13 +97,13 @@ fun SettingsFooter(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = "Be Part of the Community!",
+                        text = if (isEs) "¡Sé Parte de la Comunidad!" else "Be Part of the Community!",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
                     Text(
-                        text = "Help support LootDrop on Patreon & unlock backer perks",
+                        text = if (isEs) "Apoya a LootDrop en Patreon y desbloquea ventajas" else "Help support LootDrop on Patreon & unlock backer perks",
                         fontSize = 11.sp,
                         color = TextMuted,
                         lineHeight = 15.sp
@@ -123,7 +127,7 @@ fun SettingsFooter(
                     modifier = Modifier.height(34.dp)
                 ) {
                     Text(
-                        text = "Support ❤️",
+                        text = if (isEs) "Apoyar ❤️" else "Support ❤️",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -135,21 +139,21 @@ fun SettingsFooter(
 
         Image(
             painter = painterResource(id = R.drawable.ic_app_logo),
-            contentDescription = "LootDrop Logo",
+            contentDescription = if (isEs) "Logo de LootDrop" else "LootDrop Logo",
             modifier = Modifier
                 .size(48.dp)
                 .clip(RoundedCornerShape(12.dp))
         )
         Spacer(modifier = Modifier.height(10.dp))
         Text(
-            text = "LootDrop V${BuildConfig.VERSION_NAME} • PC & Console Free Games Radar",
+            text = if (isEs) "LootDrop V${BuildConfig.VERSION_NAME} • Radar Gratis PC y Consola" else "LootDrop V${BuildConfig.VERSION_NAME} • PC & Console Free Games Radar",
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "Real-time giveaways data powered by GamerPower API",
+            text = if (isEs) "Datos de ofertas en tiempo real con GamerPower API" else "Real-time giveaways data powered by GamerPower API",
             fontSize = 11.sp,
             color = TextMuted
         )
@@ -162,7 +166,7 @@ fun SettingsFooter(
                 .padding(horizontal = 8.dp, vertical = 3.dp)
         ) {
             Text(
-                text = "✓ 100% Pure AOSP • Zero Google Play Services (GMS)",
+                text = if (isEs) "✓ 100% AOSP Puro • Cero Servicios Google (GMS)" else "✓ 100% Pure AOSP • Zero Google Play Services (GMS)",
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
                 color = NeonGreen
@@ -170,7 +174,7 @@ fun SettingsFooter(
         }
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = "Made by BIGBKOG",
+            text = if (isEs) "Hecho por BIGBKOG" else "Made by BIGBKOG",
             fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.primary

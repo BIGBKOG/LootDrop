@@ -9,7 +9,6 @@ import android.content.SharedPreferences
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
-import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import coil.Coil
@@ -20,6 +19,9 @@ import com.example.data.local.AppDatabase
 import com.example.data.local.NotificationHistoryEntity
 import com.example.data.model.AppUpdateInfo
 import com.example.data.model.GiveawayItem
+import com.example.i18n.AppLanguage
+import com.example.i18n.AppStringsRegistry
+import com.example.i18n.localizedDisplayName
 import com.example.preferences.AppPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,10 +40,6 @@ class NotificationHelper(val context: Context) {
         const val CHANNEL_ENDING_SOON = "lootdrop_ending_soon_channel"
         const val CHANNEL_DLC = "lootdrop_dlc_channel"
         const val CHANNEL_SYSTEM = "lootdrop_system_channel"
-
-        // Keep legacy alias for backward compatibility
-        const val CHANNEL_ID = CHANNEL_MAJOR_GAMES
-        const val CHANNEL_NAME = "Free Game Alerts"
 
         const val EXTRA_GIVEAWAY_ID = "extra_giveaway_id"
         const val EXTRA_CLAIM_URL = "extra_claim_url"
@@ -67,52 +65,51 @@ class NotificationHelper(val context: Context) {
     }
 
     private fun createNotificationChannels() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            runCatching {
-                val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
+        runCatching {
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
+            val s = AppStringsRegistry.forContext(context)
 
-                val majorGamesChannel = NotificationChannel(
-                    CHANNEL_MAJOR_GAMES,
-                    "🔥 Major Free Games",
-                    NotificationManager.IMPORTANCE_HIGH
-                ).apply {
-                    description = "Instant alerts with game art when 100% free PC and console games drop"
-                    enableVibration(true)
-                    setShowBadge(true)
-                }
-
-                val endingSoonChannel = NotificationChannel(
-                    CHANNEL_ENDING_SOON,
-                    "⏳ Expiring Soon Alerts",
-                    NotificationManager.IMPORTANCE_HIGH
-                ).apply {
-                    description = "Urgent alerts 24 hours before free game offers expire"
-                    enableVibration(true)
-                    setShowBadge(true)
-                }
-
-                val dlcChannel = NotificationChannel(
-                    CHANNEL_DLC,
-                    "🎁 DLC, Add-ons & Loot",
-                    NotificationManager.IMPORTANCE_DEFAULT
-                ).apply {
-                    description = "Notifications for free DLC packs, cosmetic skins, and in-game loot"
-                    setShowBadge(true)
-                }
-
-                val systemChannel = NotificationChannel(
-                    CHANNEL_SYSTEM,
-                    "🔔 System & Test Alerts",
-                    NotificationManager.IMPORTANCE_LOW
-                ).apply {
-                    description = "Sync status, test previews, and configuration confirmation"
-                    setShowBadge(false)
-                }
-
-                manager.createNotificationChannels(
-                    listOf(majorGamesChannel, endingSoonChannel, dlcChannel, systemChannel)
-                )
+            val majorGamesChannel = NotificationChannel(
+                CHANNEL_MAJOR_GAMES,
+                s.system.notifChannelMajorName,
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = s.system.notifChannelMajorDesc
+                enableVibration(true)
+                setShowBadge(true)
             }
+
+            val endingSoonChannel = NotificationChannel(
+                CHANNEL_ENDING_SOON,
+                s.system.notifChannelEndingName,
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = s.system.notifChannelEndingDesc
+                enableVibration(true)
+                setShowBadge(true)
+            }
+
+            val dlcChannel = NotificationChannel(
+                CHANNEL_DLC,
+                s.system.notifChannelDlcName,
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = s.system.notifChannelDlcDesc
+                setShowBadge(true)
+            }
+
+            val systemChannel = NotificationChannel(
+                CHANNEL_SYSTEM,
+                s.system.notifChannelSystemName,
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = s.system.notifChannelSystemDesc
+                setShowBadge(false)
+            }
+
+            manager.createNotificationChannels(
+                listOf(majorGamesChannel, endingSoonChannel, dlcChannel, systemChannel)
+            )
         }
     }
 
@@ -281,20 +278,26 @@ class NotificationHelper(val context: Context) {
     fun sendNewGameNotification(item: GiveawayItem) {
         if (!shouldNotifyForGiveaway(item)) return
 
+        val s = AppStringsRegistry.forContext(context)
+        val isEs = s.language == AppLanguage.SPANISH
         val isGame = item.type.contains("Game", ignoreCase = true)
         val channelId = if (item.isWishlisted || isGame) CHANNEL_MAJOR_GAMES else CHANNEL_DLC
 
-        val storeName = item.launcherCategory.displayName
-        val worthText = if (item.worth.isNotBlank() && item.worth != "N/A") "Worth ${item.worth}" else "100% OFF"
-        val title = if (item.isWishlisted) {
-            "🎯 ON YOUR WISHLIST: ${item.title} is 100% FREE!"
+        val storeName = item.launcherCategory.localizedDisplayName(s)
+        val worthText = if (item.worth.isNotBlank() && item.worth != "N/A") {
+            String.format(s.system.notifWorthFormat, item.worth)
         } else {
-            "🎮 FREE NOW on $storeName: ${item.title}"
+            s.system.notif100Off
+        }
+        val title = if (item.isWishlisted) {
+            String.format(s.system.notifWishlistTitleFormat, item.title)
+        } else {
+            String.format(s.system.notifFreeTitleFormat, storeName, item.title)
         }
         val content = if (item.isWishlisted) {
-            "A game from your Steam wishlist is currently 100% free ($worthText)! Claim to keep forever."
+            String.format(s.system.notifWishlistContentFormat, worthText)
         } else {
-            "$worthText • Claim it to keep forever! Tap to view details."
+            String.format(s.system.notifFreeContentFormat, worthText)
         }
 
         CoroutineScope(Dispatchers.IO).launch {
@@ -340,21 +343,22 @@ class NotificationHelper(val context: Context) {
                 type = "text/plain"
                 putExtra(
                     Intent.EXTRA_TEXT,
-                    "🔥 Free Game Alert: ${item.title} is currently 100% FREE on $storeName ($worthText)!\nClaim here: ${item.openGiveawayUrl}"
+                    String.format(s.system.notifShareDealFormat, item.title, storeName, worthText, item.openGiveawayUrl)
                 )
             }
             val sharePendingIntent = PendingIntent.getActivity(
                 context,
                 item.id + 300000,
-                Intent.createChooser(shareIntent, "Share Free Game Deal"),
+                Intent.createChooser(shareIntent, s.system.notifShareChooser),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
+            val wishlistSubPrefix = if (isEs) "❤️ EN TU LISTA DE DESEADOS" else "❤️ ON YOUR WISHLIST"
             val builder = NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(R.drawable.ic_stat_gamepad)
                 .setContentTitle(title)
                 .setContentText(content)
-                .setSubText(if (item.isWishlisted) "❤️ ON YOUR WISHLIST • $storeName • $worthText" else "$storeName • $worthText")
+                .setSubText(if (item.isWishlisted) "$wishlistSubPrefix • $storeName • $worthText" else "$storeName • $worthText")
                 .setColor(if (item.isWishlisted) 0xFFFF2D87.toInt() else 0xFF6C5CE7.toInt())
                 .setPriority(if (item.isWishlisted) NotificationCompat.PRIORITY_MAX else NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
@@ -374,9 +378,9 @@ class NotificationHelper(val context: Context) {
             }
 
             if (isNotificationActionsEnabled) {
-                builder.addAction(0, "Claim Free", claimPendingIntent)
-                    .addAction(0, "★ Bookmark", bookmarkPendingIntent)
-                    .addAction(0, "Share", sharePendingIntent)
+                builder.addAction(0, s.system.notifActionClaimFree, claimPendingIntent)
+                    .addAction(0, s.system.notifActionBookmark, bookmarkPendingIntent)
+                    .addAction(0, s.system.notifActionShare, sharePendingIntent)
             }
 
             if (bitmap != null) {
@@ -384,13 +388,28 @@ class NotificationHelper(val context: Context) {
                 builder.setStyle(
                     NotificationCompat.BigPictureStyle()
                         .bigPicture(bitmap)
-                        .setBigContentTitle(if (item.isWishlisted) "🎯 ON YOUR WISHLIST: ${item.title}" else "🎮 ${item.title} is Free!")
-                        .setSummaryText("${item.description.take(120)}... • Platform: ${item.platforms}")
+                        .setBigContentTitle(
+                            if (item.isWishlisted) {
+                                if (isEs) "🎯 EN TU LISTA DE DESEADOS: ${item.title}" else "🎯 ON YOUR WISHLIST: ${item.title}"
+                            } else {
+                                String.format(s.system.notifBigFreeFormat, item.title)
+                            }
+                        )
+                        .setSummaryText(
+                            if (isEs) "${item.description.take(120)}... • Plataforma: ${item.platforms}"
+                            else "${item.description.take(120)}... • Platform: ${item.platforms}"
+                        )
                 )
             } else {
                 builder.setStyle(
                     NotificationCompat.BigTextStyle()
-                        .bigText("${if (item.isWishlisted) "❤️ [ON YOUR WISHLIST]\n\n" else ""}${item.description}\n\nPlatform: ${item.platforms}\nValue: $worthText")
+                        .bigText(
+                            if (isEs) {
+                                "${if (item.isWishlisted) "❤️ [EN TU LISTA DE DESEADOS]\n\n" else ""}${item.description}\n\nPlataforma: ${item.platforms}\nValor: $worthText"
+                            } else {
+                                "${if (item.isWishlisted) "❤️ [ON YOUR WISHLIST]\n\n" else ""}${item.description}\n\nPlatform: ${item.platforms}\nValue: $worthText"
+                            }
+                        )
                 )
             }
 
@@ -409,8 +428,11 @@ class NotificationHelper(val context: Context) {
     fun sendEndingSoonNotification(item: GiveawayItem) {
         if (!isNotificationsEnabled || isQuietHoursActive()) return
 
-        val title = "⏳ ENDING SOON: ${item.title}"
-        val content = "Last chance! This freebie on ${item.launcherCategory.displayName} expires in less than 24h."
+        val s = AppStringsRegistry.forContext(context)
+        val isEs = s.language == AppLanguage.SPANISH
+        val storeName = item.launcherCategory.localizedDisplayName(s)
+        val title = String.format(s.system.notifEndingTitleFormat, item.title)
+        val content = String.format(s.system.notifEndingContentFormat, storeName)
 
         CoroutineScope(Dispatchers.IO).launch {
             val bitmap = if (isNotificationRichArtwork) {
@@ -443,7 +465,7 @@ class NotificationHelper(val context: Context) {
                 .setSmallIcon(R.drawable.ic_stat_gamepad)
                 .setContentTitle(title)
                 .setContentText(content)
-                .setSubText("Ends Soon • ${item.launcherCategory.displayName}")
+                .setSubText(String.format(s.system.notifEndingSubFormat, storeName))
                 .setColor(0xFFFF5252.toInt())
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
@@ -459,8 +481,8 @@ class NotificationHelper(val context: Context) {
             }
 
             if (isNotificationActionsEnabled) {
-                builder.addAction(0, "Claim Now", claimPendingIntent)
-                    .addAction(0, "View Details", appPendingIntent)
+                builder.addAction(0, s.system.notifActionClaimNow, claimPendingIntent)
+                    .addAction(0, s.system.notifActionDetails, appPendingIntent)
             }
 
             if (bitmap != null) {
@@ -468,13 +490,21 @@ class NotificationHelper(val context: Context) {
                 builder.setStyle(
                     NotificationCompat.BigPictureStyle()
                         .bigPicture(bitmap)
-                        .setBigContentTitle("⏳ Don't Miss Out: ${item.title}")
-                        .setSummaryText("Offer ends soon on ${item.platforms}. Tap to claim before price returns.")
+                        .setBigContentTitle(
+                            if (isEs) "⏳ No Te Lo Pierdas: ${item.title}" else "⏳ Don't Miss Out: ${item.title}"
+                        )
+                        .setSummaryText(
+                            if (isEs) "La oferta termina pronto en ${item.platforms}. Toca para reclamar antes de que vuelva a su precio."
+                            else "Offer ends soon on ${item.platforms}. Tap to claim before price returns."
+                        )
                 )
             } else {
                 builder.setStyle(
                     NotificationCompat.BigTextStyle()
-                        .bigText("This 100% free giveaway for ${item.title} on ${item.platforms} is expiring soon. Grab it before the free offer ends!")
+                        .bigText(
+                            if (isEs) "Este regalo 100% gratis de ${item.title} en ${item.platforms} expira pronto. ¡Consíguelo antes de que termine la oferta!"
+                            else "This 100% free giveaway for ${item.title} on ${item.platforms} is expiring soon. Grab it before the free offer ends!"
+                        )
                 )
             }
 
@@ -511,6 +541,8 @@ class NotificationHelper(val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val s = AppStringsRegistry.forContext(context)
+        val isEs = s.language == AppLanguage.SPANISH
         CoroutineScope(Dispatchers.IO).launch {
             val sampleItem = GiveawayItem(
                 id = 99999,
@@ -519,8 +551,12 @@ class NotificationHelper(val context: Context) {
                 numericWorth = 39.99,
                 thumbnail = "https://www.gamerpower.com/offers/1/64070a996dc8e.jpg",
                 image = "https://www.gamerpower.com/offers/1/64070a996dc8e.jpg",
-                description = "From legendary game creator Hideo Kojima comes a genre-defying experience. Grab the full PC edition completely free!",
-                instructions = "Claim on Epic Games Store before promotion ends.",
+                description = if (isEs) {
+                    "Del legendario creador Hideo Kojima llega una experiencia única. ¡Consigue gratis la edición completa para PC!"
+                } else {
+                    "From legendary game creator Hideo Kojima comes a genre-defying experience. Grab the full PC edition completely free!"
+                },
+                instructions = if (isEs) "Reclama en Epic Games Store antes de que termine." else "Claim on Epic Games Store before promotion ends.",
                 openGiveawayUrl = "https://store.epicgames.com",
                 publishedDate = "2026-10-19",
                 type = "Game",
@@ -536,9 +572,15 @@ class NotificationHelper(val context: Context) {
 
             val builder = NotificationCompat.Builder(context, CHANNEL_MAJOR_GAMES)
                 .setSmallIcon(R.drawable.ic_stat_gamepad)
-                .setContentTitle("🎮 FREE NOW on Epic Games: Death Stranding")
-                .setContentText("Worth $39.99 • 100% OFF! Claim now to keep forever.")
-                .setSubText("Epic Games • Worth $39.99")
+                .setContentTitle(
+                    if (isEs) "🎮 GRATIS AHORA en Epic Games: Death Stranding"
+                    else "🎮 FREE NOW on Epic Games: Death Stranding"
+                )
+                .setContentText(
+                    if (isEs) "Valorado en $39.99 • ¡100% GRATIS! Reclámalo para siempre."
+                    else "Worth $39.99 • 100% OFF! Claim now to keep forever."
+                )
+                .setSubText(if (isEs) "Epic Games • Valor $39.99" else "Epic Games • Worth $39.99")
                 .setColor(0xFF6C5CE7.toInt())
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
@@ -554,8 +596,8 @@ class NotificationHelper(val context: Context) {
             }
 
             if (isNotificationActionsEnabled) {
-                builder.addAction(0, "Claim Free", claimPendingIntent)
-                    .addAction(0, "View in App", pendingIntent)
+                builder.addAction(0, s.system.notifActionClaimFree, claimPendingIntent)
+                    .addAction(0, s.system.notifActionViewInApp, pendingIntent)
             }
 
             if (bitmap != null) {
@@ -563,13 +605,22 @@ class NotificationHelper(val context: Context) {
                 builder.setStyle(
                     NotificationCompat.BigPictureStyle()
                         .bigPicture(bitmap)
-                        .setBigContentTitle("🎮 Death Stranding: Director's Cut is Free!")
-                        .setSummaryText("Free for a limited time on Epic Games Store • Worth $39.99")
+                        .setBigContentTitle(
+                            if (isEs) "🎮 ¡Death Stranding: Director's Cut está Gratis!"
+                            else "🎮 Death Stranding: Director's Cut is Free!"
+                        )
+                        .setSummaryText(
+                            if (isEs) "Gratis por tiempo limitado en Epic Games Store • Valor $39.99"
+                            else "Free for a limited time on Epic Games Store • Worth $39.99"
+                        )
                 )
             } else {
                 builder.setStyle(
                     NotificationCompat.BigTextStyle()
-                        .bigText("From legendary game creator Hideo Kojima comes a genre-defying experience. Now expanded in this definitive Director's Cut. 100% Free on Epic Games Store (Worth $39.99).")
+                        .bigText(
+                            if (isEs) "Del legendario creador Hideo Kojima llega una experiencia única en su versión Director's Cut. 100% Gratis en Epic Games Store (Valor $39.99)."
+                            else "From legendary game creator Hideo Kojima comes a genre-defying experience. Now expanded in this definitive Director's Cut. 100% Free on Epic Games Store (Worth $39.99)."
+                        )
                 )
             }
 
@@ -622,8 +673,10 @@ class NotificationHelper(val context: Context) {
     fun sendUpdateNotification(updateInfo: AppUpdateInfo) {
         if (!isNotificationsEnabled) return
 
-        val title = "🚀 LootDrop ${updateInfo.latestVersion} Available!"
-        val content = "New update released on GitHub. Tap to update inside the app."
+        val s = AppStringsRegistry.forContext(context)
+        val isEs = s.language == AppLanguage.SPANISH
+        val title = String.format(s.system.notifUpdateTitleFormat, updateInfo.latestVersion)
+        val content = s.system.notifUpdateContent
 
         val appIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -640,12 +693,12 @@ class NotificationHelper(val context: Context) {
             .setSmallIcon(R.drawable.ic_stat_gamepad)
             .setContentTitle(title)
             .setContentText(content)
-            .setSubText("In-App Update")
+            .setSubText(if (isEs) "Actualización en la App" else "In-App Update")
             .setColor(0xFF00E5FF.toInt())
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
             .setContentIntent(appPendingIntent)
-            .addAction(0, "Update Now", appPendingIntent)
+            .addAction(0, s.system.notifActionUpdateNow, appPendingIntent)
             .setStyle(
                 NotificationCompat.BigTextStyle()
                     .bigText("${updateInfo.releaseTitle.ifBlank { "LootDrop " + updateInfo.latestVersion }}\n\n${updateInfo.releaseNotes.take(300)}")
@@ -660,8 +713,10 @@ class NotificationHelper(val context: Context) {
     fun sendWeeklyBacklogChallengeNotification(weekDisplayName: String) {
         if (!isNotificationsEnabled || isQuietHoursActive()) return
 
-        val title = "🎯 New $weekDisplayName Backlog Challenge!"
-        val content = "A fresh 3×3 challenge grid is active for this week! Complete lines to unlock trophies & theme colors."
+        val s = AppStringsRegistry.forContext(context)
+        val isEs = s.language == AppLanguage.SPANISH
+        val title = String.format(s.system.notifChallengeTitleFormat, weekDisplayName)
+        val content = s.system.notifChallengeContent
 
         val appIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -678,14 +733,17 @@ class NotificationHelper(val context: Context) {
             .setSmallIcon(R.drawable.ic_stat_gamepad)
             .setContentTitle(title)
             .setContentText(content)
-            .setSubText("Weekly Backlog Challenge")
+            .setSubText(s.dialogs.challengeTitle)
             .setColor(0xFFFFD700.toInt())
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
             .setContentIntent(appPendingIntent)
             .setStyle(
                 NotificationCompat.BigTextStyle()
-                    .bigText("$content\n\nPlay your backlog, beat games, and unlock cosmetic rewards!")
+                    .bigText(
+                        if (isEs) "$content\n\n¡Juega tu backlog, completa juegos y desbloquea recompensas!"
+                        else "$content\n\nPlay your backlog, beat games, and unlock cosmetic rewards!"
+                    )
             )
 
         try {
@@ -701,8 +759,10 @@ class NotificationHelper(val context: Context) {
     fun sendMythicAchievementNotification(achievement: com.example.data.local.SteamAchievementEntity) {
         if (!isNotificationsEnabled || isQuietHoursActive()) return
 
-        val title = "💎 MYTHIC TROPHY UNLOCKED: ${achievement.displayName}"
-        val content = "Ultra-rare unlock in ${achievement.gameName}! Achieved by only ${achievement.formattedRarity} of players worldwide."
+        val s = AppStringsRegistry.forContext(context)
+        val isEs = s.language == AppLanguage.SPANISH
+        val title = String.format(s.system.notifMythicTitleFormat, achievement.displayName)
+        val content = String.format(s.system.notifMythicContentFormat, achievement.gameName, achievement.formattedRarity)
 
         CoroutineScope(Dispatchers.IO).launch {
             val bitmap = fetchBitmap(achievement.effectiveIconUrl)
@@ -723,12 +783,15 @@ class NotificationHelper(val context: Context) {
                 .setSmallIcon(R.drawable.ic_stat_gamepad)
                 .setContentTitle(title)
                 .setContentText(content)
-                .setSubText("💎 Mythic Trophy • ${achievement.formattedRarity}")
+                .setSubText(
+                    if (isEs) "💎 Trofeo Mítico • ${achievement.formattedRarity}"
+                    else "💎 Mythic Trophy • ${achievement.formattedRarity}"
+                )
                 .setColor(0xFFE040FB.toInt())
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
                 .setContentIntent(appPendingIntent)
-                .addAction(0, "View in App", appPendingIntent)
+                .addAction(0, s.system.notifActionViewInApp, appPendingIntent)
 
             if (!isNotificationSoundEnabled) {
                 builder.setSilent(true)
@@ -742,13 +805,25 @@ class NotificationHelper(val context: Context) {
                 builder.setStyle(
                     NotificationCompat.BigPictureStyle()
                         .bigPicture(bitmap)
-                        .setBigContentTitle("💎 Mythic Trophy: ${achievement.displayName}")
-                        .setSummaryText("${achievement.gameName} • Only ${achievement.formattedRarity} global unlock rate!")
+                        .setBigContentTitle(
+                            if (isEs) "💎 Trofeo Mítico: ${achievement.displayName}"
+                            else "💎 Mythic Trophy: ${achievement.displayName}"
+                        )
+                        .setSummaryText(
+                            if (isEs) "${achievement.gameName} • ¡Solo el ${achievement.formattedRarity} global lo desbloqueó!"
+                            else "${achievement.gameName} • Only ${achievement.formattedRarity} global unlock rate!"
+                        )
                 )
             } else {
                 builder.setStyle(
                     NotificationCompat.BigTextStyle()
-                        .bigText("${achievement.description.ifBlank { "You unlocked an ultra-rare Mythic trophy in ${achievement.gameName}!" }}\n\nGlobal unlock rate: ${achievement.formattedRarity}")
+                        .bigText(
+                            if (isEs) {
+                                "${achievement.description.ifBlank { "¡Desbloqueaste un trofeo Mítico ultra raro en ${achievement.gameName}!" }}\n\nTasa global de desbloqueo: ${achievement.formattedRarity}"
+                            } else {
+                                "${achievement.description.ifBlank { "You unlocked an ultra-rare Mythic trophy in ${achievement.gameName}!" }}\n\nGlobal unlock rate: ${achievement.formattedRarity}"
+                            }
+                        )
                 )
             }
 

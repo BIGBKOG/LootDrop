@@ -33,6 +33,37 @@ object MetacriticCatalog {
      */
     private val DYNAMIC_APPID_LINKS = java.util.concurrent.ConcurrentHashMap<Int, String>()
 
+    private const val MAX_CACHE_ENTRIES = 512
+    private val cacheLock = Any()
+
+    private val CLEAN_TITLE_CACHE = object : LinkedHashMap<String, String>(128, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?): Boolean = size > MAX_CACHE_ENTRIES
+    }
+
+    private val SCORE_CACHE = object : LinkedHashMap<String, Int>(128, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Int>?): Boolean = size > MAX_CACHE_ENTRIES
+    }
+
+    private val INFO_CACHE = object : LinkedHashMap<String, MetacriticInfo>(128, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, MetacriticInfo>?): Boolean = size > MAX_CACHE_ENTRIES
+    }
+
+    private val PARENS_REGEX = Regex("\\([^)]*\\)")
+    private val BRACKETS_REGEX = Regex("\\[[^\\]]*\\]")
+    private val PROMO_KEYWORDS_REGEX = Regex(
+        "(?i)\\b(giveaway|free|dlc|pack|key|keys|bundle|edition|loot|starter|item|bonus|skin|pass|playtest|steam|epic games|gog|indiegala|itch\\.io|itchio)\\b"
+    )
+    private val DELIMITER_REGEX = Regex("[:\\-–—]")
+    private val WHITESPACE_REGEX = Regex("\\s+")
+
+    fun clearCaches() {
+        synchronized(cacheLock) {
+            CLEAN_TITLE_CACHE.clear()
+            SCORE_CACHE.clear()
+            INFO_CACHE.clear()
+        }
+    }
+
     fun registerScore(
         rawTitle: String,
         score: Int,
@@ -60,6 +91,11 @@ object MetacriticCatalog {
                 if (fullUrl != null) {
                     DYNAMIC_APPID_LINKS[steamAppId] = fullUrl
                 }
+            }
+
+            synchronized(cacheLock) {
+                SCORE_CACHE.clear()
+                INFO_CACHE.clear()
             }
         }
     }
@@ -409,12 +445,32 @@ object MetacriticCatalog {
             DYNAMIC_APPID_SCORES[steamAppId]?.let { return it }
         }
 
+        val cacheKey = "$title\u0000$type\u0000${description.length}\u0000${description.hashCode()}\u0000${steamAppId ?: -1}"
+        synchronized(cacheLock) {
+            SCORE_CACHE[cacheKey]?.let { return it }
+        }
+
         val clean = cleanTitle(title)
         val normalized = clean.lowercase(Locale.ROOT)
+        val lowerRaw = title.lowercase(Locale.ROOT)
 
+        val resolved = resolveScoreUncached(clean, normalized, lowerRaw, type, description)
+        synchronized(cacheLock) {
+            SCORE_CACHE[cacheKey] = resolved
+        }
+        return resolved
+    }
+
+    private fun resolveScoreUncached(
+        clean: String,
+        normalized: String,
+        lowerRaw: String,
+        type: String,
+        description: String
+    ): Int {
         // 2. Check dynamically registered scores from secondary feeds (CheapShark / GamerPower)
         DYNAMIC_SCORES[normalized]?.let { return it }
-        DYNAMIC_SCORES[title.lowercase(Locale.ROOT).trim()]?.let { return it }
+        DYNAMIC_SCORES[lowerRaw.trim()]?.let { return it }
 
         // 3. Direct match on normalized core title in verified catalog
         KNOWN_METACRITIC_SCORES[normalized]?.let { return it }
@@ -439,7 +495,6 @@ object MetacriticCatalog {
         }
 
         // 6. Check original raw title for notable franchise keywords
-        val lowerRaw = title.lowercase(Locale.ROOT)
         for ((knownKey, score) in KNOWN_METACRITIC_SCORES) {
             if (knownKey.length >= 6 && lowerRaw.contains(knownKey)) {
                 return score
@@ -460,15 +515,21 @@ object MetacriticCatalog {
         explicitScore: Int? = null,
         steamAppId: Int? = null
     ): MetacriticInfo {
+        val cacheKey = "$title\u0000$type\u0000${description.length}\u0000${description.hashCode()}\u0000${explicitScore ?: -1}\u0000${steamAppId ?: -1}"
+        synchronized(cacheLock) {
+            INFO_CACHE[cacheKey]?.let { return it }
+        }
+
         val score = explicitScore ?: resolveScore(title, type, description, steamAppId)
         val tier = MetacriticRatingTier.fromScore(score)
         val cleaned = cleanTitle(title)
+        val cleanedLower = cleaned.lowercase(Locale.ROOT)
 
         // Check if a direct official Metacritic link was registered via CheapShark
         val directUrl = if (steamAppId != null && steamAppId > 0 && DYNAMIC_APPID_LINKS.containsKey(steamAppId)) {
             DYNAMIC_APPID_LINKS[steamAppId]
         } else {
-            DYNAMIC_LINKS[cleaned.lowercase(Locale.ROOT)]
+            DYNAMIC_LINKS[cleanedLower]
                 ?: DYNAMIC_LINKS[title.lowercase(Locale.ROOT).trim()]
         }
 
@@ -483,15 +544,19 @@ object MetacriticCatalog {
 
         val isVerified = directUrl != null ||
             (steamAppId != null && DYNAMIC_APPID_SCORES.containsKey(steamAppId)) ||
-            DYNAMIC_SCORES.containsKey(cleaned.lowercase(Locale.ROOT)) ||
-            KNOWN_METACRITIC_SCORES.keys.any { cleaned.lowercase(Locale.ROOT).contains(it) || it.contains(cleaned.lowercase(Locale.ROOT)) }
+            DYNAMIC_SCORES.containsKey(cleanedLower) ||
+            KNOWN_METACRITIC_SCORES.keys.any { cleanedLower.contains(it) || it.contains(cleanedLower) }
 
-        return MetacriticInfo(
+        val info = MetacriticInfo(
             score = score,
             tier = tier,
             reviewUrl = reviewUrl,
             isVerifiedCatalog = isVerified
         )
+        synchronized(cacheLock) {
+            INFO_CACHE[cacheKey] = info
+        }
+        return info
     }
 
     /**
@@ -499,28 +564,38 @@ object MetacriticCatalog {
      * Example: "V Rising - Haunted Nights Castle Pack (Steam) Giveaway" -> "V Rising"
      */
     fun cleanTitle(raw: String): String {
+        synchronized(cacheLock) {
+            CLEAN_TITLE_CACHE[raw]?.let { return it }
+        }
+
         var t = raw
         // Remove parenthesized text: (Steam), (Epic Games), (IndieGala), (itch.io)
-        t = t.replace(Regex("\\([^)]*\\)"), "")
-        t = t.replace(Regex("\\[[^\\]]*\\]"), "")
+        t = t.replace(PARENS_REGEX, "")
+        t = t.replace(BRACKETS_REGEX, "")
 
         // Remove common giveaway promo keywords
-        t = t.replace(
-            Regex("(?i)\\b(giveaway|free|dlc|pack|key|keys|bundle|edition|loot|starter|item|bonus|skin|pass|playtest|steam|epic games|gog|indiegala|itch\\.io|itchio)\\b"),
-            ""
-        )
+        t = t.replace(PROMO_KEYWORDS_REGEX, "")
 
         // Split on delimiter if this is a subtitle or DLC name (e.g. "Game Title - Subtitle / DLC Pack")
-        val segments = t.split(Regex("[:\\-–—]"))
+        val segments = t.split(DELIMITER_REGEX)
+        var result: String? = null
         for (seg in segments) {
-            val trimmed = seg.trim().replace(Regex("\\s+"), " ")
+            val trimmed = seg.trim().replace(WHITESPACE_REGEX, " ")
             if (trimmed.length >= 3) {
-                return trimmed
+                result = trimmed
+                break
             }
         }
 
-        val fallback = t.trim().replace(Regex("\\s+"), " ")
-        return if (fallback.isNotBlank()) fallback else raw.trim()
+        if (result == null) {
+            val fallback = t.trim().replace(WHITESPACE_REGEX, " ")
+            result = if (fallback.isNotBlank()) fallback else raw.trim()
+        }
+
+        synchronized(cacheLock) {
+            CLEAN_TITLE_CACHE[raw] = result
+        }
+        return result
     }
 
     /**

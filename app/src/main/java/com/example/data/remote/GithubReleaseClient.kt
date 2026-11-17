@@ -233,8 +233,20 @@ class GithubReleaseClient(private val context: Context) {
         const val REPO_URL = "https://github.com/$DEFAULT_OWNER/$DEFAULT_REPO"
         const val RELEASES_URL = "https://github.com/$DEFAULT_OWNER/$DEFAULT_REPO/releases"
 
+        private val LEGACY_TWO_PART_FOUR_REGEX = Regex("^4\\.\\d+$")
+
+        private fun normalizeVersionForLegacyCheck(cleanTag: String): String {
+            return cleanTag.substringBefore("-").substringBefore("_").trim()
+        }
+
+        private fun isLegacyFourSeries(cleanTag: String): Boolean {
+            // Pre-reset legacy tags used 2-part versioning ("4.0" .. "4.5"),
+            // whereas modern 4.0.0+ releases use 3-part semver ("4.0.0", "4.0.1", "4.0.X").
+            return LEGACY_TWO_PART_FOUR_REGEX.matches(normalizeVersionForLegacyCheck(cleanTag))
+        }
+
         private fun isLegacyTag(rawTag: String, cleanTag: String): Boolean {
-            return cleanTag.startsWith("4.") || rawTag.contains("V4.") || rawTag.contains("Loot-Drop-V3.")
+            return isLegacyFourSeries(cleanTag) || rawTag.contains("Loot-Drop-V3.")
         }
 
         internal fun parseAtomFeedXml(xml: String, currentVersionName: String): AtomReleaseCandidate? {
@@ -398,15 +410,15 @@ class GithubReleaseClient(private val context: Context) {
 
         fun isCurrentModernStream(version: String): Boolean {
             val clean = version.trim().removePrefix("v").removePrefix("V")
-            val major = clean.substringBefore(".").toIntOrNull() ?: 0
-            return (major in 1..40) && !clean.startsWith("4.")
+            val major = normalizeVersionForLegacyCheck(clean).substringBefore(".").toIntOrNull() ?: 0
+            return (major in 1..40) && !isLegacyFourSeries(clean)
         }
 
         /**
-         * Compares semantic versions (e.g. "3.4.0" vs "3.3.0", "1.5.X" vs "1.5.0").
+         * Compares semantic versions (e.g. "4.0.0" vs "3.5.1", "4.0.X" vs "4.0.0").
          * Returns true if remote is strictly newer than current.
-         * Correctly handles wildcard releases ("1.5.X"), and protects against legacy 4.x
-         * versions being falsely reported as newer when the app was reset to modern streams.
+         * Correctly handles wildcard releases ("1.5.X"), and protects against legacy 2-part 4.x
+         * tags (V4.0..V4.5) being falsely reported as newer than modern releases including 4.0.0+.
          */
         fun isNewerVersion(remoteTag: String, currentVersion: String): Boolean {
             if (remoteTag.isBlank()) return false
@@ -415,16 +427,16 @@ class GithubReleaseClient(private val context: Context) {
 
             if (cleanRemote.equals(cleanCurrent, ignoreCase = true)) return false
 
-            // The app transitioned its versioning scheme from legacy 4.x down to 1.5.0.
+            // The app transitioned its versioning scheme from legacy 2-part 4.x down to 1.5.0.
             val isRemoteOneSeries = cleanRemote.startsWith("1.")
-            val isCurrentLegacy = cleanCurrent.startsWith("4.")
+            val isCurrentLegacy = isLegacyFourSeries(cleanCurrent)
             if (isCurrentLegacy && isRemoteOneSeries) {
                 return true
             }
 
-            // Older legacy 4.x or unversioned tags from before the reset should not be treated as newer
+            // Older legacy 2-part 4.x or Loot-Drop-V3.x tags from before the reset should not be treated as newer
             if (isCurrentModernStream(cleanCurrent)) {
-                if (cleanRemote.startsWith("4.") || cleanRemote.contains("V4.")) {
+                if (isLegacyTag(remoteTag, cleanRemote)) {
                     return false
                 }
             }

@@ -4,6 +4,8 @@ import android.content.Context
 import android.util.Log
 import com.example.BuildConfig
 import com.example.data.model.PublicReview
+import com.example.i18n.AppLanguage
+import com.example.preferences.AppPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -112,7 +114,8 @@ object PublicReviewsManager {
         isVerifiedClaimer: Boolean,
         isAppReview: Boolean = false
     ): Result<PublicReview> = withContext(Dispatchers.IO) {
-        val cleanAuthor = authorName.trim().ifBlank { "Anonymous Gamer" }
+        val isEs = AppPreferences(context).appLanguage == AppLanguage.SPANISH
+        val cleanAuthor = authorName.trim().ifBlank { if (isEs) "Gamer Anónimo" else "Anonymous Gamer" }
         val cleanTitle = title.trim()
         val cleanComment = comment.trim()
         val isForApp = isAppReview || giveawayId == -1L || gameTitle.contains("LootDrop", ignoreCase = true)
@@ -120,11 +123,14 @@ object PublicReviewsManager {
         val moderation = ReviewModerationFilter.validateReviewInput(
             title = cleanTitle,
             comment = cleanComment,
-            authorName = cleanAuthor
+            authorName = cleanAuthor,
+            isSpanish = isEs
         )
         if (!moderation.isAllowed) {
             return@withContext Result.failure(
-                IllegalArgumentException(moderation.errorMessage ?: "Review contains blacklisted words.")
+                IllegalArgumentException(
+                    moderation.errorMessage ?: if (isEs) "La reseña contiene palabras prohibidas." else "Review contains blacklisted words."
+                )
             )
         }
 
@@ -203,17 +209,22 @@ object PublicReviewsManager {
      * Marks a review as helpful, increments count, and uploads to R2.
      */
     suspend fun voteHelpful(context: Context, reviewId: String): Result<Int> = withContext(Dispatchers.IO) {
+        val isEs = AppPreferences(context).appLanguage == AppLanguage.SPANISH
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val votedSet = prefs.getStringSet(KEY_HELPFUL_VOTED, mutableSetOf())?.toMutableSet() ?: mutableSetOf()
 
         if (votedSet.contains(reviewId)) {
-            return@withContext Result.failure(IllegalStateException("You already marked this review as helpful."))
+            return@withContext Result.failure(
+                IllegalStateException(if (isEs) "Ya marcaste esta reseña como útil." else "You already marked this review as helpful.")
+            )
         }
 
         val reviews = fetchReviews(context).toMutableList()
         val index = reviews.indexOfFirst { it.id == reviewId }
         if (index == -1) {
-            return@withContext Result.failure(IllegalArgumentException("Review not found."))
+            return@withContext Result.failure(
+                IllegalArgumentException(if (isEs) "Reseña no encontrada." else "Review not found.")
+            )
         }
 
         val target = reviews[index]

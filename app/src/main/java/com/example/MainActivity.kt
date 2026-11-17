@@ -14,8 +14,6 @@ import com.example.ui.GiveawaysViewModel
 import com.example.ui.HomeScreen
 import com.example.ui.theme.LootDropTheme
 
-import android.os.Build
-import android.view.Surface
 import androidx.compose.runtime.LaunchedEffect
 import com.example.preferences.TargetFrameRate
 
@@ -47,8 +45,16 @@ class MainActivity : ComponentActivity() {
             val isDpiOptimizationEnabled by viewModel.isDpiOptimizationEnabled.collectAsState()
             val dpiScaleMode by viewModel.dpiScaleMode.collectAsState()
             val uiStats by viewModel.uiStats.collectAsState()
+            val appLanguage by viewModel.appLanguage.collectAsState()
+            val appStrings = remember(appLanguage) {
+                com.example.i18n.AppStringsRegistry.forLanguage(appLanguage)
+            }
 
-            LaunchedEffect(uiStats) {
+            LaunchedEffect(appLanguage) {
+                com.example.i18n.LocaleSyncHelper.applyAndRefreshSystemSurfaces(this@MainActivity, appLanguage)
+            }
+
+            LaunchedEffect(uiStats, appLanguage) {
                 com.example.shortcuts.AppShortcutHelper.updateDynamicShortcuts(
                     context = this@MainActivity,
                     expiringCount = uiStats.expiringSoon,
@@ -71,10 +77,19 @@ class MainActivity : ComponentActivity() {
             }
 
             val perfProfile = remember { com.example.util.DevicePerformanceHelper.getProfile(this@MainActivity) }
+            val isLowEndOptimization by viewModel.isLowEndOptimization.collectAsState()
+
+            LaunchedEffect(isLowEndOptimization) {
+                if (isLowEndOptimization) {
+                    LootDropApplication.trimMemoryCaches(this@MainActivity, aggressive = false)
+                }
+            }
 
             CompositionLocalProvider(
                 LocalScreenDensityInfo provides screenDensityInfo,
-                com.example.util.LocalDevicePerformance provides perfProfile
+                com.example.util.LocalDevicePerformance provides perfProfile,
+                com.example.util.LocalLowEndOptimization provides isLowEndOptimization,
+                com.example.i18n.LocalAppStrings provides appStrings
             ) {
                 LootDropTheme(
                     themeMode = themeMode,
@@ -91,46 +106,33 @@ class MainActivity : ComponentActivity() {
 
     private fun applyDisplayRefreshRate(targetRate: TargetFrameRate) {
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                val currentDisplay = display
-                val detectedHz = currentDisplay?.refreshRate?.toInt() ?: 90
-                viewModel.setDetectedRefreshRate(detectedHz)
+            val currentDisplay = display
+            val detectedHz = currentDisplay?.refreshRate?.toInt() ?: 90
+            viewModel.setDetectedRefreshRate(detectedHz)
 
-                val targetFps = when (targetRate) {
-                    TargetFrameRate.FPS_60 -> 60f
-                    TargetFrameRate.FPS_90 -> 90f
-                    TargetFrameRate.FPS_120 -> 120f
-                    TargetFrameRate.AUTO -> 0f
-                }
-                val params = window.attributes
-                params.preferredRefreshRate = targetFps
-                window.attributes = params
+            val targetFps = when (targetRate) {
+                TargetFrameRate.FPS_60 -> 60f
+                TargetFrameRate.FPS_90 -> 90f
+                TargetFrameRate.FPS_120 -> 120f
+                TargetFrameRate.AUTO -> 0f
+            }
+            val params = window.attributes
+            params.preferredRefreshRate = targetFps
+
+            val modes = currentDisplay?.supportedModes ?: emptyArray()
+            val matchedMode = when (targetRate) {
+                TargetFrameRate.FPS_60 -> modes.find { it.refreshRate in 59.0f..61.0f }
+                TargetFrameRate.FPS_90 -> modes.find { it.refreshRate in 89.0f..91.0f }
+                    ?: modes.maxByOrNull { it.refreshRate }
+                TargetFrameRate.FPS_120 -> modes.find { it.refreshRate in 119.0f..121.0f }
+                    ?: modes.maxByOrNull { it.refreshRate }
+                TargetFrameRate.AUTO -> modes.maxByOrNull { it.refreshRate }
             }
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                val currentDisplay = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    display
-                } else {
-                    @Suppress("DEPRECATION")
-                    windowManager.defaultDisplay
-                }
-                val modes = currentDisplay?.supportedModes ?: emptyArray()
-
-                val matchedMode = when (targetRate) {
-                    TargetFrameRate.FPS_60 -> modes.find { it.refreshRate in 59.0f..61.0f }
-                    TargetFrameRate.FPS_90 -> modes.find { it.refreshRate in 89.0f..91.0f }
-                        ?: modes.maxByOrNull { it.refreshRate }
-                    TargetFrameRate.FPS_120 -> modes.find { it.refreshRate in 119.0f..121.0f }
-                        ?: modes.maxByOrNull { it.refreshRate }
-                    TargetFrameRate.AUTO -> modes.maxByOrNull { it.refreshRate }
-                }
-
-                if (matchedMode != null) {
-                    val params = window.attributes
-                    params.preferredDisplayModeId = matchedMode.modeId
-                    window.attributes = params
-                }
+            if (matchedMode != null) {
+                params.preferredDisplayModeId = matchedMode.modeId
             }
+            window.attributes = params
         } catch (_: Exception) {
             // Safe fallback if display mode adjustment is not supported by device/emulator
         }

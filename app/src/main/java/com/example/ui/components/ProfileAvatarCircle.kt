@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import android.graphics.Bitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,9 +31,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import coil.size.Precision
 import com.example.data.model.UserProfile
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGreen
+import com.example.util.LocalLowEndOptimization
 import java.io.File
 
 /**
@@ -47,6 +50,7 @@ fun ProfileAvatarCircle(
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
+    val lowEnd = LocalLowEndOptimization.current
     val hasCustomAvatar = profile.hasCustomAvatar
     val avatarFile = remember(profile.avatarPath) {
         if (profile.avatarPath.isNotBlank()) File(profile.avatarPath) else null
@@ -84,11 +88,18 @@ fun ProfileAvatarCircle(
             contentAlignment = Alignment.Center
         ) {
             if (hasCustomAvatar && avatarFile != null && avatarFile.exists()) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
+                val avatarRequest = remember(avatarFile, lowEnd) {
+                    ImageRequest.Builder(context)
                         .data(avatarFile)
-                        .crossfade(true)
-                        .build(),
+                        .crossfade(!lowEnd)
+                        .bitmapConfig(if (lowEnd) Bitmap.Config.RGB_565 else Bitmap.Config.ARGB_8888)
+                        .allowRgb565(true)
+                        .precision(if (lowEnd) Precision.INEXACT else Precision.AUTOMATIC)
+                        .size(128, 128)
+                        .build()
+                }
+                AsyncImage(
+                    model = avatarRequest,
                     contentDescription = "Profile Photo of ${profile.displayName}",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier

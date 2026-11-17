@@ -7,6 +7,7 @@ import com.example.data.local.AppDatabase
 import com.example.data.local.GiveawayEntity
 import com.example.data.local.SteamGameEntity
 import com.example.data.model.PlayStatus
+import com.example.i18n.AppLanguage
 import com.example.preferences.AppPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -301,7 +302,12 @@ object BackupRestoreManager {
         }
 
         val total = claimedRestored + steamRestored
-        val message = "Restored $claimedRestored claimed Vault games and $steamRestored Steam games!"
+        val isEs = preferences.appLanguage == AppLanguage.SPANISH
+        val message = if (isEs) {
+            "¡Se restauraron $claimedRestored juegos de Bóveda y $steamRestored juegos de Steam!"
+        } else {
+            "Restored $claimedRestored claimed Vault games and $steamRestored Steam games!"
+        }
         RestoreSummary(
             claimedRestoredCount = claimedRestored,
             bookmarkedRestoredCount = bookmarkedRestored,
@@ -387,6 +393,8 @@ object BackupRestoreManager {
      * Extracts a human-friendly display name for a SAF tree URI (e.g. Google Drive folder or local folder).
      */
     fun getFolderDisplayName(context: Context, folderTreeUri: Uri): String {
+        val isEs = AppPreferences(context).appLanguage == AppLanguage.SPANISH
+        val fallback = if (isEs) "Carpeta en Nube" else "Cloud Folder"
         return runCatching {
             val treeDocumentId = DocumentsContract.getTreeDocumentId(folderTreeUri)
             val docUri = DocumentsContract.buildDocumentUriUsingTree(folderTreeUri, treeDocumentId)
@@ -405,8 +413,8 @@ object BackupRestoreManager {
         }.getOrNull() ?: runCatching {
             val path = folderTreeUri.path ?: ""
             val last = path.substringAfterLast(":")
-            if (last.isNotBlank()) last else folderTreeUri.lastPathSegment ?: "Cloud Folder"
-        }.getOrDefault("Cloud Folder")
+            if (last.isNotBlank()) last else folderTreeUri.lastPathSegment ?: fallback
+        }.getOrDefault(fallback)
     }
 
     /**
@@ -501,9 +509,14 @@ object BackupRestoreManager {
                 fileSizeFormatted = formattedSize
             )
 
+            val isEs = preferences.appLanguage == AppLanguage.SPANISH
             preferences.lastAutoBackupTimestamp = System.currentTimeMillis()
-            val timeFormatted = SimpleDateFormat("MMM d, h:mm a", Locale.US).format(Date())
-            preferences.lastAutoBackupStatus = "✅ Current as of $timeFormatted (${summary.totalGamesCount} games, $formattedSize)"
+            val timeFormatted = SimpleDateFormat("MMM d, h:mm a", preferences.appLanguage.locale).format(Date())
+            preferences.lastAutoBackupStatus = if (isEs) {
+                "✅ Actualizado $timeFormatted (${summary.totalGamesCount} juegos, $formattedSize)"
+            } else {
+                "✅ Current as of $timeFormatted (${summary.totalGamesCount} games, $formattedSize)"
+            }
 
             summary
         }
@@ -518,6 +531,7 @@ object BackupRestoreManager {
             return null
         }
 
+        val isEs = prefs.appLanguage == AppLanguage.SPANISH
         val treeUri = runCatching { Uri.parse(prefs.autoBackupFolderUri) }.getOrNull() ?: return null
 
         // Check if persistable permissions are still active
@@ -530,15 +544,19 @@ object BackupRestoreManager {
         }
 
         if (!hasPermission) {
-            prefs.lastAutoBackupStatus = "⚠️ Folder access expired. Please reselect your backup folder."
+            prefs.lastAutoBackupStatus = if (isEs) {
+                "⚠️ Permiso de carpeta expirado. Vuelve a elegir tu carpeta de respaldo."
+            } else {
+                "⚠️ Folder access expired. Please reselect your backup folder."
+            }
             return Result.failure(SecurityException("Folder permission revoked or expired"))
         }
 
         val db = AppDatabase.getInstance(context)
         val result = exportToFolderUri(context, treeUri, db, prefs, "lootdrop_backup_latest.json")
         if (result.isFailure) {
-            val errorMsg = result.exceptionOrNull()?.message ?: "Unknown error"
-            prefs.lastAutoBackupStatus = "❌ Auto-backup failed: $errorMsg"
+            val errorMsg = result.exceptionOrNull()?.message ?: if (isEs) "Error desconocido" else "Unknown error"
+            prefs.lastAutoBackupStatus = if (isEs) "❌ Auto-respaldo fallido: $errorMsg" else "❌ Auto-backup failed: $errorMsg"
         }
         return result
     }

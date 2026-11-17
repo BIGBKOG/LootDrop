@@ -59,8 +59,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.i18n.LocalAppStrings
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGreen
+import com.example.util.LocalLowEndOptimization
 
 /**
  * Compact floating pill bar placed in the top right corner.
@@ -80,6 +82,8 @@ fun ExpressiveTopActionBar(
     isLowEndOptimization: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val s = LocalAppStrings.current
+    val effectiveLowEnd = isLowEndOptimization || LocalLowEndOptimization.current
     val barHeight = 44.dp
     val barShape = RoundedCornerShape(22.dp)
 
@@ -87,19 +91,23 @@ fun ExpressiveTopActionBar(
     val chromeSurface = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.96f)
     val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f)
 
-    val outerBorderColor by animateColorAsState(
-        targetValue = themePrimary.copy(alpha = 0.30f),
-        animationSpec = if (isLowEndOptimization) tween(100) else spring(stiffness = Spring.StiffnessMediumLow),
-        label = "top_bar_outer_border"
-    )
+    val outerBorderColor = if (effectiveLowEnd) {
+        themePrimary.copy(alpha = 0.30f)
+    } else {
+        animateColorAsState(
+            targetValue = themePrimary.copy(alpha = 0.30f),
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+            label = "top_bar_outer_border"
+        ).value
+    }
 
     Surface(
         modifier = modifier
             .wrapContentWidth()
             .height(barHeight)
             .then(
-                if (isLowEndOptimization) {
-                    Modifier.shadow(elevation = 3.dp, shape = barShape)
+                if (effectiveLowEnd) {
+                    Modifier
                 } else {
                     Modifier.shadow(
                         elevation = 10.dp,
@@ -117,7 +125,7 @@ fun ExpressiveTopActionBar(
             .testTag("top_action_bar"),
         shape = barShape,
         color = chromeSurface,
-        tonalElevation = if (isLowEndOptimization) 0.dp else 4.dp
+        tonalElevation = if (effectiveLowEnd) 0.dp else 4.dp
     ) {
         Row(
             modifier = Modifier
@@ -129,13 +137,13 @@ fun ExpressiveTopActionBar(
             // 1. Search Action Button
             TopCornerActionItem(
                 icon = if (isSearchExpanded) Icons.Default.Close else Icons.Default.Search,
-                contentDescription = "Search Games",
+                contentDescription = s.common.search,
                 isActive = isSearchExpanded || searchQuery.isNotBlank(),
                 activeColor = themePrimary,
                 onClick = onToggleSearch,
                 testTag = "toggle_search_button",
                 hasDotIndicator = searchQuery.isNotBlank() && !isSearchExpanded,
-                isLowEndOptimization = isLowEndOptimization
+                isLowEndOptimization = effectiveLowEnd
             )
 
             // Vertical divider line
@@ -149,13 +157,13 @@ fun ExpressiveTopActionBar(
             // 2. Filters Action Button
             TopCornerActionItem(
                 icon = Icons.Default.Tune,
-                contentDescription = "Filter & Sort Menu",
+                contentDescription = s.home.filterSortTitle,
                 isActive = activeFilterCount > 0,
                 activeColor = themePrimary,
                 onClick = onFilterClick,
                 testTag = "filter_menu_button",
                 badgeCount = if (activeFilterCount > 0) activeFilterCount else null,
-                isLowEndOptimization = isLowEndOptimization
+                isLowEndOptimization = effectiveLowEnd
             )
 
             // Vertical divider line
@@ -168,19 +176,19 @@ fun ExpressiveTopActionBar(
 
             // 3. Notifications Action Button
             val (bellRotation, dotPulse) = rememberBellWiggle(
-                enabled = isAnimationsEnabled && !isLowEndOptimization,
+                enabled = isAnimationsEnabled && !effectiveLowEnd,
                 hasAlerts = unreadNotificationCount > 0
             )
 
             TopCornerActionItem(
                 icon = if (unreadNotificationCount > 0) Icons.Default.NotificationsActive else Icons.Default.Notifications,
-                contentDescription = "Alert Inbox & History",
+                contentDescription = s.common.checkNotificationsCd,
                 isActive = unreadNotificationCount > 0,
                 activeColor = if (unreadNotificationCount > 0) NeonCyan else themePrimary,
                 onClick = onNotificationClick,
                 testTag = "notification_inbox_button",
                 badgeCount = if (unreadNotificationCount > 0) unreadNotificationCount else null,
-                isLowEndOptimization = isLowEndOptimization,
+                isLowEndOptimization = effectiveLowEnd,
                 iconRotation = bellRotation,
                 badgeColor = NeonGreen
             )
@@ -204,28 +212,36 @@ private fun TopCornerActionItem(
     badgeColor: Color? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
+    val targetContentColor = if (isActive) activeColor else MaterialTheme.colorScheme.onSurfaceVariant
 
-    val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.86f else 1.0f,
-        animationSpec = ExpressiveMotion.spatialFast(reducedMotion = isLowEndOptimization),
-        label = "corner_item_press_$testTag"
-    )
-
-    val morphedCorner = rememberExpressiveCornerRadius(
-        isSelected = isActive,
-        isPressed = isPressed,
-        baseRadius = 18.dp,
-        selectedRadius = 14.dp,
-        pressedRadius = 11.dp,
-        enabled = !isLowEndOptimization
-    )
-
-    val contentColor by animateColorAsState(
-        targetValue = if (isActive) activeColor else MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = ExpressiveMotion.effectsDefault(reducedMotion = isLowEndOptimization),
-        label = "corner_item_color_$testTag"
-    )
+    val pressScale: Float
+    val morphedCorner: androidx.compose.ui.unit.Dp
+    val contentColor: Color
+    if (isLowEndOptimization) {
+        pressScale = 1.0f
+        morphedCorner = if (isActive) 14.dp else 18.dp
+        contentColor = targetContentColor
+    } else {
+        val isPressed by interactionSource.collectIsPressedAsState()
+        pressScale = animateFloatAsState(
+            targetValue = if (isPressed) 0.86f else 1.0f,
+            animationSpec = ExpressiveMotion.spatialFast(reducedMotion = false),
+            label = "corner_item_press_$testTag"
+        ).value
+        morphedCorner = rememberExpressiveCornerRadius(
+            isSelected = isActive,
+            isPressed = isPressed,
+            baseRadius = 18.dp,
+            selectedRadius = 14.dp,
+            pressedRadius = 11.dp,
+            enabled = true
+        )
+        contentColor = animateColorAsState(
+            targetValue = targetContentColor,
+            animationSpec = ExpressiveMotion.effectsDefault(reducedMotion = false),
+            label = "corner_item_color_$testTag"
+        ).value
+    }
 
     val activeBackground = if (isActive) {
         Brush.horizontalGradient(
@@ -241,10 +257,11 @@ private fun TopCornerActionItem(
     Box(
         modifier = modifier
             .size(width = 42.dp, height = 38.dp)
-            .graphicsLayer {
-                scaleX = pressScale
-                scaleY = pressScale
-            }
+            .then(
+                if (!isLowEndOptimization && pressScale != 1f) {
+                    Modifier.graphicsLayer { scaleX = pressScale; scaleY = pressScale }
+                } else Modifier
+            )
             .clip(RoundedCornerShape(morphedCorner))
             .background(activeBackground)
             .then(
@@ -265,28 +282,34 @@ private fun TopCornerActionItem(
         contentAlignment = Alignment.Center
     ) {
         Box {
-            AnimatedContent(
-                targetState = icon,
-                transitionSpec = {
-                    if (isLowEndOptimization) {
-                        fadeIn(tween(100)) togetherWith fadeOut(tween(80))
-                    } else {
-                        (fadeIn(ExpressiveMotion.effectsFast()) + scaleIn(initialScale = 0.7f, animationSpec = ExpressiveMotion.spatialFast()))
-                            .togetherWith(fadeOut(ExpressiveMotion.effectsFast()) + scaleOut(targetScale = 0.7f))
-                    }
-                },
-                label = "corner_icon_swap_$testTag"
-            ) { currentIcon ->
+            val iconMod = if (iconRotation != 0f) {
+                Modifier.size(20.dp).graphicsLayer { rotationZ = iconRotation }
+            } else {
+                Modifier.size(20.dp)
+            }
+            if (isLowEndOptimization) {
                 Icon(
-                    imageVector = currentIcon,
+                    imageVector = icon,
                     contentDescription = contentDescription,
                     tint = contentColor,
-                    modifier = Modifier
-                        .size(20.dp)
-                        .graphicsLayer {
-                            rotationZ = iconRotation
-                        }
+                    modifier = iconMod
                 )
+            } else {
+                AnimatedContent(
+                    targetState = icon,
+                    transitionSpec = {
+                        (fadeIn(ExpressiveMotion.effectsFast()) + scaleIn(initialScale = 0.7f, animationSpec = ExpressiveMotion.spatialFast()))
+                            .togetherWith(fadeOut(ExpressiveMotion.effectsFast()) + scaleOut(targetScale = 0.7f))
+                    },
+                    label = "corner_icon_swap_$testTag"
+                ) { currentIcon ->
+                    Icon(
+                        imageVector = currentIcon,
+                        contentDescription = contentDescription,
+                        tint = contentColor,
+                        modifier = iconMod
+                    )
+                }
             }
 
             // Optional dot indicator (e.g. active search query)
@@ -303,6 +326,7 @@ private fun TopCornerActionItem(
             // Optional numeric badge (e.g. unread count or filter count)
             if (badgeCount != null && badgeCount > 0) {
                 val effectiveBadgeColor = badgeColor ?: activeColor
+                val badgeTextStr = if (badgeCount > 99) "99+" else badgeCount.toString()
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
@@ -315,17 +339,26 @@ private fun TopCornerActionItem(
                         .padding(horizontal = 4.dp, vertical = 0.5.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    AnimatedContent(
-                        targetState = if (badgeCount > 99) "99+" else badgeCount.toString(),
-                        transitionSpec = { ExpressiveMotion.popNumberTransform(isLowEndOptimization) },
-                        label = "corner_badge_$testTag"
-                    ) { badgeText ->
+                    if (isLowEndOptimization) {
                         Text(
-                            text = badgeText,
+                            text = badgeTextStr,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = if (badgeColor != null) Color(0xFF0B0F19) else MaterialTheme.colorScheme.onPrimary
                         )
+                    } else {
+                        AnimatedContent(
+                            targetState = badgeTextStr,
+                            transitionSpec = { ExpressiveMotion.popNumberTransform(false) },
+                            label = "corner_badge_$testTag"
+                        ) { badgeText ->
+                            Text(
+                                text = badgeText,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = if (badgeColor != null) Color(0xFF0B0F19) else MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
                     }
                 }
             }

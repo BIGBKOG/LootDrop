@@ -70,16 +70,20 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.example.data.model.ControllerSupport
 import com.example.data.model.PlayStatus
 import com.example.data.model.SteamDeckStatus
 import com.example.data.model.UnifiedLibraryItem
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
+import com.example.i18n.localizedLabel
+import com.example.i18n.localizedPillLabel
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGreen
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
+import com.example.util.LocalLowEndOptimization
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
@@ -95,6 +99,9 @@ fun BacklogRouletteDialog(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
+    val lowEnd = LocalLowEndOptimization.current
     val coroutineScope = rememberCoroutineScope()
     val diceRotation = remember { Animatable(0f) }
 
@@ -106,11 +113,13 @@ fun BacklogRouletteDialog(
 
     fun reroll() {
         if (candidates.size <= 1) return
-        coroutineScope.launch {
-            diceRotation.animateTo(
-                targetValue = diceRotation.value + 360f,
-                animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
-            )
+        if (!lowEnd) {
+            coroutineScope.launch {
+                diceRotation.animateTo(
+                    targetValue = diceRotation.value + 360f,
+                    animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
+                )
+            }
         }
         var nextIndex = Random.nextInt(candidates.size)
         while (nextIndex == selectedIndex && candidates.size > 1) {
@@ -173,7 +182,7 @@ fun BacklogRouletteDialog(
                             ) {
                                 Text("🎲", fontSize = 12.sp)
                                 Text(
-                                    text = "BACKLOG ROULETTE",
+                                    text = s.dialogs.rouletteTitle.uppercase(),
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = Color(0xFFE9D5FF),
@@ -191,7 +200,7 @@ fun BacklogRouletteDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Close roulette dialog",
+                            contentDescription = s.common.close,
                             tint = TextMuted
                         )
                     }
@@ -223,7 +232,7 @@ fun BacklogRouletteDialog(
                         }
 
                         Text(
-                            text = "Backlog Conquered! 🎉",
+                            text = if (isEs) "¡Backlog Conquistado! 🎉" else "Backlog Conquered! 🎉",
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary,
@@ -231,7 +240,11 @@ fun BacklogRouletteDialog(
                         )
 
                         Text(
-                            text = "You don't have any unplayed or in-progress games left in your All+Paid library. High five! Grab more free games from the Discover tab or replay an old favorite.",
+                            text = if (isEs) {
+                                "No tienes juegos pendientes ni en progreso en tu biblioteca Todos+Pago. ¡Choca esos cinco! Consigue más juegos gratis en Descubrir o rejugar un clásico."
+                            } else {
+                                "You don't have any unplayed or in-progress games left in your All+Paid library. High five! Grab more free games from the Discover tab or replay an old favorite."
+                            },
                             fontSize = 13.sp,
                             color = TextSecondary,
                             textAlign = TextAlign.Center,
@@ -250,7 +263,7 @@ fun BacklogRouletteDialog(
                                 .padding(top = 12.dp)
                                 .height(46.dp)
                         ) {
-                            Text("Awesome", fontWeight = FontWeight.Bold)
+                            Text(if (isEs) "¡Genial!" else "Awesome", fontWeight = FontWeight.Bold)
                         }
                     }
                 } else {
@@ -261,13 +274,17 @@ fun BacklogRouletteDialog(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = "What To Play Next",
+                            text = if (isEs) "¿Qué Jugar Ahora?" else "What To Play Next",
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Black,
                             color = TextPrimary
                         )
                         Text(
-                            text = "Analysis paralysis solved! Fate picked this candidate from your ${candidates.size} backlog titles:",
+                            text = if (isEs) {
+                                "¡Adiós indecisión! El destino eligió este título entre tus ${candidates.size} juegos pendientes:"
+                            } else {
+                                "Analysis paralysis solved! Fate picked this candidate from your ${candidates.size} backlog titles:"
+                            },
                             fontSize = 12.sp,
                             color = TextSecondary,
                             lineHeight = 16.sp
@@ -275,14 +292,16 @@ fun BacklogRouletteDialog(
                     }
 
                     // Rolled Game Showcase Card
-                    AnimatedContent(
-                        targetState = currentItem,
-                        transitionSpec = {
-                            (fadeIn(animationSpec = tween(250)) + scaleIn(initialScale = 0.92f))
-                                .togetherWith(fadeOut(animationSpec = tween(150)))
-                        },
-                        label = "RouletteGameTransition"
-                    ) { targetGame ->
+                    val showcaseCard: @Composable (UnifiedLibraryItem) -> Unit = { targetGame ->
+                        val coverRequest = remember(context, targetGame.coverImageUrl, lowEnd) {
+                            buildGiveawayImageRequest(
+                                context = context,
+                                url = targetGame.coverImageUrl,
+                                isLowEndOptimization = lowEnd,
+                                width = if (lowEnd) 480 else 640,
+                                height = if (lowEnd) 270 else 360
+                            )
+                        }
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -304,10 +323,7 @@ fun BacklogRouletteDialog(
                                         .background(Color(0xFF0F1420))
                                 ) {
                                     AsyncImage(
-                                        model = ImageRequest.Builder(context)
-                                            .data(targetGame.coverImageUrl)
-                                            .crossfade(true)
-                                            .build(),
+                                        model = coverRequest,
                                         contentDescription = targetGame.name,
                                         modifier = Modifier.fillMaxWidth(),
                                         contentScale = ContentScale.Crop
@@ -409,7 +425,11 @@ fun BacklogRouletteDialog(
                                         )
                                     ) {
                                         Text(
-                                            text = if (targetGame.playStatus == PlayStatus.PLAYING) "🎮 In Progress" else "⏳ Unplayed",
+                                            text = if (targetGame.playStatus == PlayStatus.PLAYING) {
+                                                if (isEs) "🎮 En Progreso" else "🎮 In Progress"
+                                            } else {
+                                                if (isEs) "⏳ Sin Jugar" else "⏳ Unplayed"
+                                            },
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = if (targetGame.playStatus == PlayStatus.PLAYING) NeonCyan else Color(0xFFF59E0B),
@@ -428,7 +448,7 @@ fun BacklogRouletteDialog(
                                             border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
                                         ) {
                                             Text(
-                                                text = "${targetGame.game.playtimeHours} played",
+                                                text = s.home.homePlayedFormat.format(targetGame.game.playtimeHours),
                                                 fontSize = 10.sp,
                                                 fontWeight = FontWeight.SemiBold,
                                                 color = Color(0xFF94A3B8),
@@ -481,7 +501,7 @@ fun BacklogRouletteDialog(
                                                     )
                                                 ) {
                                                     Text(
-                                                        text = hw.deckStatus.pillLabel,
+                                                        text = hw.deckStatus.localizedPillLabel(s),
                                                         fontSize = 10.sp,
                                                         fontWeight = FontWeight.Medium,
                                                         color = when (hw.deckStatus) {
@@ -501,7 +521,7 @@ fun BacklogRouletteDialog(
                                                         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF38BDF8).copy(alpha = 0.6f))
                                                     ) {
                                                         Text(
-                                                            text = "${hw.controllerSupport.iconEmoji} ${hw.controllerSupport.label}",
+                                                            text = "${hw.controllerSupport.iconEmoji} ${hw.controllerSupport.localizedLabel(s)}",
                                                             fontSize = 10.sp,
                                                             fontWeight = FontWeight.Medium,
                                                             color = Color(0xFF38BDF8),
@@ -532,7 +552,11 @@ fun BacklogRouletteDialog(
                                                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF10B981))
                                                 ) {
                                                     Text(
-                                                        text = "Claimed Free (${targetGame.giveaway.worth})",
+                                                        text = if (isEs) {
+                                                            "Gratis (${targetGame.giveaway.worth})"
+                                                        } else {
+                                                            "Claimed Free (${targetGame.giveaway.worth})"
+                                                        },
                                                         fontSize = 10.sp,
                                                         fontWeight = FontWeight.SemiBold,
                                                         color = NeonGreen,
@@ -560,6 +584,20 @@ fun BacklogRouletteDialog(
                                     }
                                 }
                             }
+                        }
+                    }
+                    if (lowEnd) {
+                        showcaseCard(currentItem)
+                    } else {
+                        AnimatedContent(
+                            targetState = currentItem,
+                            transitionSpec = {
+                                (fadeIn(animationSpec = tween(250)) + scaleIn(initialScale = 0.92f))
+                                    .togetherWith(fadeOut(animationSpec = tween(150)))
+                            },
+                            label = "RouletteGameTransition"
+                        ) { targetGame ->
+                            showcaseCard(targetGame)
                         }
                     }
 
@@ -593,7 +631,7 @@ fun BacklogRouletteDialog(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Launch & Play",
+                                text = if (isEs) "Abrir y Jugar" else "Launch & Play",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.ExtraBold
                             )
@@ -617,15 +655,15 @@ fun BacklogRouletteDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Casino,
-                                contentDescription = "Reroll game",
+                                contentDescription = s.dialogs.rouletteSpinBtn,
                                 modifier = Modifier
                                     .size(18.dp)
-                                    .rotate(diceRotation.value),
+                                    .then(if (!lowEnd) Modifier.rotate(diceRotation.value) else Modifier),
                                 tint = Color(0xFFC084FC)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Reroll",
+                                text = s.dialogs.rouletteSpinBtn,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -634,7 +672,7 @@ fun BacklogRouletteDialog(
 
                     // Close Button
                     Text(
-                        text = "Maybe Later",
+                        text = s.dialogs.updateLater,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                         color = TextMuted,

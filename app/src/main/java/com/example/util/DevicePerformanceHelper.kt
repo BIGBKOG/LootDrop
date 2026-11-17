@@ -86,3 +86,5 @@ val LocalDevicePerformance = staticCompositionLocalOf {
         telemetrySummary = "Standard Profile"
     )
 }
+
+val LocalLowEndOptimization = staticCompositionLocalOf { false }

@@ -73,10 +73,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.example.data.local.SteamAchievementEntity
 import com.example.data.local.SteamGameEntity
 import com.example.data.model.TrophyRarityTier
+import com.example.i18n.AppLanguage
+import com.example.i18n.LocalAppStrings
+import com.example.i18n.localizedLabel
 import com.example.ui.AchievementOverviewStats
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonGreen
@@ -84,12 +86,20 @@ import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 import com.example.util.AchievementWalkthroughHelper
+import com.example.util.LocalLowEndOptimization
 
 private enum class CompletionFilter(val label: String) {
     ALMOST_DONE("🔥 80%+ Almost Done"),
     MASTERED("👑 100% Mastered"),
     IN_PROGRESS("⭐ 40-79% Progress"),
-    ALL("All Games")
+    ALL("All Games");
+
+    fun localized(isEs: Boolean): String = if (!isEs) label else when (this) {
+        ALMOST_DONE -> "🔥 80%+ Casi listos"
+        MASTERED -> "👑 100% Completados"
+        IN_PROGRESS -> "⭐ 40-79% En progreso"
+        ALL -> "Todos"
+    }
 }
 
 @Composable
@@ -109,8 +119,26 @@ fun TrophyShowcaseContent(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val reducedMotion = !isAnimationsEnabled || isLowEndOptimization
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
+    val effectiveLowEnd = isLowEndOptimization || LocalLowEndOptimization.current
+    val reducedMotion = !isAnimationsEnabled || effectiveLowEnd
     var selectedFilter by remember { mutableStateOf(CompletionFilter.ALMOST_DONE) }
+
+    val filterCounts = remember(closestGames) {
+        var almostDone = 0
+        var mastered = 0
+        var inProgress = 0
+        for (game in closestGames) {
+            val pct = game.achievementsPercentage
+            when {
+                pct == 100 -> mastered++
+                pct in 80..99 -> almostDone++
+                pct in 40..79 -> inProgress++
+            }
+        }
+        intArrayOf(almostDone, mastered, inProgress, closestGames.size)
+    }
 
     val filteredGames = remember(closestGames, selectedFilter) {
         when (selectedFilter) {
@@ -141,6 +169,7 @@ fun TrophyShowcaseContent(
             TrophyOverviewHeader(
                 stats = overviewStats,
                 isSyncing = isSyncing,
+                reducedMotion = reducedMotion,
                 steamUserId = steamUserId,
                 onSyncClick = onSyncClick,
                 onOpenSteamSettings = onOpenSteamSettings
@@ -190,7 +219,7 @@ fun TrophyShowcaseContent(
                             )
                         }
                         Text(
-                            text = "CLOSEST TO 100% TRACKER",
+                            text = if (isEs) "RASTREADOR CASI AL 100%" else "CLOSEST TO 100% TRACKER",
                             style = MaterialTheme.typography.titleSmall,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
@@ -203,8 +232,9 @@ fun TrophyShowcaseContent(
                                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f))
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
+                            val nearCount = filterCounts[0]
                             Text(
-                                text = "${closestGames.count { it.achievementsPercentage in 80..99 }} near 100%",
+                                text = if (isEs) "$nearCount casi al 100%" else "$nearCount near 100%",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
@@ -214,7 +244,7 @@ fun TrophyShowcaseContent(
                 }
 
                 Text(
-                    text = "Spotlight games on the verge of 100% completion for easy Mythical Trophies.",
+                    text = if (isEs) "Juegos a punto de completar al 100% para conseguir Trofeos Míticos fácilmente." else "Spotlight games on the verge of 100% completion for easy Mythical Trophies.",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -229,12 +259,7 @@ fun TrophyShowcaseContent(
                 ) {
                     CompletionFilter.values().forEach { filter ->
                         val isSelected = filter == selectedFilter
-                        val count = when (filter) {
-                            CompletionFilter.ALMOST_DONE -> closestGames.count { it.achievementsPercentage in 80..99 }
-                            CompletionFilter.MASTERED -> closestGames.count { it.achievementsPercentage == 100 }
-                            CompletionFilter.IN_PROGRESS -> closestGames.count { it.achievementsPercentage in 40..79 }
-                            CompletionFilter.ALL -> closestGames.size
-                        }
+                        val count = filterCounts[filter.ordinal]
 
                         val chipCorner = rememberExpressiveCornerRadius(
                             isSelected = isSelected,
@@ -247,7 +272,7 @@ fun TrophyShowcaseContent(
                             onClick = { selectedFilter = filter },
                             label = {
                                 Text(
-                                    text = "${filter.label} ($count)",
+                                    text = "${filter.localized(isEs)} ($count)",
                                     fontSize = 11.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                                 )
@@ -282,7 +307,7 @@ fun TrophyShowcaseContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No games found in this category. Sync your Steam library to rank games by completion!",
+                        text = if (isEs) "No hay juegos en esta categoría. ¡Sincroniza tu biblioteca de Steam para ordenar por progreso!" else "No games found in this category. Sync your Steam library to rank games by completion!",
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -293,6 +318,7 @@ fun TrophyShowcaseContent(
             items(filteredGames, key = { "closest_${it.appId}" }) { game ->
                 ClosestGameCard(
                     game = game,
+                    lowEnd = effectiveLowEnd,
                     onClick = { onSelectGameForAchievements(game) },
                     modifier = Modifier
                         .padding(horizontal = 16.dp)
@@ -315,20 +341,25 @@ fun TrophyShowcaseContent(
 private fun TrophyOverviewHeader(
     stats: AchievementOverviewStats,
     isSyncing: Boolean,
+    reducedMotion: Boolean,
     steamUserId: String,
     onSyncClick: () -> Unit,
     onOpenSteamSettings: () -> Unit
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "trophy_spin")
-    val spinAngle by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "spin_angle"
-    )
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
+    val spinAngle = if (isSyncing && !reducedMotion) {
+        val infiniteTransition = rememberInfiniteTransition(label = "trophy_spin")
+        infiniteTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1000, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "spin_angle"
+        ).value
+    } else 0f
 
     Box(
         modifier = Modifier
@@ -375,14 +406,18 @@ private fun TrophyOverviewHeader(
                     }
                     Column {
                         Text(
-                            text = "ACHIEVEMENT HUNTER & TROPHY SHOWCASE",
+                            text = if (isEs) "CAZADOR DE LOGROS Y VITRINA" else "ACHIEVEMENT HUNTER & TROPHY SHOWCASE",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFFE040FB),
                             letterSpacing = 0.8.sp
                         )
                         Text(
-                            text = if (steamUserId.isNotBlank()) "Linked: $steamUserId" else "Tap Sync to link Steam",
+                            text = if (steamUserId.isNotBlank()) {
+                                if (isEs) "Vinculado: $steamUserId" else "Linked: $steamUserId"
+                            } else {
+                                if (isEs) "Toca Sincronizar para vincular Steam" else "Tap Sync to link Steam"
+                            },
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -401,11 +436,11 @@ private fun TrophyOverviewHeader(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Sync,
-                            contentDescription = "Sync Achievements",
+                            contentDescription = s.library.steamSyncCd,
                             tint = if (isSyncing) Color(0xFFE040FB) else MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier
                                 .size(16.dp)
-                                .then(if (isSyncing) Modifier.rotate(spinAngle) else Modifier)
+                                .then(if (isSyncing && !reducedMotion) Modifier.rotate(spinAngle) else Modifier)
                         )
                     }
 
@@ -419,7 +454,7 @@ private fun TrophyOverviewHeader(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Settings,
-                            contentDescription = "Steam Settings",
+                            contentDescription = s.library.steamSettingsCd,
                             tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(16.dp)
                         )
@@ -435,7 +470,7 @@ private fun TrophyOverviewHeader(
                 StatPill(
                     icon = "👑",
                     value = "${stats.masteredGamesCount}",
-                    label = "100% Mastered",
+                    label = s.library.trophiesMasteredGames,
                     accentColor = NeonGreen,
                     modifier = Modifier.weight(1f)
                 )
@@ -443,7 +478,7 @@ private fun TrophyOverviewHeader(
                 StatPill(
                     icon = "💎",
                     value = "${stats.mythicTrophiesCount}",
-                    label = "Mythic (<5%)",
+                    label = s.library.trophiesMythicCount,
                     accentColor = Color(0xFFE040FB),
                     modifier = Modifier.weight(1f)
                 )
@@ -451,7 +486,7 @@ private fun TrophyOverviewHeader(
                 StatPill(
                     icon = "🏆",
                     value = "${stats.totalUnlockedTrophies}",
-                    label = "Trophies Won",
+                    label = s.library.trophiesTotalUnlocked,
                     accentColor = Color(0xFFFFD700),
                     modifier = Modifier.weight(1f)
                 )
@@ -459,7 +494,7 @@ private fun TrophyOverviewHeader(
                 StatPill(
                     icon = "📊",
                     value = "${stats.averageCompletionPercentage}%",
-                    label = "Avg Progress",
+                    label = s.library.trophiesAvgCompletion,
                     accentColor = NeonCyan,
                     modifier = Modifier.weight(1f)
                 )
@@ -502,6 +537,8 @@ private fun TrophyWallSection(
     trophies: List<SteamAchievementEntity>,
     onTrophyClick: (SteamAchievementEntity) -> Unit
 ) {
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -532,7 +569,7 @@ private fun TrophyWallSection(
                     )
                 }
                 Text(
-                    text = "TROPHY WALL: RAREST UNLOCKED",
+                    text = if (isEs) "MURO DE TROFEOS: MÁS RAROS" else "TROPHY WALL: RAREST UNLOCKED",
                     style = MaterialTheme.typography.titleSmall,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
@@ -545,12 +582,12 @@ private fun TrophyWallSection(
                         .background(Color(0xFFFFB800).copy(alpha = 0.18f))
                         .padding(horizontal = 5.dp, vertical = 1.dp)
                 ) {
-                    Text(text = "RARITY", fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFFFB800))
+                    Text(text = if (isEs) "RAREZA" else "RARITY", fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFFFB800))
                 }
             }
 
             Text(
-                text = "${trophies.size} trophies",
+                text = if (isEs) "${trophies.size} trofeos" else "${trophies.size} trophies",
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -568,7 +605,7 @@ private fun TrophyWallSection(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No unlocked trophies found yet. Link your Steam account to showcase your rarest achievements!",
+                    text = if (isEs) "Aún no hay trofeos desbloqueados. ¡Vincula tu cuenta de Steam para lucir tus logros más raros!" else "No unlocked trophies found yet. Link your Steam account to showcase your rarest achievements!",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -596,6 +633,8 @@ private fun TrophyWallCard(
     trophy: SteamAchievementEntity,
     onClick: () -> Unit
 ) {
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
     val tier = trophy.rarityTier
     val tierColor = tier.color
     val isMythic = tier == TrophyRarityTier.MYTHIC
@@ -672,7 +711,7 @@ private fun TrophyWallCard(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = tier.label,
+                        text = tier.localizedLabel(s),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = tierColor
@@ -682,7 +721,9 @@ private fun TrophyWallCard(
 
             // Description
             Text(
-                text = trophy.description.ifBlank { "Unlocked in ${trophy.gameName}" },
+                text = trophy.description.ifBlank {
+                    if (isEs) "Desbloqueado en ${trophy.gameName}" else "Unlocked in ${trophy.gameName}"
+                },
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 lineHeight = 15.sp,
@@ -696,13 +737,26 @@ private fun TrophyWallCard(
 @Composable
 private fun ClosestGameCard(
     game: SteamGameEntity,
+    lowEnd: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val s = LocalAppStrings.current
+    val isEs = s.language == AppLanguage.SPANISH
     val percent = game.achievementsPercentage
     val remaining = (game.achievementsTotal - game.achievementsUnlocked).coerceAtLeast(0)
     val isNearHundred = percent in 80..99 && remaining in 1..5
     val isMastered = percent == 100
+    val headerImageRequest = remember(context, game.headerImageUrl, lowEnd) {
+        buildGiveawayImageRequest(
+            context = context,
+            url = game.headerImageUrl,
+            isLowEndOptimization = lowEnd,
+            width = if (lowEnd) 460 else 640,
+            height = if (lowEnd) 190 else 280
+        )
+    }
 
     Card(
         modifier = modifier
@@ -726,10 +780,7 @@ private fun ClosestGameCard(
                     .height(95.dp)
             ) {
                 AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(game.headerImageUrl)
-                        .crossfade(true)
-                        .build(),
+                    model = headerImageRequest,
                     contentDescription = game.name,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxWidth()
@@ -758,7 +809,7 @@ private fun ClosestGameCard(
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = "🔥 ONLY $remaining LEFT FOR 100%!",
+                            text = if (isEs) "🔥 ¡SOLO FALTAN $remaining PARA EL 100%!" else "🔥 ONLY $remaining LEFT FOR 100%!",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = NeonCyan
@@ -775,7 +826,7 @@ private fun ClosestGameCard(
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = "👑 100% MASTERED",
+                            text = if (isEs) "👑 100% COMPLETADO" else "👑 100% MASTERED",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = NeonGreen
@@ -832,7 +883,7 @@ private fun ClosestGameCard(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "⏱️ ${game.playtimeHours} playtime • ${game.playStatus.label}",
+                        text = "⏱️ ${String.format(s.home.cardPlaytimeFormat, game.playtimeHours)} • ${game.playStatus.localizedLabel(s)}",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -842,7 +893,7 @@ private fun ClosestGameCard(
                         horizontalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         Text(
-                            text = if (isMastered) "View Trophies" else "View Walkthroughs",
+                            text = if (isMastered) s.library.steamViewTrophies else if (isEs) "Ver Guías" else "View Walkthroughs",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary

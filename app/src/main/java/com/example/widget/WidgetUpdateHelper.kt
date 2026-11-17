@@ -20,6 +20,9 @@ import coil.request.ImageRequest
 import com.example.MainActivity
 import com.example.R
 import com.example.data.local.AppDatabase
+import com.example.i18n.AppLanguage
+import com.example.i18n.AppStringsRegistry
+import com.example.i18n.LocaleSyncHelper
 import com.example.notifications.NotificationHelper
 import com.example.util.MetacriticCatalog
 import kotlinx.coroutines.CoroutineScope
@@ -32,6 +35,26 @@ import java.util.Locale
 object WidgetUpdateHelper {
 
     const val ACTION_REFRESH_WIDGETS = "com.example.widget.ACTION_REFRESH_WIDGETS"
+
+    private fun applyLatestStaticLabels(context: Context, views: RemoteViews) {
+        val localizedRes = LocaleSyncHelper.localizedContextFromPrefs(context).resources
+        views.setTextViewText(R.id.widget_header_title, localizedRes.getString(R.string.widget_latest_header))
+        views.setTextViewText(R.id.widget_free_badge, localizedRes.getString(R.string.widget_free_badge))
+        views.setTextViewText(R.id.widget_claim_text, localizedRes.getString(R.string.widget_claim_btn))
+        views.setTextViewText(R.id.widget_details_text, localizedRes.getString(R.string.widget_details_btn))
+        views.setContentDescription(R.id.widget_btn_refresh, localizedRes.getString(R.string.widget_refresh_drops))
+        views.setContentDescription(R.id.widget_game_image, localizedRes.getString(R.string.widget_game_artwork))
+    }
+
+    private fun applyRadarStaticLabels(context: Context, views: RemoteViews) {
+        val localizedRes = LocaleSyncHelper.localizedContextFromPrefs(context).resources
+        views.setTextViewText(R.id.widget_radar_header_title, localizedRes.getString(R.string.widget_radar_header))
+        views.setTextViewText(R.id.widget_free_drops_label, localizedRes.getString(R.string.widget_free_drops_label))
+        views.setTextViewText(R.id.widget_saved_in_vault_label, localizedRes.getString(R.string.widget_saved_in_vault_label))
+        views.setTextViewText(R.id.widget_radar_btn_text, localizedRes.getString(R.string.widget_radar_btn))
+        views.setTextViewText(R.id.widget_vault_btn_text, localizedRes.getString(R.string.widget_vault_btn))
+        views.setContentDescription(R.id.widget_radar_refresh, localizedRes.getString(R.string.widget_refresh_stats))
+    }
 
     fun updateAllWidgets(context: Context) {
         val appWidgetManager = AppWidgetManager.getInstance(context.applicationContext)
@@ -125,6 +148,9 @@ object WidgetUpdateHelper {
 
     fun buildLatestDropRemoteViews(context: Context, appWidgetId: Int): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_latest_drop)
+        val s = AppStringsRegistry.forContext(context)
+        val isEs = s.language == AppLanguage.SPANISH
+        applyLatestStaticLabels(context, views)
         views.setImageViewResource(R.id.widget_game_image, R.drawable.widget_image_placeholder)
 
         // Refresh intent
@@ -151,15 +177,18 @@ object WidgetUpdateHelper {
         )
         views.setOnClickPendingIntent(R.id.widget_root_latest, openAppPending)
 
-        views.setTextViewText(R.id.widget_game_title, "Loading free drops...")
-        views.setTextViewText(R.id.widget_platform_badge, "PC / Console")
-        views.setTextViewText(R.id.widget_original_price, "FREE")
-        views.setTextViewText(R.id.widget_metascore, "★ NEW")
+        views.setTextViewText(R.id.widget_game_title, s.system.widgetLoadingDrops)
+        views.setTextViewText(R.id.widget_platform_badge, if (isEs) "PC / Consola" else "PC / Console")
+        views.setTextViewText(R.id.widget_original_price, if (isEs) "GRATIS" else "FREE")
+        views.setTextViewText(R.id.widget_metascore, if (isEs) "★ NUEVO" else "★ NEW")
 
         return views
     }
 
     fun populateLatestDrop(context: Context, views: RemoteViews, appWidgetId: Int) {
+        val s = AppStringsRegistry.forContext(context)
+        applyLatestStaticLabels(context, views)
+
         // Refresh intent
         val refreshIntent = Intent(context, LatestDropWidgetProvider::class.java).apply {
             action = ACTION_REFRESH_WIDGETS
@@ -250,7 +279,7 @@ object WidgetUpdateHelper {
                     views.setImageViewResource(R.id.widget_game_image, R.drawable.widget_image_placeholder)
                 }
             } else {
-                views.setTextViewText(R.id.widget_game_title, "Tap to check free games")
+                views.setTextViewText(R.id.widget_game_title, s.system.widgetTapToCheck)
                 views.setTextViewText(R.id.widget_platform_badge, "LootDrop")
                 views.setTextViewText(R.id.widget_original_price, "")
                 views.setTextViewText(R.id.widget_metascore, "★ 100%")
@@ -267,6 +296,9 @@ object WidgetUpdateHelper {
     }
 
     fun populateRadarStats(context: Context, views: RemoteViews, appWidgetId: Int) {
+        val s = AppStringsRegistry.forContext(context)
+        applyRadarStaticLabels(context, views)
+
         // Refresh intent
         val refreshIntent = Intent(context, RadarStatsWidgetProvider::class.java).apply {
             action = ACTION_REFRESH_WIDGETS
@@ -316,10 +348,10 @@ object WidgetUpdateHelper {
             val activeCount = list.count { it.status != "Ended" && it.status != "expired" }
             val savedTotal = list.filter { it.isClaimed }.sumOf { it.numericWorth }
 
-            views.setTextViewText(R.id.widget_stat_active_count, "$activeCount Active")
+            views.setTextViewText(R.id.widget_stat_active_count, String.format(s.system.widgetActiveCountFormat, activeCount))
             views.setTextViewText(R.id.widget_stat_saved_dollars, String.format(Locale.US, "$%.2f", savedTotal))
         } catch (_: Exception) {
-            views.setTextViewText(R.id.widget_stat_active_count, "Radar Online")
+            views.setTextViewText(R.id.widget_stat_active_count, s.system.widgetRadarOnline)
             views.setTextViewText(R.id.widget_stat_saved_dollars, "$0.00")
         }
     }

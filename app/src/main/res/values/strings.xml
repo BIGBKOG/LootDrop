@@ -1,11 +1,5 @@
 <resources>
     <string name="app_name">LootDrop</string>
-    <string name="notification_channel_name">Free Game Alerts</string>
-    <string name="notification_channel_description">Notifications when new free PC and console games are available to claim</string>
-    <string name="channel_major_games">Major Free Games</string>
-    <string name="channel_ending_soon">Expiring Soon Alerts</string>
-    <string name="channel_dlc">DLC, Add-ons &amp; Loot</string>
-    <string name="channel_system">System &amp; Sync Alerts</string>
     <string name="widget_latest_drop_desc">Shows the hottest new free game drop with one-tap claim and store details</string>
     <string name="widget_radar_stats_desc">Live radar of available free games and total money saved in your vault</string>
     <string name="shortcut_expiring_soon_short">Expiring Soon</string>
@@ -16,4 +10,18 @@
     <string name="shortcut_my_vault_long">My Vault (Claimed Games)</string>
     <string name="tile_free_games_label">Free Games</string>
     <string name="tile_free_games_subtitle">Check Drops</string>
+    <string name="widget_latest_header">LootDrop • Latest Drop</string>
+    <string name="widget_refresh_drops">Refresh Drops</string>
+    <string name="widget_game_artwork">Game artwork</string>
+    <string name="widget_no_cached_games">No free games cached yet</string>
+    <string name="widget_free_badge">FREE</string>
+    <string name="widget_claim_btn">CLAIM</string>
+    <string name="widget_details_btn">DETAILS</string>
+    <string name="widget_radar_header">LootDrop Radar &amp; Vault</string>
+    <string name="widget_refresh_stats">Refresh Stats</string>
+    <string name="widget_active_placeholder">-- Active</string>
+    <string name="widget_free_drops_label">Free Drops</string>
+    <string name="widget_saved_in_vault_label">Saved in Vault</string>
+    <string name="widget_radar_btn">RADAR</string>
+    <string name="widget_vault_btn">MY VAULT</string>
 </resources>
