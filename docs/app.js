@@ -2005,10 +2005,12 @@ async function pingSupabaseKeepAlive(force = false) {
     }
     const headers = {
       'apikey': R2_AUTH_KEY,
-      'Authorization': `Bearer ${R2_AUTH_KEY}`,
       'Accept': 'application/json',
       'Prefer': 'count=exact'
     };
+    if (!R2_AUTH_KEY.startsWith('sb_')) {
+      headers['Authorization'] = `Bearer ${R2_AUTH_KEY}`;
+    }
     const endpoints = [
       `${SUPABASE_PROJECT_URL}/rest/v1/lootdrop_backups?select=account_id&limit=1`,
       `${SUPABASE_PROJECT_URL}/rest/v1/keep_alive?select=id&limit=1`,

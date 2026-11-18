@@ -74,6 +74,19 @@ class SupabaseKeepAliveTest {
     }
 
     @Test
+    fun buildPostgrestPingRequest_omitsBearerForPublishableKey() {
+        val req = SupabaseKeepAliveManager.buildPostgrestPingRequest(
+            baseUrl = "https://example.supabase.co",
+            path = "/rest/v1/",
+            anonKey = "sb_publishable_example123",
+            useExactCountHeader = false
+        )
+        assertEquals("sb_publishable_example123", req.header("apikey"))
+        assertNull(req.header("Authorization"))
+        assertNull(req.header("Prefer"))
+    }
+
+    @Test
     fun shouldPing_respectsTwelveHourThrottleWindow() {
         val now = 1_750_000_000_000L
         assertTrue(SupabaseKeepAliveManager.shouldPing(0L, nowMs = now))

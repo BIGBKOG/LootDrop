@@ -42,44 +42,55 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'sb_publishable_htD9aXXk0QHjhG_ifS3nYg_kjUp7osD' }}
         run: |
           set -euo pipefail
-          BASE_URL="${SUPABASE_URL%/}"
+          BASE_URL="$(printf '%s' "$SUPABASE_URL" | tr -d '[:space:]')"
+          BASE_URL="${BASE_URL%/}"
+          ANON_KEY="$(printf '%s' "$SUPABASE_ANON_KEY" | tr -d '[:space:]')"
+
+          if [ -z "$BASE_URL" ] || [ -z "$ANON_KEY" ]; then
+            echo "::error::SUPABASE_URL or SUPABASE_ANON_KEY is empty"
+            exit 1
+          fi
+
+          # Modern Supabase publishable/secret keys (sb_publishable_... / sb_secret_...)
+          # are NOT JWTs. Passing them in `Authorization: Bearer` causes PostgREST to
+          # fail JWT decoding and return HTTP 401. Only include Authorization for JWTs.
+          AUTH_ARGS=()
+          if [[ "$ANON_KEY" != sb_* ]]; then
+            AUTH_ARGS=(-H "Authorization: Bearer $ANON_KEY")
+          fi
 
           ping_endpoint() {
             local label="$1"
-            local method="$2"
-            local url="$3"
-            local extra_header="${4:-}"
-            local body_flag=()
-            if [ "$method" = "POST" ]; then
-              body_flag=(-d '{}')
+            local url="$2"
+            local extra_header="${3:-}"
+            local extra_args=()
+            if [ -n "$extra_header" ]; then
+              extra_args=(-H "$extra_header")
             fi
 
             local code
-            if [ -n "$extra_header" ]; then
-              code=$(curl -sS -o /tmp/supa_resp.txt -w "%{http_code}" -X "$method" \
-                "$url" \
-                -H "apikey: $SUPABASE_ANON_KEY" \
-                -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
-                -H "Content-Type: application/json" \
-                -H "$extra_header" \
-                "${body_flag[@]}" || echo "000")
-            else
-              code=$(curl -sS -o /tmp/supa_resp.txt -w "%{http_code}" -X "$method" \
-                "$url" \
-                -H "apikey: $SUPABASE_ANON_KEY" \
-                -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
-                -H "Content-Type: application/json" \
-                "${body_flag[@]}" || echo "000")
-            fi
+            code=$(curl -sS -o /tmp/supa_resp.txt -w "%{http_code}" -X GET \
+              "$url" \
+              -H "apikey: $ANON_KEY" \
+              -H "Accept: application/json" \
+              ${AUTH_ARGS[@]+"${AUTH_ARGS[@]}"} \
+              ${extra_args[@]+"${extra_args[@]}"} || echo "000")
 
             echo "[$label] HTTP $code -> $url"
+            if [[ "$code" =~ ^[0-9]+$ ]] && { [ "$code" = "401" ] || [ "$code" = "403" ] || [ "$code" -ge 500 ]; }; then
+              local body_preview
+              body_preview=$(head -c 300 /tmp/supa_resp.txt | tr '\n' ' ' || true)
+              if [ -n "$body_preview" ]; then
+                echo "[$label] Response: $body_preview"
+              fi
+            fi
             echo "$code" > /tmp/last_code.txt
           }
 
           db_alive=0
 
           # 1. Query existing backups table (executes PostgreSQL query plan + count/RLS check)
-          ping_endpoint "lootdrop_backups" "GET" \
+          ping_endpoint "lootdrop_backups" \
             "$BASE_URL/rest/v1/lootdrop_backups?select=account_id&limit=1" \
             "Prefer: count=exact"
           code1=$(cat /tmp/last_code.txt)
@@ -88,7 +99,7 @@ jobs:
           fi
 
           # 2. Query optional keep_alive heartbeat table (tolerant if table not created yet)
-          ping_endpoint "keep_alive" "GET" \
+          ping_endpoint "keep_alive" \
             "$BASE_URL/rest/v1/keep_alive?select=id&limit=1" \
             "Prefer: count=exact"
           code2=$(cat /tmp/last_code.txt)
@@ -96,8 +107,8 @@ jobs:
             db_alive=1
           fi
 
-          # 3. Query PostgREST OpenAPI schema reflection (always queries PostgreSQL pg_catalog)
-          ping_endpoint "postgrest_schema" "GET" "$BASE_URL/rest/v1/"
+          # 3. Query PostgREST OpenAPI schema reflection (queries PostgreSQL pg_catalog)
+          ping_endpoint "postgrest_schema" "$BASE_URL/rest/v1/"
           code3=$(cat /tmp/last_code.txt)
           if [ "$code3" -ge 200 ] && [ "$code3" -lt 400 ]; then
             db_alive=1
@@ -114,8 +125,12 @@ jobs:
           fi
 
           if [ "$db_alive" -eq 0 ]; then
-            echo "::warning::No 2xx/3xx PostgREST response received (backups=$code1, keep_alive=$code2, schema=$code3)"
+            echo "::error::No 2xx/3xx PostgREST response received (backups=$code1, keep_alive=$code2, schema=$code3)"
             exit 1
+          fi
+
+          if [ "$code1" = "404" ] && [ "$code2" = "404" ]; then
+            echo "::notice::PostgREST schema ping succeeded (HTTP $code3). For guaranteed Postgres table query activity, optionally create the public.keep_alive table via Supabase SQL Editor."
           fi
 
           echo "Supabase PostgreSQL keep-alive succeeded! (backups=$code1, keep_alive=$code2, schema=$code3)"

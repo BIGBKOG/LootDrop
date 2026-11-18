@@ -50,12 +50,17 @@ object SupabaseKeepAliveManager {
     ): Request {
         val cleanBase = baseUrl.trim().trimEnd('/')
         val cleanPath = if (path.startsWith("/")) path else "/$path"
+        val cleanKey = anonKey.trim()
         return Request.Builder()
             .url("$cleanBase$cleanPath")
             .get()
             .header("User-Agent", CloudAuthTransport.USER_AGENT)
-            .header("apikey", anonKey)
-            .header("Authorization", "Bearer $anonKey")
+            .header("apikey", cleanKey)
+            .apply {
+                if (!cleanKey.startsWith("sb_")) {
+                    header("Authorization", "Bearer $cleanKey")
+                }
+            }
             .header("Accept", "application/json")
             .apply {
                 if (useExactCountHeader) {
