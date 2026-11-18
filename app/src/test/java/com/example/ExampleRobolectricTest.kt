@@ -1621,43 +1621,45 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `version 4 0 0 build 52 is configured and recognized as modern release stream`() {
-        assertEquals("4.0.0", BuildConfig.VERSION_NAME)
-        assertEquals(52, BuildConfig.VERSION_CODE)
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("4.0.0"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v4.0.0"))
-        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("V4.0.0"))
+    fun `version 4 1 0 build 53 is configured and recognized as modern release stream`() {
+        assertEquals("4.1.0", BuildConfig.VERSION_NAME)
+        assertEquals(53, BuildConfig.VERSION_CODE)
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("4.1.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("v4.1.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("V4.1.0"))
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion("V4.1.0", "4.0.0"))
+        org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isNewerVersion("V4.1.0", "4.1.0"))
         org.junit.Assert.assertFalse(com.example.data.remote.GithubReleaseClient.isCurrentModernStream("4.5"))
     }
 
     @Test
-    fun `github release pull and installer resolution operates with v4 0 0 conventions`() {
+    fun `github release pull and installer resolution operates with v4 1 0 conventions`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val client = com.example.data.remote.GithubReleaseClient(context)
         val apkUrl = client.resolveApkUrl(
             com.example.data.remote.GithubReleaseClient.DEFAULT_OWNER,
             com.example.data.remote.GithubReleaseClient.DEFAULT_REPO,
-            "V4.0.0"
+            "V4.1.0"
         )
         println("RESOLVED APK URL: $apkUrl")
         assertNotNull(apkUrl)
-        assertTrue(apkUrl!!.contains("V4.0.0", ignoreCase = true))
+        assertTrue(apkUrl!!.contains("V4.1.0", ignoreCase = true))
         assertTrue(apkUrl.endsWith(".apk", ignoreCase = true))
 
-        // Verify Atom feed parser picks V4.0.0 over V3.5.1 while ignoring legacy 2-part V4.5
+        // Verify Atom feed parser picks V4.1.0 over V4.0.0 while ignoring legacy 2-part V4.5
         val atomXml = """
             <feed xmlns="http://www.w3.org/2005/Atom">
               <entry>
-                <id>tag:github.com,2008:Repository/12345/V3.5.1</id>
+                <id>tag:github.com,2008:Repository/12345/V4.0.0</id>
                 <updated>2026-11-16T12:00:00Z</updated>
-                <title>LootDrop V3.5.1</title>
+                <title>LootDrop V4.0.0</title>
                 <content type="html">&lt;p&gt;Edited older release notes&lt;/p&gt;</content>
               </entry>
               <entry>
-                <id>tag:github.com,2008:Repository/12345/V4.0.0</id>
-                <updated>2026-11-17T12:00:00Z</updated>
-                <title>LootDrop V4.0.0</title>
-                <content type="html">&lt;p&gt;Performance Optimization &amp;amp; Build 52&lt;/p&gt;</content>
+                <id>tag:github.com,2008:Repository/12345/V4.1.0</id>
+                <updated>2026-11-18T12:00:00Z</updated>
+                <title>LootDrop V4.1.0</title>
+                <content type="html">&lt;p&gt;Spanish Website, Widgets &amp;amp; Build 53&lt;/p&gt;</content>
               </entry>
               <entry>
                 <id>tag:github.com,2008:Repository/12345/V4.5</id>
@@ -1667,23 +1669,23 @@ class ExampleRobolectricTest {
               </entry>
             </feed>
         """.trimIndent()
-        val parsedAtom = com.example.data.remote.GithubReleaseClient.parseAtomFeedXml(atomXml, "3.5.1")
+        val parsedAtom = com.example.data.remote.GithubReleaseClient.parseAtomFeedXml(atomXml, "4.0.0")
         assertNotNull(parsedAtom)
-        assertEquals("V4.0.0", parsedAtom!!.tag)
-        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion(parsedAtom.tag, "3.5.1"))
+        assertEquals("V4.1.0", parsedAtom!!.tag)
+        assertTrue(com.example.data.remote.GithubReleaseClient.isNewerVersion(parsedAtom.tag, "4.0.0"))
 
-        // Verify REST API parser extracts non-blank APK asset URL for V4.0.0
+        // Verify REST API parser extracts non-blank APK asset URL for V4.1.0
         val restJson = """
             {
-              "tag_name": "V4.0.0",
-              "name": "LootDrop V4.0.0",
-              "body": "Build 52 release",
-              "html_url": "https://github.com/BIGBKOG/LootDrop/releases/tag/V4.0.0",
-              "published_at": "2026-11-17T12:00:00Z",
+              "tag_name": "V4.1.0",
+              "name": "LootDrop V4.1.0",
+              "body": "Build 53 release",
+              "html_url": "https://github.com/BIGBKOG/LootDrop/releases/tag/V4.1.0",
+              "published_at": "2026-11-18T12:00:00Z",
               "assets": [
                 {
-                  "name": "Lootdrop-V4.0.0.apk",
-                  "browser_download_url": "https://github.com/BIGBKOG/LootDrop/releases/download/V4.0.0/Lootdrop-V4.0.0.apk"
+                  "name": "Lootdrop-V4.1.0.apk",
+                  "browser_download_url": "https://github.com/BIGBKOG/LootDrop/releases/download/V4.1.0/Lootdrop-V4.1.0.apk"
                 }
               ]
             }
@@ -1692,21 +1694,21 @@ class ExampleRobolectricTest {
             restJson,
             "BIGBKOG",
             "LootDrop",
-            "3.5.1"
+            "4.0.0"
         )
         assertNotNull(parsedRest)
         assertTrue(parsedRest!!.hasUpdate)
         assertTrue(parsedRest.isApkAvailable)
         assertEquals(
-            "https://github.com/BIGBKOG/LootDrop/releases/download/V4.0.0/Lootdrop-V4.0.0.apk",
+            "https://github.com/BIGBKOG/LootDrop/releases/download/V4.1.0/Lootdrop-V4.1.0.apk",
             parsedRest.downloadUrl
         )
 
         // Verify expanded_assets HTML extraction prefers release APK over debug APK
         val expandedHtml = """
             <ul>
-              <li><a href="/BIGBKOG/LootDrop/releases/download/V4.0.0/Lootdrop-V4.0.0-debug.apk">Lootdrop-V4.0.0-debug.apk</a></li>
-              <li><a href="/BIGBKOG/LootDrop/releases/download/V4.0.0/Lootdrop-V4.0.0.apk">Lootdrop-V4.0.0.apk</a></li>
+              <li><a href="/BIGBKOG/LootDrop/releases/download/V4.1.0/Lootdrop-V4.1.0-debug.apk">Lootdrop-V4.1.0-debug.apk</a></li>
+              <li><a href="/BIGBKOG/LootDrop/releases/download/V4.1.0/Lootdrop-V4.1.0.apk">Lootdrop-V4.1.0.apk</a></li>
             </ul>
         """.trimIndent()
         val extracted = com.example.data.remote.GithubReleaseClient.extractApkUrlFromExpandedAssetsHtml(
@@ -1715,7 +1717,7 @@ class ExampleRobolectricTest {
             "LootDrop"
         )
         assertEquals(
-            "https://github.com/BIGBKOG/LootDrop/releases/download/V4.0.0/Lootdrop-V4.0.0.apk",
+            "https://github.com/BIGBKOG/LootDrop/releases/download/V4.1.0/Lootdrop-V4.1.0.apk",
             extracted
         )
 
@@ -1735,7 +1737,7 @@ class ExampleRobolectricTest {
         smallZip.delete()
 
         // Verify valid ZIP APK in cacheDir passes validation and resolves a FileProvider content URI
-        val validApk = java.io.File(context.cacheDir, "lootdrop_V4.0.0.apk")
+        val validApk = java.io.File(context.cacheDir, "lootdrop_V4.1.0.apk")
         val bytes = ByteArray(60_000)
         bytes[0] = 0x50
         bytes[1] = 0x4B

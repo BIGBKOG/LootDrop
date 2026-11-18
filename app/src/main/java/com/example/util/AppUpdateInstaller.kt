@@ -87,14 +87,28 @@ object AppUpdateInstaller {
 
             Log.d(TAG, "Starting APK download from: $actualUrl (tag: $versionTag)")
 
-            val request = Request.Builder()
-                .url(actualUrl)
+            fun buildDownloadRequest(url: String) = Request.Builder()
+                .url(url)
                 .header("User-Agent", "LootDrop-Android-App")
                 .header("Accept", "application/octet-stream, application/vnd.android.package-archive, */*")
                 .build()
 
             val isEs = AppPreferences(context).appLanguage == AppLanguage.SPANISH
-            httpClient.newCall(request).execute().use { response ->
+            var initialResponse = httpClient.newCall(buildDownloadRequest(actualUrl)).execute()
+            if (initialResponse.code == 404 && versionTag.isNotBlank()) {
+                val resolvedRetry = GithubReleaseClient(context).resolveApkUrl(
+                    GithubReleaseClient.DEFAULT_OWNER,
+                    GithubReleaseClient.DEFAULT_REPO,
+                    versionTag
+                )
+                if (!resolvedRetry.isNullOrBlank() && resolvedRetry != actualUrl) {
+                    initialResponse.close()
+                    actualUrl = resolvedRetry
+                    initialResponse = httpClient.newCall(buildDownloadRequest(actualUrl)).execute()
+                }
+            }
+
+            initialResponse.use { response ->
                 if (!response.isSuccessful) {
                     return@withContext Result.failure(
                         Exception(

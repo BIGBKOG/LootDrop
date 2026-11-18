@@ -215,8 +215,9 @@ class GithubReleaseClient(private val context: Context) {
             }
         }
 
-        // Predictable fallback: Lootdrop releases follow predictable asset naming conventions
-        return "https://github.com/$owner/$repo/releases/download/V$cleanTag/Lootdrop-V$cleanTag.apk"
+        // Predictable fallback: preserve explicit v/V tag prefix if provided
+        val fallbackTag = if (tag.startsWith("v", ignoreCase = true)) tag else "V$cleanTag"
+        return "https://github.com/$owner/$repo/releases/download/$fallbackTag/Lootdrop-$fallbackTag.apk"
     }
 
     internal data class AtomReleaseCandidate(

@@ -1,5 +1,5 @@
 /**
- * LootDrop Web V4.0.0 - English & Spanish Localization Engine
+ * LootDrop Web V4.1.0 - English & Spanish Localization Engine
  * Uses explicit data-i18n attributes + helper lookups for dynamic components.
  */
 (function (global) {
@@ -42,7 +42,7 @@
       ann_tag: 'COMMUNITY',
       ann_text: 'Support LootDrop on <strong>Patreon</strong> & download the native Android APK release!',
       ann_patreon: '❤️ Support on Patreon',
-      ann_apk: '⬇️ Download V4.0.0 APK',
+      ann_apk: '⬇️ Download V4.1.0 APK',
       hero_eyebrow: '<span class="live-dot"></span> LIVE LOOT RADAR',
       hero_title: 'Claim 100% Free Games & Conquer Your Backlog',
       hero_desc: 'Real-time alerts for limited-time freebies across PC, Steam, Epic Games, GOG, PlayStation & Xbox.',
@@ -180,7 +180,7 @@
       comm_patreon_title: 'LootDrop Patreon',
       comm_patreon_sub: 'Support development & get exclusive backer perks',
       comm_gh_title: 'GitHub Releases & APK Downloads',
-      comm_gh_sub: 'Latest release: LootDrop V4.0.0 (Build 52)',
+      comm_gh_sub: 'Latest release: LootDrop V4.1.0 (Build 53)',
       comm_fdroid_title: 'F-Droid Store',
       comm_fdroid_sub: 'Loot Drop is coming to F-Droid in January!',
       comm_coming_soon: 'Coming Soon',
@@ -285,7 +285,7 @@
       notif_btn_read: 'Mark All Read',
       notif_btn_clear: 'Clear History',
       notif_empty: 'No notifications yet. You will receive alerts when new free games drop!',
-      notif_seed1_title: '🎉 LootDrop V4.0.0 Web Live!',
+      notif_seed1_title: '🎉 LootDrop V4.1.0 Web Live!',
       notif_seed1_desc: '1-to-1 Web client running directly on GitHub Pages with 19 themes.',
       notif_seed2_title: '🏆 Weekly 3×3 Challenge Ready',
       notif_seed2_desc: 'Complete challenge tiles this week to unlock exclusive themes.',
@@ -502,7 +502,7 @@
       ann_tag: 'COMUNIDAD',
       ann_text: '¡Apoya a LootDrop en <strong>Patreon</strong> y descarga la app nativa APK de Android!',
       ann_patreon: '❤️ Apoyar en Patreon',
-      ann_apk: '⬇️ Descargar APK V4.0.0',
+      ann_apk: '⬇️ Descargar APK V4.1.0',
       hero_eyebrow: '<span class="live-dot"></span> RADAR DE BOTÍN EN VIVO',
       hero_title: 'Reclama Juegos 100% Gratis y Domina tu Backlog',
       hero_desc: 'Alertas en tiempo real de regalos por tiempo limitado en PC, Steam, Epic Games, GOG, PlayStation y Xbox.',
@@ -640,7 +640,7 @@
       comm_patreon_title: 'Patreon de LootDrop',
       comm_patreon_sub: 'Apoya el desarrollo y obtén ventajas exclusivas',
       comm_gh_title: 'Lanzamientos GitHub y Descarga APK',
-      comm_gh_sub: 'Última versión: LootDrop V4.0.0 (Build 52)',
+      comm_gh_sub: 'Última versión: LootDrop V4.1.0 (Build 53)',
       comm_fdroid_title: 'Tienda F-Droid',
       comm_fdroid_sub: '¡LootDrop llegará a F-Droid en enero!',
       comm_coming_soon: 'Próximamente',
@@ -745,7 +745,7 @@
       notif_btn_read: 'Marcar Leídas',
       notif_btn_clear: 'Limpiar Historial',
       notif_empty: 'Sin notificaciones aún. ¡Recibirás avisos cuando salgan juegos gratis!',
-      notif_seed1_title: '🎉 ¡LootDrop V4.0.0 Web Activo!',
+      notif_seed1_title: '🎉 ¡LootDrop V4.1.0 Web Activo!',
       notif_seed1_desc: 'Cliente web 1 a 1 en GitHub Pages con 19 temas.',
       notif_seed2_title: '🏆 Reto Semanal 3×3 Listo',
       notif_seed2_desc: 'Completa casillas esta semana para desbloquear temas exclusivos.',
