@@ -89,6 +89,9 @@ fun CloudBackupCard(
     val cloudStatus by viewModel.cloudBackupStatus.collectAsState()
     val lastBackupTimestamp by viewModel.lastCloudBackupTimestamp.collectAsState()
     val isCloudAutoBackupEnabled by viewModel.isCloudAutoBackupEnabled.collectAsState()
+    val lastKeepAliveTimestamp by viewModel.lastSupabaseKeepAliveTimestamp.collectAsState()
+    val lastKeepAliveStatus by viewModel.lastSupabaseKeepAliveStatus.collectAsState()
+    val isPingingSupabase by viewModel.isPingingSupabase.collectAsState()
 
     var showCreateAccountDialog by remember { mutableStateOf(false) }
     var showSignInDialog by remember { mutableStateOf(false) }
@@ -707,6 +710,71 @@ fun CloudBackupCard(
                         checkedTrackColor = MaterialTheme.colorScheme.primary
                     )
                 )
+            }
+
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                thickness = 1.dp
+            )
+
+            // Supabase Keep-Alive Status & Manual Ping Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (isEs) "Latido Activo de Base Supabase" else "Supabase DB Keep-Alive",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    val subtitle = when {
+                        lastKeepAliveTimestamp > 0L -> {
+                            val formatted = SimpleDateFormat("MMM d • h:mm a", s.language.locale).format(Date(lastKeepAliveTimestamp))
+                            val statusHint = if (lastKeepAliveStatus.isNotBlank()) " ($lastKeepAliveStatus)" else ""
+                            if (isEs) "Último ping: $formatted$statusHint" else "Last ping: $formatted$statusHint"
+                        }
+                        lastKeepAliveStatus.isNotBlank() -> lastKeepAliveStatus
+                        else -> if (isEs) "Auto-ping cada 12h + GitHub cada 2 días" else "Auto-pings every 12h + GitHub every 2 days"
+                    }
+                    Text(
+                        text = subtitle,
+                        fontSize = 10.sp,
+                        color = if (lastKeepAliveTimestamp > 0L) NeonGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                OutlinedButton(
+                    onClick = { viewModel.pingSupabaseNow(context) },
+                    enabled = !isPingingSupabase,
+                    modifier = Modifier
+                        .testTag("btn_supabase_keepalive_ping")
+                        .size(width = 88.dp, height = 48.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                    border = BorderStroke(1.dp, NeonCyan.copy(alpha = 0.6f))
+                ) {
+                    if (isPingingSupabase) {
+                        CircularProgressIndicator(
+                            strokeWidth = 2.dp,
+                            color = NeonCyan,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    } else {
+                        Text(
+                            text = if (isEs) "Ping" else "Ping DB",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = NeonCyan
+                        )
+                    }
+                }
             }
         }
     }

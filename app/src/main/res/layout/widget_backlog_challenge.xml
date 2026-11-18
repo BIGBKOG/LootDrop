@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root_challenge"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:orientation="vertical"
+    android:padding="10dp">
+
+    <!-- Header Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:contentDescription="@string/widget_challenge_header"
+            android:src="@drawable/ic_widget_trophy" />
+
+        <TextView
+            android:id="@+id/widget_challenge_header_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/widget_challenge_header"
+            android:textColor="#C084FC"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_challenge_days_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/widget_pill_purple"
+            android:paddingStart="6dp"
+            android:paddingTop="1dp"
+            android:paddingEnd="6dp"
+            android:paddingBottom="1dp"
+            android:text="7d"
+            android:textColor="#E9D5FF"
+            android:textSize="9sp"
+            android:textStyle="bold" />
+
+        <ImageView
+            android:id="@+id/widget_challenge_refresh"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/widget_refresh_stats"
+            android:padding="2dp"
+            android:src="@drawable/ic_widget_refresh" />
+    </LinearLayout>
+
+    <!-- Main Split: Mini 3x3 Board on Left + Progress & Action on Right -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="6dp"
+        android:layout_weight="1"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <!-- Live 3x3 Matrix -->
+        <LinearLayout
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:orientation="vertical">
+
+            <!-- Row 0 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/widget_tile_0"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_margin="1.5dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/widget_tile_pending"
+                    android:gravity="center"
+                    android:text="🏆"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/widget_tile_1"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_margin="1.5dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/widget_tile_pending"
+                    android:gravity="center"
+                    android:text="🎮"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/widget_tile_2"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_margin="1.5dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/widget_tile_pending"
+                    android:gravity="center"
+                    android:text="⏳"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Row 1 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/widget_tile_3"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_margin="1.5dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/widget_tile_pending"
+                    android:gravity="center"
+                    android:text="📦"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/widget_tile_4"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_margin="1.5dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/widget_tile_pending"
+                    android:gravity="center"
+                    android:text="👑"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/widget_tile_5"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_margin="1.5dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/widget_tile_pending"
+                    android:gravity="center"
+                    android:text="💎"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Row 2 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/widget_tile_6"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_margin="1.5dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/widget_tile_pending"
+                    android:gravity="center"
+                    android:text="🕹️"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/widget_tile_7"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_margin="1.5dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/widget_tile_pending"
+                    android:gravity="center"
+                    android:text="⚡"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/widget_tile_8"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_margin="1.5dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/widget_tile_pending"
+                    android:gravity="center"
+                    android:text="🌟"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Stats & Button Column -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/widget_challenge_progress_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0/9"
+                    android:textColor="#00E676"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/widget_challenge_lines_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:text="• 0 Lines"
+                    android:textColor="#CAD5E8"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/widget_challenge_next_label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/widget_challenge_next_label"
+                android:textColor="#8892B0"
+                android:textSize="9sp" />
+
+            <TextView
+                android:id="@+id/widget_challenge_next_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:text="Unlock a Gold Trophy"
+                android:textColor="#FFFFFF"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:id="@+id/widget_challenge_btn_open"
+                android:layout_width="match_parent"
+                android:layout_height="28dp"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/widget_pill_purple"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/widget_challenge_open_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/widget_open_grid_btn"
+                    android:textColor="#E9D5FF"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

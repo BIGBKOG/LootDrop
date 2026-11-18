@@ -24,4 +24,30 @@
     <string name="widget_saved_in_vault_label">Saved in Vault</string>
     <string name="widget_radar_btn">RADAR</string>
     <string name="widget_vault_btn">MY VAULT</string>
+
+    <string name="widget_expiring_soon_label">Ending Soon Radar</string>
+    <string name="widget_expiring_soon_desc">Shows the next 3 free games about to expire with countdown pills and one-tap jump to Calendar</string>
+    <string name="widget_expiring_header">LootDrop • Ending Soon</string>
+    <string name="widget_open_calendar_btn">OPEN CALENDAR</string>
+    <string name="widget_expiring_empty">No drops expiring soon — tap to inspect Calendar</string>
+    <string name="widget_expiring_today">TODAY!</string>
+
+    <string name="widget_top_drops_label">Top 3 Free Drops</string>
+    <string name="widget_top_drops_desc">Ranked list of the highest-value and top-rated 100% free games live right now</string>
+    <string name="widget_top_drops_header">LootDrop • Top Freebies</string>
+    <string name="widget_explore_radar_btn">EXPLORE RADAR</string>
+    <string name="widget_top_drops_empty">Tap to fetch top freebies</string>
+
+    <string name="widget_backlog_challenge_label">3×3 Backlog Challenge</string>
+    <string name="widget_backlog_challenge_desc">Live 3×3 weekly gaming challenge board tracking completed tiles, lines, and rewards</string>
+    <string name="widget_challenge_header">Weekly 3×3 Grid</string>
+    <string name="widget_open_grid_btn">OPEN GRID</string>
+    <string name="widget_challenge_tiles_label">Tiles Done</string>
+    <string name="widget_challenge_next_label">Next Challenge</string>
+
+    <string name="widget_compact_vault_label">Compact Vault &amp; Wishlist</string>
+    <string name="widget_compact_vault_desc">Compact 2×2 tracker showing vault savings, claimed games, and saved wishlist alerts</string>
+    <string name="widget_compact_vault_header">Vault</string>
+    <string name="widget_claimed_label">Claimed</string>
+    <string name="widget_saved_label">Saved</string>
 </resources>

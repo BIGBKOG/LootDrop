@@ -24,4 +24,30 @@
     <string name="widget_saved_in_vault_label">Ahorrado en Bóveda</string>
     <string name="widget_radar_btn">RADAR</string>
     <string name="widget_vault_btn">MI BÓVEDA</string>
+
+    <string name="widget_expiring_soon_label">Radar Por Expirar</string>
+    <string name="widget_expiring_soon_desc">Muestra los próximos 3 juegos gratis por terminar con cuenta regresiva y acceso al Calendario</string>
+    <string name="widget_expiring_header">LootDrop • Por Expirar</string>
+    <string name="widget_open_calendar_btn">ABRIR CALENDARIO</string>
+    <string name="widget_expiring_empty">Sin ofertas por expirar — toca para ver Calendario</string>
+    <string name="widget_expiring_today">¡HOY!</string>
+
+    <string name="widget_top_drops_label">Top 3 Juegos Gratis</string>
+    <string name="widget_top_drops_desc">Lista con los juegos 100% gratis mejor valorados y de mayor precio disponibles hoy</string>
+    <string name="widget_top_drops_header">LootDrop • Top Gratis</string>
+    <string name="widget_explore_radar_btn">EXPLORAR RADAR</string>
+    <string name="widget_top_drops_empty">Toca para buscar juegos gratis</string>
+
+    <string name="widget_backlog_challenge_label">Reto Backlog 3×3</string>
+    <string name="widget_backlog_challenge_desc">Tablero semanal 3×3 en vivo con casillas completadas, líneas y recompensas</string>
+    <string name="widget_challenge_header">Tablero 3×3</string>
+    <string name="widget_open_grid_btn">VER TABLERO</string>
+    <string name="widget_challenge_tiles_label">Casillas</string>
+    <string name="widget_challenge_next_label">Siguiente Reto</string>
+
+    <string name="widget_compact_vault_label">Bóveda Compacta</string>
+    <string name="widget_compact_vault_desc">Widget compacto 2×2 con ahorros, juegos reclamados y favoritos guardados</string>
+    <string name="widget_compact_vault_header">Bóveda</string>
+    <string name="widget_claimed_label">Reclamados</string>
+    <string name="widget_saved_label">Guardados</string>
 </resources>

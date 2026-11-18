@@ -102,6 +102,62 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/radar_stats_widget_info" />
         </receiver>
+
+        <!-- Ending Soon Radar 4x2 Home Screen Widget -->
+        <receiver
+            android:name=".widget.ExpiringSoonWidgetProvider"
+            android:label="@string/widget_expiring_soon_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.example.widget.ACTION_REFRESH_WIDGETS" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/expiring_soon_widget_info" />
+        </receiver>
+
+        <!-- Top 3 Free Drops 4x2 Home Screen Widget -->
+        <receiver
+            android:name=".widget.TopDropsListWidgetProvider"
+            android:label="@string/widget_top_drops_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.example.widget.ACTION_REFRESH_WIDGETS" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/top_drops_widget_info" />
+        </receiver>
+
+        <!-- Weekly 3x3 Backlog Challenge 3x2 Home Screen Widget -->
+        <receiver
+            android:name=".widget.BacklogChallengeWidgetProvider"
+            android:label="@string/widget_backlog_challenge_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.example.widget.ACTION_REFRESH_WIDGETS" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/backlog_challenge_widget_info" />
+        </receiver>
+
+        <!-- Compact 2x2 Vault & Wishlist Home Screen Widget -->
+        <receiver
+            android:name=".widget.CompactVaultWidgetProvider"
+            android:label="@string/widget_compact_vault_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.example.widget.ACTION_REFRESH_WIDGETS" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/compact_vault_widget_info" />
+        </receiver>
     </application>
 
 </manifest>

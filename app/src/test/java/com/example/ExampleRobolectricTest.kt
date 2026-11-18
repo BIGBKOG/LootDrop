@@ -1009,7 +1009,9 @@ class ExampleRobolectricTest {
 
         val views = android.widget.RemoteViews(context.packageName, R.layout.widget_radar_stats)
         com.example.widget.WidgetUpdateHelper.populateRadarStats(context, views, 102)
-        assertNotNull(views)
+        val inflated = views.apply(context, android.widget.FrameLayout(context))
+        assertNotNull(inflated)
+        assertEquals("$29.99", inflated.findViewById<android.widget.TextView>(R.id.widget_stat_saved_dollars).text.toString())
     }
 
     @Test
@@ -1027,6 +1029,163 @@ class ExampleRobolectricTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val views = com.example.widget.WidgetUpdateHelper.buildLatestDropRemoteViews(context, 201)
         assertNotNull(views)
+    }
+
+    @Test
+    fun `expiring soon widget populates urgent drops sorted by nearest expiration`() = kotlinx.coroutines.runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val prefs = AppPreferences(context)
+        prefs.appLanguage = com.example.i18n.AppLanguage.ENGLISH
+        val db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
+        try {
+            val today = java.time.LocalDate.now()
+            val base = GiveawayEntity(
+                id = 1,
+                title = "Urgent Game Today",
+                worth = "$19.99",
+                numericWorth = 19.99,
+                thumbnail = "",
+                image = "",
+                description = "",
+                instructions = "",
+                openGiveawayUrl = "https://store.steampowered.com",
+                publishedDate = today.toString(),
+                type = "Game",
+                platforms = "Steam, PC",
+                endDate = today.toString(),
+                users = 500,
+                status = "Active"
+            )
+            db.giveawayDao().insertAll(
+                listOf(
+                    base,
+                    base.copy(id = 2, title = "Tomorrow Drop", endDate = today.plusDays(1).toString()),
+                    base.copy(id = 3, title = "Three Days Drop", endDate = today.plusDays(3).toString()),
+                    base.copy(id = 4, title = "Already Past", endDate = today.minusDays(2).toString())
+                )
+            )
+
+            val views = android.widget.RemoteViews(context.packageName, R.layout.widget_expiring_soon)
+            com.example.widget.WidgetUpdateHelper.populateExpiringSoon(context, views, 301, db)
+
+            val container = android.widget.FrameLayout(context)
+            val inflated = views.apply(context, container)
+
+            assertEquals("3", inflated.findViewById<android.widget.TextView>(R.id.widget_exp_count_badge).text.toString())
+            assertEquals("Urgent Game Today", inflated.findViewById<android.widget.TextView>(R.id.widget_exp_title_1).text.toString())
+            assertEquals("TODAY!", inflated.findViewById<android.widget.TextView>(R.id.widget_exp_time_1).text.toString())
+            assertEquals("Tomorrow Drop", inflated.findViewById<android.widget.TextView>(R.id.widget_exp_title_2).text.toString())
+            assertEquals("1d", inflated.findViewById<android.widget.TextView>(R.id.widget_exp_time_2).text.toString())
+            assertEquals("Three Days Drop", inflated.findViewById<android.widget.TextView>(R.id.widget_exp_title_3).text.toString())
+            assertEquals(android.view.View.GONE, inflated.findViewById<android.view.View>(R.id.widget_exp_empty).visibility)
+        } finally {
+            db.close()
+        }
+    }
+
+    @Test
+    fun `top 3 free drops widget ranks full games and renders scores and worth`() = kotlinx.coroutines.runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        AppPreferences(context).appLanguage = com.example.i18n.AppLanguage.ENGLISH
+        val db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
+        try {
+            val sample = GiveawayEntity(
+                id = 51,
+                title = "Portal 2",
+                worth = "$19.99",
+                numericWorth = 19.99,
+                thumbnail = "",
+                image = "",
+                description = "Puzzle masterpiece",
+                instructions = "",
+                openGiveawayUrl = "https://store.steampowered.com",
+                publishedDate = "2026-11-17",
+                type = "Game",
+                platforms = "Steam",
+                endDate = "N/A",
+                users = 9000,
+                status = "Active"
+            )
+            db.giveawayDao().insertAll(
+                listOf(
+                    sample.copy(id = 51, title = "Dlc Skin Pack", type = "DLC", numericWorth = 49.99, worth = "$49.99"),
+                    sample.copy(id = 52, title = "Half-Life 2", type = "Game", numericWorth = 9.99, worth = "$9.99"),
+                    sample.copy(id = 53, title = "Indie Gem", type = "Game", numericWorth = 14.99, worth = "$14.99")
+                )
+            )
+
+            val views = android.widget.RemoteViews(context.packageName, R.layout.widget_top_drops)
+            com.example.widget.WidgetUpdateHelper.populateTopDropsList(context, views, 302, db)
+
+            val inflated = views.apply(context, android.widget.FrameLayout(context))
+            assertEquals("3 FREE", inflated.findViewById<android.widget.TextView>(R.id.widget_top_count_pill).text.toString())
+            assertEquals("Half-Life 2", inflated.findViewById<android.widget.TextView>(R.id.widget_top_title_1).text.toString())
+            assertEquals(android.view.View.VISIBLE, inflated.findViewById<android.view.View>(R.id.widget_top_row_3).visibility)
+        } finally {
+            db.close()
+        }
+    }
+
+    @Test
+    fun `backlog challenge widget renders 3x3 matrix and progress counter`() = kotlinx.coroutines.runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val prefs = AppPreferences(context)
+        prefs.appLanguage = com.example.i18n.AppLanguage.ENGLISH
+        val weekKey = com.example.util.BacklogChallengeManager.getCurrentWeekKey()
+        prefs.saveBacklogChallengeProgress(weekKey, "{}")
+        assertTrue(com.example.util.BacklogChallengeManager.toggleManualOverride(prefs, weekKey, 0))
+        val db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
+        try {
+            val views = android.widget.RemoteViews(context.packageName, R.layout.widget_backlog_challenge)
+            com.example.widget.WidgetUpdateHelper.populateBacklogChallenge(context, views, 303, db)
+
+            val inflated = views.apply(context, android.widget.FrameLayout(context))
+            assertEquals("✓", inflated.findViewById<android.widget.TextView>(R.id.widget_tile_0).text.toString())
+            assertEquals("1/9", inflated.findViewById<android.widget.TextView>(R.id.widget_challenge_progress_text).text.toString())
+        } finally {
+            db.close()
+        }
+    }
+
+    @Test
+    fun `compact vault widget renders claimed savings and spanish localization`() = kotlinx.coroutines.runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val prefs = AppPreferences(context)
+        prefs.appLanguage = com.example.i18n.AppLanguage.SPANISH
+        val db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
+        try {
+            val claimed = GiveawayEntity(
+                id = 81,
+                title = "Control",
+                worth = "$39.99",
+                numericWorth = 39.99,
+                thumbnail = "",
+                image = "",
+                description = "",
+                instructions = "",
+                openGiveawayUrl = "https://store.epicgames.com",
+                publishedDate = "2026-11-17",
+                type = "Game",
+                platforms = "Epic Games",
+                endDate = "N/A",
+                users = 3000,
+                status = "Active",
+                isClaimed = true
+            )
+            val saved = claimed.copy(id = 82, title = "Saved Drop", isClaimed = false, isBookmarked = true, numericWorth = 9.99)
+            db.giveawayDao().insertAll(listOf(claimed, saved))
+
+            val views = android.widget.RemoteViews(context.packageName, R.layout.widget_compact_vault)
+            com.example.widget.WidgetUpdateHelper.populateCompactVault(context, views, 304, db)
+
+            val inflated = views.apply(context, android.widget.FrameLayout(context))
+            assertEquals("$39.99", inflated.findViewById<android.widget.TextView>(R.id.widget_compact_saved_dollars).text.toString())
+            assertEquals("1 Reclamados • 1 Guardados", inflated.findViewById<android.widget.TextView>(R.id.widget_compact_counts_line).text.toString())
+            assertEquals("MI BÓVEDA", inflated.findViewById<android.widget.TextView>(R.id.widget_compact_vault_text).text.toString())
+        } finally {
+            prefs.appLanguage = com.example.i18n.AppLanguage.ENGLISH
+            db.close()
+        }
     }
 
     @Test
@@ -2984,6 +3143,7 @@ class ExampleRobolectricTest {
         val db = AppDatabase.getInstance(activity)
         assertNotNull(db)
         assertEquals("com.example.data.local.AppDatabase_Impl", db.javaClass.name)
+        controller.pause().stop().destroy()
     }
 
     @Test

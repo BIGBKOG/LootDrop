@@ -386,6 +386,8 @@ class AppPreferences(context: Context) {
         private const val KEY_CUSTOM_FONT_NAME = "key_custom_font_name"
         private const val KEY_APP_LANGUAGE = "key_app_language"
         private const val KEY_HAS_SELECTED_INITIAL_LANGUAGE = "key_has_selected_initial_language"
+        private const val KEY_LAST_SUPABASE_KEEPALIVE_TS = "key_last_supabase_keepalive_ts"
+        private const val KEY_LAST_SUPABASE_KEEPALIVE_STATUS = "key_last_supabase_keepalive_status"
     }
 
     var themeMode: ThemeMode
@@ -821,4 +823,12 @@ class AppPreferences(context: Context) {
     var hasSelectedInitialLanguage: Boolean
         get() = prefs.getBoolean(KEY_HAS_SELECTED_INITIAL_LANGUAGE, false)
         set(value) = prefs.edit().putBoolean(KEY_HAS_SELECTED_INITIAL_LANGUAGE, value).apply()
+
+    var lastSupabaseKeepAliveTimestamp: Long
+        get() = prefs.getLong(KEY_LAST_SUPABASE_KEEPALIVE_TS, 0L)
+        set(value) = prefs.edit().putLong(KEY_LAST_SUPABASE_KEEPALIVE_TS, value).apply()
+
+    var lastSupabaseKeepAliveStatus: String
+        get() = prefs.getString(KEY_LAST_SUPABASE_KEEPALIVE_STATUS, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_LAST_SUPABASE_KEEPALIVE_STATUS, value).apply()
 }

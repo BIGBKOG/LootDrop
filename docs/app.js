@@ -50,8 +50,18 @@ const STORAGE_KEYS = {
   DLC_CACHE: 'lootdrop_steam_dlc_cache',
   DLC_DISMISSED: 'lootdrop_dismissed_dlcs',
   NOTIFICATIONS: 'lootdrop_notifications',
-  ALERT_SETTINGS: 'lootdrop_alert_settings'
+  ALERT_SETTINGS: 'lootdrop_alert_settings',
+  SUPA_KEEPALIVE_TS: 'lootdrop_supa_keepalive_ts'
 };
+
+const t = (key, params) => (window.LootDropI18n ? window.LootDropI18n.t(key, params) : key);
+const isEs = () => window.LootDropI18n?.isSpanish() === true;
+
+const DEFAULT_PROFILE_NAMES = new Set(['Vault Hunter', 'Cazador de Bóveda']);
+const DEFAULT_PROFILE_BIOS = new Set([
+  'Clearing the backlog, one drop at a time.',
+  'Limpiando el backlog, un drop a la vez.'
+]);
 
 function openDealBrowser(url, title = 'Giveaway Deal') {
   if (!url || url === '#' || url === 'about:blank') return;
@@ -181,10 +191,10 @@ const CHALLENGE_BLUEPRINTS = [
 let allGiveaways = [];
 let vaultItems = JSON.parse(localStorage.getItem(STORAGE_KEYS.VAULT) || '[]');
 let userProfile = JSON.parse(localStorage.getItem(STORAGE_KEYS.PROFILE) || JSON.stringify({
-  name: 'Vault Hunter',
-  bio: 'Clearing the backlog, one drop at a time.',
+  name: t('default_profile_name'),
+  bio: t('default_profile_bio'),
   avatar: '🎮',
-  title: 'Backlog Slayer'
+  title: t('default_profile_title')
 }));
 let alertSettings = JSON.parse(localStorage.getItem(STORAGE_KEYS.ALERT_SETTINGS) || JSON.stringify({
   master: true,
@@ -215,6 +225,7 @@ let audioCtx = null;
 // Initialization
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
+  initLanguageControls();
   applyThemeAndBg(currentThemeId, currentBgMode);
   initNavigation();
   initWeekKeys();
@@ -229,7 +240,99 @@ document.addEventListener('DOMContentLoaded', () => {
   fetchPublicReviewsFromR2();
   initReviewsModal();
   initSteamAndDlcFeatures();
+  pingSupabaseKeepAlive();
 });
+
+function initLanguageControls() {
+  if (!window.LootDropI18n) return;
+  window.LootDropI18n.applyStaticDomTranslations();
+  syncLanguagePickerSelection();
+
+  document.getElementById('btn-lang-toggle')?.addEventListener('click', () => {
+    const next = window.LootDropI18n.getLanguage() === 'es' ? 'en' : 'es';
+    switchAppLanguage(next, true);
+  });
+
+  document.getElementById('btn-set-lang-en')?.addEventListener('click', () => {
+    switchAppLanguage('en', true);
+  });
+  document.getElementById('btn-set-lang-es')?.addEventListener('click', () => {
+    switchAppLanguage('es', true);
+  });
+
+  document.getElementById('btn-pick-lang-en')?.addEventListener('click', () => {
+    switchAppLanguage('en', true);
+    document.getElementById('modal-language-picker')?.classList.remove('open');
+  });
+  document.getElementById('btn-pick-lang-es')?.addEventListener('click', () => {
+    switchAppLanguage('es', true);
+    document.getElementById('modal-language-picker')?.classList.remove('open');
+  });
+
+  const langModal = document.getElementById('modal-language-picker');
+  document.getElementById('close-lang-modal-btn')?.addEventListener('click', () => {
+    if (!window.LootDropI18n.hasExplicitLanguageSelection()) {
+      window.LootDropI18n.setLanguage(window.LootDropI18n.getLanguage(), true);
+    }
+  });
+  langModal?.addEventListener('click', (e) => {
+    if (e.target === langModal && !window.LootDropI18n.hasExplicitLanguageSelection()) {
+      window.LootDropI18n.setLanguage(window.LootDropI18n.getLanguage(), true);
+    }
+  });
+
+  if (!window.LootDropI18n.hasExplicitLanguageSelection()) {
+    langModal?.classList.add('open');
+  }
+}
+
+function syncLanguagePickerSelection() {
+  if (!window.LootDropI18n) return;
+  const lang = window.LootDropI18n.getLanguage();
+  document.getElementById('btn-pick-lang-en')?.classList.toggle('active', lang === 'en');
+  document.getElementById('btn-pick-lang-es')?.classList.toggle('active', lang === 'es');
+}
+
+function switchAppLanguage(lang, showToastMsg = true) {
+  if (!window.LootDropI18n) return;
+  window.LootDropI18n.setLanguage(lang, true);
+  syncLanguagePickerSelection();
+
+  renderHome();
+  renderRadar();
+  renderCalendar();
+  renderVault();
+  renderNotificationsList();
+  renderMiniChallengeWidget();
+  updateStats();
+  renderProfile();
+  updateSettingsAppRatingUI();
+  if (typeof refreshSteamStatusHint === 'function') refreshSteamStatusHint();
+  if (typeof syncReviewModalLanguage === 'function') syncReviewModalLanguage();
+
+  if (document.getElementById('modal-challenge')?.classList.contains('open')) {
+    renderChallengeModal();
+  }
+  if (document.getElementById('modal-giveaway-detail')?.classList.contains('open') && selectedGiveaway) {
+    openGiveawayDetail(selectedGiveaway);
+  }
+  if (document.getElementById('modal-dlc-hub')?.classList.contains('open')) {
+    const gameSelect = document.getElementById('dlc-hub-game-select');
+    const firstOpt = gameSelect?.querySelector('option[value="all"]');
+    if (firstOpt) firstOpt.textContent = t('dlc_select_all_count', { count: steamGamesList.length });
+    updateDlcHubHeader();
+    updateDlcHubStatusUI();
+    renderDlcHubList();
+  }
+
+  if (steamGamesList.length > 0 && !isDlcCacheFresh()) {
+    refreshWebSteamDlcRecommendations(false);
+  }
+
+  if (showToastMsg) {
+    showToast(t(lang === 'es' ? 'toast_lang_es' : 'toast_lang_en'), '🌐');
+  }
+}
 
 // ==========================================
 // Audio Synthesizer (Gaming Chime)
@@ -290,11 +393,11 @@ async function requestNotificationPermission() {
   if ('Notification' in window) {
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
-      showToast('Browser drop alerts enabled!', '🔔');
+      showToast(t('toast_alerts_on'), '🔔');
       playGamerChime();
       document.getElementById('perm-banner').style.display = 'none';
     } else {
-      showToast('Browser notifications were declined', 'ℹ️');
+      showToast(t('toast_alerts_off'), 'ℹ️');
       document.getElementById('perm-banner').style.display = 'none';
     }
   }
@@ -335,12 +438,18 @@ function triggerWebsiteAlert(title, message, url = '#', icon = '🎁') {
   renderNotificationsList();
 }
 
+const SEED_NOTIF_KEYS = {
+  1: { title: 'notif_seed1_title', desc: 'notif_seed1_desc' },
+  2: { title: 'notif_seed2_title', desc: 'notif_seed2_desc' },
+  3: { title: 'notif_seed3_title', desc: 'notif_seed3_desc' }
+};
+
 function initNotificationsList() {
   if (notificationsList.length === 0) {
     notificationsList = [
-      { id: 1, title: '🎉 LootDrop V4.0.0 Web Live!', desc: '1-to-1 Web client running directly on GitHub Pages with 19 themes.', timestamp: Date.now(), unread: true },
-      { id: 2, title: '🏆 Weekly 3×3 Challenge Ready', desc: 'Complete challenge tiles this week to unlock exclusive themes.', timestamp: Date.now() - 3600000, unread: true },
-      { id: 3, title: '❤️ Support on Patreon', desc: 'Help sustain servers and track upcoming F-Droid release.', timestamp: Date.now() - 7200000, unread: false }
+      { id: 1, title: t('notif_seed1_title'), desc: t('notif_seed1_desc'), timestamp: Date.now(), unread: true },
+      { id: 2, title: t('notif_seed2_title'), desc: t('notif_seed2_desc'), timestamp: Date.now() - 3600000, unread: true },
+      { id: 3, title: t('notif_seed3_title'), desc: t('notif_seed3_desc'), timestamp: Date.now() - 7200000, unread: false }
     ];
     localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notificationsList));
   }
@@ -362,22 +471,27 @@ function renderNotificationsList() {
     container.innerHTML = `
       <div style="padding: 32px; text-align: center; color: var(--color-text-muted);">
         <span style="font-size: 32px; display: block; margin-bottom: 8px;">📭</span>
-        <p>No notifications yet. You will receive alerts when new free games drop!</p>
+        <p>${escapeHtml(t('notif_empty'))}</p>
       </div>
     `;
     return;
   }
 
-  container.innerHTML = notificationsList.map(n => `
-    <div class="notif-item ${n.unread ? 'unread' : ''}" data-id="${n.id}">
-      <span style="font-size: 22px;">🎁</span>
-      <div class="notif-text">
-        <strong>${escapeHtml(n.title)}</strong>
-        <span>${escapeHtml(n.desc)}</span>
+  container.innerHTML = notificationsList.map(n => {
+    const seedKey = SEED_NOTIF_KEYS[n.id];
+    const displayTitle = seedKey ? t(seedKey.title) : n.title;
+    const displayDesc = seedKey ? t(seedKey.desc) : n.desc;
+    return `
+      <div class="notif-item ${n.unread ? 'unread' : ''}" data-id="${n.id}">
+        <span style="font-size: 22px;">🎁</span>
+        <div class="notif-text">
+          <strong>${escapeHtml(displayTitle)}</strong>
+          <span>${escapeHtml(displayDesc)}</span>
+        </div>
+        ${n.unread ? '<span class="notif-dot"></span>' : ''}
       </div>
-      ${n.unread ? '<span class="notif-dot"></span>' : ''}
-    </div>
-  `).join('');
+    `;
+  }).join('');
 
   container.querySelectorAll('.notif-item').forEach(item => {
     item.addEventListener('click', () => {
@@ -446,7 +560,7 @@ function renderThemeCatalog(category = 'all') {
       applyThemeAndBg(id, currentBgMode);
       renderThemeCatalog(category);
       playGamerChime();
-      showToast(`Applied ${card.querySelector('.theme-title').textContent} theme!`, '🎨');
+      showToast(t('toast_theme_applied', { title: card.querySelector('.theme-title').textContent }), '🎨');
     });
   });
 }
@@ -614,15 +728,15 @@ function renderRadar() {
   }
 
   if (countLabel) {
-    countLabel.textContent = `Showing ${filtered.length} free giveaways found`;
+    countLabel.textContent = t('radar_showing', { count: filtered.length });
   }
 
   if (filtered.length === 0) {
     container.innerHTML = `
       <div style="grid-column: 1 / -1; padding: 40px; text-align: center; color: var(--color-text-muted);">
         <span style="font-size: 36px; display: block; margin-bottom: 10px;">🔍</span>
-        <h3>No Giveaways Matched</h3>
-        <p>Try broadening your platform or type filters, or search for a different game.</p>
+        <h3>${escapeHtml(t('radar_empty_title'))}</h3>
+        <p>${escapeHtml(t('radar_empty_desc'))}</p>
       </div>
     `;
     return;
@@ -682,10 +796,10 @@ function renderCalendar() {
   };
 
   container.innerHTML = 
-    renderGroup('⚠️ Ending Within 24 Hours', endingToday, '#EF4444') +
-    renderGroup('⏳ Ending This Week', endingThisWeek, '#F59E0B') +
-    renderGroup('📅 Ending Later This Month', endingLater, '#3B82F6') +
-    renderGroup('♾️ Ongoing & Long-Term Freebies', ongoing, '#10B981');
+    renderGroup(t('cal_ending_24h'), endingToday, '#EF4444') +
+    renderGroup(t('cal_ending_week'), endingThisWeek, '#F59E0B') +
+    renderGroup(t('cal_ending_month'), endingLater, '#3B82F6') +
+    renderGroup(t('cal_ongoing'), ongoing, '#10B981');
 
   attachCardEvents();
 }
@@ -720,11 +834,11 @@ function renderVault() {
       container.innerHTML = `
         <div style="grid-column: 1 / -1; padding: 48px; text-align: center; background: var(--color-surface); border: 1px dashed var(--color-border); border-radius: var(--radius-xl);">
           <span style="font-size: 40px; display: block; margin-bottom: 12px;">🎮</span>
-          <h3>No Synced Steam Games Yet</h3>
+          <h3>${escapeHtml(t('steam_empty_title'))}</h3>
           <p style="color: var(--color-text-muted); font-size: 14px; margin-top: 6px; margin-bottom: 16px;">
-            Link your public Steam 64 ID or Vanity URL in Settings to browse your Steam games and find matching DLCs!
+            ${escapeHtml(t('steam_empty_desc'))}
           </p>
-          <button class="btn btn-primary" onclick="switchTab('pane-settings')">Link Steam Account ➔</button>
+          <button class="btn btn-primary" onclick="switchTab('pane-settings')">${escapeHtml(t('steam_empty_btn'))}</button>
         </div>
       `;
       return;
@@ -743,16 +857,16 @@ function renderVault() {
             <div class="card-top-badges">
               <span class="badge-platform">🎮 STEAM</span>
             </div>
-            <div class="badge-price">${sg.playtimeMinutes > 0 ? `${hours}h played` : 'Unplayed'}</div>
+            <div class="badge-price">${sg.playtimeMinutes > 0 ? escapeHtml(t('steam_hours_played', { hours })) : escapeHtml(t('steam_unplayed'))}</div>
           </div>
           <div class="giveaway-card-body">
             <h3 class="giveaway-card-title">${escapeHtml(sg.name)}</h3>
             <div class="card-actions-row">
               <button class="btn btn-sm btn-dlc open-game-dlcs-btn" data-appid="${sg.appId}" style="flex:1;">
-                🧩 DLCs
+                ${escapeHtml(t('steam_dlcs_btn'))}
               </button>
               <a href="${storeUrl}" target="_blank" rel="noopener" class="btn btn-sm btn-outline" onclick="event.stopPropagation()">
-                Store ↗
+                ${escapeHtml(t('steam_store_btn'))}
               </a>
             </div>
           </div>
@@ -781,14 +895,23 @@ function renderVault() {
     container.innerHTML = `
       <div style="grid-column: 1 / -1; padding: 48px; text-align: center; background: var(--color-surface); border: 1px dashed var(--color-border); border-radius: var(--radius-xl);">
         <span style="font-size: 40px; display: block; margin-bottom: 12px;">💎</span>
-        <h3>Your Vault is Ready</h3>
+        <h3>${escapeHtml(t('vault_empty_title'))}</h3>
         <p style="color: var(--color-text-muted); font-size: 14px; margin-top: 6px;">
-          Bookmark free giveaways from the Radar or sync your Steam 64 ID to track backlog & discover DLCs!
+          ${escapeHtml(t('vault_empty_desc'))}
         </p>
       </div>
     `;
     return;
   }
+
+  const statusBadgeLabel = (st) => {
+    switch (st) {
+      case 'playing': return isEs() ? 'JUGANDO' : 'PLAYING';
+      case 'beaten': return isEs() ? 'PASADO' : 'BEATEN';
+      case 'dropped': return isEs() ? 'PAUSADO' : 'PAUSED';
+      default: return isEs() ? 'PENDIENTE' : 'BACKLOG';
+    }
+  };
 
   container.innerHTML = displayed.map(item => `
     <div class="giveaway-card" data-id="${item.id}">
@@ -796,26 +919,26 @@ function renderVault() {
         <img src="${item.thumbnail || item.image || ''}" alt="${escapeHtml(item.title)}" class="giveaway-card-thumb" loading="lazy">
         <div class="card-top-badges">
           <span class="badge-platform">${escapeHtml(item.platforms || 'PC')}</span>
-          <span class="badge-type">${(item.playStatus || 'BACKLOG').toUpperCase()}</span>
+          <span class="badge-type">${escapeHtml(statusBadgeLabel(item.playStatus || 'backlog'))}</span>
         </div>
-        <div class="badge-price">${escapeHtml(item.worth || 'FREE')}</div>
+        <div class="badge-price">${escapeHtml(item.worth && item.worth !== 'N/A' ? item.worth : t('card_free'))}</div>
       </div>
       <div class="giveaway-card-body">
         <h3 class="giveaway-card-title">${escapeHtml(item.title)}</h3>
         <div class="giveaway-card-meta">
-          <span>Status:</span>
+          <span>${escapeHtml(t('card_status_lbl'))}</span>
           <select class="custom-select vault-status-select" data-id="${item.id}" onclick="event.stopPropagation()">
-            <option value="backlog" ${item.playStatus === 'backlog' ? 'selected' : ''}>⏳ Backlog</option>
-            <option value="playing" ${item.playStatus === 'playing' ? 'selected' : ''}>🎮 Playing</option>
-            <option value="beaten" ${item.playStatus === 'beaten' ? 'selected' : ''}>👑 Beaten</option>
-            <option value="dropped" ${item.playStatus === 'dropped' ? 'selected' : ''}>⏸️ Paused</option>
+            <option value="backlog" ${item.playStatus === 'backlog' ? 'selected' : ''}>${escapeHtml(t('vault_status_backlog'))}</option>
+            <option value="playing" ${item.playStatus === 'playing' ? 'selected' : ''}>${escapeHtml(t('vault_status_playing'))}</option>
+            <option value="beaten" ${item.playStatus === 'beaten' ? 'selected' : ''}>${escapeHtml(t('vault_status_beaten'))}</option>
+            <option value="dropped" ${item.playStatus === 'dropped' ? 'selected' : ''}>${escapeHtml(t('vault_status_paused'))}</option>
           </select>
         </div>
         <div class="card-actions-row">
           <a href="${item.open_giveaway_url || '#'}" target="_blank" rel="noopener" class="btn btn-sm btn-primary claim-deal-btn" data-url="${item.open_giveaway_url || ''}" data-title="${escapeHtml(item.title)}" style="flex:1;" onclick="event.stopPropagation()">
-            Launch / Claim ↗
+            ${escapeHtml(t('card_launch_claim'))}
           </a>
-          <button class="btn-vault-icon remove-vault-btn" data-id="${item.id}" title="Remove from Vault" onclick="event.stopPropagation()">
+          <button class="btn-vault-icon remove-vault-btn" data-id="${item.id}" title="${escapeHtml(t('card_remove_vault_title'))}" onclick="event.stopPropagation()">
             🗑️
           </button>
         </div>
@@ -832,7 +955,9 @@ function renderVault() {
         target.playStatus = newStatus;
         localStorage.setItem(STORAGE_KEYS.VAULT, JSON.stringify(vaultItems));
         playGamerChime();
-        showToast(`Updated status to ${newStatus.toUpperCase()}`, '🎮');
+        const statusLabel = e.target.options[e.target.selectedIndex]?.textContent || statusBadgeLabel(newStatus);
+        showToast(t('toast_status_updated', { status: statusLabel }), '🎮');
+        renderVault();
         updateStats();
       }
     });
@@ -843,7 +968,7 @@ function renderVault() {
       const id = parseInt(btn.dataset.id, 10);
       vaultItems = vaultItems.filter(v => v.id !== id);
       localStorage.setItem(STORAGE_KEYS.VAULT, JSON.stringify(vaultItems));
-      showToast('Removed game from Vault', '🗑️');
+      showToast(t('toast_removed_vault'), '🗑️');
       renderVault();
       updateStats();
     });
@@ -858,7 +983,8 @@ function renderVault() {
 function createGiveawayCardHtml(g, isFeatured = false) {
   const isSaved = vaultItems.some(v => v.id === g.id);
   const platformsStr = g.platforms || 'PC';
-  const priceStr = g.worth && g.worth !== 'N/A' ? `${g.worth} FREE` : 'FREE';
+  const freeLbl = t('card_free');
+  const priceStr = g.worth && g.worth !== 'N/A' ? `${g.worth} ${freeLbl}` : freeLbl;
 
   return `
     <div class="giveaway-card ${isFeatured ? 'featured' : ''}" data-id="${g.id}">
@@ -874,13 +1000,13 @@ function createGiveawayCardHtml(g, isFeatured = false) {
         <h3 class="giveaway-card-title">${escapeHtml(g.title)}</h3>
         <div class="giveaway-card-meta">
           <span>${formatExpiration(g.end_date)}</span>
-          <span>👥 ${g.users ? `${g.users} claims` : 'Active'}</span>
+          <span>👥 ${g.users ? `${g.users} ${escapeHtml(t('card_claims_suffix'))}` : escapeHtml(t('card_active'))}</span>
         </div>
         <div class="card-actions-row">
           <a href="${g.open_giveaway_url || '#'}" target="_blank" rel="noopener" class="btn btn-sm btn-primary claim-deal-btn" data-url="${g.open_giveaway_url || ''}" data-title="${escapeHtml(g.title)}" style="flex:1;" onclick="event.stopPropagation()">
-            Claim Free ↗
+            ${escapeHtml(t('card_claim_free'))}
           </a>
-          <button class="btn-vault-icon ${isSaved ? 'active' : ''}" data-id="${g.id}" title="${isSaved ? 'In Vault' : 'Add to Vault'}" onclick="event.stopPropagation(); toggleVaultItem(${g.id});">
+          <button class="btn-vault-icon ${isSaved ? 'active' : ''}" data-id="${g.id}" title="${escapeHtml(isSaved ? t('card_in_vault_title') : t('card_add_vault_title'))}" onclick="event.stopPropagation(); toggleVaultItem(${g.id});">
             ${isSaved ? '💎' : '📥'}
           </button>
         </div>
@@ -914,7 +1040,7 @@ function toggleVaultItem(id) {
   const existingIndex = vaultItems.findIndex(v => v.id === id);
   if (existingIndex >= 0) {
     vaultItems.splice(existingIndex, 1);
-    showToast('Removed from your Vault', '📥');
+    showToast(t('toast_removed_vault_short'), '📥');
   } else {
     vaultItems.push({
       ...item,
@@ -922,7 +1048,7 @@ function toggleVaultItem(id) {
       addedAt: Date.now()
     });
     playGamerChime();
-    showToast('Added to your Vault!', '💎');
+    showToast(t('toast_added_vault'), '💎');
   }
 
   localStorage.setItem(STORAGE_KEYS.VAULT, JSON.stringify(vaultItems));
@@ -939,13 +1065,14 @@ function openGiveawayDetail(g) {
   const modal = document.getElementById('modal-giveaway-detail');
   if (!modal) return;
 
+  const freeLbl = t('card_free');
   document.getElementById('detail-banner-img').src = g.image || g.thumbnail || '';
   document.getElementById('detail-title').textContent = g.title || '';
   document.getElementById('detail-platform').textContent = g.platforms || 'PC';
   document.getElementById('detail-type').textContent = (g.type || 'GAME').toUpperCase();
-  document.getElementById('detail-worth').textContent = g.worth && g.worth !== 'N/A' ? `${g.worth} FREE` : 'FREE';
+  document.getElementById('detail-worth').textContent = g.worth && g.worth !== 'N/A' ? `${g.worth} ${freeLbl}` : freeLbl;
   document.getElementById('detail-expiration').textContent = formatExpiration(g.end_date);
-  document.getElementById('detail-instructions').textContent = g.instructions || 'Claim directly on store page.';
+  document.getElementById('detail-instructions').textContent = g.instructions || t('det_default_instr');
   document.getElementById('detail-description').textContent = g.description || '';
   const claimLink = document.getElementById('detail-claim-link');
   claimLink.href = g.open_giveaway_url || '#';
@@ -953,7 +1080,7 @@ function openGiveawayDetail(g) {
 
   const isSaved = vaultItems.some(v => v.id === g.id);
   const vaultBtn = document.getElementById('detail-vault-toggle');
-  vaultBtn.textContent = isSaved ? '💎 Remove from Vault' : '📥 Add to Vault';
+  vaultBtn.textContent = isSaved ? t('det_remove_vault') : t('det_add_vault');
 
   // Check Vault & Steam Ownership
   const ownershipBanner = document.getElementById('detail-ownership-banner');
@@ -980,15 +1107,15 @@ function openGiveawayDetail(g) {
       ownershipIcon.textContent = inSteam ? '🎮' : '💎';
     }
     if (ownershipTitle) {
-      ownershipTitle.textContent = 'YOU ALREADY HAVE THIS';
+      ownershipTitle.textContent = t('det_already_own');
     }
     if (ownershipSubtitle) {
       if (inVault && inSteam) {
-        ownershipSubtitle.textContent = 'Saved in your LootDrop Vault and found in your Steam Library!';
+        ownershipSubtitle.textContent = t('det_own_both');
       } else if (inVault) {
-        ownershipSubtitle.textContent = 'Already saved in your LootDrop Vault.';
+        ownershipSubtitle.textContent = t('det_own_vault');
       } else {
-        ownershipSubtitle.textContent = `Found in your linked Steam library as "${matchedSteam.name}".`;
+        ownershipSubtitle.textContent = t('det_own_steam', { name: matchedSteam.name });
       }
     }
   } else {
@@ -1051,9 +1178,11 @@ function renderChallengeModal() {
   const prevBtn = document.getElementById('btn-prev-week');
   const nextBtn = document.getElementById('btn-next-week');
 
-  if (modalWeekTitle) modalWeekTitle.textContent = `Week ${relativeWeekNum} • Anchor 2026-W46`;
+  if (modalWeekTitle) modalWeekTitle.textContent = t('ch_modal_sub', { n: relativeWeekNum });
   if (weekDisplayBadge) {
-    weekDisplayBadge.textContent = weekKey === currentWeekKey ? `Week ${relativeWeekNum} (Active)` : `Week ${relativeWeekNum}`;
+    weekDisplayBadge.textContent = weekKey === currentWeekKey
+      ? t('ch_week_badge_active', { n: relativeWeekNum })
+      : t('ch_week_num', { n: relativeWeekNum });
   }
 
   if (prevBtn) prevBtn.disabled = relativeWeekNum <= 1;
@@ -1064,9 +1193,10 @@ function renderChallengeModal() {
   const manualRemaining = Math.max(0, MAX_MANUAL_OVERRIDES - manualUsed);
   const manualText = document.getElementById('manual-unlock-text');
   if (manualText) {
-    manualText.innerHTML = `Manual Overrides Remaining: <strong>${manualRemaining} / ${MAX_MANUAL_OVERRIDES}</strong>`;
+    manualText.innerHTML = t('ch_manual_rem', { rem: manualRemaining, max: MAX_MANUAL_OVERRIDES });
   }
 
+  const esMap = window.LootDropI18n?.BLUEPRINTS_ES || {};
   const evaluated = tiles.map((tile, idx) => {
     const isManual = !!state.manualOverrides[idx];
     let isAutoDone = false;
@@ -1079,19 +1209,27 @@ function renderChallengeModal() {
       isAutoDone = vaultItems.filter(v => v.playStatus === 'playing').length >= 2;
     }
 
+    const loc = isEs() && esMap[tile.id];
     const isCompleted = isManual || isAutoDone;
-    return { ...tile, index: idx, isCompleted, isManual };
+    return {
+      ...tile,
+      title: loc ? loc.title : tile.title,
+      desc: loc ? loc.desc : tile.desc,
+      index: idx,
+      isCompleted,
+      isManual
+    };
   });
 
   const gridContainer = document.getElementById('challenge-grid-container');
   if (gridContainer) {
-    gridContainer.innerHTML = evaluated.map(t => `
-      <div class="challenge-tile ${t.isCompleted ? 'completed' : ''} ${t.isManual ? 'manual' : ''}" data-idx="${t.index}">
-        <span class="tile-emoji">${t.emoji}</span>
-        <h4 class="tile-title">${t.title}</h4>
-        <p class="tile-desc">${t.desc}</p>
-        <div class="tile-status-badge ${t.isCompleted ? (t.isManual ? 'manual-done' : 'done') : ''}">
-          ${t.isCompleted ? (t.isManual ? '🔑 MANUAL UNLOCK' : '✓ COMPLETED') : 'TAP TO UNLOCK'}
+    gridContainer.innerHTML = evaluated.map(tl => `
+      <div class="challenge-tile ${tl.isCompleted ? 'completed' : ''} ${tl.isManual ? 'manual' : ''}" data-idx="${tl.index}">
+        <span class="tile-emoji">${tl.emoji}</span>
+        <h4 class="tile-title">${escapeHtml(tl.title)}</h4>
+        <p class="tile-desc">${escapeHtml(tl.desc)}</p>
+        <div class="tile-status-badge ${tl.isCompleted ? (tl.isManual ? 'manual-done' : 'done') : ''}">
+          ${escapeHtml(tl.isCompleted ? (tl.isManual ? t('ch_tile_manual') : t('ch_tile_done')) : t('ch_tile_tap'))}
         </div>
       </div>
     `).join('');
@@ -1116,16 +1254,16 @@ function toggleManualUnlock(tileIdx) {
 
   if (currentlyDone) {
     delete currentOverrides[tileIdx];
-    showToast('Recycled manual unlock slot (+1)', '♻️');
+    showToast(t('toast_recycle_slot'), '♻️');
   } else {
     const used = Object.values(currentOverrides).filter(Boolean).length;
     if (used >= MAX_MANUAL_OVERRIDES) {
-      showToast(`Limit reached: Max ${MAX_MANUAL_OVERRIDES} manual unlocks per week!`, '⚠️');
+      showToast(t('toast_manual_limit', { max: MAX_MANUAL_OVERRIDES }), '⚠️');
       return;
     }
     currentOverrides[tileIdx] = true;
     playGamerChime();
-    showToast('Tile manually completed! (1 slot used)', '🔑');
+    showToast(t('toast_manual_done'), '🔑');
   }
 
   state.manualOverrides = currentOverrides;
@@ -1145,42 +1283,49 @@ function checkMilestoneWins(evaluated, weekKey) {
   const diag1 = evaluated[0].isCompleted && evaluated[4].isCompleted && evaluated[8].isCompleted;
   const diag2 = evaluated[2].isCompleted && evaluated[4].isCompleted && evaluated[6].isCompleted;
   const totalLines = completedRows.length + completedCols.length + (diag1 ? 1 : 0) + (diag2 ? 1 : 0);
-  const isBlackout = evaluated.every(t => t.isCompleted);
+  const isBlackout = evaluated.every(tItem => tItem.isCompleted);
 
   const claimedMilestones = JSON.parse(localStorage.getItem(STORAGE_KEYS.MILESTONES) || '{}');
+  const esMilestones = window.LootDropI18n?.MILESTONES_ES || {};
+  const locM = (baseKey, enName, enSub, enTrophy) => {
+    const mEs = isEs() && esMilestones[baseKey];
+    return {
+      name: mEs ? mEs.name : enName,
+      sub: mEs ? mEs.sub : enSub,
+      trophy: mEs ? mEs.trophy : enTrophy
+    };
+  };
 
   const milestones = [
     {
       id: `backlog_slayer_${weekKey}`,
-      name: 'Backlog Slayer Trophy & Theme',
-      sub: 'Complete any 3-tile line (row, col, or diag)',
+      ...locM('backlog_slayer', 'Backlog Slayer Trophy & Theme', 'Complete any 3-tile line (row, col, or diag)', '🏆 Backlog Slayer'),
       isEligible: totalLines > 0,
-      rewardTheme: 'theme-backlog-slayer',
-      trophy: '🏆 Backlog Slayer'
+      rewardTheme: 'theme-backlog-slayer'
     },
     {
       id: `row_raider_${weekKey}`,
-      name: 'Row Raider Trophy',
-      sub: 'Complete any horizontal row this week',
-      isEligible: completedRows.length > 0,
-      trophy: '🥇 Row Raider'
+      ...locM('row_raider', 'Row Raider Trophy', 'Complete any horizontal row this week', '🥇 Row Raider'),
+      isEligible: completedRows.length > 0
     },
     {
       id: `column_conqueror_${weekKey}`,
-      name: 'Column Conqueror Trophy',
-      sub: 'Complete any vertical column this week',
-      isEligible: completedCols.length > 0,
-      trophy: '🥈 Column Conqueror'
+      ...locM('column_conqueror', 'Column Conqueror Trophy', 'Complete any vertical column this week', '🥈 Column Conqueror'),
+      isEligible: completedCols.length > 0
     },
     {
       id: `blackout_champion_${weekKey}`,
-      name: 'Blackout Champion Trophy & Vault Cleaner Theme',
-      sub: 'Blackout all 9 tiles on the grid',
+      ...locM('blackout_champion', 'Blackout Champion Trophy & Vault Cleaner Theme', 'Blackout all 9 tiles on the grid', '⚡ Blackout Champion'),
       isEligible: isBlackout,
-      rewardTheme: 'theme-vault-cleaner',
-      trophy: '⚡ Blackout Champion'
+      rewardTheme: 'theme-vault-cleaner'
     }
   ];
+
+  const claimedCount = milestones.filter(m => !!claimedMilestones[m.id]).length;
+  const badgeEl = document.getElementById('milestones-count-badge');
+  if (badgeEl) {
+    badgeEl.textContent = t('ch_milestones_progress', { claimed: claimedCount });
+  }
 
   const milestonesContainer = document.getElementById('milestones-list-container');
   if (milestonesContainer) {
@@ -1189,13 +1334,13 @@ function checkMilestoneWins(evaluated, weekKey) {
       return `
         <div class="milestone-item ${m.isEligible ? 'unlocked' : ''}">
           <div class="milestone-info">
-            <span class="milestone-name">${m.name}</span>
-            <span class="milestone-sub">${m.sub}</span>
+            <span class="milestone-name">${escapeHtml(m.name)}</span>
+            <span class="milestone-sub">${escapeHtml(m.sub)}</span>
           </div>
           <button class="btn btn-sm ${isClaimed ? 'btn-outline' : (m.isEligible ? 'btn-primary' : 'btn-secondary')}" 
                   ${!m.isEligible || isClaimed ? 'disabled' : ''} 
-                  onclick="claimMilestone('${m.id}', '${m.rewardTheme || ''}', '${m.trophy}')">
-            ${isClaimed ? '✓ Claimed' : (m.isEligible ? '🎁 Claim' : 'Locked')}
+                  onclick="claimMilestone('${m.id}', '${m.rewardTheme || ''}', '${escapeHtml(m.trophy)}')">
+            ${escapeHtml(isClaimed ? t('ch_claimed_btn') : (m.isEligible ? t('ch_claim_btn') : t('ch_locked_btn')))}
           </button>
         </div>
       `;
@@ -1214,9 +1359,9 @@ window.claimMilestone = function(id, rewardTheme, trophy) {
   if (rewardTheme) {
     applyThemeAndBg(rewardTheme, currentBgMode);
     renderThemeCatalog('all');
-    showToast(`Claimed ${trophy}! Unlocked and applied new theme!`, '🎉');
+    showToast(t('toast_claim_theme', { trophy }), '🎉');
   } else {
-    showToast(`Claimed ${trophy}! Displayed on your profile!`, '🏆');
+    showToast(t('toast_claim_trophy', { trophy }), '🏆');
   }
 
   renderChallengeModal();
@@ -1232,13 +1377,19 @@ function renderMiniChallengeWidget() {
   const completedCount = manualCount + (vaultItems.length > 0 ? 1 : 0);
   const pct = Math.min(100, Math.round((completedCount / 9) * 100));
 
+  const claimedMilestones = JSON.parse(localStorage.getItem(STORAGE_KEYS.MILESTONES) || '{}');
+  const claimedCount = ['backlog_slayer', 'row_raider', 'column_conqueror', 'blackout_champion']
+    .filter(prefix => !!claimedMilestones[`${prefix}_${currentWeekKey}`]).length;
+
   const progressFill = document.getElementById('home-challenge-progress-fill');
   const progressText = document.getElementById('home-challenge-progress-text');
   const weekLabel = document.getElementById('home-challenge-week-label');
+  const milestonesText = document.getElementById('home-challenge-milestones-text');
 
   if (progressFill) progressFill.style.width = `${pct}%`;
-  if (progressText) progressText.textContent = `${completedCount} / 9 Tiles Completed`;
-  if (weekLabel) weekLabel.textContent = `Week ${getRelativeWeekNumber(currentWeekKey)} • Active`;
+  if (progressText) progressText.textContent = t('ch_tiles_progress', { done: completedCount });
+  if (weekLabel) weekLabel.textContent = t('ch_week_active', { n: getRelativeWeekNumber(currentWeekKey) });
+  if (milestonesText) milestonesText.textContent = t('ch_milestones_progress', { claimed: claimedCount });
 }
 
 // ==========================================
@@ -1251,7 +1402,7 @@ function openRouletteModal() {
 function spinRoulette() {
   const candidates = vaultItems.length > 0 ? vaultItems : allGiveaways;
   if (!candidates || candidates.length === 0) {
-    showToast('No games available in backlog to spin!', '🎲');
+    showToast(t('toast_roulette_empty'), '🎲');
     return;
   }
 
@@ -1267,7 +1418,10 @@ function spinRoulette() {
   const interval = setInterval(() => {
     const randomPick = candidates[Math.floor(Math.random() * candidates.length)];
     titleEl.textContent = randomPick.title;
-    platformEl.textContent = `${randomPick.platforms || 'PC'} • Worth ${randomPick.worth || 'FREE'}`;
+    platformEl.textContent = t('rou_worth_fmt', {
+      plat: randomPick.platforms || 'PC',
+      worth: randomPick.worth && randomPick.worth !== 'N/A' ? randomPick.worth : t('card_free')
+    });
     counter++;
 
     if (counter >= totalSpins) {
@@ -1275,10 +1429,10 @@ function spinRoulette() {
       spinBtn.disabled = false;
       const finalPick = candidates[Math.floor(Math.random() * candidates.length)];
       titleEl.textContent = finalPick.title;
-      platformEl.textContent = `Selected: ${finalPick.platforms || 'PC'}! Enjoy playing!`;
+      platformEl.textContent = t('rou_selected_fmt', { plat: finalPick.platforms || 'PC' });
       triggerConfetti();
       playGamerChime();
-      showToast(`Fate has spoken: Play ${finalPick.title}!`, '🎰');
+      showToast(t('toast_roulette_win', { title: finalPick.title }), '🎰');
     }
   }, speed);
 }
@@ -1289,32 +1443,50 @@ function spinRoulette() {
 function renderProfile() {
   const nameDisplay = document.getElementById('profile-name-display');
   const bioDisplay = document.getElementById('profile-bio-display');
+  const titleBadge = document.getElementById('profile-title-badge');
   const nameInput = document.getElementById('edit-profile-name');
   const bioInput = document.getElementById('edit-profile-bio');
   const trophiesContainer = document.getElementById('profile-trophies-container');
+  const trophyCountEl = document.getElementById('profile-trophy-count');
 
-  if (nameDisplay) nameDisplay.textContent = userProfile.name;
-  if (bioDisplay) bioDisplay.textContent = userProfile.bio;
-  if (nameInput) nameInput.value = userProfile.name;
-  if (bioInput) bioInput.value = userProfile.bio;
+  const displayName = !userProfile.name || DEFAULT_PROFILE_NAMES.has(userProfile.name)
+    ? t('default_profile_name')
+    : userProfile.name;
+  const displayBio = !userProfile.bio || DEFAULT_PROFILE_BIOS.has(userProfile.bio)
+    ? t('default_profile_bio')
+    : userProfile.bio;
+
+  if (nameDisplay) nameDisplay.textContent = displayName;
+  if (bioDisplay) bioDisplay.textContent = displayBio;
+  if (titleBadge) titleBadge.textContent = t('default_profile_title');
+  if (nameInput) nameInput.value = displayName;
+  if (bioInput) bioInput.value = displayBio;
 
   const claimedMilestones = JSON.parse(localStorage.getItem(STORAGE_KEYS.MILESTONES) || '{}');
   const allTrophies = [
-    { title: 'Backlog Slayer', key: 'backlog_slayer', icon: '🏆', rarity: 'MYTHIC' },
-    { title: 'Row Raider', key: 'row_raider', icon: '🥇', rarity: 'GOLD' },
-    { title: 'Column Conqueror', key: 'column_conqueror', icon: '🥈', rarity: 'SILVER' },
-    { title: 'Blackout Champion', key: 'blackout_champion', icon: '⚡', rarity: 'MYTHIC' }
+    { title: 'Backlog Slayer', titleEs: 'Backlog Slayer', key: 'backlog_slayer', icon: '🏆', rarity: 'MYTHIC' },
+    { title: 'Row Raider', titleEs: 'Incursor de Fila', key: 'row_raider', icon: '🥇', rarity: 'GOLD' },
+    { title: 'Column Conqueror', titleEs: 'Conquistador de Columna', key: 'column_conqueror', icon: '🥈', rarity: 'SILVER' },
+    { title: 'Blackout Champion', titleEs: 'Campeón Apagón', key: 'blackout_champion', icon: '⚡', rarity: 'MYTHIC' }
   ];
 
+  let unlockedCount = 0;
+  allTrophies.forEach(tr => {
+    if (Object.keys(claimedMilestones).some(k => k.startsWith(tr.key))) unlockedCount++;
+  });
+  if (trophyCountEl) {
+    trophyCountEl.textContent = t('prof_unlocked_count', { count: unlockedCount });
+  }
+
   if (trophiesContainer) {
-    trophiesContainer.innerHTML = allTrophies.map(t => {
-      const isUnlocked = Object.keys(claimedMilestones).some(k => k.startsWith(t.key));
+    trophiesContainer.innerHTML = allTrophies.map(tr => {
+      const isUnlocked = Object.keys(claimedMilestones).some(k => k.startsWith(tr.key));
       return `
         <div class="trophy-badge-card ${isUnlocked ? 'unlocked' : ''}">
-          <span class="trophy-icon">${t.icon}</span>
-          <span class="trophy-title">${t.title}</span>
+          <span class="trophy-icon">${tr.icon}</span>
+          <span class="trophy-title">${escapeHtml(isEs() ? tr.titleEs : tr.title)}</span>
           <span style="font-size: 9px; color: var(--color-primary); font-weight:800; margin-top:2px;">
-            ${isUnlocked ? 'UNLOCKED' : 'LOCKED'}
+            ${escapeHtml(isUnlocked ? t('prof_unlocked_badge') : t('prof_locked_badge'))}
           </span>
         </div>
       `;
@@ -1426,15 +1598,15 @@ function parsePrice(str) {
 }
 
 function formatExpiration(dateStr) {
-  if (!dateStr || dateStr.startsWith('N/A')) return 'Ongoing / Unlimited';
+  if (!dateStr || dateStr.startsWith('N/A')) return t('exp_ongoing');
   const end = new Date(dateStr);
   const now = new Date();
   const diffHours = Math.round((end - now) / (1000 * 60 * 60));
 
-  if (diffHours <= 0) return 'Expired';
-  if (diffHours < 24) return `Expires in ${diffHours}h`;
+  if (diffHours <= 0) return t('exp_expired');
+  if (diffHours < 24) return t('exp_hours', { n: diffHours });
   const days = Math.round(diffHours / 24);
-  return `Expires in ${days}d`;
+  return t('exp_days', { n: days });
 }
 
 function escapeHtml(str) {
@@ -1540,13 +1712,15 @@ function setupEventListeners() {
   // Test Chime & Test Alert Triggers
   document.getElementById('btn-test-chime')?.addEventListener('click', () => {
     playGamerChime();
-    showToast('Playing synthesized gaming chime sound', '🎵');
+    showToast(t('toast_chime_test'), '🎵');
   });
 
   document.getElementById('btn-test-notification')?.addEventListener('click', () => {
     triggerWebsiteAlert(
-      '🚨 New Drop Alert: Warhammer 40K',
-      'Warhammer 40,000: Gladius is currently 100% FREE on Steam! Grab it before it ends.',
+      isEs() ? '🚨 Nuevo Drop: Warhammer 40K' : '🚨 New Drop Alert: Warhammer 40K',
+      isEs()
+        ? '¡Warhammer 40,000: Gladius está 100% GRATIS en Steam! Reclámalo antes de que acabe.'
+        : 'Warhammer 40,000: Gladius is currently 100% FREE on Steam! Grab it before it ends.',
       'https://store.steampowered.com/',
       '🎮'
     );
@@ -1554,8 +1728,10 @@ function setupEventListeners() {
 
   document.getElementById('btn-fire-test-alert')?.addEventListener('click', () => {
     triggerWebsiteAlert(
-      '⚡ High-Value Freebie: Cyberpunk OST',
-      'The complete digital soundtrack is free on GOG. Claim to keep forever!',
+      isEs() ? '⚡ Regalo de Alto Valor: Cyberpunk OST' : '⚡ High-Value Freebie: Cyberpunk OST',
+      isEs()
+        ? '¡La banda sonora digital completa es gratis en GOG! Reclámala para siempre.'
+        : 'The complete digital soundtrack is free on GOG. Claim to keep forever!',
       'https://www.gog.com/',
       '⚡'
     );
@@ -1573,7 +1749,7 @@ function setupEventListeners() {
     initAlertSettingsUI();
     document.getElementById('modal-alert-settings')?.classList.remove('open');
     playGamerChime();
-    showToast('Alert preferences saved successfully!', '🔔');
+    showToast(t('toast_alerts_saved'), '🔔');
   });
 
   // Notification Inbox Actions
@@ -1581,14 +1757,14 @@ function setupEventListeners() {
     notificationsList.forEach(n => n.unread = false);
     localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notificationsList));
     renderNotificationsList();
-    showToast('Marked all alerts as read', '✓');
+    showToast(t('toast_mark_read'), '✓');
   });
 
   document.getElementById('btn-clear-notifs')?.addEventListener('click', () => {
     notificationsList = [];
     localStorage.removeItem(STORAGE_KEYS.NOTIFICATIONS);
     renderNotificationsList();
-    showToast('Cleared notification history', '🗑️');
+    showToast(t('toast_clear_notifs'), '🗑️');
   });
 
   // Background Mode Buttons
@@ -1596,7 +1772,7 @@ function setupEventListeners() {
     btn.addEventListener('click', () => {
       const mode = btn.dataset.bg;
       applyThemeAndBg(currentThemeId, mode);
-      showToast(`Switched to ${btn.textContent.trim()} mode!`, '🌓');
+      showToast(t('toast_bg_switched', { mode: btn.textContent.trim() }), '🌓');
     });
   });
 
@@ -1691,7 +1867,7 @@ function setupEventListeners() {
     if (selectedGiveaway) {
       toggleVaultItem(selectedGiveaway.id);
       const isSaved = vaultItems.some(v => v.id === selectedGiveaway.id);
-      document.getElementById('detail-vault-toggle').textContent = isSaved ? '💎 Remove from Vault' : '📥 Add to Vault';
+      document.getElementById('detail-vault-toggle').textContent = isSaved ? t('det_remove_vault') : t('det_add_vault');
     }
   });
 
@@ -1700,32 +1876,34 @@ function setupEventListeners() {
     if (!selectedGiveaway) return;
     if (navigator.share) {
       navigator.share({
-        title: `LootDrop: Free ${selectedGiveaway.title}`,
-        text: `Grab ${selectedGiveaway.title} 100% free on ${selectedGiveaway.platforms || 'PC'} before it expires!`,
+        title: isEs() ? `LootDrop: ${selectedGiveaway.title} Gratis` : `LootDrop: Free ${selectedGiveaway.title}`,
+        text: isEs()
+          ? `¡Consigue ${selectedGiveaway.title} 100% gratis en ${selectedGiveaway.platforms || 'PC'} antes de que expire!`
+          : `Grab ${selectedGiveaway.title} 100% free on ${selectedGiveaway.platforms || 'PC'} before it expires!`,
         url: selectedGiveaway.open_giveaway_url || window.location.href
       }).catch(() => {});
     } else {
       navigator.clipboard.writeText(selectedGiveaway.open_giveaway_url || window.location.href);
-      showToast('Giveaway link copied to clipboard!', '🔗');
+      showToast(t('toast_link_copied'), '🔗');
     }
   });
 
   // Profile Save
   document.getElementById('btn-save-profile')?.addEventListener('click', () => {
-    const name = document.getElementById('edit-profile-name').value.trim() || 'Vault Hunter';
-    const bio = document.getElementById('edit-profile-bio').value.trim() || 'Clearing the backlog, one drop at a time.';
+    const name = document.getElementById('edit-profile-name').value.trim() || t('default_profile_name');
+    const bio = document.getElementById('edit-profile-bio').value.trim() || t('default_profile_bio');
     userProfile.name = name;
     userProfile.bio = bio;
     localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(userProfile));
     renderProfile();
-    showToast('Profile updated!', '👤');
+    showToast(t('toast_profile_saved'), '👤');
   });
 
   // Steam 64 ID Sync
   document.getElementById('btn-save-steam-id')?.addEventListener('click', () => {
     const input = document.getElementById('steam-id-input').value.trim();
     if (!input) {
-      showToast('Please enter a Steam 64 ID or Vanity URL', '⚠️');
+      showToast(t('toast_steam_enter'), '⚠️');
       return;
     }
     syncWebSteamLibrary(input);
@@ -1735,7 +1913,7 @@ function setupEventListeners() {
     const savedId = localStorage.getItem(STORAGE_KEYS.STEAM_ID);
     if (!savedId) {
       switchTab('pane-settings');
-      showToast('Enter your Steam 64 ID in Settings first!', 'ℹ️');
+      showToast(t('toast_steam_need'), 'ℹ️');
       return;
     }
     syncWebSteamLibrary(savedId);
@@ -1759,7 +1937,7 @@ function setupEventListeners() {
     a.download = `lootdrop_backup_${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    showToast('Backup JSON exported successfully!', '💾');
+    showToast(t('toast_backup_exported'), '💾');
   });
 
   // Backup Import
@@ -1785,12 +1963,12 @@ function setupEventListeners() {
         if (data.milestones) {
           localStorage.setItem(STORAGE_KEYS.MILESTONES, JSON.stringify(data.milestones));
         }
-        showToast('Backup successfully restored!', '📂');
+        showToast(t('toast_backup_restored'), '📂');
         renderProfile();
         renderVault();
         updateStats();
       } catch (err) {
-        showToast('Failed to parse backup JSON file', '❌');
+        showToast(t('toast_backup_failed'), '❌');
       }
     };
     reader.readAsText(file);
@@ -1798,12 +1976,12 @@ function setupEventListeners() {
 
   // Clear Vault
   document.getElementById('btn-clear-vault')?.addEventListener('click', () => {
-    if (confirm('Are you sure you want to clear your LootDrop Vault?')) {
+    if (confirm(t('confirm_clear_vault'))) {
       vaultItems = [];
       localStorage.removeItem(STORAGE_KEYS.VAULT);
       renderVault();
       updateStats();
-      showToast('Vault cleared', '🗑️');
+      showToast(t('toast_vault_cleared'), '🗑️');
     }
   });
 }
@@ -1813,8 +1991,43 @@ function setupEventListeners() {
 // ==========================================
 const R2_REVIEWS_URL = 'https://lootdrop-storage-proxy.hardingbentley67.workers.dev?accountId=public_reviews&filename=lootdrop_reviews.json';
 const R2_AUTH_KEY = 'sb_publishable_htD9aXXk0QHjhG_ifS3nYg_kjUp7osD';
+const SUPABASE_PROJECT_URL = 'https://imcwutouksxeevmofcmn.supabase.co';
+const SUPABASE_KEEPALIVE_INTERVAL_MS = 12 * 60 * 60 * 1000;
 let publicReviewsList = [];
 let currentReviewRating = 5;
+
+async function pingSupabaseKeepAlive(force = false) {
+  try {
+    const now = Date.now();
+    const lastTs = parseInt(localStorage.getItem(STORAGE_KEYS.SUPA_KEEPALIVE_TS) || '0', 10);
+    if (!force && lastTs > 0 && (now - lastTs) < SUPABASE_KEEPALIVE_INTERVAL_MS) {
+      return;
+    }
+    const headers = {
+      'apikey': R2_AUTH_KEY,
+      'Authorization': `Bearer ${R2_AUTH_KEY}`,
+      'Accept': 'application/json',
+      'Prefer': 'count=exact'
+    };
+    const endpoints = [
+      `${SUPABASE_PROJECT_URL}/rest/v1/lootdrop_backups?select=account_id&limit=1`,
+      `${SUPABASE_PROJECT_URL}/rest/v1/keep_alive?select=id&limit=1`,
+      `${SUPABASE_PROJECT_URL}/rest/v1/`
+    ];
+    for (const url of endpoints) {
+      try {
+        const resp = await fetch(url, { method: 'GET', headers });
+        if (resp.status >= 200 && resp.status < 300) {
+          localStorage.setItem(STORAGE_KEYS.SUPA_KEEPALIVE_TS, String(now));
+          return;
+        }
+        if (resp.status !== 404 && resp.status < 500) {
+          localStorage.setItem(STORAGE_KEYS.SUPA_KEEPALIVE_TS, String(now));
+        }
+      } catch (_) {}
+    }
+  } catch (_) {}
+}
 
 const REVIEW_BLACKLIST_TERMS = [
   'fuck(?:er|ers|ed|ing|ings|in|wit|wits|head|heads|face|faces|tard|tards|boy|boys|s)?',
@@ -2069,20 +2282,24 @@ function validateReviewModeration(title, comment, authorName) {
   const commentHasPii = containsReviewAddress(comment) || containsReviewPhoneNumber(comment);
   const authorHasPii = containsReviewAddress(authorName) || containsReviewPhoneNumber(authorName);
 
-  if (titleHasPii || containsProfanityOrSlurWords(title)) flagged.push('headline');
-  if (commentHasPii || containsProfanityOrSlurWords(comment)) flagged.push('review comment');
-  if (authorHasPii || containsProfanityOrSlurWords(authorName)) flagged.push('gamer tag');
+  if (titleHasPii || containsProfanityOrSlurWords(title)) flagged.push(isEs() ? 'título' : 'headline');
+  if (commentHasPii || containsProfanityOrSlurWords(comment)) flagged.push(isEs() ? 'comentario de reseña' : 'review comment');
+  if (authorHasPii || containsProfanityOrSlurWords(authorName)) flagged.push(isEs() ? 'nombre de jugador' : 'gamer tag');
 
   if (flagged.length > 0) {
     const joined = flagged.length === 1
       ? flagged[0]
       : flagged.length === 2
-        ? `${flagged[0]} and ${flagged[1]}`
-        : `${flagged[0]}, ${flagged[1]}, and ${flagged[2]}`;
+        ? `${flagged[0]} ${isEs() ? 'y' : 'and'} ${flagged[1]}`
+        : `${flagged[0]}, ${flagged[1]}${isEs() ? ' y' : ', and'} ${flagged[2]}`;
     const hasPii = titleHasPii || commentHasPii || authorHasPii;
-    const errorMessage = hasPii
-      ? `Blacklisted content (addresses or phone numbers) detected in your ${joined}. Addresses, phone numbers, swears, slurs, and restricted slang are not allowed in community reviews.`
-      : `Blacklisted words detected in your ${joined}. Swears, slurs, and restricted slang are not allowed in community reviews.`;
+    const errorMessage = isEs()
+      ? (hasPii
+          ? `Se detectó contenido restringido (direcciones o teléfonos) en tu ${joined}. No se permiten direcciones, teléfonos, groserías ni insultos en las reseñas.`
+          : `Se detectaron palabras restringidas en tu ${joined}. No se permiten groserías, insultos ni lenguaje ofensivo en las reseñas.`)
+      : (hasPii
+          ? `Blacklisted content (addresses or phone numbers) detected in your ${joined}. Addresses, phone numbers, swears, slurs, and restricted slang are not allowed in community reviews.`
+          : `Blacklisted words detected in your ${joined}. Swears, slurs, and restricted slang are not allowed in community reviews.`);
     return {
       isAllowed: false,
       errorMessage
@@ -2271,6 +2488,19 @@ function getAppReviews() {
   return publicReviewsList.filter(r => r.isAppReview || r.giveawayId === -1 || r.gameTitle === 'LootDrop App');
 }
 
+function updateViewAppReviewsButton() {
+  const viewAppReviewsBtn = document.getElementById('btn-view-app-reviews');
+  const appPreviewList = document.getElementById('settings-app-reviews-preview');
+  if (!viewAppReviewsBtn) return;
+  const isOpen = appPreviewList && appPreviewList.style.display !== 'none';
+  if (isOpen) {
+    viewAppReviewsBtn.textContent = t('btn_hide_reviews');
+  } else {
+    const count = getAppReviews().length;
+    viewAppReviewsBtn.innerHTML = `<span data-i18n="btn_view_reviews">${escapeHtml(t('btn_view_reviews'))}</span> (<span id="settings-app-reviews-count">${count}</span>)`;
+  }
+}
+
 function updateSettingsAppRatingUI() {
   const appReviews = getAppReviews();
   const scoreEl = document.getElementById('settings-app-score');
@@ -2287,14 +2517,21 @@ function updateSettingsAppRatingUI() {
   if (count === 0) {
     scoreEl.textContent = '5.0';
     if (starsEl) starsEl.textContent = '★★★★★';
-    if (countLabelEl) countLabelEl.textContent = 'Be the first to rate LootDrop App!';
+    if (countLabelEl) countLabelEl.textContent = t('rev_first_app');
   } else {
     const avg = appReviews.reduce((sum, r) => sum + (r.rating || 5), 0) / count;
     const rounded = Math.round(avg);
     scoreEl.textContent = avg.toFixed(1);
     if (starsEl) starsEl.textContent = '★'.repeat(rounded) + '☆'.repeat(5 - rounded);
-    if (countLabelEl) countLabelEl.textContent = `Based on ${count} community ${count === 1 ? 'review' : 'reviews'} across Android & Web.`;
+    if (countLabelEl) {
+      countLabelEl.textContent = t('rev_based_app', {
+        count,
+        noun: count === 1 ? t('rev_noun_one') : t('rev_noun_many')
+      });
+    }
   }
+
+  updateViewAppReviewsButton();
 
   if (previewEl && previewEl.style.display !== 'none') {
     renderAppReviewsPreview();
@@ -2308,7 +2545,7 @@ function renderAppReviewsPreview() {
   const votedIds = JSON.parse(localStorage.getItem('lootdrop_voted_reviews') || '[]');
 
   if (appReviews.length === 0) {
-    previewEl.innerHTML = '<p class="input-hint">No app reviews posted yet.</p>';
+    previewEl.innerHTML = `<p class="input-hint">${escapeHtml(t('rev_none_app'))}</p>`;
     return;
   }
 
@@ -2319,7 +2556,7 @@ function renderAppReviewsPreview() {
     const starStr = '★'.repeat(r.rating || 5) + '☆'.repeat(5 - (r.rating || 5));
     const initial = (cleanAuthor || 'G').trim().charAt(0).toUpperCase();
     const isVoted = votedIds.includes(r.id);
-    const dateFormatted = new Date(r.timestamp || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const dateFormatted = new Date(r.timestamp || Date.now()).toLocaleDateString(isEs() ? 'es-ES' : undefined, { month: 'short', day: 'numeric' });
 
     return `
       <div class="review-item-card" data-review-id="${r.id}" style="margin-bottom: 10px;">
@@ -2329,7 +2566,7 @@ function renderAppReviewsPreview() {
             <div class="review-author-meta">
               <span class="review-author-name">
                 ${escapeHtml(cleanAuthor)}
-                <span class="review-verified-badge">✓ Verified User</span>
+                <span class="review-verified-badge">${escapeHtml(t('rev_verified_user'))}</span>
               </span>
               <span class="review-time-platform">${escapeHtml(r.platform || 'LootDrop')} • ${dateFormatted}</span>
             </div>
@@ -2340,9 +2577,9 @@ function renderAppReviewsPreview() {
         ${cleanComment ? `<div class="review-card-body">${escapeHtml(cleanComment)}</div>` : ''}
         <div class="review-card-footer">
           <button class="review-helpful-btn ${isVoted ? 'voted' : ''}" data-review-id="${r.id}">
-            👍 Helpful (${r.helpfulCount || 0})
+            ${escapeHtml(t('rev_helpful', { count: r.helpfulCount || 0 }))}
           </button>
-          <span style="font-size: 10px; color: var(--color-text-dim);">⭐ LootDrop App Review</span>
+          <span style="font-size: 10px; color: var(--color-text-dim);">${escapeHtml(t('rev_app_tag'))}</span>
         </div>
       </div>
     `;
@@ -2382,11 +2619,11 @@ function loadAndRenderReviewsForGame(game) {
   if (reviews.length === 0) {
     avgScoreEl.textContent = '5.0';
     starsEl.textContent = '★★★★★';
-    countLabelEl.textContent = 'Be the first to review this game!';
+    countLabelEl.textContent = t('rev_first_game');
     listEl.innerHTML = `
       <div class="review-empty-state">
-        <p>🎮 No community reviews yet for <strong>${escapeHtml(game.title || 'this game')}</strong>.</p>
-        <p style="font-size: 11px; margin-top: 4px;">Click <strong>"Leave Review"</strong> to share your rating with everyone!</p>
+        <p>🎮 ${t('rev_empty_game', { title: escapeHtml(game.title || (isEs() ? 'este juego' : 'this game')) })}</p>
+        <p style="font-size: 11px; margin-top: 4px;">${t('rev_empty_hint')}</p>
       </div>
     `;
     return;
@@ -2396,7 +2633,10 @@ function loadAndRenderReviewsForGame(game) {
   const rounded = Math.round(avg);
   avgScoreEl.textContent = avg.toFixed(1);
   starsEl.textContent = '★'.repeat(rounded) + '☆'.repeat(5 - rounded);
-  countLabelEl.textContent = `Based on ${reviews.length} community ${reviews.length === 1 ? 'review' : 'reviews'}`;
+  countLabelEl.textContent = t('rev_based_on', {
+    count: reviews.length,
+    noun: reviews.length === 1 ? t('rev_noun_one') : t('rev_noun_many')
+  });
 
   const votedIds = JSON.parse(localStorage.getItem('lootdrop_voted_reviews') || '[]');
 
@@ -2407,7 +2647,7 @@ function loadAndRenderReviewsForGame(game) {
     const starStr = '★'.repeat(r.rating || 5) + '☆'.repeat(5 - (r.rating || 5));
     const initial = (cleanAuthor || 'G').trim().charAt(0).toUpperCase();
     const isVoted = votedIds.includes(r.id);
-    const dateFormatted = new Date(r.timestamp || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const dateFormatted = new Date(r.timestamp || Date.now()).toLocaleDateString(isEs() ? 'es-ES' : undefined, { month: 'short', day: 'numeric' });
 
     return `
       <div class="review-item-card" data-review-id="${r.id}">
@@ -2417,7 +2657,7 @@ function loadAndRenderReviewsForGame(game) {
             <div class="review-author-meta">
               <span class="review-author-name">
                 ${escapeHtml(cleanAuthor)}
-                ${r.isVerifiedClaimer ? '<span class="review-verified-badge">✓ Verified</span>' : ''}
+                ${r.isVerifiedClaimer ? `<span class="review-verified-badge">${escapeHtml(t('rev_verified'))}</span>` : ''}
               </span>
               <span class="review-time-platform">${escapeHtml(r.platform || 'PC')} • ${dateFormatted}</span>
             </div>
@@ -2428,7 +2668,7 @@ function loadAndRenderReviewsForGame(game) {
         ${cleanComment ? `<div class="review-card-body">${escapeHtml(cleanComment)}</div>` : ''}
         <div class="review-card-footer">
           <button class="review-helpful-btn ${isVoted ? 'voted' : ''}" data-review-id="${r.id}">
-            👍 Helpful (${r.helpfulCount || 0})
+            ${escapeHtml(t('rev_helpful', { count: r.helpfulCount || 0 }))}
           </button>
           ${r.authorTag ? `<span style="font-size: 10px; color: var(--color-text-dim);">🏷️ ${escapeHtml(r.authorTag)}</span>` : ''}
         </div>
@@ -2449,7 +2689,7 @@ function loadAndRenderReviewsForGame(game) {
 async function voteReviewHelpful(reviewId, game) {
   const votedIds = JSON.parse(localStorage.getItem('lootdrop_voted_reviews') || '[]');
   if (votedIds.includes(reviewId)) {
-    showToast('You already voted helpful on this review!', 'ℹ️');
+    showToast(t('toast_already_voted'), 'ℹ️');
     return;
   }
 
@@ -2465,7 +2705,7 @@ async function voteReviewHelpful(reviewId, game) {
     loadAndRenderReviewsForGame(game);
   }
   updateSettingsAppRatingUI();
-  showToast('Marked as helpful!', '👍');
+  showToast(t('toast_voted_helpful'), '👍');
 
   // Push updated list to R2
   try {
@@ -2504,6 +2744,8 @@ async function postPublicReviewToR2(newReview) {
   }
 }
 
+let syncReviewModalLanguage = () => {};
+
 function initReviewsModal() {
   const modal = document.getElementById('modal-write-review');
   const openBtn = document.getElementById('btn-open-write-review');
@@ -2519,14 +2761,6 @@ function initReviewsModal() {
 
   let isWritingAppReview = false;
 
-  const RATING_TEXTS = {
-    1: '1 - Skip / Unplayable',
-    2: '2 - Mediocre / Flawed',
-    3: '3 - Average / Fun with Friends',
-    4: '4 - Great / Highly Recommended',
-    5: '5 - Pure Masterpiece! Must Play!'
-  };
-
   function setReviewTarget(isApp) {
     isWritingAppReview = isApp;
     const titleSub = document.getElementById('write-review-game-title');
@@ -2537,7 +2771,7 @@ function initReviewsModal() {
     } else {
       targetGameBtn?.classList.add('active');
       targetAppBtn?.classList.remove('active');
-      if (titleSub) titleSub.textContent = selectedGiveaway?.title || 'Giveaway';
+      if (titleSub) titleSub.textContent = selectedGiveaway?.title || (isEs() ? 'Regalo' : 'Giveaway');
     }
   }
 
@@ -2560,7 +2794,7 @@ function initReviewsModal() {
     if (!selectedGiveaway) return;
     setReviewTarget(false);
     clearModerationError();
-    document.getElementById('review-input-author').value = userProfile.name || 'Gamer';
+    document.getElementById('review-input-author').value = userProfile.name || t('default_profile_name');
     document.getElementById('review-input-title').value = '';
     document.getElementById('review-input-comment').value = '';
     currentReviewRating = 5;
@@ -2572,7 +2806,7 @@ function initReviewsModal() {
   rateAppSettingBtn?.addEventListener('click', () => {
     setReviewTarget(true);
     clearModerationError();
-    document.getElementById('review-input-author').value = userProfile.name || 'Gamer';
+    document.getElementById('review-input-author').value = userProfile.name || t('default_profile_name');
     document.getElementById('review-input-title').value = '';
     document.getElementById('review-input-comment').value = '';
     currentReviewRating = 5;
@@ -2585,7 +2819,7 @@ function initReviewsModal() {
     if (!appPreviewList) return;
     const isHidden = appPreviewList.style.display === 'none';
     appPreviewList.style.display = isHidden ? 'block' : 'none';
-    viewAppReviewsBtn.textContent = isHidden ? '▲ Hide Reviews' : `💬 View All Reviews (${getAppReviews().length})`;
+    updateViewAppReviewsButton();
     if (isHidden) {
       renderAppReviewsPreview();
     }
@@ -2606,9 +2840,19 @@ function initReviewsModal() {
       }
     });
     if (ratingLabel) {
-      ratingLabel.textContent = RATING_TEXTS[currentReviewRating] || `${currentReviewRating} Stars`;
+      const key = `wr_rating_${currentReviewRating}`;
+      const translated = t(key);
+      ratingLabel.textContent = translated !== key ? translated : t('wr_stars_suffix', { n: currentReviewRating });
     }
   }
+
+  syncReviewModalLanguage = () => {
+    updateStarUI();
+    setReviewTarget(isWritingAppReview);
+    if (submitBtn && !submitBtn.disabled) {
+      submitBtn.textContent = t('wr_submit');
+    }
+  };
 
   starsContainer?.querySelectorAll('.star-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -2623,7 +2867,7 @@ function initReviewsModal() {
     const author = document.getElementById('review-input-author').value.trim() || userProfile.name || 'Anonymous Gamer';
 
     if (!title && !comment) {
-      showToast('Please enter a review headline or comment!', '⚠️');
+      showToast(t('toast_enter_review'), '⚠️');
       return;
     }
 
@@ -2633,13 +2877,13 @@ function initReviewsModal() {
         moderationErrEl.textContent = `⚠️ ${moderation.errorMessage}`;
         moderationErrEl.style.display = 'block';
       }
-      showToast('Swears and slurs are not allowed in reviews.', '🚫');
+      showToast(t('toast_moderation_blocked'), '🚫');
       return;
     }
     clearModerationError();
 
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Uploading to Cloudflare R2...';
+    submitBtn.textContent = t('wr_submitting');
 
     if (isWritingAppReview) {
       const newReview = {
@@ -2661,15 +2905,15 @@ function initReviewsModal() {
       await postPublicReviewToR2(newReview);
 
       submitBtn.disabled = false;
-      submitBtn.textContent = '🚀 Post Review to Community';
+      submitBtn.textContent = t('wr_submit');
       modal?.classList.remove('open');
 
-      showToast('Your rating for LootDrop App has been published to R2!', '⭐');
+      showToast(t('toast_review_app_ok'), '⭐');
       updateSettingsAppRatingUI();
     } else {
       if (!selectedGiveaway) {
         submitBtn.disabled = false;
-        submitBtn.textContent = '🚀 Post Review to Community';
+        submitBtn.textContent = t('wr_submit');
         return;
       }
       const isClaimed = vaultItems.some(v => v.id === selectedGiveaway.id);
@@ -2692,15 +2936,16 @@ function initReviewsModal() {
       await postPublicReviewToR2(newReview);
 
       submitBtn.disabled = false;
-      submitBtn.textContent = '🚀 Post Review to Community';
+      submitBtn.textContent = t('wr_submit');
       modal?.classList.remove('open');
 
-      showToast('Your review has been published publicly to R2!', '⭐');
+      showToast(t('toast_review_game_ok'), '⭐');
       loadAndRenderReviewsForGame(selectedGiveaway);
       updateSettingsAppRatingUI();
     }
   });
 
+  updateStarUI();
   updateSettingsAppRatingUI();
 }
 
@@ -2721,6 +2966,22 @@ let activeDlcHubFilter = 'all';
 let selectedDlcParentAppId = 'all';
 let selectedGameDlcsList = [];
 let isLoadingGameDlcs = false;
+
+function refreshSteamStatusHint() {
+  const savedSteamId = localStorage.getItem(STORAGE_KEYS.STEAM_ID) || '';
+  const steamHint = document.getElementById('steam-status-hint');
+  if (!steamHint) return;
+  if (steamGamesList.length > 0) {
+    steamHint.textContent = t('steam_status_synced', {
+      count: steamGamesList.length,
+      id: savedSteamId ? ` (${savedSteamId})` : ''
+    });
+  } else if (savedSteamId) {
+    steamHint.textContent = t('steam_status_linked', { id: savedSteamId });
+  } else {
+    steamHint.textContent = t('steam_status_not_linked');
+  }
+}
 
 function initSteamAndDlcFeatures() {
   try {
@@ -2743,15 +3004,8 @@ function initSteamAndDlcFeatures() {
 
   const savedSteamId = localStorage.getItem(STORAGE_KEYS.STEAM_ID) || '';
   const steamInput = document.getElementById('steam-id-input');
-  const steamHint = document.getElementById('steam-status-hint');
   if (steamInput && savedSteamId) steamInput.value = savedSteamId;
-  if (steamHint) {
-    if (steamGamesList.length > 0) {
-      steamHint.textContent = `Synced ${steamGamesList.length} Steam games${savedSteamId ? ` (${savedSteamId})` : ''}`;
-    } else if (savedSteamId) {
-      steamHint.textContent = `Linked Steam ID: ${savedSteamId} (Click Save & Sync to load games)`;
-    }
-  }
+  refreshSteamStatusHint();
 
   // Vault Mode Tabs (Vault vs Steam Library)
   document.querySelectorAll('#vault-mode-tabs .vault-mode-btn').forEach(btn => {
@@ -2861,14 +3115,18 @@ function parseSteamIdentifier(rawInput) {
 async function syncWebSteamLibrary(rawInput) {
   const parsed = parseSteamIdentifier(rawInput);
   if (!parsed.value) {
-    showToast('Please enter a valid Steam 64 ID or Custom URL', '⚠️');
+    showToast(t('toast_steam_invalid'), '⚠️');
     return;
   }
 
   localStorage.setItem(STORAGE_KEYS.STEAM_ID, rawInput.trim());
   const hint = document.getElementById('steam-status-hint');
-  if (hint) hint.textContent = `Syncing public Steam library for "${parsed.value}"...`;
-  showToast('Connecting to Steam profile...', '🔄');
+  if (hint) {
+    hint.textContent = isEs()
+      ? `Sincronizando biblioteca Steam de "${parsed.value}"...`
+      : `Syncing public Steam library for "${parsed.value}"...`;
+  }
+  showToast(t('toast_steam_connecting'), '🔄');
 
   const xmlUrl = parsed.type === 'steam64'
     ? `https://steamcommunity.com/profiles/${encodeURIComponent(parsed.value)}/games?tab=all&xml=1`
@@ -2880,12 +3138,12 @@ async function syncWebSteamLibrary(rawInput) {
     const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
     const errorNode = doc.querySelector('response > error');
     if (errorNode) {
-      throw new Error(errorNode.textContent || 'Steam profile private or not found');
+      throw new Error(errorNode.textContent || (isEs() ? 'Perfil de Steam privado o no encontrado' : 'Steam profile private or not found'));
     }
 
     const gameNodes = Array.from(doc.querySelectorAll('games > game'));
     if (gameNodes.length === 0) {
-      throw new Error('No games returned. Ensure Steam Profile & Game Details are Public.');
+      throw new Error(isEs() ? 'Sin juegos. Asegúrate de que tu perfil y juegos de Steam sean públicos.' : 'No games returned. Ensure Steam Profile & Game Details are Public.');
     }
 
     const parsedGames = gameNodes.map(node => {
@@ -2909,9 +3167,9 @@ async function syncWebSteamLibrary(rawInput) {
     localStorage.setItem(STORAGE_KEYS.STEAM_GAMES, JSON.stringify(steamGamesList));
 
     if (hint) {
-      hint.textContent = `Synced ${steamGamesList.length} Steam games! Scanning DLCs next...`;
+      hint.textContent = t('toast_steam_synced', { count: steamGamesList.length });
     }
-    showToast(`Synced ${steamGamesList.length} Steam games! Scanning DLCs...`, '🎮');
+    showToast(t('toast_steam_synced', { count: steamGamesList.length }), '🎮');
 
     updateDlcBadges();
     renderVault();
@@ -2919,27 +3177,37 @@ async function syncWebSteamLibrary(rawInput) {
     await refreshWebSteamDlcRecommendations(true);
 
     if (hint) {
-      hint.textContent = `Synced ${steamGamesList.length} Steam games • ${getCombinedDlcRecommendations().length} DLC picks ready`;
+      hint.textContent = t('steam_status_ready', {
+        count: steamGamesList.length,
+        dlc: getCombinedDlcRecommendations().length
+      });
     }
   } catch (err) {
     console.warn('Steam sync error:', err);
-    if (hint) hint.textContent = `Sync failed: ${err.message}`;
-    showToast(`Steam sync failed: ${err.message}`, '⚠️');
+    if (hint) hint.textContent = t('toast_steam_failed', { err: err.message });
+    showToast(t('toast_steam_failed', { err: err.message }), '⚠️');
   }
 }
 
 function isDlcCacheFresh() {
   try {
     const cache = JSON.parse(localStorage.getItem(STORAGE_KEYS.DLC_CACHE) || '{}');
-    return cache.timestamp && (Date.now() - cache.timestamp) < DLC_CACHE_TTL_MS && Array.isArray(cache.items) && cache.items.length > 0;
+    const langNow = window.LootDropI18n?.getLanguage() || 'en';
+    return cache.timestamp &&
+      (!cache.lang || cache.lang === langNow) &&
+      (Date.now() - cache.timestamp) < DLC_CACHE_TTL_MS &&
+      Array.isArray(cache.items) &&
+      cache.items.length > 0;
   } catch (_) {
     return false;
   }
 }
 
 function saveDlcCache(items) {
+  const langNow = window.LootDropI18n?.getLanguage() || 'en';
   localStorage.setItem(STORAGE_KEYS.DLC_CACHE, JSON.stringify({
     timestamp: Date.now(),
+    lang: langNow,
     items
   }));
 }
@@ -2990,6 +3258,9 @@ function findFreeDlcGiveawaysForSteamLibraryWeb(giveaways, steamGames) {
     const dlcAppId = steamAppMatch ? parseInt(steamAppMatch[1], 10) : (9000000 + (g.id || 0));
     const isClaimed = vaultItems.some(v => v.id === g.id);
     const playtimeHrs = ((parent.playtimeMinutes || 0) / 60).toFixed(1);
+    const infoStr = parent.playtimeMinutes > 0
+      ? t('steam_hours_played', { hours: playtimeHrs })
+      : t('dlc_owned_steam');
 
     matches.push({
       dlcAppId,
@@ -3001,12 +3272,12 @@ function findFreeDlcGiveawaysForSteamLibraryWeb(giveaways, steamGames) {
       shortDescription: g.description || '',
       isFree: true,
       discountPercent: 100,
-      priceFormatted: 'FREE',
+      priceFormatted: t('card_free'),
       initialPriceFormatted: g.worth && g.worth !== 'N/A' ? g.worth : '',
       recommendationsCount: parseInt(g.users || '0', 10) || 0,
       releaseDate: g.published_date || '',
-      reasonBadge: isClaimed ? '✓ Claimed Free DLC' : '🎁 Free DLC Drop',
-      recommendationReason: `100% Free giveaway for ${parent.name} (${parent.playtimeMinutes > 0 ? `${playtimeHrs}h played` : 'Owned in Steam'})`,
+      reasonBadge: isClaimed ? t('dlc_badge_claimed_free') : t('dlc_badge_free_drop'),
+      recommendationReason: t('dlc_reason_free_giveaway', { name: parent.name, info: infoStr }),
       storeUrl: g.open_giveaway_url || `https://store.steampowered.com/app/${parent.appId}`,
       matchedGiveawayId: g.id,
       isSoundtrackOrCosmetic: false,
@@ -3028,7 +3299,8 @@ function selectCandidateGamesForDlcScanWeb(steamGames, maxGames = 6) {
 }
 
 async function fetchSteamStoreAppDetailsWeb(appId) {
-  const url = `https://store.steampowered.com/api/appdetails?appids=${appId}&l=english&cc=us`;
+  const steamLang = isEs() ? 'spanish' : 'english';
+  const url = `https://store.steampowered.com/api/appdetails?appids=${appId}&l=${steamLang}&cc=us`;
   const resp = await fetchWithCorsFallback(url);
   const json = await resp.json();
   const entry = json?.[String(appId)];
@@ -3042,7 +3314,7 @@ function buildDlcRecommendationFromStoreData(dlcAppId, data, parentGame) {
   const priceObj = data.price_overview || null;
   const isFree = Boolean(data.is_free) || (priceObj && priceObj.final === 0);
   const discountPercent = priceObj?.discount_percent || 0;
-  const priceFormatted = isFree ? 'Free' : (priceObj?.final_formatted || 'View Price');
+  const priceFormatted = isFree ? (isEs() ? 'Gratis' : 'Free') : (priceObj?.final_formatted || t('dlc_view_price'));
   const initialPriceFormatted = priceObj?.initial_formatted || '';
   const recsCount = data.recommendations?.total || 0;
   const metacriticScore = data.metacritic?.score || null;
@@ -3057,22 +3329,24 @@ function buildDlcRecommendationFromStoreData(dlcAppId, data, parentGame) {
   if (isCosmeticOrOst) score -= 450;
 
   const hours = ((parentGame.playtimeMinutes || 0) / 60).toFixed(1);
-  const playtimeText = (parentGame.playtimeMinutes || 0) > 0 ? `${hours}h played` : 'In Steam Library';
+  const playtimeText = (parentGame.playtimeMinutes || 0) > 0
+    ? t('steam_hours_played', { hours })
+    : t('dlc_in_library');
 
-  let reasonBadge = '🧩 DLC Expansion';
-  if (isFree) reasonBadge = '🎁 Free DLC';
-  else if (discountPercent >= 50) reasonBadge = `🔥 -${discountPercent}% Deal`;
-  else if (discountPercent > 0) reasonBadge = `🏷️ -${discountPercent}% Off`;
-  else if (isCosmeticOrOst) reasonBadge = '🎵 Soundtrack / Extra';
-  else if (recsCount >= 5000) reasonBadge = '⭐ Fan Favorite';
-  else if ((parentGame.playtime2WeeksMinutes || 0) > 0) reasonBadge = '🎮 Recently Played';
-  else if ((parentGame.playtimeMinutes || 0) >= 1200) reasonBadge = '🏆 Top Game Pick';
+  let reasonBadge = t('dlc_badge_exp');
+  if (isFree) reasonBadge = t('dlc_badge_free');
+  else if (discountPercent >= 50) reasonBadge = t('dlc_badge_deal', { pct: discountPercent });
+  else if (discountPercent > 0) reasonBadge = t('dlc_badge_off', { pct: discountPercent });
+  else if (isCosmeticOrOst) reasonBadge = t('dlc_badge_ost');
+  else if (recsCount >= 5000) reasonBadge = t('dlc_badge_fan');
+  else if ((parentGame.playtime2WeeksMinutes || 0) > 0) reasonBadge = t('dlc_badge_recent');
+  else if ((parentGame.playtimeMinutes || 0) >= 1200) reasonBadge = t('dlc_badge_top');
 
-  let recommendationReason = `Official expansion for ${parentGame.name} (${playtimeText})`;
-  if (isFree) recommendationReason = `Free add-on for ${parentGame.name} (${playtimeText})`;
-  else if (discountPercent > 0) recommendationReason = `On sale (-${discountPercent}%) for ${parentGame.name} • ${playtimeText}`;
-  else if (recsCount >= 1000) recommendationReason = `Popular expansion for ${parentGame.name} (${playtimeText})`;
-  else if ((parentGame.playtimeMinutes || 0) > 0) recommendationReason = `Recommended from your ${playtimeText} in ${parentGame.name}`;
+  let recommendationReason = t('dlc_reason_official', { name: parentGame.name, info: playtimeText });
+  if (isFree) recommendationReason = t('dlc_reason_free_addon', { name: parentGame.name, info: playtimeText });
+  else if (discountPercent > 0) recommendationReason = t('dlc_reason_sale', { pct: discountPercent, name: parentGame.name, info: playtimeText });
+  else if (recsCount >= 1000) recommendationReason = t('dlc_reason_popular', { name: parentGame.name, info: playtimeText });
+  else if ((parentGame.playtimeMinutes || 0) > 0) recommendationReason = t('dlc_reason_played', { info: playtimeText, name: parentGame.name });
 
   const cleanDesc = (data.short_description || '')
     .replace(/<[^>]*>/g, ' ')
@@ -3137,7 +3411,7 @@ async function refreshWebSteamDlcRecommendations(force = true) {
   if (!force && isDlcCacheFresh()) return;
 
   isScanningDlcs = true;
-  dlcScanStatus = 'Scanning Steam Storefront for DLCs matching your library...';
+  dlcScanStatus = t('dlc_scanning_store');
   renderHomeDlcSection();
   updateDlcHubStatusUI();
 
@@ -3148,7 +3422,7 @@ async function refreshWebSteamDlcRecommendations(force = true) {
     const collected = [];
 
     for (const game of candidates) {
-      dlcScanStatus = `Checking DLCs for ${game.name}...`;
+      dlcScanStatus = isEs() ? `Buscando DLCs de ${game.name}...` : `Checking DLCs for ${game.name}...`;
       updateDlcHubStatusUI();
 
       try {
@@ -3184,10 +3458,12 @@ async function refreshWebSteamDlcRecommendations(force = true) {
 
     saveDlcCache(storeDlcRecommendations);
     dlcScanStatus = collected.length > 0
-      ? `Found ${collected.length} Steam DLC recommendations!`
-      : 'Scan complete — no additional store DLCs returned.';
+      ? (isEs() ? `¡${collected.length} recomendaciones de DLC encontradas!` : `Found ${collected.length} Steam DLC recommendations!`)
+      : (isEs() ? 'Escaneo completo — sin DLCs adicionales en tienda.' : 'Scan complete — no additional store DLCs returned.');
   } catch (err) {
-    dlcScanStatus = `Could not finish Steam DLC scan: ${err.message}`;
+    dlcScanStatus = isEs()
+      ? `No se pudo completar el escaneo de DLC: ${err.message}`
+      : `Could not finish Steam DLC scan: ${err.message}`;
   } finally {
     isScanningDlcs = false;
     updateDlcBadges();
@@ -3203,7 +3479,9 @@ async function fetchDlcsForSingleGameWeb(appId) {
 
   selectedDlcParentAppId = String(appId);
   isLoadingGameDlcs = true;
-  dlcScanStatus = `Fetching official Steam DLCs for ${parentGame.name}...`;
+  dlcScanStatus = isEs()
+    ? `Obteniendo DLCs oficiales de Steam para ${parentGame.name}...`
+    : `Fetching official Steam DLCs for ${parentGame.name}...`;
   selectedGameDlcsList = getCombinedDlcRecommendations().filter(d => d.parentAppId === appId);
   updateDlcHubHeader();
   updateDlcHubStatusUI();
@@ -3250,7 +3528,9 @@ async function fetchDlcsForSingleGameWeb(appId) {
 
     dlcScanStatus = '';
   } catch (err) {
-    dlcScanStatus = `Could not fetch DLCs for ${parentGame.name}: ${err.message}`;
+    dlcScanStatus = isEs()
+      ? `No se pudieron cargar DLCs de ${parentGame.name}: ${err.message}`
+      : `Could not fetch DLCs for ${parentGame.name}: ${err.message}`;
   } finally {
     isLoadingGameDlcs = false;
     updateDlcBadges();
@@ -3289,12 +3569,12 @@ function renderHomeDlcSection() {
         <div class="dlc-link-steam-top">
           <div class="dlc-link-icon">🧩</div>
           <div class="dlc-link-copy">
-            <h4>Discover DLCs for Games You Already Own</h4>
-            <p>Link your public Steam ID in Settings to automatically spot free DLC drops, expansion sales, and top-rated add-ons for your Steam library.</p>
+            <h4>${escapeHtml(t('dlc_home_cta_title'))}</h4>
+            <p>${escapeHtml(t('dlc_home_cta_desc'))}</p>
           </div>
         </div>
         <div>
-          <button class="btn btn-sm btn-dlc" id="btn-home-dlc-link-steam">🎮 Link Steam Library ➔</button>
+          <button class="btn btn-sm btn-dlc" id="btn-home-dlc-link-steam">${escapeHtml(t('dlc_home_cta_btn'))}</button>
         </div>
       </div>
     `;
@@ -3306,24 +3586,30 @@ function renderHomeDlcSection() {
     container.innerHTML = `
       <div class="dlc-scan-status-bar">
         <div class="spinner dlc-mini-spinner"></div>
-        <span>${escapeHtml(dlcScanStatus || 'Scanning Steam Storefront for DLCs matching your library...')}</span>
+        <span>${escapeHtml(dlcScanStatus || t('dlc_scanning_store'))}</span>
       </div>
     `;
     return;
   }
 
   if (recs.length === 0) {
+    const emptyDescFallback = isEs()
+      ? 'Pulsa Escanear para buscar expansiones, ofertas y DLCs gratis en Steam para tus juegos.'
+      : 'Click Scan Now to check the Steam Store for expansions, deals, and free DLC drops for games you own.';
+    const syncedTitle = isEs()
+      ? `${steamGamesList.length} Juegos de Steam Sincronizados`
+      : `${steamGamesList.length} Steam Games Synced`;
     container.innerHTML = `
       <div class="dlc-link-steam-card">
         <div class="dlc-link-steam-top">
           <div class="dlc-link-icon">✨</div>
           <div class="dlc-link-copy">
-            <h4>${steamGamesList.length} Steam Games Synced</h4>
-            <p>${escapeHtml(dlcScanStatus || 'Click Scan Now to check the Steam Store for expansions, deals, and free DLC drops for games you own.')}</p>
+            <h4>${escapeHtml(syncedTitle)}</h4>
+            <p>${escapeHtml(dlcScanStatus || emptyDescFallback)}</p>
           </div>
         </div>
         <div>
-          <button class="btn btn-sm btn-dlc" id="btn-home-dlc-empty-scan">🔄 Scan Library for DLCs</button>
+          <button class="btn btn-sm btn-dlc" id="btn-home-dlc-empty-scan">${escapeHtml(t('dlc_scan_now_btn'))}</button>
         </div>
       </div>
     `;
@@ -3331,6 +3617,8 @@ function renderHomeDlcSection() {
     return;
   }
 
+  const freeLbl = t('card_free');
+  const forPrefix = isEs() ? 'Para:' : 'For:';
   container.innerHTML = `
     <div class="dlc-carousel">
       ${recs.slice(0, 10).map(dlc => {
@@ -3344,8 +3632,8 @@ function renderHomeDlcSection() {
               <img src="${dlc.headerImageUrl}" onerror="this.onerror=null;this.src='https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${dlc.parentAppId}/header.jpg';" alt="${escapeHtml(dlc.name)}" class="dlc-thumb-img" loading="lazy">
               <div class="dlc-thumb-scrim"></div>
               <span class="dlc-reason-badge ${badgeCls}">${escapeHtml(dlc.reasonBadge)}</span>
-              <button class="dlc-dismiss-btn" data-dismiss-dlcid="${dlc.dlcAppId}" title="Hide recommendation">✕</button>
-              <div class="dlc-parent-pill">For: ${escapeHtml(parentLabel)}</div>
+              <button class="dlc-dismiss-btn" data-dismiss-dlcid="${dlc.dlcAppId}" title="${escapeHtml(t('dlc_hide_btn'))}">✕</button>
+              <div class="dlc-parent-pill">${forPrefix} ${escapeHtml(parentLabel)}</div>
             </div>
             <div class="dlc-card-body">
               <div class="dlc-card-title">${escapeHtml(dlc.name)}</div>
@@ -3353,10 +3641,10 @@ function renderHomeDlcSection() {
               <div class="dlc-card-footer">
                 <div class="dlc-price-group">
                   ${dlc.initialPriceFormatted && dlc.initialPriceFormatted !== dlc.priceFormatted ? `<span class="dlc-price-strike">${escapeHtml(dlc.initialPriceFormatted)}</span>` : ''}
-                  <span class="dlc-price-pill ${badgeCls}">${dlc.isFree ? 'FREE' : escapeHtml(dlc.priceFormatted)}</span>
+                  <span class="dlc-price-pill ${badgeCls}">${dlc.isFree ? escapeHtml(freeLbl) : escapeHtml(dlc.priceFormatted)}</span>
                 </div>
                 <button class="btn btn-sm ${dlc.isFree ? 'btn-primary' : 'btn-dlc'} open-dlc-action-btn" data-dlcid="${dlc.dlcAppId}">
-                  ${dlc.matchedGiveawayId != null ? 'Claim Free' : 'View DLC'}
+                  ${escapeHtml(dlc.matchedGiveawayId != null ? t('dlc_claim_free_short') : t('dlc_view_btn'))}
                 </button>
               </div>
             </div>
@@ -3390,7 +3678,7 @@ function openDlcHubModal(gameAppId = 'all') {
   const gameSelect = document.getElementById('dlc-hub-game-select');
   if (gameSelect) {
     const sorted = [...steamGamesList].sort((a, b) => (b.playtimeMinutes || 0) - (a.playtimeMinutes || 0));
-    gameSelect.innerHTML = `<option value="all">All Owned Steam Games (${steamGamesList.length})</option>` +
+    gameSelect.innerHTML = `<option value="all">${escapeHtml(t('dlc_select_all_count', { count: steamGamesList.length }))}</option>` +
       sorted.map(g => `<option value="${g.appId}">${escapeHtml(g.name)} (${((g.playtimeMinutes || 0) / 60).toFixed(1)}h)</option>`).join('');
     gameSelect.value = String(gameAppId);
   }
@@ -3414,12 +3702,14 @@ function updateDlcHubHeader() {
   if (!titleEl || !subEl) return;
 
   if (selectedDlcParentAppId === 'all') {
-    titleEl.textContent = '🧩 Steam DLC Recommender';
-    subEl.textContent = 'Matched to games you already own in Steam';
+    titleEl.textContent = t('dlc_title');
+    subEl.textContent = t('dlc_sub');
   } else {
     const game = steamGamesList.find(g => String(g.appId) === String(selectedDlcParentAppId));
-    titleEl.textContent = game ? `🧩 DLCs for ${game.name}` : '🧩 Game DLC Explorer';
-    subEl.textContent = game ? `${((game.playtimeMinutes || 0) / 60).toFixed(1)}h played on Steam` : 'Official Steam Storefront expansions';
+    titleEl.textContent = game ? t('dlc_for_game', { name: game.name }) : t('dlc_title');
+    subEl.textContent = game
+      ? t('dlc_played_steam', { hours: ((game.playtimeMinutes || 0) / 60).toFixed(1) })
+      : t('dlc_official_exp');
   }
 }
 
@@ -3433,7 +3723,7 @@ function updateDlcHubStatusUI() {
   if (busy) {
     bar.style.display = 'flex';
     if (spinnerEl) spinnerEl.style.display = 'block';
-    textEl.textContent = dlcScanStatus || 'Fetching DLC metadata from Steam Storefront...';
+    textEl.textContent = dlcScanStatus || t('dlc_fetching_meta');
   } else {
     bar.style.display = 'none';
   }
@@ -3461,26 +3751,26 @@ function renderDlcHubList() {
     listEl.innerHTML = `
       <div style="text-align:center; padding: 36px 20px; color: var(--color-text-muted);">
         <span style="font-size: 38px; display:block; margin-bottom:10px;">🧩</span>
-        <h4>${steamGamesList.length === 0 ? 'No Steam Library Synced Yet' : 'No Matching DLC Recommendations'}</h4>
+        <h4>${escapeHtml(steamGamesList.length === 0 ? t('dlc_empty_no_steam_title') : t('dlc_empty_none_title'))}</h4>
         <p style="font-size:12px; margin-top:6px; margin-bottom:14px;">
-          ${steamGamesList.length === 0
-            ? 'Link your Steam 64 ID in Settings so LootDrop can recommend DLCs for games you own.'
-            : 'Try switching filters or clicking Scan to fetch fresh Steam Storefront DLC deals.'}
+          ${escapeHtml(steamGamesList.length === 0 ? t('dlc_empty_no_steam_desc') : t('dlc_empty_rescan_desc'))}
         </p>
         ${steamGamesList.length === 0
-          ? `<button class="btn btn-sm btn-primary" onclick="document.getElementById('modal-dlc-hub').classList.remove('open'); switchTab('pane-settings');">Link Steam Account</button>`
-          : `<button class="btn btn-sm btn-dlc" onclick="document.getElementById('btn-dlc-hub-refresh').click();">🔄 Scan Library Now</button>`
+          ? `<button class="btn btn-sm btn-primary" onclick="document.getElementById('modal-dlc-hub').classList.remove('open'); switchTab('pane-settings');">${escapeHtml(t('dlc_link_account_btn'))}</button>`
+          : `<button class="btn btn-sm btn-dlc" onclick="document.getElementById('btn-dlc-hub-refresh').click();">${escapeHtml(t('dlc_scan_now_btn'))}</button>`
         }
       </div>
     `;
     return;
   }
 
+  const freeLbl = t('card_free');
+  const reviewsWord = isEs() ? 'reseñas' : 'reviews';
   listEl.innerHTML = filtered.map(dlc => {
     const badgeCls = dlc.isFree ? 'free' : (dlc.discountPercent > 0 ? 'sale' : '');
     const cardCls = dlc.isFree ? 'is-free' : (dlc.discountPercent > 0 ? 'is-sale' : '');
     const hours = ((dlc.parentPlaytimeMinutes || 0) / 60).toFixed(1);
-    const recsText = dlc.recommendationsCount > 0 ? `${dlc.recommendationsCount.toLocaleString()} reviews` : '';
+    const recsText = dlc.recommendationsCount > 0 ? `${dlc.recommendationsCount.toLocaleString()} ${reviewsWord}` : '';
 
     return `
       <div class="dlc-detail-card ${cardCls}">
@@ -3488,27 +3778,27 @@ function renderDlcHubList() {
           <img src="${dlc.headerImageUrl}" onerror="this.onerror=null;this.src='https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${dlc.parentAppId}/header.jpg';" alt="${escapeHtml(dlc.name)}" class="dlc-thumb-img" loading="lazy">
           <div class="dlc-thumb-scrim"></div>
           <span class="dlc-reason-badge ${badgeCls}">${escapeHtml(dlc.reasonBadge)}</span>
-          <div class="dlc-parent-pill">🎮 ${escapeHtml(dlc.parentGameName)}${dlc.parentPlaytimeMinutes > 0 ? ` • ${hours}h played` : ''}</div>
+          <div class="dlc-parent-pill">🎮 ${escapeHtml(dlc.parentGameName)}${dlc.parentPlaytimeMinutes > 0 ? ` • ${escapeHtml(t('dlc_played_suffix', { hours }))}` : ''}</div>
         </div>
         <div class="dlc-card-body">
           <div class="dlc-card-footer" style="margin-top:0; padding-top:0;">
             <strong style="font-size:15px; color:var(--color-text-main);">${escapeHtml(dlc.name)}</strong>
             <div class="dlc-price-group">
               ${dlc.initialPriceFormatted && dlc.initialPriceFormatted !== dlc.priceFormatted ? `<span class="dlc-price-strike">${escapeHtml(dlc.initialPriceFormatted)}</span>` : ''}
-              <span class="dlc-price-pill ${badgeCls}">${dlc.isFree ? 'FREE' : escapeHtml(dlc.priceFormatted)}</span>
+              <span class="dlc-price-pill ${badgeCls}">${dlc.isFree ? escapeHtml(freeLbl) : escapeHtml(dlc.priceFormatted)}</span>
             </div>
           </div>
           <div style="font-size:12px; font-weight:700; color:#D8B4FE;">${escapeHtml(dlc.recommendationReason)}</div>
           ${dlc.shortDescription ? `<p class="dlc-detail-desc">${escapeHtml(dlc.shortDescription)}</p>` : ''}
           <div class="dlc-meta-chips">
-            ${recsText ? `<span class="dlc-meta-pill">👍 ${recsText}</span>` : ''}
+            ${recsText ? `<span class="dlc-meta-pill">👍 ${escapeHtml(recsText)}</span>` : ''}
             ${dlc.metacriticScore ? `<span class="dlc-meta-pill" style="background:rgba(16,185,129,0.16); color:#34D399;">MC ${dlc.metacriticScore}</span>` : ''}
             ${dlc.releaseDate ? `<span>${escapeHtml(dlc.releaseDate)}</span>` : ''}
           </div>
           <div class="dlc-detail-actions">
-            <button class="btn btn-sm btn-outline hub-dismiss-dlc-btn" data-dlcid="${dlc.dlcAppId}">Hide</button>
+            <button class="btn btn-sm btn-outline hub-dismiss-dlc-btn" data-dlcid="${dlc.dlcAppId}">${escapeHtml(t('dlc_hide_btn'))}</button>
             <button class="btn btn-sm ${dlc.isFree ? 'btn-primary' : 'btn-dlc'} hub-open-dlc-btn" data-dlcid="${dlc.dlcAppId}" style="flex:1;">
-              ${dlc.matchedGiveawayId != null ? '🎁 Claim Free DLC' : 'Open Steam Store ↗'}
+              ${escapeHtml(dlc.matchedGiveawayId != null ? t('dlc_claim_free_btn') : t('dlc_open_store_btn'))}
             </button>
           </div>
         </div>
@@ -3538,7 +3828,7 @@ function dismissDlcWeb(dlcAppId) {
   updateDlcBadges();
   renderHomeDlcSection();
   renderDlcHubList();
-  showToast('DLC recommendation hidden', '👁️');
+  showToast(t('toast_dlc_hidden'), '👁️');
 }
 
 function openDlcRecommendationWeb(dlc) {

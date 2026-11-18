@@ -74,6 +74,38 @@ object WidgetUpdateHelper {
         if (statsIds.isNotEmpty()) {
             RadarStatsWidgetProvider.updateAppWidgets(context, appWidgetManager, statsIds)
         }
+
+        // Update Ending Soon widgets
+        val expiringIds = appWidgetManager.getAppWidgetIds(
+            ComponentName(context, ExpiringSoonWidgetProvider::class.java)
+        )
+        if (expiringIds.isNotEmpty()) {
+            ExpiringSoonWidgetProvider.updateAppWidgets(context, appWidgetManager, expiringIds)
+        }
+
+        // Update Top 3 Free Drops widgets
+        val topDropsIds = appWidgetManager.getAppWidgetIds(
+            ComponentName(context, TopDropsListWidgetProvider::class.java)
+        )
+        if (topDropsIds.isNotEmpty()) {
+            TopDropsListWidgetProvider.updateAppWidgets(context, appWidgetManager, topDropsIds)
+        }
+
+        // Update Weekly 3x3 Backlog Challenge widgets
+        val challengeIds = appWidgetManager.getAppWidgetIds(
+            ComponentName(context, BacklogChallengeWidgetProvider::class.java)
+        )
+        if (challengeIds.isNotEmpty()) {
+            BacklogChallengeWidgetProvider.updateAppWidgets(context, appWidgetManager, challengeIds)
+        }
+
+        // Update Compact Vault widgets
+        val compactVaultIds = appWidgetManager.getAppWidgetIds(
+            ComponentName(context, CompactVaultWidgetProvider::class.java)
+        )
+        if (compactVaultIds.isNotEmpty()) {
+            CompactVaultWidgetProvider.updateAppWidgets(context, appWidgetManager, compactVaultIds)
+        }
     }
 
     fun triggerManualSync(context: Context) {
@@ -355,4 +387,32 @@ object WidgetUpdateHelper {
             views.setTextViewText(R.id.widget_stat_saved_dollars, "$0.00")
         }
     }
+
+    fun populateExpiringSoon(
+        context: Context,
+        views: RemoteViews,
+        appWidgetId: Int,
+        db: AppDatabase = AppDatabase.getInstance(context)
+    ) = ExpandedWidgetsHelper.populateExpiringSoon(context, views, appWidgetId, db)
+
+    fun populateTopDropsList(
+        context: Context,
+        views: RemoteViews,
+        appWidgetId: Int,
+        db: AppDatabase = AppDatabase.getInstance(context)
+    ) = ExpandedWidgetsHelper.populateTopDropsList(context, views, appWidgetId, db)
+
+    fun populateBacklogChallenge(
+        context: Context,
+        views: RemoteViews,
+        appWidgetId: Int,
+        db: AppDatabase = AppDatabase.getInstance(context)
+    ) = ExpandedWidgetsHelper.populateBacklogChallenge(context, views, appWidgetId, db)
+
+    fun populateCompactVault(
+        context: Context,
+        views: RemoteViews,
+        appWidgetId: Int,
+        db: AppDatabase = AppDatabase.getInstance(context)
+    ) = ExpandedWidgetsHelper.populateCompactVault(context, views, appWidgetId, db)
 }

@@ -42,6 +42,8 @@ class NotificationSyncReceiver : BroadcastReceiver() {
                 val repository = GiveawaysRepository(db.giveawayDao(), helper)
                 repository.refreshGiveaways()
 
+                runCatching { com.example.util.SupabaseKeepAliveManager.pingIfDue(appContext, prefs) }
+
                 // Check background Steam sync & Mythic achievement unlocks
                 if (prefs.steamUserId.isNotBlank()) {
                     try {

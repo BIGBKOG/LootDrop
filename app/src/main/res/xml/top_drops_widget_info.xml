@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_top_drops_desc"
+    android:initialKeyguardLayout="@layout/widget_top_drops"
+    android:initialLayout="@layout/widget_top_drops"
+    android:minWidth="240dp"
+    android:minHeight="140dp"
+    android:previewImage="@drawable/ic_app_logo"
+    android:previewLayout="@layout/widget_top_drops"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="1800000"
+    android:widgetCategory="home_screen" />

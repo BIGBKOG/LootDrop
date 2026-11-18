@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_compact_vault_desc"
+    android:initialKeyguardLayout="@layout/widget_compact_vault"
+    android:initialLayout="@layout/widget_compact_vault"
+    android:minWidth="120dp"
+    android:minHeight="110dp"
+    android:previewImage="@drawable/ic_app_logo"
+    android:previewLayout="@layout/widget_compact_vault"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="1800000"
+    android:widgetCategory="home_screen" />

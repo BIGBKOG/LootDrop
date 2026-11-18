@@ -54,6 +54,7 @@ import com.example.util.CustomFontHelper
 import com.example.util.MythicAchievementNotificationManager
 import com.example.util.PublicReviewsManager
 import com.example.util.SteamDlcRecommender
+import com.example.util.SupabaseKeepAliveManager
 import com.example.util.UserProfileManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -626,6 +627,15 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isCloudSessionActive = MutableStateFlow(isCloudSessionActive)
     val isCloudSessionActiveFlow: StateFlow<Boolean> = _isCloudSessionActive.asStateFlow()
 
+    private val _lastSupabaseKeepAliveTimestamp = MutableStateFlow(preferences.lastSupabaseKeepAliveTimestamp)
+    val lastSupabaseKeepAliveTimestamp: StateFlow<Long> = _lastSupabaseKeepAliveTimestamp.asStateFlow()
+
+    private val _lastSupabaseKeepAliveStatus = MutableStateFlow(preferences.lastSupabaseKeepAliveStatus)
+    val lastSupabaseKeepAliveStatus: StateFlow<String> = _lastSupabaseKeepAliveStatus.asStateFlow()
+
+    private val _isPingingSupabase = MutableStateFlow(false)
+    val isPingingSupabase: StateFlow<Boolean> = _isPingingSupabase.asStateFlow()
+
     init {
         runCatching { refreshGiveaways() }
         runCatching { updateStorageFootprint() }
@@ -639,6 +649,12 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
             runCatching { AutoBackupScheduler.schedulePeriodicAutoBackup(application) }
             runCatching { checkAndTriggerAutoBackupIfNeeded(application) }
             runCatching { checkAndTriggerCloudAutoBackupIfNeeded(application) }
+            runCatching {
+                SupabaseKeepAliveManager.pingIfDue(application, preferences)?.onSuccess {
+                    _lastSupabaseKeepAliveTimestamp.value = preferences.lastSupabaseKeepAliveTimestamp
+                    _lastSupabaseKeepAliveStatus.value = preferences.lastSupabaseKeepAliveStatus
+                }
+            }
             runCatching { MythicAchievementNotificationManager.checkPendingFromPreferences(application) }
             runCatching { checkWeeklyBacklogRollover() }
             runCatching {
@@ -693,7 +709,10 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun toggleBacklogTileManual(tileIndex: Int, weekKey: String = _selectedBacklogWeek.value): Boolean {
         val success = BacklogChallengeManager.toggleManualOverride(preferences, weekKey, tileIndex)
-        if (success) _backlogGridRefreshTrigger.value += 1
+        if (success) {
+            _backlogGridRefreshTrigger.value += 1
+            runCatching { com.example.widget.WidgetUpdateHelper.updateAllWidgets(getApplication()) }
+        }
         return success
     }
 
@@ -702,6 +721,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
             val newlyAwarded = BacklogChallengeManager.checkAndAwardMilestones(backlogChallengeGrid.value, database, preferences)
             if (newlyAwarded.isNotEmpty()) {
                 _backlogGridRefreshTrigger.value += 1
+                runCatching { com.example.widget.WidgetUpdateHelper.updateAllWidgets(getApplication()) }
                 onClaimed(newlyAwarded)
             }
         }
@@ -1234,6 +1254,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
                 _steamSyncStatus.value = String.format(s.system.vmSteamSyncFailedFormat, e.message ?: "")
             } finally {
                 _isSyncingSteam.value = false
+                runCatching { com.example.widget.WidgetUpdateHelper.updateAllWidgets(getApplication()) }
             }
         }
     }
@@ -1466,5 +1487,31 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         if (!preferences.isCloudAutoBackupEnabled || !CloudBackupManager.isConfigured() || !preferences.isCloudAccountLoggedIn) return
         val elapsed = System.currentTimeMillis() - preferences.lastCloudBackupTimestamp
         if (preferences.lastCloudBackupTimestamp <= 0L || elapsed >= 86_400_000L) backupToCloud(context, isAutomated = true)
+    }
+
+    fun pingSupabaseNow(context: Context) {
+        val isEs = _appLanguage.value == AppLanguage.SPANISH
+        viewModelScope.launch {
+            _isPingingSupabase.value = true
+            val result = SupabaseKeepAliveManager.pingNow(preferences)
+            _lastSupabaseKeepAliveTimestamp.value = preferences.lastSupabaseKeepAliveTimestamp
+            _lastSupabaseKeepAliveStatus.value = preferences.lastSupabaseKeepAliveStatus
+            _isPingingSupabase.value = false
+            result.onSuccess { res ->
+                val msg = if (isEs) {
+                    "✅ Base de datos Supabase activa (HTTP ${res.httpCode} • ${res.latencyMs}ms)"
+                } else {
+                    "✅ Supabase DB active (HTTP ${res.httpCode} • ${res.latencyMs}ms)"
+                }
+                showShortToast(context, msg)
+            }.onFailure { err ->
+                val msg = if (isEs) {
+                    "⚠️ Error al hacer ping a Supabase: ${err.message ?: "Sin conexión"}"
+                } else {
+                    "⚠️ Supabase ping failed: ${err.message ?: "Offline"}"
+                }
+                showShortToast(context, msg)
+            }
+        }
     }
 }

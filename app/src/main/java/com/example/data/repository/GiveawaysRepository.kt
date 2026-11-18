@@ -262,18 +262,22 @@ class GiveawaysRepository(
 
     suspend fun toggleBookmarked(id: Int, currentlyBookmarked: Boolean) = withContext(Dispatchers.IO) {
         giveawayDao.updateBookmarked(id, !currentlyBookmarked)
+        com.example.widget.WidgetUpdateHelper.updateAllWidgets(notificationHelper.context)
     }
 
     suspend fun toggleWishlisted(id: Int, currentlyWishlisted: Boolean) = withContext(Dispatchers.IO) {
         giveawayDao.updateWishlisted(id, !currentlyWishlisted)
+        com.example.widget.WidgetUpdateHelper.updateAllWidgets(notificationHelper.context)
     }
 
     suspend fun markWishlistedBySteamAppIds(steamAppIds: List<Int>) = withContext(Dispatchers.IO) {
         giveawayDao.markWishlistedBySteamAppIds(steamAppIds)
+        com.example.widget.WidgetUpdateHelper.updateAllWidgets(notificationHelper.context)
     }
 
     suspend fun clearAllWishlisted() = withContext(Dispatchers.IO) {
         giveawayDao.clearAllWishlisted()
+        com.example.widget.WidgetUpdateHelper.updateAllWidgets(notificationHelper.context)
     }
 
     suspend fun insertSteamGames(games: List<SteamGameEntity>) = withContext(Dispatchers.IO) {
@@ -302,10 +306,12 @@ class GiveawaysRepository(
 
     suspend fun clearAllClaimed() = withContext(Dispatchers.IO) {
         giveawayDao.clearAllClaimed()
+        com.example.widget.WidgetUpdateHelper.updateAllWidgets(notificationHelper.context)
     }
 
     suspend fun clearAllBookmarks() = withContext(Dispatchers.IO) {
         giveawayDao.clearAllBookmarks()
+        com.example.widget.WidgetUpdateHelper.updateAllWidgets(notificationHelper.context)
     }
 
     suspend fun clearAllCaches(context: android.content.Context): Long = withContext(Dispatchers.IO) {
