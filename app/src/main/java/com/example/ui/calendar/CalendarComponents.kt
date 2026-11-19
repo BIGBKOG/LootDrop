@@ -60,7 +60,6 @@ internal val CalendarNeonAmber = Color(0xFFFFB300)
 internal fun CalendarHeroBanner(
     totalExpiringCount: Int,
     totalValueUsd: Double,
-    urgentCount: Int,
     isCompact: Boolean,
     onToggleCompact: () -> Unit,
     reducedMotion: Boolean
@@ -129,34 +128,13 @@ internal fun CalendarHeroBanner(
                     }
 
                     Column {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text(
-                                text = if (isEs) "RADAR DE EXPIRACIÓN" else "EXPIRING GAMES RADAR",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Black,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                letterSpacing = 0.5.sp
-                            )
-                            if (urgentCount > 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .background(CalendarNeonAmber.copy(alpha = 0.2f))
-                                        .border(0.8.dp, CalendarNeonAmber.copy(alpha = 0.4f), RoundedCornerShape(4.dp))
-                                        .padding(horizontal = 5.dp, vertical = 1.dp)
-                                ) {
-                                    Text(
-                                        text = if (isEs) "⚠️ $urgentCount Por Vencer" else "⚠️ $urgentCount Ending Soon",
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = CalendarNeonAmber
-                                    )
-                                }
-                            }
-                        }
+                        Text(
+                            text = if (isEs) "RADAR DE EXPIRACIÓN" else "EXPIRING GAMES RADAR",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            letterSpacing = 0.5.sp
+                        )
                         AnimatedVisibility(
                             visible = !isCompact,
                             enter = ExpressiveMotion.expressiveExpandEnter(reducedMotion),

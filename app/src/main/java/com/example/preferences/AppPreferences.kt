@@ -40,11 +40,11 @@ enum class DpiScaleMode(val label: String, val shortName: String, val descriptio
 }
 
 enum class AccentCategory(val label: String) {
-    ALL("All (19)"),
+    ALL("All (23)"),
     GAMING("Gaming (6)"),
     CYBER("Cyber (5)"),
     VAULT("Vault (5)"),
-    REWARDS("Rewards (3)")
+    REWARDS("Rewards (7)")
 }
 
 enum class AccentTheme(
@@ -245,6 +245,46 @@ enum class AccentTheme(
         Color(0xFF0284C7),
         "Unlocked via Backlog Challenge! Cosmic nebula violet & electric cyan",
         "Nebula",
+        AccentCategory.REWARDS
+    ),
+    PRISM_DRIFT(
+        "Prism Drift",
+        Color(0xFFFF2E93), // Hot Magenta Prism
+        Color(0xFF00E5FF), // Arctic Laser Cyan
+        Color(0xFFDB2777),
+        Color(0xFF0284C7),
+        "Unlocked via Diagonal Drifter! Razor-sharp magenta & glacier cyan",
+        "Prism",
+        AccentCategory.REWARDS
+    ),
+    SOLAR_NOVA(
+        "Solar Nova",
+        Color(0xFFFF6B00), // Blazing Solar Flare
+        Color(0xFFFFD166), // Warm Corona Gold
+        Color(0xFFC2410C),
+        Color(0xFFD97706),
+        "Unlocked via Bingo Architect! Supernova orange & molten gold",
+        "Nova",
+        AccentCategory.REWARDS
+    ),
+    TOXIC_OVERDRIVE(
+        "Toxic Overdrive",
+        Color(0xFFA3E635), // Radio-Active Volt Lime
+        Color(0xFFC026D3), // Hyper Plasma Fuchsia
+        Color(0xFF4D7C0F),
+        Color(0xFF9333EA),
+        "Unlocked via Overdrive Runner! Acid volt lime & plasma violet",
+        "Overdrive",
+        AccentCategory.REWARDS
+    ),
+    AURORA_SOVEREIGN(
+        "Aurora Sovereign",
+        Color(0xFF00FFA3), // Northern Aurora Mint
+        Color(0xFF3B82F6), // Sapphire Ice Blue
+        Color(0xFF047857),
+        Color(0xFF1D4ED8),
+        "Unlocked via Triple Threat! Borealis emerald & deep sapphire",
+        "Aurora",
         AccentCategory.REWARDS
     );
 
@@ -746,7 +786,11 @@ class AppPreferences(context: Context) {
         return when (theme) {
             AccentTheme.BACKLOG_SLAYER,
             AccentTheme.VAULT_CLEANER,
-            AccentTheme.NEBULA_BLACKOUT -> theme.name in unlockedAccentThemes
+            AccentTheme.NEBULA_BLACKOUT,
+            AccentTheme.PRISM_DRIFT,
+            AccentTheme.SOLAR_NOVA,
+            AccentTheme.TOXIC_OVERDRIVE,
+            AccentTheme.AURORA_SOVEREIGN -> theme.name in unlockedAccentThemes
             else -> true
         }
     }

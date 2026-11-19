@@ -64,6 +64,7 @@ internal fun MilestonesShelf(
     val s = LocalAppStrings.current
     val isEs = s.language == AppLanguage.SPANISH
     val unclaimedCount = milestones.count { it.isUnlocked && !it.isClaimed }
+    val claimedCount = milestones.count { it.isClaimed }
 
     Column(
         modifier = Modifier
@@ -89,6 +90,20 @@ internal fun MilestonesShelf(
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
+                Box(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(Color(0xFF1E293B))
+                        .border(0.5.dp, Color(0xFF334155), CircleShape)
+                        .padding(horizontal = 7.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = "$claimedCount / ${milestones.size}",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (claimedCount > 0) Color(0xFF34D399) else Color(0xFF94A3B8)
+                    )
+                }
                 if (unclaimedCount > 0) {
                     Box(
                         modifier = Modifier
@@ -143,6 +158,7 @@ internal fun MilestoneItemRow(
     val isEs = s.language == AppLanguage.SPANISH
     val isUnlocked = milestone.isUnlocked
     val isClaimed = milestone.isClaimed
+    val rewardTheme = milestone.themeReward
 
     Row(
         modifier = Modifier
@@ -163,9 +179,17 @@ internal fun MilestoneItemRow(
                 .size(36.dp)
                 .clip(CircleShape)
                 .background(
-                    if (isClaimed) Color(0xFF10B981).copy(alpha = 0.2f)
-                    else if (isUnlocked) Color(0xFFF59E0B).copy(alpha = 0.2f)
-                    else Color(0xFF1E293B)
+                    when {
+                        isClaimed -> Color(0xFF10B981).copy(alpha = 0.2f)
+                        isUnlocked -> Color(0xFFF59E0B).copy(alpha = 0.2f)
+                        rewardTheme != null -> rewardTheme.darkPrimary.copy(alpha = 0.14f)
+                        else -> Color(0xFF1E293B)
+                    }
+                )
+                .then(
+                    if (rewardTheme != null) {
+                        Modifier.border(1.dp, rewardTheme.darkPrimary.copy(alpha = 0.45f), CircleShape)
+                    } else Modifier
                 ),
             contentAlignment = Alignment.Center
         ) {
@@ -185,19 +209,41 @@ internal fun MilestoneItemRow(
                 else -> Icon(
                     imageVector = Icons.Default.Lock,
                     contentDescription = if (isEs) "Bloqueado" else "Locked",
-                    tint = Color(0xFF64748B),
+                    tint = rewardTheme?.darkPrimary?.copy(alpha = 0.8f) ?: Color(0xFF64748B),
                     modifier = Modifier.size(16.dp)
                 )
             }
         }
 
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = milestone.localizedTitle(s),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (isClaimed) Color(0xFF86EFAC) else if (isUnlocked) Color(0xFFFDE68A) else Color(0xFF94A3B8)
-            )
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = milestone.localizedTitle(s),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isClaimed) Color(0xFF86EFAC) else if (isUnlocked) Color(0xFFFDE68A) else Color(0xFF94A3B8),
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                if (rewardTheme != null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(rewardTheme.darkPrimary)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(rewardTheme.darkSecondary)
+                        )
+                    }
+                }
+            }
             Text(
                 text = milestone.localizedSubtitle(s),
                 fontSize = 10.sp,
@@ -205,12 +251,14 @@ internal fun MilestoneItemRow(
             )
         }
 
-        if (isClaimed && milestone.themeReward != null) {
+        if (isClaimed && rewardTheme != null) {
             Button(
-                onClick = { onEquipTheme(milestone.themeReward) },
+                onClick = { onEquipTheme(rewardTheme) },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
                 shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.height(28.dp)
+                modifier = Modifier
+                    .height(28.dp)
+                    .testTag("equip_theme_${rewardTheme.name.lowercase()}")
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

@@ -77,8 +77,7 @@ private data class CalendarIndexSummary(
     val urgentItems: List<GiveawayItem>,
     val ongoingGiveaways: List<GiveawayItem>,
     val totalExpiringIn14Days: Int,
-    val totalValueExpiring14Days: Double,
-    val urgentCount: Int
+    val totalValueExpiring14Days: Double
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -157,8 +156,7 @@ fun CalendarTabContent(
             urgentItems = urgent,
             ongoingGiveaways = ongoing,
             totalExpiringIn14Days = next14.size,
-            totalValueExpiring14Days = value14,
-            urgentCount = urgent.size
+            totalValueExpiring14Days = value14
         )
     }
 
@@ -166,7 +164,6 @@ fun CalendarTabContent(
     val ongoingGiveaways = calendarSummary.ongoingGiveaways
     val totalExpiringIn14Days = calendarSummary.totalExpiringIn14Days
     val totalValueExpiring14Days = calendarSummary.totalValueExpiring14Days
-    val urgentCount = calendarSummary.urgentCount
 
     val filteredTimelineItems by remember(calendarSummary, selectedCalendarDate, selectedScope) {
         derivedStateOf {
@@ -202,7 +199,6 @@ fun CalendarTabContent(
                 CalendarHeroBanner(
                     totalExpiringCount = totalExpiringIn14Days,
                     totalValueUsd = totalValueExpiring14Days,
-                    urgentCount = urgentCount,
                     isCompact = isCalendarHeaderCompact,
                     onToggleCompact = { isCalendarHeaderCompact = !isCalendarHeaderCompact },
                     reducedMotion = reducedMotion

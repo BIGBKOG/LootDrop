@@ -95,7 +95,8 @@ object AppUpdateInstaller {
 
             val isEs = AppPreferences(context).appLanguage == AppLanguage.SPANISH
             var initialResponse = httpClient.newCall(buildDownloadRequest(actualUrl)).execute()
-            if (initialResponse.code == 404 && versionTag.isNotBlank()) {
+            val initialType = initialResponse.header("Content-Type")?.lowercase().orEmpty()
+            if ((initialResponse.code == 404 || initialType.contains("text/html")) && versionTag.isNotBlank()) {
                 val resolvedRetry = GithubReleaseClient(context).resolveApkUrl(
                     GithubReleaseClient.DEFAULT_OWNER,
                     GithubReleaseClient.DEFAULT_REPO,
@@ -134,9 +135,12 @@ object AppUpdateInstaller {
                     )
 
                 val totalBytes = body.contentLength()
-                val targetDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
-                    ?: File(context.cacheDir, "updates")
-                targetDir.mkdirs()
+                val extDownloads = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+                val targetDir = if (extDownloads != null && (extDownloads.exists() || extDownloads.mkdirs()) && extDownloads.canWrite()) {
+                    extDownloads
+                } else {
+                    File(context.cacheDir, "updates").apply { mkdirs() }
+                }
 
                 val cleanTag = versionTag.replace("[^a-zA-Z0-9.-]".toRegex(), "_")
                 val targetFile = File(targetDir, "lootdrop_$cleanTag.apk")
@@ -342,15 +346,19 @@ object AppUpdateInstaller {
 
             try {
                 context.startActivity(installIntent)
-            } catch (notFound: ActivityNotFoundException) {
-                @Suppress("DEPRECATION")
-                val fallbackInstall = Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
-                    data = apkUri
-                    clipData = ClipData.newRawUri("LootDrop Update APK", apkUri)
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
-                    putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true)
+            } catch (err: RuntimeException) {
+                if (err is ActivityNotFoundException || err is SecurityException) {
+                    @Suppress("DEPRECATION")
+                    val fallbackInstall = Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
+                        data = apkUri
+                        clipData = ClipData.newRawUri("LootDrop Update APK", apkUri)
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true)
+                    }
+                    context.startActivity(fallbackInstall)
+                } else {
+                    throw err
                 }
-                context.startActivity(fallbackInstall)
             }
             true
         } catch (e: ActivityNotFoundException) {

@@ -20,9 +20,12 @@ import com.example.data.model.GiveawayItem
 import com.example.i18n.AppLanguage
 import com.example.i18n.AppStringsRegistry
 import com.example.i18n.LocalAppStrings
+import com.example.i18n.LocaleAssetCatalog
 import com.example.i18n.LocaleSyncHelper
 import com.example.i18n.StringsEn
 import com.example.i18n.StringsEs
+import com.example.i18n.localizedLabel
+import com.example.i18n.localizedTitle
 import com.example.preferences.AppPreferences
 import com.example.ui.GiveawaysViewModel
 import com.example.ui.components.GeneralSettingsCategoryContent
@@ -206,5 +209,46 @@ class LocalizationTest {
         )
         assertFalse(validation.isAllowed)
         assertTrue(validation.errorMessage!!.contains("título"))
+    }
+
+    @Test
+    fun `locale asset catalog loads en and es json asset files for enum and theme labels`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        LocaleAssetCatalog.clearCacheForTesting()
+        LocaleAssetCatalog.preload(context, AppLanguage.ENGLISH)
+        LocaleAssetCatalog.preload(context, AppLanguage.SPANISH)
+
+        assertEquals(
+            "Rewards (7)",
+            com.example.preferences.AccentCategory.REWARDS.localizedLabel(StringsEn)
+        )
+        assertEquals(
+            "Premios (7)",
+            com.example.preferences.AccentCategory.REWARDS.localizedLabel(StringsEs)
+        )
+        assertEquals(
+            "Aurora Sovereign",
+            com.example.preferences.AccentTheme.AURORA_SOVEREIGN.localizedTitle(StringsEn)
+        )
+        assertEquals(
+            "Aurora Soberana",
+            com.example.preferences.AccentTheme.AURORA_SOVEREIGN.localizedTitle(StringsEs)
+        )
+        assertEquals(
+            "OLED Midnight",
+            com.example.preferences.BackgroundTheme.OLED_BLACK.localizedTitle(StringsEn)
+        )
+        assertEquals(
+            "Negro OLED",
+            com.example.preferences.BackgroundTheme.OLED_BLACK.localizedTitle(StringsEs)
+        )
+        assertEquals(
+            "Newest First",
+            com.example.ui.SortOption.NEWEST.localizedLabel(StringsEn)
+        )
+        assertEquals(
+            "Más recientes",
+            com.example.ui.SortOption.NEWEST.localizedLabel(StringsEs)
+        )
     }
 }

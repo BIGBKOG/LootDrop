@@ -1107,6 +1107,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun setAppLanguage(language: AppLanguage) {
+        com.example.i18n.LocaleAssetCatalog.preload(getApplication(), language)
         preferences.appLanguage = language
         _appLanguage.value = language
         LocaleSyncHelper.applyAndRefreshSystemSurfaces(getApplication(), language)

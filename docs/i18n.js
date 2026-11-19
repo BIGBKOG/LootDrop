@@ -1,959 +1,19 @@
 /**
- * LootDrop Web V4.1.0 - English & Spanish Localization Engine
- * Uses explicit data-i18n attributes + helper lookups for dynamic components.
+ * LootDrop Web V4.2.0 - File-Based Localization Loader
+ * Dynamically fetches complete language bundles from ./locales/{lang}.json
+ * instead of hardcoding English and Spanish strings inline.
  */
 (function (global) {
   const LANG_STORAGE_KEY = 'lootdrop_language';
+  const LOCALE_CACHE_PREFIX = 'lootdrop_locale_cache_v2_';
+  const SUPPORTED_LANGS = ['en', 'es'];
 
-  const TRANSLATIONS = {
-    en: {
-      // Meta & Top Bar
-      doc_title: 'LootDrop - Free Games & 100% Discount Tracker',
-      brand_sub: 'FREE GAME & BACKLOG RADAR',
-      tip_challenge: 'Weekly 3×3 Backlog Challenge',
-      tip_roulette: 'Backlog Roulette (Random Game Picker)',
-      tip_notifications: 'Notifications & Alert Settings',
-      tip_profile: 'Player Profile & Trophies',
-      tip_lang_toggle: 'Switch Language (English / Español)',
+  const localeCache = {};
+  const inFlightRequests = {};
 
-      // First-Boot Language Modal
-      lang_modal_badge: 'WELCOME TO LOOTDROP',
-      lang_modal_title: 'Choose Your Language / Elige tu Idioma',
-      lang_modal_sub: 'Select your preferred display language. You can change this anytime in Settings or the top bar.',
-      lang_en_name: 'English',
-      lang_en_sub: 'Default interface & English store details',
-      lang_es_name: 'Español',
-      lang_es_sub: 'Interfaz completa y detalles en español',
-
-      // Permission Banner
-      perm_title: 'Enable Website Drop Alerts',
-      perm_desc: 'Get real-time browser alerts when games become 100% free on Steam, Epic, GOG, PlayStation & Xbox.',
-      perm_allow: 'Allow Alerts',
-      perm_later: 'Later',
-
-      // Nav
-      nav_home: 'Home',
-      nav_radar: 'Radar',
-      nav_calendar: 'Calendar',
-      nav_vault: 'Vault',
-      nav_settings: 'Settings',
-
-      // Home Tab
-      ann_tag: 'COMMUNITY',
-      ann_text: 'Support LootDrop on <strong>Patreon</strong> & download the native Android APK release!',
-      ann_patreon: '❤️ Support on Patreon',
-      ann_apk: '⬇️ Download V4.1.0 APK',
-      hero_eyebrow: '<span class="live-dot"></span> LIVE LOOT RADAR',
-      hero_title: 'Claim 100% Free Games & Conquer Your Backlog',
-      hero_desc: 'Real-time alerts for limited-time freebies across PC, Steam, Epic Games, GOG, PlayStation & Xbox.',
-      hero_explore: '⚡ Explore Radar',
-      hero_grid_btn: '🎯 3×3 Weekly Grid',
-      stat_total_val: 'TOTAL FREE VALUE',
-      stat_vault_saved: 'SAVED IN YOUR VAULT',
-      stat_vault_count: 'CLAIMED IN VAULT',
-      stat_expiring: 'EXPIRING THIS WEEK',
-
-      home_ch_title: 'Weekly Backlog Challenge (3×3)',
-      home_ch_open: 'Open Grid & Unlocks ↗',
-      home_badge_hot: 'HOT PICKS',
-      home_featured_title: 'Featured Freebies',
-      home_view_all: 'View All Radar ➔',
-      home_scanning_feeds: 'Scanning giveaway feeds...',
-      home_badge_dlc: 'FOR YOUR STEAM GAMES',
-      home_dlc_title: '🧩 DLC Picks for Owned Games',
-      btn_scan: '🔄 Scan',
-      home_see_all: 'See All ➔',
-      home_badge_new: 'NEW DROPS',
-      home_recent_title: 'Recently Added',
-
-      // Radar Tab
-      radar_search_ph: 'Search by game title, publisher, DLC...',
-      plat_all: '🌐 All Platforms',
-      plat_pc: '💻 PC Digital',
-      filter_type_lbl: 'Type:',
-      type_all: 'All Types',
-      type_game: 'Full Games Only',
-      type_loot: 'DLC & In-Game Loot',
-      type_beta: 'Beta / Early Access',
-      sort_by_lbl: 'Sort By:',
-      sort_date: 'Newest First',
-      sort_value: 'Highest Worth ($)',
-      sort_pop: 'Most Popular',
-      sort_alpha: 'Title (A–Z)',
-      tip_grid_view: 'Grid View',
-      tip_list_view: 'List View',
-      radar_scanning: 'Scanning free giveaways...',
-      radar_showing: 'Showing {count} free giveaways found',
-      radar_empty_title: 'No Giveaways Matched',
-      radar_empty_desc: 'Try broadening your platform or type filters, or search for a different game.',
-
-      // Calendar Tab
-      cal_badge: 'TIMELINE RADAR',
-      cal_title: 'Giveaway Expiration Radar',
-      cal_desc: 'Keep track of drop closing dates so you never let a free game or DLC slip away.',
-      cal_ending_24h: '⚠️ Ending Within 24 Hours',
-      cal_ending_week: '⏳ Ending This Week',
-      cal_ending_month: '📅 Ending Later This Month',
-      cal_ongoing: '♾️ Ongoing & Long-Term Freebies',
-
-      // Vault Tab
-      vault_lbl_total: 'GAMES IN VAULT',
-      vault_lbl_val: 'TOTAL VALUE CLAIMED',
-      vault_lbl_beaten: 'BEATEN / FINISHED',
-      vault_status_all: 'All Items',
-      vault_status_backlog: '⏳ Backlog',
-      vault_status_playing: '🎮 Playing',
-      vault_status_beaten: '👑 Beaten',
-      vault_status_paused: '⏸️ Paused',
-      vault_btn_dlc: '🧩 DLC Picks',
-      vault_btn_steam: '🔄 Sync Steam',
-      vault_btn_roulette: '🎲 Roulette',
-      vault_tab_claimed: '💎 Claimed Vault',
-      vault_tab_steam: '🎮 Steam Library',
-      vault_empty_title: 'Your Vault is Ready',
-      vault_empty_desc: 'Bookmark free giveaways from the Radar or sync your Steam 64 ID to track backlog & discover DLCs!',
-      steam_empty_title: 'No Synced Steam Games Yet',
-      steam_empty_desc: 'Link your public Steam 64 ID or Vanity URL in Settings to browse your Steam games and find matching DLCs!',
-      steam_empty_btn: 'Link Steam Account ➔',
-      card_status_lbl: 'Status:',
-      card_launch_claim: 'Launch / Claim ↗',
-      card_remove_vault_title: 'Remove from Vault',
-      card_in_vault_title: 'In Vault',
-      card_add_vault_title: 'Add to Vault',
-      card_claim_free: 'Claim Free ↗',
-      card_free: 'FREE',
-      card_claims_suffix: 'claims',
-      card_active: 'Active',
-      steam_hours_played: '{hours}h played',
-      steam_unplayed: 'Unplayed',
-      steam_dlcs_btn: '🧩 DLCs',
-      steam_store_btn: 'Store ↗',
-
-      // Settings Tab
-      set_badge: 'PREFERENCES',
-      set_title: 'Settings & Customization',
-      set_lang_title: '🌐 App & Website Language',
-      set_lang_sub: 'Switch instantly between English and Spanish across all menus, alerts, and challenge tiles.',
-      set_lang_hint_en: 'Selected: English 🇺🇸',
-      set_lang_hint_es: 'Seleccionado: Español 🇪🇸',
-      set_bg_title: '🌓 Background Display Mode',
-      set_bg_sub: 'Select your display contrast and dark mode behavior.',
-      bg_dark: '🌙 Dark Gaming',
-      bg_amoled: '🖤 AMOLED Black',
-      bg_light: '☀️ Clean Light',
-      set_theme_title: '🎨 Accent Theme Catalog (19 Themes)',
-      set_theme_sub: 'Choose your signature gaming color palette from the official LootDrop collection.',
-      cat_all: 'All (19)',
-      cat_gaming: 'Gaming (6)',
-      cat_cyber: 'Cyber (5)',
-      cat_vault: 'Vault (5)',
-      cat_rewards: 'Rewards (3)',
-      set_alerts_title: '🔔 Website Drop Alerts & Notifications',
-      set_alerts_sub: 'Configure browser alerts, audio chimes, and giveaway filter thresholds.',
-      btn_alert_settings: '⚙️ Alert Settings',
-      tgl_chime: '🎵 Play Gamer Sound Chime on New Drop',
-      tgl_desktop: '🖥️ Desktop / Mobile Browser Alerts',
-      tgl_ending: '⏳ Alert When Deals Expire in <24h',
-      btn_test_chime: '🔊 Test Sound Chime',
-      btn_test_notif: '🚨 Trigger Test Drop Alert',
-      set_steam_title: '🎮 Steam 64 ID Integration',
-      set_steam_desc: 'Link your Steam account to synchronize library statistics and complete 3×3 challenge grid tiles. Need your Steam 64 ID? Look it up quickly at <a href="https://www.steamid64.net" target="_blank" rel="noopener" class="text-link">steamid64.net ↗</a>.',
-      steam_input_ph: 'e.g. 76561198000000000 or custom vanity URL',
-      btn_save_steam: 'Save & Sync',
-      steam_status_not_linked: 'Steam status: Not linked',
-      steam_status_synced: 'Synced {count} Steam games{id}',
-      steam_status_linked: 'Linked Steam ID: {id} (Click Save & Sync to load games)',
-      steam_status_ready: 'Synced {count} Steam games • {dlc} DLC picks ready',
-      set_backup_title: '☁️ Backup & Export',
-      set_backup_sub: 'Export your LootDrop Vault, 3×3 challenge progress, and settings to JSON, or restore an existing backup.',
-      btn_export_backup: '💾 Export Backup (JSON)',
-      btn_restore_backup: '📂 Restore Backup',
-      btn_clear_vault: '🗑️ Clear Vault',
-      rev_badge: 'COMMUNITY REVIEWS',
-      rev_settings_title: '⭐ LootDrop App Rating & Community Reviews',
-      rev_settings_sub: 'Real community reviews from fellow gamers and freebie hunters, hosted publicly on Cloudflare R2.',
-      btn_rate_app: '⭐ Rate LootDrop App',
-      btn_view_reviews: '💬 View All Reviews',
-      btn_hide_reviews: '▲ Hide Reviews',
-      set_comm_title: '💖 LootDrop Community & Releases',
-      set_comm_sub: 'Support the creator, download mobile APK releases, and track F-Droid updates.',
-      comm_patreon_title: 'LootDrop Patreon',
-      comm_patreon_sub: 'Support development & get exclusive backer perks',
-      comm_gh_title: 'GitHub Releases & APK Downloads',
-      comm_gh_sub: 'Latest release: LootDrop V4.1.0 (Build 53)',
-      comm_fdroid_title: 'F-Droid Store',
-      comm_fdroid_sub: 'Loot Drop is coming to F-Droid in January!',
-      comm_coming_soon: 'Coming Soon',
-
-      // About & Credits
-      about_badge: 'ABOUT & CREDITS',
-      about_title: 'ℹ️ About LootDrop & Credits',
-      about_sub: 'Creator attribution, powered-by APIs, open-source tech stack & project info.',
-      about_desc: 'Built to track 100% free games, limited-time DLC giveaways, Steam library stats, OSTs, and weekly 3×3 backlog challenges with zero ads and zero tracking.',
-      about_pill_aosp: '✓ Pure AOSP App',
-      about_pill_noads: 'Zero Ads',
-      about_pill_oss: 'Open Source',
-      about_btn_repo: '💻 GitHub Repo ↗',
-      about_btn_apk: '📦 Latest APK Release ↗',
-      about_grp_creators: '👥 CREATOR & CONTRIBUTORS',
-      about_creator_badge: 'CREATOR',
-      about_creator_role: 'Creator, Lead Developer & Maintainer',
-      about_creator_desc: 'Original concept, Kotlin/Jetpack Compose Android app, GitHub Pages Web Edition, release management & feature design.',
-      about_comm_title: 'Community Contributors & Patreon Supporters',
-      about_comm_badge: 'COMMUNITY',
-      about_comm_role: 'Testers, Reviewers & Backers',
-      about_comm_desc: 'Everyone testing builds, reporting bugs, submitting community reviews, and supporting LootDrop on Patreon.',
-      about_grp_apis: '🔌 POWERED BY APIS & SERVICES',
-      about_gp_badge: 'CORE API',
-      about_gp_role: 'Primary Giveaways & Free Loot Feed',
-      about_gp_desc: 'Real-time 100% free game, DLC, and loot drop tracking across PC, Steam, Epic Games, GOG, PlayStation, Xbox & mobile.',
-      about_cs_badge: 'DEALS API',
-      about_cs_role: 'Storefront Deals & Price Comparisons',
-      about_cs_desc: 'Cross-store price lookups, retail savings comparisons, and deal tracking across major digital PC storefronts.',
-      about_steam_role: 'Library Sync, Achievements & DLC Radar',
-      about_steam_desc: 'Owned Steam games lookup, library sync, storefront metadata, and personalized DLC recommendations.',
-      about_ost_badge: 'OST DATA',
-      about_ost_role: 'Official Soundtrack (OST) Discovery',
-      about_ost_desc: 'Album metadata, tracklists, release years, and soundtrack streaming links in the LootDrop Android app.',
-      about_cloud_badge: 'CLOUD',
-      about_cloud_role: 'Community Reviews & Optional Vault Sync',
-      about_cloud_desc: 'Public community reviews storage and optional encrypted account backup sync across devices.',
-      about_upd_badge: 'UPDATES',
-      about_upd_role: 'In-App Updater & Web App Hosting',
-      about_upd_desc: 'Public release feed checking, Android APK distribution, and hosting for the LootDrop Web Edition.',
-      about_grp_stack: '🧱 TECH STACK & OPEN SOURCE',
-      about_web_title: 'Web Edition Stack (HTML5, CSS3, Vanilla JS & PWA)',
-      about_web_role: 'Responsive Web App & Browser Radar',
-      about_web_desc: 'Zero-framework client with 19 themes, browser drop alerts, Steam DLC scanner & 3×3 backlog challenge.',
-      about_and_title: 'Android App Stack (Kotlin, Jetpack Compose M3, Room, Retrofit & Coil)',
-      about_and_role: 'Native Material 3 Expressive Client',
-      about_and_desc: 'Edge-to-edge UI, custom font importer, offline Room caching, home screen widgets & background alerts.',
-      about_lic_title: 'Open-Source Project License',
-      about_lic_badge: 'LICENSE',
-      about_lic_role: 'Repository Licensing & Terms',
-      about_lic_desc: 'View the LootDrop repository LICENSE file and third-party open-source attributions on GitHub.',
-      patreon_footer_title: 'Be Part of the Community!',
-      patreon_footer_desc: 'Help support LootDrop on Patreon & get exclusive backer updates',
-      patreon_footer_btn: 'Support ❤️',
-
-      // Challenge Modal
-      ch_modal_badge: 'GAMIFIED BACKLOG CLEARING',
-      ch_modal_title: '3×3 Weekly Backlog Grid',
-      ch_prev_week: '◀ Previous',
-      ch_next_week: 'Next (Preview) ▶',
-      ch_rule_hint: 'ℹ️ Rule',
-      ch_rule_tooltip: "You can manually unlock up to 2 tiles per week if a game doesn't track achievements or was played offline. Unchecking recycles your slot!",
-      ch_milestones_title: '🎁 Milestone Rewards',
-      ch_milestones_desc: 'Complete rows, columns, or a full blackout to earn exclusive cosmetic trophies and in-app themes!',
-      ch_week_active: 'Week {n} • Active',
-      ch_week_badge_active: 'Week {n} (Active)',
-      ch_week_num: 'Week {n}',
-      ch_tiles_progress: '{done} / 9 Tiles Completed',
-      ch_milestones_progress: '{claimed} / 4 Milestones Claimed',
-      ch_manual_rem: 'Manual Overrides Remaining: <strong>{rem} / {max}</strong>',
-      ch_tile_manual: '🔑 MANUAL UNLOCK',
-      ch_tile_done: '✓ COMPLETED',
-      ch_tile_tap: 'TAP TO UNLOCK',
-      ch_claimed_btn: '✓ Claimed',
-      ch_claim_btn: '🎁 Claim',
-      ch_locked_btn: 'Locked',
-      ch_modal_sub: 'Week {n} • Anchor 2026-W46',
-
-      // Alert Settings Modal
-      al_badge: 'ALERTS CONFIGURATION',
-      al_title: '🔔 Notification & Drop Alerts',
-      al_sub: 'Customize which free drops notify you and how alerts sound.',
-      al_master_title: 'Enable Website Drop Alerts',
-      al_master_desc: 'Receive notifications for free games and giveaways',
-      al_plat_section: 'PLATFORM ALERTS',
-      al_criteria_section: 'DEAL CRITERIA & TIMING',
-      al_full_games: 'Full Games Only',
-      al_full_games_desc: 'Filter out DLC, cosmetic packs, and beta codes',
-      al_high_val: 'High-Value Drops ($20+ Only)',
-      al_high_val_desc: 'Only trigger alerts for AAA and high value games',
-      al_expiring: 'Expiring Deal Radar (<24 Hours)',
-      al_expiring_desc: 'Send urgency reminders before free deals expire',
-      al_chime: 'Play Chime Sound',
-      al_chime_desc: 'Synthesizes a pleasant gaming chime on alert',
-      al_save: 'Save Alert Preferences',
-      al_send_test: '🚨 Send Test Alert',
-
-      // Notifications Modal
-      notif_badge: 'INBOX & HISTORY',
-      notif_title: '🔔 Drop Alerts & History',
-      notif_btn_settings: '⚙️ Alert Settings',
-      notif_btn_read: 'Mark All Read',
-      notif_btn_clear: 'Clear History',
-      notif_empty: 'No notifications yet. You will receive alerts when new free games drop!',
-      notif_seed1_title: '🎉 LootDrop V4.1.0 Web Live!',
-      notif_seed1_desc: '1-to-1 Web client running directly on GitHub Pages with 19 themes.',
-      notif_seed2_title: '🏆 Weekly 3×3 Challenge Ready',
-      notif_seed2_desc: 'Complete challenge tiles this week to unlock exclusive themes.',
-      notif_seed3_title: '❤️ Support on Patreon',
-      notif_seed3_desc: 'Help sustain servers and track upcoming F-Droid release.',
-
-      // Detail Modal
-      det_how_to: 'How to Claim:',
-      det_desc: 'Description:',
-      det_already_own: 'YOU ALREADY HAVE THIS',
-      det_own_both: 'Saved in your LootDrop Vault and found in your Steam Library!',
-      det_own_vault: 'Already saved in your LootDrop Vault.',
-      det_own_steam: 'Found in your linked Steam library as "{name}".',
-      det_claim_store: '🚀 Claim on Store ↗',
-      det_add_vault: '📥 Add to Vault',
-      det_remove_vault: '💎 Remove from Vault',
-      det_share_btn: '🔗 Share Deal',
-      det_default_instr: 'Claim directly on store page.',
-      rev_sec_badge: '★ PUBLIC REVIEWS',
-      rev_heading: 'Community Reviews <span class="reviews-storage-tag">Cloudflare R2</span>',
-      rev_leave_btn: '✍️ Leave Review',
-      rev_first_game: 'Be the first to review this game!',
-      rev_first_app: 'Be the first to rate LootDrop App!',
-      rev_based_on: 'Based on {count} community {noun}',
-      rev_based_app: 'Based on {count} community {noun} across Android & Web.',
-      rev_noun_one: 'review',
-      rev_noun_many: 'reviews',
-      rev_empty_game: 'No community reviews yet for <strong>{title}</strong>.',
-      rev_empty_hint: 'Click <strong>"Leave Review"</strong> to share your rating with everyone!',
-      rev_helpful: '👍 Helpful ({count})',
-      rev_verified: '✓ Verified',
-      rev_verified_user: '✓ Verified User',
-      rev_app_tag: '⭐ LootDrop App Review',
-      rev_none_app: 'No app reviews posted yet.',
-
-      // Write Review Modal
-      wr_badge: 'COMMUNITY REVIEW',
-      wr_title: 'Leave a Public Review',
-      wr_target_game: '🎮 Review Game',
-      wr_target_app: '⭐ Rate LootDrop App',
-      wr_headline_lbl: 'Review Headline',
-      wr_headline_ph: 'e.g. Unbelievable gameplay & graphics!',
-      wr_comment_lbl: 'Detailed Thoughts',
-      wr_comment_ph: 'Share your experience, performance, story, or gameplay tips...',
-      wr_author_lbl: 'Your Gamer Tag / Name',
-      wr_author_ph: 'e.g. CyberGamer99',
-      wr_notice: '☁️ Published publicly to Cloudflare R2 object storage. Synced live across Android and Web. Respectful language only (no swears, slurs, addresses, or phone numbers).',
-      wr_submit: '🚀 Post Review to Community',
-      wr_submitting: 'Uploading to Cloudflare R2...',
-      wr_rating_1: '1 - Skip / Unplayable',
-      wr_rating_2: '2 - Mediocre / Flawed',
-      wr_rating_3: '3 - Average / Fun with Friends',
-      wr_rating_4: '4 - Great / Highly Recommended',
-      wr_rating_5: '5 - Pure Masterpiece! Must Play!',
-      wr_stars_suffix: '{n} Stars',
-
-      // Roulette Modal
-      rou_badge: 'RANDOM PICKER',
-      rou_title: '🎲 Backlog Roulette',
-      rou_sub: "Can't decide what to play? Let fate choose your next adventure.",
-      rou_idle_title: 'Press Spin to Start!',
-      rou_idle_sub: 'From your Vault & Giveaways',
-      rou_spin_btn: '🎰 SPIN THE ROULETTE',
-      rou_worth_fmt: '{plat} • Worth {worth}',
-      rou_selected_fmt: 'Selected: {plat}! Enjoy playing!',
-
-      // Profile Modal
-      prof_badge: 'GAMER IDENTITY',
-      prof_title: 'Player Profile & Trophies',
-      prof_lbl_name: 'Gamer Tag / Name:',
-      prof_lbl_bio: 'Bio / Motto:',
-      prof_save_btn: 'Save Profile Changes',
-      prof_trophies_title: '🏆 Unlocked Trophies Showcase',
-      prof_unlocked_count: '{count} Unlocked',
-      prof_unlocked_badge: 'UNLOCKED',
-      prof_locked_badge: 'LOCKED',
-
-      // DLC Hub Modal
-      dlc_badge: 'OWNED STEAM LIBRARY',
-      dlc_title: '🧩 Steam DLC Recommender',
-      dlc_sub: 'Matched to games you already own in Steam',
-      dlc_filter_all: 'All Picks',
-      dlc_filter_free: 'Free DLCs',
-      dlc_filter_sale: 'On Sale',
-      dlc_filter_top: 'Top Expansions',
-      dlc_select_all: 'All Owned Steam Games',
-      dlc_select_all_count: 'All Owned Steam Games ({count})',
-      dlc_scanning_store: 'Scanning Steam Storefront...',
-      dlc_fetching_meta: 'Fetching DLC metadata from Steam Storefront...',
-      dlc_home_cta_title: 'Discover DLCs for Games You Already Own',
-      dlc_home_cta_desc: 'Link your public Steam ID in Settings to automatically spot free DLC drops, expansion sales, and top-rated add-ons for your Steam library.',
-      dlc_home_cta_btn: '🎮 Link Steam Library ➔',
-      dlc_empty_none_title: 'No Matching DLC Recommendations',
-      dlc_empty_no_steam_title: 'No Steam Library Synced Yet',
-      dlc_empty_no_steam_desc: 'Link your Steam 64 ID in Settings so LootDrop can recommend DLCs for games you own.',
-      dlc_empty_rescan_desc: 'Try switching filters or clicking Scan to fetch fresh Steam Storefront DLC deals.',
-      dlc_link_account_btn: 'Link Steam Account',
-      dlc_scan_now_btn: '🔄 Scan Library Now',
-      dlc_hide_btn: 'Hide',
-      dlc_claim_free_btn: '🎁 Claim Free DLC',
-      dlc_claim_free_short: 'Claim Free',
-      dlc_view_btn: 'View DLC',
-      dlc_open_store_btn: 'Open Steam Store ↗',
-      dlc_played_suffix: '{hours}h played',
-      dlc_played_steam: '{hours}h played on Steam',
-      dlc_official_exp: 'Official Steam Storefront expansions',
-      dlc_for_game: '🧩 DLCs for {name}',
-      dlc_badge_claimed_free: '✓ Claimed Free DLC',
-      dlc_badge_free_drop: '🎁 Free DLC Drop',
-      dlc_badge_free: '🎁 Free DLC',
-      dlc_badge_exp: '🧩 DLC Expansion',
-      dlc_badge_deal: '🔥 -{pct}% Deal',
-      dlc_badge_off: '🏷️ -{pct}% Off',
-      dlc_badge_ost: '🎵 Soundtrack / Extra',
-      dlc_badge_fan: '⭐ Fan Favorite',
-      dlc_badge_recent: '🎮 Recently Played',
-      dlc_badge_top: '🏆 Top Game Pick',
-      dlc_view_price: 'View Price',
-      dlc_owned_steam: 'Owned in Steam',
-      dlc_in_library: 'In Steam Library',
-      dlc_reason_free_giveaway: '100% Free giveaway for {name} ({info})',
-      dlc_reason_free_addon: 'Free add-on for {name} ({info})',
-      dlc_reason_sale: 'On sale (-{pct}%) for {name} • {info}',
-      dlc_reason_popular: 'Popular expansion for {name} ({info})',
-      dlc_reason_played: 'Recommended from your {info} in {name}',
-      dlc_reason_official: 'Official expansion for {name} ({info})',
-
-      // Expiration formatter
-      exp_ongoing: 'Ongoing / Unlimited',
-      exp_expired: 'Expired',
-      exp_hours: 'Expires in {n}h',
-      exp_days: 'Expires in {n}d',
-
-      // Toasts & Alerts
-      toast_lang_es: 'Idioma cambiado a Español 🇪🇸',
-      toast_lang_en: 'Language switched to English 🇺🇸',
-      toast_alerts_on: 'Browser drop alerts enabled!',
-      toast_alerts_off: 'Browser notifications were declined',
-      toast_theme_applied: 'Applied {title} theme!',
-      toast_status_updated: 'Updated status to {status}',
-      toast_removed_vault: 'Removed game from Vault',
-      toast_removed_vault_short: 'Removed from your Vault',
-      toast_added_vault: 'Added to your Vault!',
-      toast_recycle_slot: 'Recycled manual unlock slot (+1)',
-      toast_manual_limit: 'Limit reached: Max {max} manual unlocks per week!',
-      toast_manual_done: 'Tile manually completed! (1 slot used)',
-      toast_claim_theme: 'Claimed {trophy}! Unlocked and applied new theme!',
-      toast_claim_trophy: 'Claimed {trophy}! Displayed on your profile!',
-      toast_roulette_empty: 'No games available in backlog to spin!',
-      toast_roulette_win: 'Fate has spoken: Play {title}!',
-      toast_chime_test: 'Playing synthesized gaming chime sound',
-      toast_alerts_saved: 'Alert preferences saved successfully!',
-      toast_mark_read: 'Marked all alerts as read',
-      toast_clear_notifs: 'Cleared notification history',
-      toast_bg_switched: 'Switched to {mode} mode!',
-      toast_link_copied: 'Giveaway link copied to clipboard!',
-      toast_profile_saved: 'Profile updated!',
-      toast_steam_enter: 'Please enter a Steam 64 ID or Vanity URL',
-      toast_steam_need: 'Enter your Steam 64 ID in Settings first!',
-      toast_backup_exported: 'Backup JSON exported successfully!',
-      toast_backup_restored: 'Backup successfully restored!',
-      toast_backup_failed: 'Failed to parse backup JSON file',
-      confirm_clear_vault: 'Are you sure you want to clear your LootDrop Vault?',
-      toast_vault_cleared: 'Vault cleared',
-      toast_already_voted: 'You already voted helpful on this review!',
-      toast_voted_helpful: 'Marked as helpful!',
-      toast_enter_review: 'Please enter a review headline or comment!',
-      toast_moderation_blocked: 'Swears and slurs are not allowed in reviews.',
-      toast_review_app_ok: 'Your rating for LootDrop App has been published to R2!',
-      toast_review_game_ok: 'Your review has been published publicly to R2!',
-      toast_steam_invalid: 'Please enter a valid Steam 64 ID or Custom URL',
-      toast_steam_connecting: 'Connecting to Steam profile...',
-      toast_steam_synced: 'Synced {count} Steam games! Scanning DLCs...',
-      toast_steam_failed: 'Steam sync failed: {err}',
-      toast_dlc_hidden: 'DLC recommendation hidden',
-      default_profile_name: 'Vault Hunter',
-      default_profile_bio: 'Clearing the backlog, one drop at a time.',
-      default_profile_title: 'Backlog Slayer'
-    },
-
-    es: {
-      // Meta & Top Bar
-      doc_title: 'LootDrop - Rastreador de Juegos Gratis y Descuentos 100%',
-      brand_sub: 'RADAR DE JUEGOS GRATIS Y BACKLOG',
-      tip_challenge: 'Reto Semanal Backlog 3×3',
-      tip_roulette: 'Ruleta del Backlog (Selector Aleatorio)',
-      tip_notifications: 'Notificaciones y Ajustes de Alertas',
-      tip_profile: 'Perfil de Jugador y Trofeos',
-      tip_lang_toggle: 'Cambiar Idioma (English / Español)',
-
-      // First-Boot Language Modal
-      lang_modal_badge: 'BIENVENIDO A LOOTDROP',
-      lang_modal_title: 'Elige tu Idioma / Choose Your Language',
-      lang_modal_sub: 'Selecciona tu idioma preferido. Puedes cambiarlo en cualquier momento desde Ajustes o la barra superior.',
-      lang_en_name: 'English',
-      lang_en_sub: 'Interfaz y detalles de tienda en inglés',
-      lang_es_name: 'Español',
-      lang_es_sub: 'Interfaz completa y detalles en español',
-
-      // Permission Banner
-      perm_title: 'Activar Alertas Web de Ofertas',
-      perm_desc: 'Recibe alertas en tiempo real cuando haya juegos 100% gratis en Steam, Epic, GOG, PlayStation y Xbox.',
-      perm_allow: 'Permitir Alertas',
-      perm_later: 'Más tarde',
-
-      // Nav
-      nav_home: 'Inicio',
-      nav_radar: 'Radar',
-      nav_calendar: 'Calendario',
-      nav_vault: 'Bóveda',
-      nav_settings: 'Ajustes',
-
-      // Home Tab
-      ann_tag: 'COMUNIDAD',
-      ann_text: '¡Apoya a LootDrop en <strong>Patreon</strong> y descarga la app nativa APK de Android!',
-      ann_patreon: '❤️ Apoyar en Patreon',
-      ann_apk: '⬇️ Descargar APK V4.1.0',
-      hero_eyebrow: '<span class="live-dot"></span> RADAR DE BOTÍN EN VIVO',
-      hero_title: 'Reclama Juegos 100% Gratis y Domina tu Backlog',
-      hero_desc: 'Alertas en tiempo real de regalos por tiempo limitado en PC, Steam, Epic Games, GOG, PlayStation y Xbox.',
-      hero_explore: '⚡ Explorar Radar',
-      hero_grid_btn: '🎯 Cuadrícula 3×3',
-      stat_total_val: 'VALOR TOTAL GRATIS',
-      stat_vault_saved: 'AHORRADO EN BÓVEDA',
-      stat_vault_count: 'RECLAMADOS',
-      stat_expiring: 'EXPIRAN ESTA SEMANA',
-
-      home_ch_title: 'Reto Semanal de Backlog (3×3)',
-      home_ch_open: 'Abrir Cuadrícula ↗',
-      home_badge_hot: 'DESTACADOS',
-      home_featured_title: 'Regalos Destacados',
-      home_view_all: 'Ver Todo el Radar ➔',
-      home_scanning_feeds: 'Escaneando feeds de regalos...',
-      home_badge_dlc: 'PARA TUS JUEGOS DE STEAM',
-      home_dlc_title: '🧩 DLCs para tus Juegos',
-      btn_scan: '🔄 Escanear',
-      home_see_all: 'Ver Todo ➔',
-      home_badge_new: 'NUEVOS DROPS',
-      home_recent_title: 'Añadidos Recientemente',
-
-      // Radar Tab
-      radar_search_ph: 'Buscar por título, editor, DLC...',
-      plat_all: '🌐 Todas las Plataformas',
-      plat_pc: '💻 PC Digital',
-      filter_type_lbl: 'Tipo:',
-      type_all: 'Todos los Tipos',
-      type_game: 'Solo Juegos Completos',
-      type_loot: 'DLC y Botín en Juego',
-      type_beta: 'Beta / Acceso Anticipado',
-      sort_by_lbl: 'Ordenar por:',
-      sort_date: 'Más Recientes',
-      sort_value: 'Mayor Valor ($)',
-      sort_pop: 'Más Populares',
-      sort_alpha: 'Título (A–Z)',
-      tip_grid_view: 'Vista en Cuadrícula',
-      tip_list_view: 'Vista en Lista',
-      radar_scanning: 'Buscando juegos gratis...',
-      radar_showing: 'Mostrando {count} regalos gratis encontrados',
-      radar_empty_title: 'Sin Resultados',
-      radar_empty_desc: 'Prueba ampliando los filtros de plataforma o tipo, o busca otro juego.',
-
-      // Calendar Tab
-      cal_badge: 'RADAR CRONOLÓGICO',
-      cal_title: 'Radar de Expiración',
-      cal_desc: 'Controla las fechas límite para que nunca se te escape un juego o DLC gratis.',
-      cal_ending_24h: '⚠️ Terminan en 24 Horas',
-      cal_ending_week: '⏳ Terminan Esta Semana',
-      cal_ending_month: '📅 Terminan Más Adelante Este Mes',
-      cal_ongoing: '♾️ Permanentes y a Largo Plazo',
-
-      // Vault Tab
-      vault_lbl_total: 'JUEGOS EN BÓVEDA',
-      vault_lbl_val: 'VALOR RECLAMADO',
-      vault_lbl_beaten: 'COMPLETADOS',
-      vault_status_all: 'Todos',
-      vault_status_backlog: '⏳ Pendiente',
-      vault_status_playing: '🎮 Jugando',
-      vault_status_beaten: '👑 Pasado',
-      vault_status_paused: '⏸️ Pausado',
-      vault_btn_dlc: '🧩 DLCs',
-      vault_btn_steam: '🔄 Sinc. Steam',
-      vault_btn_roulette: '🎲 Ruleta',
-      vault_tab_claimed: '💎 Bóveda Reclamada',
-      vault_tab_steam: '🎮 Biblioteca Steam',
-      vault_empty_title: 'Tu Bóveda está Lista',
-      vault_empty_desc: 'Guarda juegos gratis desde el Radar o vincula tu Steam 64 ID para seguir tu backlog y descubrir DLCs.',
-      steam_empty_title: 'Sin Juegos de Steam Sincronizados',
-      steam_empty_desc: 'Vincula tu Steam 64 ID público o URL personalizada en Ajustes para explorar tus juegos y encontrar DLCs.',
-      steam_empty_btn: 'Vincular Cuenta Steam ➔',
-      card_status_lbl: 'Estado:',
-      card_launch_claim: 'Abrir / Reclamar ↗',
-      card_remove_vault_title: 'Quitar de la Bóveda',
-      card_in_vault_title: 'En Bóveda',
-      card_add_vault_title: 'Añadir a Bóveda',
-      card_claim_free: 'Reclamar Gratis ↗',
-      card_free: 'GRATIS',
-      card_claims_suffix: 'reclamos',
-      card_active: 'Activo',
-      steam_hours_played: '{hours}h jugadas',
-      steam_unplayed: 'Sin jugar',
-      steam_dlcs_btn: '🧩 DLCs',
-      steam_store_btn: 'Tienda ↗',
-
-      // Settings Tab
-      set_badge: 'PREFERENCIAS',
-      set_title: 'Ajustes y Personalización',
-      set_lang_title: '🌐 Idioma de la Web y App',
-      set_lang_sub: 'Cambia al instante entre Inglés y Español en todos los menús, alertas y retos.',
-      set_lang_hint_en: 'Seleccionado: English 🇺🇸',
-      set_lang_hint_es: 'Seleccionado: Español 🇪🇸',
-      set_bg_title: '🌓 Modo de Pantalla',
-      set_bg_sub: 'Elige el contraste visual y comportamiento del modo oscuro.',
-      bg_dark: '🌙 Oscuro Gaming',
-      bg_amoled: '🖤 Negro AMOLED',
-      bg_light: '☀️ Claro Limpio',
-      set_theme_title: '🎨 Catálogo de Temas (19 Temas)',
-      set_theme_sub: 'Elige tu paleta de colores favorita de la colección oficial de LootDrop.',
-      cat_all: 'Todos (19)',
-      cat_gaming: 'Gaming (6)',
-      cat_cyber: 'Cyber (5)',
-      cat_vault: 'Bóveda (5)',
-      cat_rewards: 'Premios (3)',
-      set_alerts_title: '🔔 Alertas Web y Notificaciones',
-      set_alerts_sub: 'Configura alertas del navegador, sonidos y filtros de ofertas gratis.',
-      btn_alert_settings: '⚙️ Ajustes de Alerta',
-      tgl_chime: '🎵 Reproducir Sonido Gamer al Haber Nuevo Drop',
-      tgl_desktop: '🖥️ Alertas del Navegador (Escritorio / Móvil)',
-      tgl_ending: '⏳ Avisar Cuando Expiren en <24h',
-      btn_test_chime: '🔊 Probar Sonido',
-      btn_test_notif: '🚨 Probar Alerta de Drop',
-      set_steam_title: '🎮 Integración con Steam 64 ID',
-      set_steam_desc: 'Vincula tu cuenta de Steam para sincronizar estadísticas y completar casillas del reto 3×3. ¿Necesitas tu Steam 64 ID? Búscalo en <a href="https://www.steamid64.net" target="_blank" rel="noopener" class="text-link">steamid64.net ↗</a>.',
-      steam_input_ph: 'ej. 76561198000000000 o URL personalizada',
-      btn_save_steam: 'Guardar y Sinc.',
-      steam_status_not_linked: 'Estado de Steam: No vinculado',
-      steam_status_synced: '{count} juegos de Steam sincronizados{id}',
-      steam_status_linked: 'Steam ID vinculado: {id} (Pulsa Guardar y Sinc. para cargar)',
-      steam_status_ready: '{count} juegos sincronizados • {dlc} DLCs recomendados',
-      set_backup_title: '☁️ Respaldo y Exportación',
-      set_backup_sub: 'Exporta tu Bóveda, progreso del reto 3×3 y ajustes a JSON, o restaura un respaldo existente.',
-      btn_export_backup: '💾 Exportar Respaldo (JSON)',
-      btn_restore_backup: '📂 Restaurar Respaldo',
-      btn_clear_vault: '🗑️ Vaciar Bóveda',
-      rev_badge: 'RESEÑAS DE LA COMUNIDAD',
-      rev_settings_title: '⭐ Puntuación y Reseñas de LootDrop',
-      rev_settings_sub: 'Reseñas reales de jugadores y cazadores de ofertas, alojadas públicamente en Cloudflare R2.',
-      btn_rate_app: '⭐ Calificar LootDrop',
-      btn_view_reviews: '💬 Ver Todas las Reseñas',
-      btn_hide_reviews: '▲ Ocultar Reseñas',
-      set_comm_title: '💖 Comunidad LootDrop y Lanzamientos',
-      set_comm_sub: 'Apoya al creador, descarga versiones APK móviles y sigue las novedades en F-Droid.',
-      comm_patreon_title: 'Patreon de LootDrop',
-      comm_patreon_sub: 'Apoya el desarrollo y obtén ventajas exclusivas',
-      comm_gh_title: 'Lanzamientos GitHub y Descarga APK',
-      comm_gh_sub: 'Última versión: LootDrop V4.1.0 (Build 53)',
-      comm_fdroid_title: 'Tienda F-Droid',
-      comm_fdroid_sub: '¡LootDrop llegará a F-Droid en enero!',
-      comm_coming_soon: 'Próximamente',
-
-      // About & Credits
-      about_badge: 'ACERCA DE Y CRÉDITOS',
-      about_title: 'ℹ️ Acerca de LootDrop y Créditos',
-      about_sub: 'Autoría, APIs utilizadas, tecnologías open-source e información del proyecto.',
-      about_desc: 'Creada para seguir juegos 100% gratis, regalos de DLCs, estadísticas de Steam, bandas sonoras y retos semanales 3×3 sin anuncios ni rastreadores.',
-      about_pill_aosp: '✓ App AOSP Pura',
-      about_pill_noads: 'Cero Anuncios',
-      about_pill_oss: 'Código Abierto',
-      about_btn_repo: '💻 Repo GitHub ↗',
-      about_btn_apk: '📦 Último APK ↗',
-      about_grp_creators: '👥 CREADOR Y COLABORADORES',
-      about_creator_badge: 'CREADOR',
-      about_creator_role: 'Creador, Desarrollador Principal y Mantenedor',
-      about_creator_desc: 'Concepto original, app Android en Kotlin/Jetpack Compose, Edición Web en GitHub Pages, lanzamientos y diseño.',
-      about_comm_title: 'Colaboradores de la Comunidad y Patrocinadores',
-      about_comm_badge: 'COMUNIDAD',
-      about_comm_role: 'Probadores, Reseñadores y Patrocinadores',
-      about_comm_desc: 'Todos los que prueban compilaciones, reportan errores, escriben reseñas y apoyan a LootDrop en Patreon.',
-      about_grp_apis: '🔌 IMPULSADO POR APIS Y SERVICIOS',
-      about_gp_badge: 'API BASE',
-      about_gp_role: 'Feed Principal de Regalos y Botín Gratis',
-      about_gp_desc: 'Seguimiento en tiempo real de juegos, DLCs y loot gratis en PC, Steam, Epic Games, GOG, PlayStation, Xbox y móvil.',
-      about_cs_badge: 'API OFERTAS',
-      about_cs_role: 'Ofertas de Tiendas y Comparativa de Precios',
-      about_cs_desc: 'Consulta de precios entre tiendas, cálculo de ahorros y seguimiento de descuentos digitales en PC.',
-      about_steam_role: 'Sinc. de Biblioteca, Logros y Radar de DLC',
-      about_steam_desc: 'Consulta de juegos de Steam, sincronización de biblioteca, metadatos y recomendaciones personalizadas de DLC.',
-      about_ost_badge: 'DATOS OST',
-      about_ost_role: 'Descubrimiento de Bandas Sonoras (OST)',
-      about_ost_desc: 'Metadatos de álbumes, listas de pistas, años de lanzamiento y enlaces musicales en la app Android.',
-      about_cloud_badge: 'NUBE',
-      about_cloud_role: 'Reseñas Comunitarias y Respaldo Opcional',
-      about_cloud_desc: 'Almacenamiento público de reseñas y sincronización opcional cifrada de cuentas entre dispositivos.',
-      about_upd_badge: 'ACTUALIZACIONES',
-      about_upd_role: 'Actualizador Integrado y Alojamiento Web',
-      about_upd_desc: 'Comprobación pública de versiones, distribución APK para Android y alojamiento de LootDrop Web.',
-      about_grp_stack: '🧱 TECNOLOGÍA Y CÓDIGO ABIERTO',
-      about_web_title: 'Stack Edición Web (HTML5, CSS3, Vanilla JS y PWA)',
-      about_web_role: 'Web App Adaptativa y Radar en Navegador',
-      about_web_desc: 'Cliente sin frameworks con 19 temas, alertas en navegador, escáner DLC de Steam y reto 3×3.',
-      about_and_title: 'Stack App Android (Kotlin, Jetpack Compose M3, Room, Retrofit y Coil)',
-      about_and_role: 'Cliente Nativo Material 3 Expressive',
-      about_and_desc: 'Interfaz borde a borde, fuentes personalizadas, caché offline Room, widgets de inicio y alertas en segundo plano.',
-      about_lic_title: 'Licencia de Código Abierto del Proyecto',
-      about_lic_badge: 'LICENCIA',
-      about_lic_role: 'Licencia y Términos del Repositorio',
-      about_lic_desc: 'Consulta el archivo LICENSE del repositorio LootDrop y atribuciones de terceros en GitHub.',
-      patreon_footer_title: '¡Forma Parte de la Comunidad!',
-      patreon_footer_desc: 'Apoya a LootDrop en Patreon y recibe novedades exclusivas',
-      patreon_footer_btn: 'Apoyar ❤️',
-
-      // Challenge Modal
-      ch_modal_badge: 'DOMINA TU BACKLOG JUGANDO',
-      ch_modal_title: 'Cuadrícula Semanal Backlog 3×3',
-      ch_prev_week: '◀ Anterior',
-      ch_next_week: 'Siguiente (Vista Previa) ▶',
-      ch_rule_hint: 'ℹ️ Regla',
-      ch_rule_tooltip: 'Puedes desbloquear manualmente hasta 2 casillas por semana si un juego no registra logros o lo jugaste sin conexión. ¡Desmarcar devuelve tu turno!',
-      ch_milestones_title: '🎁 Recompensas por Hito',
-      ch_milestones_desc: '¡Completa filas, columnas o toda la cuadrícula para ganar trofeos exclusivos y temas desbloqueables!',
-      ch_week_active: 'Semana {n} • Activa',
-      ch_week_badge_active: 'Semana {n} (Activa)',
-      ch_week_num: 'Semana {n}',
-      ch_tiles_progress: '{done} / 9 Casillas Completadas',
-      ch_milestones_progress: '{claimed} / 4 Hitos Reclamados',
-      ch_manual_rem: 'Desbloqueos Manuales Restantes: <strong>{rem} / {max}</strong>',
-      ch_tile_manual: '🔑 DESBLOQUEO MANUAL',
-      ch_tile_done: '✓ COMPLETADO',
-      ch_tile_tap: 'TOCA PARA MARCAR',
-      ch_claimed_btn: '✓ Reclamado',
-      ch_claim_btn: '🎁 Reclamar',
-      ch_locked_btn: 'Bloqueado',
-      ch_modal_sub: 'Semana {n} • Ancla 2026-W46',
-
-      // Alert Settings Modal
-      al_badge: 'CONFIGURACIÓN DE ALERTAS',
-      al_title: '🔔 Notificaciones y Alertas de Drops',
-      al_sub: 'Personaliza qué juegos gratis te notifican y cómo suenan las alertas.',
-      al_master_title: 'Activar Alertas Web de Ofertas',
-      al_master_desc: 'Recibir notificaciones de juegos gratis y regalos',
-      al_plat_section: 'ALERTAS POR PLATAFORMA',
-      al_criteria_section: 'CRITERIOS Y HORARIOS',
-      al_full_games: 'Solo Juegos Completos',
-      al_full_games_desc: 'Omitir DLCs, paquetes cosméticos y códigos beta',
-      al_high_val: 'Ofertas de Alto Valor ($20+)',
-      al_high_val_desc: 'Solo alertar para títulos AAA y de alto valor',
-      al_expiring: 'Radar de Expiración (<24 Horas)',
-      al_expiring_desc: 'Enviar recordatorios urgentes antes de que acabe la oferta',
-      al_chime: 'Reproducir Sonido de Alerta',
-      al_chime_desc: 'Sintetiza un tono gamer agradable al avisar',
-      al_save: 'Guardar Preferencias',
-      al_send_test: '🚨 Enviar Alerta de Prueba',
-
-      // Notifications Modal
-      notif_badge: 'BANDEJA E HISTORIAL',
-      notif_title: '🔔 Alertas e Historial de Drops',
-      notif_btn_settings: '⚙️ Ajustes de Alerta',
-      notif_btn_read: 'Marcar Leídas',
-      notif_btn_clear: 'Limpiar Historial',
-      notif_empty: 'Sin notificaciones aún. ¡Recibirás avisos cuando salgan juegos gratis!',
-      notif_seed1_title: '🎉 ¡LootDrop V4.1.0 Web Activo!',
-      notif_seed1_desc: 'Cliente web 1 a 1 en GitHub Pages con 19 temas.',
-      notif_seed2_title: '🏆 Reto Semanal 3×3 Listo',
-      notif_seed2_desc: 'Completa casillas esta semana para desbloquear temas exclusivos.',
-      notif_seed3_title: '❤️ Apoya en Patreon',
-      notif_seed3_desc: 'Ayuda a mantener servidores y sigue el lanzamiento en F-Droid.',
-
-      // Detail Modal
-      det_how_to: 'Cómo Reclamar:',
-      det_desc: 'Descripción:',
-      det_already_own: 'YA TIENES ESTE JUEGO',
-      det_own_both: '¡Guardado en tu Bóveda LootDrop y encontrado en tu Biblioteca Steam!',
-      det_own_vault: 'Ya está guardado en tu Bóveda de LootDrop.',
-      det_own_steam: 'Encontrado en tu biblioteca de Steam como "{name}".',
-      det_claim_store: '🚀 Reclamar en Tienda ↗',
-      det_add_vault: '📥 Añadir a Bóveda',
-      det_remove_vault: '💎 Quitar de Bóveda',
-      det_share_btn: '🔗 Compartir Oferta',
-      det_default_instr: 'Reclama directamente en la página de la tienda.',
-      rev_sec_badge: '★ RESEÑAS PÚBLICAS',
-      rev_heading: 'Reseñas de la Comunidad <span class="reviews-storage-tag">Cloudflare R2</span>',
-      rev_leave_btn: '✍️ Escribir Reseña',
-      rev_first_game: '¡Sé el primero en reseñar este juego!',
-      rev_first_app: '¡Sé el primero en calificar LootDrop!',
-      rev_based_on: 'Basado en {count} {noun} de la comunidad',
-      rev_based_app: 'Basado en {count} {noun} de la comunidad en Android y Web.',
-      rev_noun_one: 'reseña',
-      rev_noun_many: 'reseñas',
-      rev_empty_game: 'Aún no hay reseñas comunitarias para <strong>{title}</strong>.',
-      rev_empty_hint: 'Haz clic en <strong>"Escribir Reseña"</strong> para compartir tu opinión.',
-      rev_helpful: '👍 Útil ({count})',
-      rev_verified: '✓ Verificado',
-      rev_verified_user: '✓ Usuario Verificado',
-      rev_app_tag: '⭐ Reseña de LootDrop App',
-      rev_none_app: 'Aún no hay reseñas de la app.',
-
-      // Write Review Modal
-      wr_badge: 'RESEÑA COMUNITARIA',
-      wr_title: 'Escribir una Reseña Pública',
-      wr_target_game: '🎮 Reseñar Juego',
-      wr_target_app: '⭐ Calificar LootDrop',
-      wr_headline_lbl: 'Título de tu Reseña',
-      wr_headline_ph: 'ej. ¡Jugabilidad y gráficos increíbles!',
-      wr_comment_lbl: 'Opinión Detallada',
-      wr_comment_ph: 'Comparte tu experiencia, rendimiento, historia o consejos...',
-      wr_author_lbl: 'Tu Gamer Tag / Nombre',
-      wr_author_ph: 'ej. CyberGamer99',
-      wr_notice: '☁️ Publicado en Cloudflare R2 y sincronizado en vivo entre Android y Web. Solo lenguaje respetuoso (sin insultos, direcciones ni teléfonos).',
-      wr_submit: '🚀 Publicar Reseña en Comunidad',
-      wr_submitting: 'Subiendo a Cloudflare R2...',
-      wr_rating_1: '1 - Saltar / Injugable',
-      wr_rating_2: '2 - Mediocre / Con fallos',
-      wr_rating_3: '3 - Normal / Divertido con amigos',
-      wr_rating_4: '4 - Genial / Muy Recomendado',
-      wr_rating_5: '5 - ¡Obra Maestra! ¡Imperdible!',
-      wr_stars_suffix: '{n} Estrellas',
-
-      // Roulette Modal
-      rou_badge: 'SELECTOR ALEATORIO',
-      rou_title: '🎲 Ruleta del Backlog',
-      rou_sub: '¿No sabes qué jugar? Deja que el destino elija tu próxima aventura.',
-      rou_idle_title: '¡Pulsa Girar para Empezar!',
-      rou_idle_sub: 'De tu Bóveda y Regalos',
-      rou_spin_btn: '🎰 GIRAR LA RULETA',
-      rou_worth_fmt: '{plat} • Valor {worth}',
-      rou_selected_fmt: 'Seleccionado: {plat}. ¡A disfrutar!',
-
-      // Profile Modal
-      prof_badge: 'IDENTIDAD GAMER',
-      prof_title: 'Perfil de Jugador y Trofeos',
-      prof_lbl_name: 'Gamer Tag / Nombre:',
-      prof_lbl_bio: 'Biografía / Lema:',
-      prof_save_btn: 'Guardar Cambios de Perfil',
-      prof_trophies_title: '🏆 Vitrina de Trofeos Desbloqueados',
-      prof_unlocked_count: '{count} Desbloqueados',
-      prof_unlocked_badge: 'DESBLOQUEADO',
-      prof_locked_badge: 'BLOQUEADO',
-
-      // DLC Hub Modal
-      dlc_badge: 'BIBLIOTECA DE STEAM',
-      dlc_title: '🧩 Recomendador de DLCs de Steam',
-      dlc_sub: 'Emparejados con juegos que ya tienes en Steam',
-      dlc_filter_all: 'Todos',
-      dlc_filter_free: 'DLCs Gratis',
-      dlc_filter_sale: 'En Oferta',
-      dlc_filter_top: 'Top Expansiones',
-      dlc_select_all: 'Todos tus Juegos de Steam',
-      dlc_select_all_count: 'Todos tus Juegos de Steam ({count})',
-      dlc_scanning_store: 'Escaneando Tienda de Steam...',
-      dlc_fetching_meta: 'Obteniendo metadatos de DLC desde Steam...',
-      dlc_home_cta_title: 'Descubre DLCs para Juegos que ya Tienes',
-      dlc_home_cta_desc: 'Vincula tu Steam ID público en Ajustes para detectar DLCs gratis, descuentos y expansiones top para tu biblioteca.',
-      dlc_home_cta_btn: '🎮 Vincular Biblioteca Steam ➔',
-      dlc_empty_none_title: 'Sin Recomendaciones de DLC',
-      dlc_empty_no_steam_title: 'Sin Biblioteca de Steam Sincronizada',
-      dlc_empty_no_steam_desc: 'Vincula tu Steam 64 ID en Ajustes para recibir recomendaciones de DLCs para tus juegos.',
-      dlc_empty_rescan_desc: 'Prueba otro filtro o pulsa Escanear para buscar ofertas nuevas de DLCs en Steam.',
-      dlc_link_account_btn: 'Vincular Cuenta Steam',
-      dlc_scan_now_btn: '🔄 Escanear Biblioteca',
-      dlc_hide_btn: 'Ocultar',
-      dlc_claim_free_btn: '🎁 Reclamar DLC Gratis',
-      dlc_claim_free_short: 'Reclamar Gratis',
-      dlc_view_btn: 'Ver DLC',
-      dlc_open_store_btn: 'Abrir en Steam ↗',
-      dlc_played_suffix: '{hours}h jugadas',
-      dlc_played_steam: '{hours}h jugadas en Steam',
-      dlc_official_exp: 'Expansiones oficiales de Steam',
-      dlc_for_game: '🧩 DLCs para {name}',
-      dlc_badge_claimed_free: '✓ DLC Gratis Reclamado',
-      dlc_badge_free_drop: '🎁 DLC Gratis',
-      dlc_badge_free: '🎁 DLC Gratis',
-      dlc_badge_exp: '🧩 Expansión DLC',
-      dlc_badge_deal: '🔥 -{pct}% Oferta',
-      dlc_badge_off: '🏷️ -{pct}% Dto.',
-      dlc_badge_ost: '🎵 Banda Sonora / Extra',
-      dlc_badge_fan: '⭐ Favorito de Fans',
-      dlc_badge_recent: '🎮 Jugado Recientemente',
-      dlc_badge_top: '🏆 Muy Jugado',
-      dlc_view_price: 'Ver Precio',
-      dlc_owned_steam: 'En Steam',
-      dlc_in_library: 'En tu Biblioteca Steam',
-      dlc_reason_free_giveaway: 'Regalo 100% gratis para {name} ({info})',
-      dlc_reason_free_addon: 'Complemento gratis para {name} ({info})',
-      dlc_reason_sale: 'En oferta (-{pct}%) para {name} • {info}',
-      dlc_reason_popular: 'Expansión popular para {name} ({info})',
-      dlc_reason_played: 'Recomendado por tus {info} en {name}',
-      dlc_reason_official: 'Expansión oficial para {name} ({info})',
-
-      // Expiration formatter
-      exp_ongoing: 'Permanente / Sin límite',
-      exp_expired: 'Expirado',
-      exp_hours: 'Expira en {n}h',
-      exp_days: 'Expira en {n}d',
-
-      // Toasts & Alerts
-      toast_lang_es: 'Idioma cambiado a Español 🇪🇸',
-      toast_lang_en: 'Language switched to English 🇺🇸',
-      toast_alerts_on: '¡Alertas del navegador activadas!',
-      toast_alerts_off: 'Notificaciones del navegador rechazadas',
-      toast_theme_applied: '¡Tema {title} aplicado!',
-      toast_status_updated: 'Estado actualizado a {status}',
-      toast_removed_vault: 'Juego quitado de la Bóveda',
-      toast_removed_vault_short: 'Quitado de tu Bóveda',
-      toast_added_vault: '¡Añadido a tu Bóveda!',
-      toast_recycle_slot: 'Turno de desbloqueo reciclado (+1)',
-      toast_manual_limit: '¡Límite alcanzado: máx. {max} desbloqueos manuales por semana!',
-      toast_manual_done: '¡Casilla completada manualmente! (1 turno usado)',
-      toast_claim_theme: '¡Reclamado {trophy}! ¡Nuevo tema desbloqueado y aplicado!',
-      toast_claim_trophy: '¡Reclamado {trophy}! ¡Visible en tu perfil!',
-      toast_roulette_empty: '¡No hay juegos disponibles en el backlog para girar!',
-      toast_roulette_win: 'El destino eligió: ¡Juega {title}!',
-      toast_chime_test: 'Reproduciendo sonido de alerta gamer',
-      toast_alerts_saved: '¡Preferencias de alertas guardadas!',
-      toast_mark_read: 'Todas las alertas marcadas como leídas',
-      toast_clear_notifs: 'Historial de notificaciones limpiado',
-      toast_bg_switched: '¡Cambiado a modo {mode}!',
-      toast_link_copied: '¡Enlace del regalo copiado al portapapeles!',
-      toast_profile_saved: '¡Perfil actualizado!',
-      toast_steam_enter: 'Introduce un Steam 64 ID o URL personalizada',
-      toast_steam_need: '¡Primero introduce tu Steam 64 ID en Ajustes!',
-      toast_backup_exported: '¡Respaldo JSON exportado con éxito!',
-      toast_backup_restored: '¡Respaldo restaurado correctamente!',
-      toast_backup_failed: 'Error al leer el archivo de respaldo JSON',
-      confirm_clear_vault: '¿Seguro que deseas vaciar tu Bóveda de LootDrop?',
-      toast_vault_cleared: 'Bóveda vaciada',
-      toast_already_voted: '¡Ya votaste esta reseña como útil!',
-      toast_voted_helpful: '¡Marcada como útil!',
-      toast_enter_review: '¡Escribe un título o comentario para la reseña!',
-      toast_moderation_blocked: 'No se permiten insultos ni lenguaje ofensivo en reseñas.',
-      toast_review_app_ok: '¡Tu calificación de LootDrop ha sido publicada en R2!',
-      toast_review_game_ok: '¡Tu reseña ha sido publicada en R2!',
-      toast_steam_invalid: 'Introduce un Steam 64 ID o URL válida',
-      toast_steam_connecting: 'Conectando con el perfil de Steam...',
-      toast_steam_synced: '¡{count} juegos sincronizados! Escaneando DLCs...',
-      toast_steam_failed: 'Error al sincronizar Steam: {err}',
-      toast_dlc_hidden: 'Recomendación de DLC ocultada',
-      default_profile_name: 'Cazador de Bóveda',
-      default_profile_bio: 'Limpiando el backlog, un drop a la vez.',
-      default_profile_title: 'Matador de Backlog'
-    }
-  };
-
-  const BLUEPRINTS_ES = {
-    GOLD_TROPHY: { title: 'Desbloquea un Trofeo Oro', desc: 'Consigue cualquier trofeo Oro o Mítico (<15% de desbloqueo).' },
-    INDIE_GAME: { title: 'Juega un Título Indie', desc: 'Juega o avanza en un juego indie de tu biblioteca por +20 min.' },
-    IMMERSION_SESSION: { title: 'Inmersión de 1 Hora', desc: 'Juega un título pendiente o clásico durante +60 minutos.' },
-    VAULT_STARTER: { title: 'Iniciador de Bóveda', desc: 'Inicia o juega un título gratis reclamado en tu Bóveda LootDrop.' },
-    BEAT_GAME: { title: 'Pásate un Juego', desc: 'Termina cualquier juego pendiente y márcalo como Pasado en la Bóveda.' },
-    CONTROLLER_READY: { title: 'Listo con Mando', desc: 'Juega cualquier título compatible con mando durante +25 min.' },
-    TROPHY_COLLECTOR: { title: 'Coleccionista de Trofeos', desc: 'Desbloquea 3 trofeos en total en tu colección de juegos.' },
-    MYTHIC_HUNTER: { title: 'Cazador Mítico', desc: 'Consigue un trofeo Mítico ultra raro (<5% de desbloqueo).' },
-    TRI_PLAY: { title: 'Tri-Partida del Backlog', desc: 'Juega o registra progreso en 2 juegos distintos esta semana.' },
-    METACRITIC_80: { title: 'Aclamado por la Crítica', desc: 'Juega un título con Metacritic 80+ durante al menos 30 minutos.' },
-    DECK_VERIFIED: { title: 'Héroe Steam Deck', desc: 'Juega cualquier título verificado en Steam Deck de tu biblioteca.' },
-    QUICK_SESSION: { title: 'Partida Rápida', desc: 'Juega un título de sesiones cortas (<30 min) durante +15 min.' },
-    UNPLAYED_REVIVAL: { title: 'Nuevo Comienzo', desc: 'Estrena un juego sin jugar de tu backlog por +30 minutos.' },
-    FIVE_TROPHIES: { title: 'Maratón de Trofeos', desc: 'Desbloquea 5 trofeos en total en toda tu biblioteca.' },
-    COMPLETION_JOURNEY: { title: 'Finalizador Semanal', desc: 'Ten al menos 1 juego marcado como Pasado en tu biblioteca.' },
-    COMPACT_STORAGE: { title: 'Joya Ligera', desc: 'Juega cualquier título de menos de 2 GB durante +20 minutos.' },
-    HEAVYWEIGHT_EPIC: { title: 'Épica Triple-A', desc: 'Juega un título de 10 GB+ de tu biblioteca durante +45 minutos.' },
-    GENRE_HOPPER: { title: 'Explorador de Géneros', desc: 'Juega títulos de 2 géneros distintos esta semana.' }
-  };
-
-  const MILESTONES_ES = {
-    backlog_slayer: { name: 'Trofeo y Tema Backlog Slayer', sub: 'Completa cualquier línea de 3 casillas (fila, columna o diagonal)', trophy: '🏆 Backlog Slayer' },
-    row_raider: { name: 'Trofeo Incursor de Fila', sub: 'Completa cualquier fila horizontal esta semana', trophy: '🥇 Incursor de Fila' },
-    column_conqueror: { name: 'Trofeo Conquistador de Columna', sub: 'Completa cualquier columna vertical esta semana', trophy: '🥈 Conquistador de Columna' },
-    blackout_champion: { name: 'Trofeo Campeón Apagón y Tema Vault Cleaner', sub: 'Completa las 9 casillas de la cuadrícula', trophy: '⚡ Campeón Apagón' }
-  };
+  function normalizeLanguage(lang) {
+    return lang === 'es' ? 'es' : 'en';
+  }
 
   function getSavedLanguage() {
     try {
@@ -973,11 +33,91 @@
     }
   }
 
+  function readCachedLocaleFromStorage(lang) {
+    try {
+      const raw = localStorage.getItem(LOCALE_CACHE_PREFIX + lang);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' && parsed.strings ? parsed : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function writeCachedLocaleToStorage(lang, data) {
+    try {
+      localStorage.setItem(LOCALE_CACHE_PREFIX + lang, JSON.stringify(data));
+    } catch (_) {}
+  }
+
   let currentLang = getSavedLanguage();
+  // Hydrate synchronously from localStorage cache if previously downloaded
+  SUPPORTED_LANGS.forEach(lang => {
+    const cached = readCachedLocaleFromStorage(lang);
+    if (cached) localeCache[lang] = cached;
+  });
+
+  async function loadLocale(lang, forceReload = false) {
+    const normalized = normalizeLanguage(lang);
+    if (!forceReload && localeCache[normalized]) {
+      return localeCache[normalized];
+    }
+    if (!forceReload && inFlightRequests[normalized]) {
+      return inFlightRequests[normalized];
+    }
+
+    const request = (async () => {
+      try {
+        const res = await fetch(`./locales/${normalized}.json?v=4.2.0`, { cache: 'no-cache' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!data || typeof data !== 'object' || !data.strings) {
+          throw new Error(`Invalid locale bundle: ${normalized}`);
+        }
+        localeCache[normalized] = data;
+        writeCachedLocaleToStorage(normalized, data);
+        return data;
+      } catch (err) {
+        const cached = localeCache[normalized] || readCachedLocaleFromStorage(normalized);
+        if (cached) {
+          localeCache[normalized] = cached;
+          return cached;
+        }
+        console.warn(`Failed to load locale file ./locales/${normalized}.json:`, err);
+        return null;
+      } finally {
+        delete inFlightRequests[normalized];
+      }
+    })();
+
+    inFlightRequests[normalized] = request;
+    return request;
+  }
+
+  function getLocaleData(lang = currentLang) {
+    return localeCache[normalizeLanguage(lang)] || localeCache.en || null;
+  }
+
+  function getMeta() {
+    const data = getLocaleData(currentLang);
+    if (data && data.meta) return data.meta;
+    return {
+      code: currentLang,
+      dateLocale: currentLang === 'es' ? 'es-ES' : 'en-US',
+      steamLanguage: currentLang === 'es' ? 'spanish' : 'english',
+      toggleBadge: currentLang === 'es' ? '🌐 ES' : '🌐 EN'
+    };
+  }
 
   function t(key, params = {}) {
-    const dict = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
-    let str = dict[key] !== undefined ? dict[key] : (TRANSLATIONS.en[key] !== undefined ? TRANSLATIONS.en[key] : key);
+    const active = getLocaleData(currentLang);
+    const fallback = localeCache.en;
+    const raw =
+      (active && active.strings && active.strings[key] !== undefined ? active.strings[key] : undefined) ??
+      (fallback && fallback.strings && fallback.strings[key] !== undefined ? fallback.strings[key] : undefined) ??
+      key;
+
+    let str = String(raw);
     if (params && typeof params === 'object') {
       Object.keys(params).forEach(k => {
         str = str.replace(new RegExp(`\\{${k}\\}`, 'g'), String(params[k]));
@@ -986,9 +126,46 @@
     return str;
   }
 
+  function getThemeText(themeId) {
+    const active = getLocaleData(currentLang);
+    const fallback = localeCache.en;
+    return (active && active.themes && active.themes[themeId]) ||
+      (fallback && fallback.themes && fallback.themes[themeId]) ||
+      null;
+  }
+
+  function getBlueprintText(blueprintId) {
+    const active = getLocaleData(currentLang);
+    const fallback = localeCache.en;
+    return (active && active.blueprints && active.blueprints[blueprintId]) ||
+      (fallback && fallback.blueprints && fallback.blueprints[blueprintId]) ||
+      null;
+  }
+
+  function getMilestoneText(milestoneKey) {
+    const active = getLocaleData(currentLang);
+    const fallback = localeCache.en;
+    return (active && active.milestones && active.milestones[milestoneKey]) ||
+      (fallback && fallback.milestones && fallback.milestones[milestoneKey]) ||
+      null;
+  }
+
+  function getTrophyText(trophyKey) {
+    const active = getLocaleData(currentLang);
+    const fallback = localeCache.en;
+    return (active && active.trophies && active.trophies[trophyKey]) ||
+      (fallback && fallback.trophies && fallback.trophies[trophyKey]) ||
+      null;
+  }
+
   function applyStaticDomTranslations() {
+    if (typeof document === 'undefined') return;
     document.documentElement.lang = currentLang;
-    document.title = t('doc_title');
+
+    const titleText = t('doc_title');
+    if (titleText && titleText !== 'doc_title') {
+      document.title = titleText;
+    }
 
     document.querySelectorAll('[data-i18n]').forEach(el => {
       const key = el.getAttribute('data-i18n');
@@ -1009,7 +186,7 @@
 
     const toggleBtn = document.getElementById('btn-lang-toggle');
     if (toggleBtn) {
-      toggleBtn.textContent = currentLang === 'es' ? '🌐 ES' : '🌐 EN';
+      toggleBtn.textContent = getMeta().toggleBadge || (currentLang === 'es' ? '🌐 ES' : '🌐 EN');
     }
     const settingsBtnEn = document.getElementById('btn-set-lang-en');
     const settingsBtnEs = document.getElementById('btn-set-lang-es');
@@ -1017,26 +194,40 @@
     settingsBtnEs?.classList.toggle('active', currentLang === 'es');
   }
 
-  function setLanguage(lang, persist = true) {
-    const normalized = lang === 'es' ? 'es' : 'en';
+  async function setLanguage(lang, persist = true) {
+    const normalized = normalizeLanguage(lang);
     currentLang = normalized;
     if (persist) {
       try {
         localStorage.setItem(LANG_STORAGE_KEY, normalized);
       } catch (_) {}
     }
+    await loadLocale(normalized);
     applyStaticDomTranslations();
+    return getLocaleData(normalized);
+  }
+
+  async function init() {
+    await loadLocale(currentLang);
+    applyStaticDomTranslations();
+    return getLocaleData(currentLang);
   }
 
   global.LootDropI18n = {
     LANG_STORAGE_KEY,
-    BLUEPRINTS_ES,
-    MILESTONES_ES,
+    init,
+    loadLocale,
     getLanguage: () => currentLang,
     isSpanish: () => currentLang === 'es',
     hasExplicitLanguageSelection,
+    getLocaleData,
+    getMeta,
     setLanguage,
     applyStaticDomTranslations,
+    getThemeText,
+    getBlueprintText,
+    getMilestoneText,
+    getTrophyText,
     t
   };
-})(window);
+})(typeof window !== 'undefined' ? window : globalThis);

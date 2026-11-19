@@ -41,9 +41,11 @@ data class BacklogChallengeTile(
 }
 
 enum class BacklogMilestoneType {
+    TILE_PROGRESS,
     LINE_ROW,
     LINE_COLUMN,
     LINE_DIAGONAL,
+    MULTI_LINE,
     BLACKOUT_ALL
 }
 

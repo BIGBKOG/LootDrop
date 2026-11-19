@@ -428,14 +428,12 @@ fun BacklogChallengeGridDialog(
                                 text = if (isEs) {
                                     "• Renovación semanal: Cada lunes a las 00:00 tu tablero 3×3 se renueva con nuevos retos de todas las categorías. ¡Tus temas y trofeos desbloqueados permanecen para siempre!\n" +
                                         "• Seguimiento automático: Horas jugadas, juegos terminados y logros de Steam llenan casillas automáticamente.\n" +
-                                        "• Líneas Bingo: Cualquier línea de 3 (horizontal, vertical o diagonal) desbloquea el Trofeo y Tema Matabacklog.\n" +
-                                        "• Cartón Lleno: Completa las 9 casillas para reclamar el tema Oro de Bóveda 24K y el Trofeo Nebulosa Blackout.\n" +
+                                        "• 10 Hitos y 7 Temas Exclusivos: Gana recompensas al completar 2 casillas, líneas, diagonales, 6 casillas, 2 o 3 líneas y Cartón Lleno.\n" +
                                         "• Desbloqueo manual: ¿Juegas en consola o sin conexión? Puedes marcar manualmente hasta 2 casillas por semana (toca una casilla marcada para liberar el espacio)."
                                 } else {
                                     "• Weekly Auto-Refresh: Every Monday at 00:00, your 3×3 challenge grid automatically refreshes with a fresh set of challenges sampled across all categories. Your unlocked themes and trophies remain permanently unlocked!\n" +
                                         "• Auto-Tracked: Playtime, beaten status, and Steam achievements automatically fill tiles.\n" +
-                                        "• Line Bingos: Any 3-in-a-row (horizontal, vertical, or diagonal) unlocks the Backlog Slayer Trophy & Theme!\n" +
-                                        "• Blackout: Clear all 9 tiles to claim the 24K Vault Cleaner Theme and Nebula Blackout Champion Trophy!\n" +
+                                        "• 10 Milestones & 7 Reward Themes: Earn trophies and exclusive color themes for 2 tiles, rows, columns, diagonals, 6 tiles, 2+ or 3+ lines, and Full Blackout!\n" +
                                         "• Manual Override: Playing on console/offline? You can manually unlock up to 2 challenges per week (tap an unlocked tile anytime to uncheck and free up a slot)."
                                 },
                                 fontSize = 11.sp,

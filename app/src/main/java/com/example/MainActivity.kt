@@ -47,6 +47,7 @@ class MainActivity : ComponentActivity() {
             val uiStats by viewModel.uiStats.collectAsState()
             val appLanguage by viewModel.appLanguage.collectAsState()
             val appStrings = remember(appLanguage) {
+                com.example.i18n.LocaleAssetCatalog.preload(this@MainActivity, appLanguage)
                 com.example.i18n.AppStringsRegistry.forLanguage(appLanguage)
             }
 

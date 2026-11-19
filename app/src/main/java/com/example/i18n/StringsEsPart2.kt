@@ -129,10 +129,10 @@ internal val StringsEsDialogs = DialogsReviewsBacklogStrings(
         ),
         OnboardingStepText(
             title = "Alertas y Temas Propios",
-            subtitle = "19 TEMAS CYBER Y GAMER • ALERTAS AL INSTANTE",
+            subtitle = "23 TEMAS CYBER Y PREMIOS • ALERTAS AL INSTANTE",
             description = "Recibe alertas en cuanto salgan ofertas flash para no perder regalos de 24h. Personaliza LootDrop con temas vibrantes, modo OLED y vistas compactas o ricas.",
             badge = "PERSONALIZACIÓN GAMER",
-            tags = listOf("Alertas al Instante", "19 Temas Color", "Modo OLED", "Vistas Flexibles")
+            tags = listOf("Alertas al Instante", "23 Temas Color", "Modo OLED", "Vistas Flexibles")
         )
     )
 )

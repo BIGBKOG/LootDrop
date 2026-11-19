@@ -69,8 +69,53 @@ object CuratedAchievementsCatalog {
             gameName = "Backlog Challenge",
             apiName = "ACH_BLACKOUT_CHAMPION",
             title = "Blackout Champion",
-            description = "Mastered all 9 tiles on the monthly Backlog Clearing card!",
+            description = "Mastered all 9 tiles on the weekly Backlog Clearing card!",
             globalPercent = 0.2f,
+            isDefaultUnlocked = false
+        ),
+        PredefinedAchievement(
+            appId = 777000,
+            gameName = "Backlog Challenge",
+            apiName = "ACH_MOMENTUM_SPARK",
+            title = "Momentum Spark",
+            description = "Completed 2 or more tiles in a single 3x3 Backlog Challenge week!",
+            globalPercent = 11.5f,
+            isDefaultUnlocked = false
+        ),
+        PredefinedAchievement(
+            appId = 777000,
+            gameName = "Backlog Challenge",
+            apiName = "ACH_DIAGONAL_DRIFTER",
+            title = "Diagonal Drifter",
+            description = "Completed a corner-to-corner diagonal line in the 3x3 Backlog grid!",
+            globalPercent = 3.6f,
+            isDefaultUnlocked = false
+        ),
+        PredefinedAchievement(
+            appId = 777000,
+            gameName = "Backlog Challenge",
+            apiName = "ACH_BINGO_ARCHITECT",
+            title = "Bingo Architect",
+            description = "Completed 2 or more winning lines on a weekly 3x3 Backlog Challenge card!",
+            globalPercent = 2.4f,
+            isDefaultUnlocked = false
+        ),
+        PredefinedAchievement(
+            appId = 777000,
+            gameName = "Backlog Challenge",
+            apiName = "ACH_OVERDRIVE_RUNNER",
+            title = "Overdrive Runner",
+            description = "Completed 6 or more tiles on a weekly 3x3 Backlog Challenge card!",
+            globalPercent = 1.6f,
+            isDefaultUnlocked = false
+        ),
+        PredefinedAchievement(
+            appId = 777000,
+            gameName = "Backlog Challenge",
+            apiName = "ACH_TRIPLE_THREAT",
+            title = "Triple Threat",
+            description = "Completed 3 or more winning lines in a single 3x3 Backlog Challenge week!",
+            globalPercent = 0.7f,
             isDefaultUnlocked = false
         ),
 

@@ -129,10 +129,10 @@ internal val StringsEnDialogs = DialogsReviewsBacklogStrings(
         ),
         OnboardingStepText(
             title = "Custom Alerts & UI",
-            subtitle = "16 CYBER & BRAND THEMES • DROP ALERTS",
-            description = "Get notified the instant flash giveaways drop so you never miss a 24-hour giveaway. Tailor LootDrop with 16 vibrant themes, OLED midnight mode, and rich or compact card views.",
+            subtitle = "23 CYBER & REWARD THEMES • DROP ALERTS",
+            description = "Get notified the instant flash giveaways drop so you never miss a 24-hour giveaway. Tailor LootDrop with 23 vibrant themes, OLED midnight mode, and rich or compact card views.",
             badge = "GAMER CUSTOMIZATION",
-            tags = listOf("Instant Notifications", "16 Accent Themes", "OLED Dark Mode", "Custom Density")
+            tags = listOf("Instant Notifications", "23 Accent Themes", "OLED Dark Mode", "Custom Density")
         )
     )
 )

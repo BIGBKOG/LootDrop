@@ -1,43 +1,59 @@
 /**
- * LootDrop V4.1.0 - Complete Client Application
- * 1-to-1 Web Edition with 19 Accent Themes & Comprehensive Website Alerts
+ * LootDrop V4.2.0 - Complete Client Application
+ * 1-to-1 Web Edition with 23 Accent Themes & Comprehensive Website Alerts
  */
 
-// ==========================================
-// 19 Official Accent Themes (From AppPreferences.kt)
-// ==========================================
+// 23 Official Accent Themes (Metadata & Colors; Text loaded from /locales/{lang}.json)
 const ACCENT_THEMES = [
   // Cyber (5)
-  { id: 'theme-cyber-cyan', title: 'Cyber Cyan', short: 'Cyan', cat: 'cyber', primary: '#00F0FF', secondary: '#00FF88', desc: 'Vibrant high-contrast cyber blue' },
-  { id: 'theme-gog-purple', title: 'Ultraviolet', short: 'Ultra Violet', cat: 'cyber', primary: '#A855F7', secondary: '#D946EF', desc: 'Deep electric violet & magenta' },
-  { id: 'theme-razer-lime', title: 'Toxic Lime', short: 'Toxic Lime', cat: 'cyber', primary: '#22C55E', secondary: '#10B981', desc: 'High-energy matrix green' },
-  { id: 'theme-inferno-red', title: 'Inferno Red', short: 'Inferno', cat: 'cyber', primary: '#EF4444', secondary: '#F97316', desc: 'Warm battle red & ember' },
-  { id: 'theme-cherry-rose', title: 'Cherry Blossom', short: 'Sakura', cat: 'cyber', primary: '#EC4899', secondary: '#F43F5E', desc: 'Vivid neon pink & sakura' },
+  { id: 'theme-cyber-cyan', cat: 'cyber', primary: '#00F0FF', secondary: '#00FF88' },
+  { id: 'theme-gog-purple', cat: 'cyber', primary: '#A855F7', secondary: '#D946EF' },
+  { id: 'theme-razer-lime', cat: 'cyber', primary: '#22C55E', secondary: '#10B981' },
+  { id: 'theme-inferno-red', cat: 'cyber', primary: '#EF4444', secondary: '#F97316' },
+  { id: 'theme-cherry-rose', cat: 'cyber', primary: '#EC4899', secondary: '#F43F5E' },
 
   // Gaming (6)
-  { id: 'theme-steam-blue', title: 'Steam Sky', short: 'Steam', cat: 'gaming', primary: '#38BDF8', secondary: '#818CF8', desc: 'Classic PC gaming blue' },
-  { id: 'theme-epic-indigo', title: 'Epic Indigo', short: 'Epic', cat: 'gaming', primary: '#6366F1', secondary: '#8B5CF6', desc: 'Deep launcher indigo' },
-  { id: 'theme-playstation-blue', title: 'PlayStation Blue', short: 'PlayStation', cat: 'gaming', primary: '#0070D1', secondary: '#38BDF8', desc: 'Official PlayStation electric cobalt' },
-  { id: 'theme-xbox-green', title: 'Xbox Green', short: 'Xbox', cat: 'gaming', primary: '#107C10', secondary: '#22C55E', desc: 'Iconic Xbox emerald neon green' },
-  { id: 'theme-nintendo-red', title: 'Nintendo Red', short: 'Nintendo', cat: 'gaming', primary: '#E60012', secondary: '#FF4D5A', desc: 'Iconic Nintendo Switch neon crimson' },
-  { id: 'theme-discord-blurple', title: 'Discord Blurple', short: 'Discord', cat: 'gaming', primary: '#5865F2', secondary: '#818CF8', desc: 'Iconic gamer community blurple' },
+  { id: 'theme-steam-blue', cat: 'gaming', primary: '#38BDF8', secondary: '#818CF8' },
+  { id: 'theme-epic-indigo', cat: 'gaming', primary: '#6366F1', secondary: '#8B5CF6' },
+  { id: 'theme-playstation-blue', cat: 'gaming', primary: '#0070D1', secondary: '#38BDF8' },
+  { id: 'theme-xbox-green', cat: 'gaming', primary: '#107C10', secondary: '#22C55E' },
+  { id: 'theme-nintendo-red', cat: 'gaming', primary: '#E60012', secondary: '#FF4D5A' },
+  { id: 'theme-discord-blurple', cat: 'gaming', primary: '#5865F2', secondary: '#818CF8' },
 
   // Vault (5)
-  { id: 'theme-golden-loot', title: 'Loot Gold', short: 'Loot Gold', cat: 'vault', primary: '#FBBF24', secondary: '#F59E0B', desc: 'Legendary gold drops' },
-  { id: 'theme-ocean-teal', title: 'Ocean Teal', short: 'Teal', cat: 'vault', primary: '#14B8A6', secondary: '#06B6D4', desc: 'Deep oceanic crystal teal' },
-  { id: 'theme-sunset-coral', title: 'Sunset Coral', short: 'Sunset', cat: 'vault', primary: '#FB923C', secondary: '#F43F5E', desc: 'Warm twilight sunset blaze' },
-  { id: 'theme-deep-royale', title: 'Royal Violet', short: 'Royale', cat: 'vault', primary: '#8B5CF6', secondary: '#C084FC', desc: 'Majestic royal imperial purple' },
-  { id: 'theme-emerald-mint', title: 'Emerald Vault', short: 'Emerald', cat: 'vault', primary: '#10B981', secondary: '#34D399', desc: 'Lush emerald gemstone green' },
+  { id: 'theme-golden-loot', cat: 'vault', primary: '#FBBF24', secondary: '#F59E0B' },
+  { id: 'theme-ocean-teal', cat: 'vault', primary: '#14B8A6', secondary: '#06B6D4' },
+  { id: 'theme-sunset-coral', cat: 'vault', primary: '#FB923C', secondary: '#F43F5E' },
+  { id: 'theme-deep-royale', cat: 'vault', primary: '#8B5CF6', secondary: '#C084FC' },
+  { id: 'theme-emerald-mint', cat: 'vault', primary: '#10B981', secondary: '#34D399' },
 
-  // Rewards (3)
-  { id: 'theme-backlog-slayer', title: 'Backlog Slayer', short: 'Slayer', cat: 'rewards', primary: '#FF0055', secondary: '#FF5500', desc: 'Unlocked via Backlog Challenge! Aggressive neon crimson & blaze' },
-  { id: 'theme-vault-cleaner', title: 'Vault Cleaner Gold', short: 'Vault Gold', cat: 'rewards', primary: '#FFD700', secondary: '#00FFCC', desc: 'Unlocked via Backlog Blackout! Pure 24K vault gold & cyber teal' },
-  { id: 'theme-nebula-blackout', title: 'Nebula Blackout', short: 'Nebula', cat: 'rewards', primary: '#B026FF', secondary: '#00F0FF', desc: 'Unlocked via Backlog Challenge! Cosmic nebula violet & electric cyan' }
+  // Rewards (7)
+  { id: 'theme-backlog-slayer', cat: 'rewards', primary: '#FF0055', secondary: '#FF5500', unlockPrefix: 'backlog_slayer' },
+  { id: 'theme-prism-drift', cat: 'rewards', primary: '#FF2E93', secondary: '#00E5FF', unlockPrefix: 'diagonal_drifter' },
+  { id: 'theme-solar-nova', cat: 'rewards', primary: '#FF6B00', secondary: '#FFD166', unlockPrefix: 'bingo_architect' },
+  { id: 'theme-toxic-overdrive', cat: 'rewards', primary: '#A3E635', secondary: '#C026D3', unlockPrefix: 'overdrive_runner' },
+  { id: 'theme-aurora-sovereign', cat: 'rewards', primary: '#00FFA3', secondary: '#3B82F6', unlockPrefix: 'triple_threat' },
+  { id: 'theme-vault-cleaner', cat: 'rewards', primary: '#FFD700', secondary: '#00FFCC', unlockPrefix: 'vault_cleaner', legacyPrefix: 'blackout_champion' },
+  { id: 'theme-nebula-blackout', cat: 'rewards', primary: '#B026FF', secondary: '#00F0FF', unlockPrefix: 'blackout_champion' }
 ];
 
-// ==========================================
+function getLocalizedThemeMeta(themeId) {
+  const fromLocale = window.LootDropI18n?.getThemeText?.(themeId);
+  if (fromLocale) return fromLocale;
+  return { title: themeId, short: themeId, desc: '' };
+}
+
+function isThemeUnlocked(themeObj) {
+  if (!themeObj || themeObj.cat !== 'rewards') return true;
+  const claimed = JSON.parse(localStorage.getItem(STORAGE_KEYS.MILESTONES) || '{}');
+  const keys = Object.keys(claimed);
+  return keys.some(k =>
+    (themeObj.unlockPrefix && k.startsWith(themeObj.unlockPrefix)) ||
+    (themeObj.legacyPrefix && k.startsWith(themeObj.legacyPrefix))
+  );
+}
+
 // App State & Local Storage Keys
-// ==========================================
 const STORAGE_KEYS = {
   VAULT: 'lootdrop_vault_items',
   PROFILE: 'lootdrop_user_profile',
@@ -55,7 +71,6 @@ const STORAGE_KEYS = {
 };
 
 const t = (key, params) => (window.LootDropI18n ? window.LootDropI18n.t(key, params) : key);
-const isEs = () => window.LootDropI18n?.isSpanish() === true;
 
 const DEFAULT_PROFILE_NAMES = new Set(['Vault Hunter', 'Cazador de Bóveda']);
 const DEFAULT_PROFILE_BIOS = new Set([
@@ -165,26 +180,26 @@ const FALLBACK_GIVEAWAYS = [
   }
 ];
 
-// Catalog of 3x3 Backlog Challenge Blueprints (From BacklogChallengeManager.kt)
+// Catalog of 3x3 Backlog Challenge Blueprints (Text loaded dynamically from /locales/{lang}.json)
 const CHALLENGE_BLUEPRINTS = [
-  { id: "GOLD_TROPHY", title: "Unlock a Gold Trophy", desc: "Earn any Gold or Mythic tier trophy (<15% unlock rate).", emoji: "🏆" },
-  { id: "INDIE_GAME", title: "Play an Indie Game", desc: "Play or advance an indie title in your library for 20+ mins.", emoji: "🕹️" },
-  { id: "IMMERSION_SESSION", title: "1-Hour Immersion", desc: "Play an unplayed or classic backlog game for 60+ minutes.", emoji: "⏳" },
-  { id: "VAULT_STARTER", title: "Vault Starter", desc: "Start or play a claimed free game from your LootDrop Vault.", emoji: "📦" },
-  { id: "BEAT_GAME", title: "Beat a Game", desc: "Finish any backlog game and mark it as Beaten in your Vault!", emoji: "👑" },
-  { id: "CONTROLLER_READY", title: "Controller Ready", desc: "Play any game with verified Controller support for 25+ mins.", emoji: "🎮" },
-  { id: "TROPHY_COLLECTOR", title: "Trophy Collector", desc: "Unlock 3 total trophies across any games in your collection.", emoji: "💎" },
-  { id: "MYTHIC_HUNTER", title: "Mythic Hunter", desc: "Unlock an ultra-rare Mythic trophy (<5% unlock rate).", emoji: "⚡" },
-  { id: "TRI_PLAY", title: "Backlog Tri-Play", desc: "Play or log progress in 2 different games this week.", emoji: "🌟" },
-  { id: "METACRITIC_80", title: "Critically Acclaimed", desc: "Play a title with Metacritic 80+ for at least 30 minutes.", emoji: "🎖️" },
-  { id: "DECK_VERIFIED", title: "Deck Verified Hero", desc: "Play any Steam Deck Verified title from your collection.", emoji: "🔋" },
-  { id: "QUICK_SESSION", title: "Bite-Sized Sprint", desc: "Play a quick session friendly game (<30 min loop) for 15+ mins.", emoji: "☕" },
-  { id: "UNPLAYED_REVIVAL", title: "Fresh Start", desc: "Boot up an unplayed backlog game and log 30+ minutes.", emoji: "🚀" },
-  { id: "FIVE_TROPHIES", title: "Trophy Sprint", desc: "Unlock 5 total trophies across your entire gaming library.", emoji: "🥇" },
-  { id: "COMPLETION_JOURNEY", title: "Weekly Finisher", desc: "Have 1 or more backlog games marked as Beaten in your library.", emoji: "🎖️" },
-  { id: "COMPACT_STORAGE", title: "Lightweight Gem", desc: "Play any game under 2GB storage footprint for 20+ minutes.", emoji: "💾" },
-  { id: "HEAVYWEIGHT_EPIC", title: "Triple-A Immersion", desc: "Play a large 10GB+ title from your library for 45+ minutes.", emoji: "🛡️" },
-  { id: "GENRE_HOPPER", title: "Genre Explorer", desc: "Play games across 2 distinct genres this week.", emoji: "🗺️" }
+  { id: "GOLD_TROPHY", emoji: "🏆" },
+  { id: "INDIE_GAME", emoji: "🕹️" },
+  { id: "IMMERSION_SESSION", emoji: "⏳" },
+  { id: "VAULT_STARTER", emoji: "📦" },
+  { id: "BEAT_GAME", emoji: "👑" },
+  { id: "CONTROLLER_READY", emoji: "🎮" },
+  { id: "TROPHY_COLLECTOR", emoji: "💎" },
+  { id: "MYTHIC_HUNTER", emoji: "⚡" },
+  { id: "TRI_PLAY", emoji: "🌟" },
+  { id: "METACRITIC_80", emoji: "🎖️" },
+  { id: "DECK_VERIFIED", emoji: "🔋" },
+  { id: "QUICK_SESSION", emoji: "☕" },
+  { id: "UNPLAYED_REVIVAL", emoji: "🚀" },
+  { id: "FIVE_TROPHIES", emoji: "🥇" },
+  { id: "COMPLETION_JOURNEY", emoji: "🎖️" },
+  { id: "COMPACT_STORAGE", emoji: "💾" },
+  { id: "HEAVYWEIGHT_EPIC", emoji: "🛡️" },
+  { id: "GENRE_HOPPER", emoji: "🗺️" }
 ];
 
 // App State
@@ -221,10 +236,19 @@ let selectedGiveaway = null;
 // Audio Synthesizer Context
 let audioCtx = null;
 
-// ==========================================
 // Initialization
-// ==========================================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  if (window.LootDropI18n?.init) {
+    await window.LootDropI18n.init();
+  }
+  if (!localStorage.getItem(STORAGE_KEYS.PROFILE)) {
+    userProfile = {
+      name: t('default_profile_name'),
+      bio: t('default_profile_bio'),
+      avatar: '🎮',
+      title: t('default_profile_title')
+    };
+  }
   initLanguageControls();
   applyThemeAndBg(currentThemeId, currentBgMode);
   initNavigation();
@@ -260,24 +284,24 @@ function initLanguageControls() {
     switchAppLanguage('es', true);
   });
 
-  document.getElementById('btn-pick-lang-en')?.addEventListener('click', () => {
-    switchAppLanguage('en', true);
+  document.getElementById('btn-pick-lang-en')?.addEventListener('click', async () => {
+    await switchAppLanguage('en', true);
     document.getElementById('modal-language-picker')?.classList.remove('open');
   });
-  document.getElementById('btn-pick-lang-es')?.addEventListener('click', () => {
-    switchAppLanguage('es', true);
+  document.getElementById('btn-pick-lang-es')?.addEventListener('click', async () => {
+    await switchAppLanguage('es', true);
     document.getElementById('modal-language-picker')?.classList.remove('open');
   });
 
   const langModal = document.getElementById('modal-language-picker');
   document.getElementById('close-lang-modal-btn')?.addEventListener('click', () => {
     if (!window.LootDropI18n.hasExplicitLanguageSelection()) {
-      window.LootDropI18n.setLanguage(window.LootDropI18n.getLanguage(), true);
+      switchAppLanguage(window.LootDropI18n.getLanguage(), false);
     }
   });
   langModal?.addEventListener('click', (e) => {
     if (e.target === langModal && !window.LootDropI18n.hasExplicitLanguageSelection()) {
-      window.LootDropI18n.setLanguage(window.LootDropI18n.getLanguage(), true);
+      switchAppLanguage(window.LootDropI18n.getLanguage(), false);
     }
   });
 
@@ -293,17 +317,19 @@ function syncLanguagePickerSelection() {
   document.getElementById('btn-pick-lang-es')?.classList.toggle('active', lang === 'es');
 }
 
-function switchAppLanguage(lang, showToastMsg = true) {
+async function switchAppLanguage(lang, showToastMsg = true) {
   if (!window.LootDropI18n) return;
-  window.LootDropI18n.setLanguage(lang, true);
+  await window.LootDropI18n.setLanguage(lang, true);
   syncLanguagePickerSelection();
 
+  applyThemeAndBg(currentThemeId, currentBgMode);
   renderHome();
   renderRadar();
   renderCalendar();
   renderVault();
   renderNotificationsList();
   renderMiniChallengeWidget();
+  renderThemeCatalog(document.querySelector('#theme-cat-tabs .theme-cat-tab.active')?.dataset?.cat || 'all');
   updateStats();
   renderProfile();
   updateSettingsAppRatingUI();
@@ -334,9 +360,7 @@ function switchAppLanguage(lang, showToastMsg = true) {
   }
 }
 
-// ==========================================
 // Audio Synthesizer (Gaming Chime)
-// ==========================================
 function playGamerChime() {
   if (!alertSettings.sound) return;
   try {
@@ -371,9 +395,7 @@ function playGamerChime() {
   }
 }
 
-// ==========================================
 // Web Drop Alerts & Notifications System
-// ==========================================
 function checkNotificationPermissionState() {
   const banner = document.getElementById('perm-banner');
   if (!banner) return;
@@ -507,9 +529,7 @@ function renderNotificationsList() {
   });
 }
 
-// ==========================================
 // Theme & Background Mode Management
-// ==========================================
 function applyThemeAndBg(themeId, bgMode) {
   currentThemeId = themeId;
   currentBgMode = bgMode;
@@ -520,9 +540,10 @@ function applyThemeAndBg(themeId, bgMode) {
 
   // Update theme badge in settings
   const foundTheme = ACCENT_THEMES.find(t => t.id === themeId);
+  const foundMeta = foundTheme ? getLocalizedThemeMeta(foundTheme.id) : null;
   const badge = document.getElementById('current-theme-badge');
   if (badge && foundTheme) {
-    badge.textContent = foundTheme.title;
+    badge.textContent = foundMeta.title;
     badge.style.backgroundColor = foundTheme.primary;
     badge.style.color = '#000';
   }
@@ -537,37 +558,45 @@ function renderThemeCatalog(category = 'all') {
   const container = document.getElementById('full-theme-grid');
   if (!container) return;
 
-  const filtered = category === 'all' 
-    ? ACCENT_THEMES 
-    : ACCENT_THEMES.filter(t => t.cat === category);
+  const filtered = category === 'all'
+    ? ACCENT_THEMES
+    : ACCENT_THEMES.filter(th => th.cat === category);
 
-  container.innerHTML = filtered.map(t => `
-    <div class="theme-btn-card ${t.id === currentThemeId ? 'active' : ''}" data-id="${t.id}">
-      <div class="theme-preview-dots">
-        <span class="theme-dot" style="background: ${t.primary};"></span>
-        <span class="theme-dot secondary" style="background: ${t.secondary};"></span>
+  container.innerHTML = filtered.map(th => {
+    const unlocked = isThemeUnlocked(th);
+    const meta = getLocalizedThemeMeta(th.id);
+    return `
+      <div class="theme-btn-card ${th.id === currentThemeId ? 'active' : ''} ${unlocked ? '' : 'locked'}" data-id="${th.id}">
+        <div class="theme-preview-dots">
+          <span class="theme-dot" style="background: ${th.primary};"></span>
+          <span class="theme-dot secondary" style="background: ${th.secondary};"></span>
+        </div>
+        <div class="theme-info">
+          <span class="theme-title">${unlocked ? '' : '🔒 '}${escapeHtml(meta.title)}</span>
+          <span class="theme-cat">${unlocked ? th.cat.toUpperCase() : escapeHtml(t('ch_locked_btn').toUpperCase())}</span>
+        </div>
       </div>
-      <div class="theme-info">
-        <span class="theme-title">${t.title}</span>
-        <span class="theme-cat">${t.cat.toUpperCase()}</span>
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 
   container.querySelectorAll('.theme-btn-card').forEach(card => {
     card.addEventListener('click', () => {
       const id = card.dataset.id;
+      const themeObj = ACCENT_THEMES.find(th => th.id === id);
+      const meta = getLocalizedThemeMeta(id);
+      if (themeObj && !isThemeUnlocked(themeObj)) {
+        showToast(t('toast_theme_locked', { title: meta.title }), '🔒');
+        return;
+      }
       applyThemeAndBg(id, currentBgMode);
       renderThemeCatalog(category);
       playGamerChime();
-      showToast(t('toast_theme_applied', { title: card.querySelector('.theme-title').textContent }), '🎨');
+      showToast(t('toast_theme_applied', { title: meta.title }), '🎨');
     });
   });
 }
 
-// ==========================================
 // Week & Challenge Calculations
-// ==========================================
 function getISOWeekNumber(d) {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
@@ -595,9 +624,7 @@ function getRelativeWeekNumber(weekKey) {
   return Math.max(1, diffWeeks + 1);
 }
 
-// ==========================================
 // Navigation & Tab Switching
-// ==========================================
 function initNavigation() {
   const navItems = document.querySelectorAll('.nav-item');
   navItems.forEach(item => {
@@ -610,6 +637,126 @@ function initNavigation() {
   document.getElementById('brand-home-btn')?.addEventListener('click', () => switchTab('pane-home'));
   document.getElementById('hero-browse-btn')?.addEventListener('click', () => switchTab('pane-discover'));
   document.getElementById('view-all-drops-btn')?.addEventListener('click', () => switchTab('pane-discover'));
+}
+
+const LAZY_THUMB_PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+let lazyThumbObserver = null;
+
+function createLazyThumbImgHtml(src, alt, className = 'giveaway-card-thumb', fallbackSrc = '') {
+  const safeAlt = escapeHtml(alt || '');
+  const primary = src || '';
+  const fallbackAttr = fallbackSrc && fallbackSrc !== primary ? ` data-fallback-src="${escapeHtml(fallbackSrc)}"` : '';
+  return `<img src="${LAZY_THUMB_PLACEHOLDER}" data-src="${escapeHtml(primary)}"${fallbackAttr} alt="${safeAlt}" class="${className} lazy-thumb" loading="lazy" decoding="async" fetchpriority="low">`;
+}
+
+function markThumbnailLoaded(img) {
+  if (!img) return;
+  const wrap = img.closest('.giveaway-card-thumb-wrap, .dlc-thumb-wrap');
+  const finish = () => {
+    img.classList.add('is-loaded');
+    if (wrap) {
+      wrap.classList.remove('is-error');
+      wrap.classList.add('is-loaded');
+    }
+  };
+  if (typeof img.decode === 'function') {
+    img.decode().then(finish, finish);
+  } else {
+    finish();
+  }
+}
+
+function loadLazyThumbnail(img) {
+  if (!img || img.dataset.lazyState === 'loading' || img.dataset.lazyState === 'done') return;
+  const targetSrc = img.dataset.src || '';
+  const wrap = img.closest('.giveaway-card-thumb-wrap, .dlc-thumb-wrap');
+  delete img.dataset.src;
+
+  if (!targetSrc) {
+    img.dataset.lazyState = 'error';
+    if (wrap) wrap.classList.add('is-error');
+    return;
+  }
+
+  img.dataset.lazyState = 'loading';
+  const fallbackSrc = img.dataset.fallbackSrc || '';
+  let activeUrl = targetSrc;
+  let settled = false;
+
+  const BgImage = typeof Image === 'function' ? Image : null;
+  if (!BgImage) {
+    img.src = activeUrl;
+    img.dataset.lazyState = 'done';
+    markThumbnailLoaded(img);
+    return;
+  }
+
+  const bgImg = new BgImage();
+  bgImg.decoding = 'async';
+
+  const commitLoaded = () => {
+    if (settled) return;
+    settled = true;
+    bgImg.onload = null;
+    bgImg.onerror = null;
+    img.src = activeUrl;
+    img.dataset.lazyState = 'done';
+    markThumbnailLoaded(img);
+  };
+
+  bgImg.onload = commitLoaded;
+
+  bgImg.onerror = () => {
+    if (settled) return;
+    if (fallbackSrc && activeUrl !== fallbackSrc) {
+      delete img.dataset.fallbackSrc;
+      activeUrl = fallbackSrc;
+      bgImg.src = fallbackSrc;
+      if (bgImg.complete && bgImg.naturalWidth > 0) commitLoaded();
+      return;
+    }
+    settled = true;
+    bgImg.onload = null;
+    bgImg.onerror = null;
+    img.dataset.lazyState = 'error';
+    if (wrap) wrap.classList.add('is-error');
+  };
+
+  bgImg.src = activeUrl;
+  if (bgImg.complete && bgImg.naturalWidth > 0) {
+    commitLoaded();
+  }
+}
+
+function initLazyThumbnails(root = document) {
+  const scope = root || document;
+  const images = scope.querySelectorAll('img.lazy-thumb[data-src]');
+  if (!images.length) return;
+
+  if (!('IntersectionObserver' in window)) {
+    images.forEach(img => loadLazyThumbnail(img));
+    return;
+  }
+
+  if (!lazyThumbObserver) {
+    lazyThumbObserver = new IntersectionObserver((entries, observer) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting || entry.intersectionRatio > 0) {
+          const img = entry.target;
+          observer.unobserve(img);
+          loadLazyThumbnail(img);
+        }
+      });
+    }, {
+      rootMargin: '240px 0px',
+      threshold: 0.01
+    });
+  }
+
+  images.forEach(img => {
+    lazyThumbObserver.unobserve(img);
+    lazyThumbObserver.observe(img);
+  });
 }
 
 function switchTab(tabId) {
@@ -630,11 +777,12 @@ function switchTab(tabId) {
   } else if (tabId === 'pane-calendar') {
     renderCalendar();
   }
+
+  const activePane = document.getElementById(tabId);
+  if (activePane) initLazyThumbnails(activePane);
 }
 
-// ==========================================
 // Fetching Live Giveaways (GamerPower API)
-// ==========================================
 async function fetchGiveaways() {
   try {
     let response;
@@ -668,9 +816,7 @@ async function fetchGiveaways() {
   renderMiniChallengeWidget();
 }
 
-// ==========================================
 // Render Home Tab
-// ==========================================
 function renderHome() {
   const featuredContainer = document.getElementById('featured-drops-container');
   const recentContainer = document.getElementById('home-recent-drops-container');
@@ -682,13 +828,13 @@ function renderHome() {
   featuredContainer.innerHTML = featured.map(g => createGiveawayCardHtml(g, true)).join('');
   recentContainer.innerHTML = recent.map(g => createGiveawayCardHtml(g, false)).join('');
 
+  initLazyThumbnails(featuredContainer);
+  initLazyThumbnails(recentContainer);
   attachCardEvents();
   renderHomeDlcSection();
 }
 
-// ==========================================
 // Render Discover / Radar Tab
-// ==========================================
 function renderRadar() {
   const container = document.getElementById('radar-drops-container');
   const countLabel = document.getElementById('radar-count-label');
@@ -710,7 +856,7 @@ function renderRadar() {
 
   if (activeSearchQuery.trim()) {
     const q = activeSearchQuery.toLowerCase();
-    filtered = filtered.filter(g => 
+    filtered = filtered.filter(g =>
       (g.title || '').toLowerCase().includes(q) ||
       (g.description || '').toLowerCase().includes(q) ||
       (g.platforms || '').toLowerCase().includes(q)
@@ -743,12 +889,11 @@ function renderRadar() {
   }
 
   container.innerHTML = filtered.map(g => createGiveawayCardHtml(g, false)).join('');
+  initLazyThumbnails(container);
   attachCardEvents();
 }
 
-// ==========================================
 // Render Calendar / Expiration Radar Tab
-// ==========================================
 function renderCalendar() {
   const container = document.getElementById('calendar-groups-container');
   if (!container) return;
@@ -795,18 +940,17 @@ function renderCalendar() {
     `;
   };
 
-  container.innerHTML = 
+  container.innerHTML =
     renderGroup(t('cal_ending_24h'), endingToday, '#EF4444') +
     renderGroup(t('cal_ending_week'), endingThisWeek, '#F59E0B') +
     renderGroup(t('cal_ending_month'), endingLater, '#3B82F6') +
     renderGroup(t('cal_ongoing'), ongoing, '#10B981');
 
+  initLazyThumbnails(container);
   attachCardEvents();
 }
 
-// ==========================================
 // Render Vault / Claimed Tab
-// ==========================================
 function renderVault() {
   const container = document.getElementById('vault-items-container');
   const countVal = document.getElementById('vault-total-count');
@@ -853,7 +997,7 @@ function renderVault() {
       return `
         <div class="giveaway-card steam-library-card" data-appid="${sg.appId}">
           <div class="giveaway-card-thumb-wrap">
-            <img src="${headerImg}" onerror="this.onerror=null;this.src='${fallbackImg}';" alt="${escapeHtml(sg.name)}" class="giveaway-card-thumb" loading="lazy">
+            ${createLazyThumbImgHtml(headerImg, sg.name, 'giveaway-card-thumb', fallbackImg)}
             <div class="card-top-badges">
               <span class="badge-platform">🎮 STEAM</span>
             </div>
@@ -881,6 +1025,7 @@ function renderVault() {
         if (appId > 0) openDlcHubModal(appId);
       });
     });
+    initLazyThumbnails(container);
     return;
   }
 
@@ -906,17 +1051,17 @@ function renderVault() {
 
   const statusBadgeLabel = (st) => {
     switch (st) {
-      case 'playing': return isEs() ? 'JUGANDO' : 'PLAYING';
-      case 'beaten': return isEs() ? 'PASADO' : 'BEATEN';
-      case 'dropped': return isEs() ? 'PAUSADO' : 'PAUSED';
-      default: return isEs() ? 'PENDIENTE' : 'BACKLOG';
+      case 'playing': return t('status_badge_playing');
+      case 'beaten': return t('status_badge_beaten');
+      case 'dropped': return t('status_badge_paused');
+      default: return t('status_badge_backlog');
     }
   };
 
   container.innerHTML = displayed.map(item => `
     <div class="giveaway-card" data-id="${item.id}">
       <div class="giveaway-card-thumb-wrap">
-        <img src="${item.thumbnail || item.image || ''}" alt="${escapeHtml(item.title)}" class="giveaway-card-thumb" loading="lazy">
+        ${createLazyThumbImgHtml(item.thumbnail || item.image || '', item.title, 'giveaway-card-thumb', item.thumbnail && item.image ? item.image : '')}
         <div class="card-top-badges">
           <span class="badge-platform">${escapeHtml(item.platforms || 'PC')}</span>
           <span class="badge-type">${escapeHtml(statusBadgeLabel(item.playStatus || 'backlog'))}</span>
@@ -974,22 +1119,23 @@ function renderVault() {
     });
   });
 
+  initLazyThumbnails(container);
   attachCardEvents();
 }
 
-// ==========================================
 // Giveaway Card HTML Generator
-// ==========================================
 function createGiveawayCardHtml(g, isFeatured = false) {
   const isSaved = vaultItems.some(v => v.id === g.id);
   const platformsStr = g.platforms || 'PC';
   const freeLbl = t('card_free');
   const priceStr = g.worth && g.worth !== 'N/A' ? `${g.worth} ${freeLbl}` : freeLbl;
+  const primaryThumb = g.thumbnail || g.image || '';
+  const fallbackThumb = g.thumbnail && g.image && g.thumbnail !== g.image ? g.image : '';
 
   return `
     <div class="giveaway-card ${isFeatured ? 'featured' : ''}" data-id="${g.id}">
       <div class="giveaway-card-thumb-wrap">
-        <img src="${g.thumbnail || g.image || ''}" alt="${escapeHtml(g.title)}" class="giveaway-card-thumb" loading="lazy">
+        ${createLazyThumbImgHtml(primaryThumb, g.title, 'giveaway-card-thumb', fallbackThumb)}
         <div class="card-top-badges">
           <span class="badge-platform">${escapeHtml(platformsStr)}</span>
           <span class="badge-type">${(g.type || 'GAME').toUpperCase()}</span>
@@ -1057,9 +1203,7 @@ function toggleVaultItem(id) {
   renderRadar();
 }
 
-// ==========================================
 // Giveaway Detail Dialog
-// ==========================================
 function openGiveawayDetail(g) {
   selectedGiveaway = g;
   const modal = document.getElementById('modal-giveaway-detail');
@@ -1091,7 +1235,7 @@ function openGiveawayDetail(g) {
   const inVault = isSaved;
   const steamGames = JSON.parse(localStorage.getItem('lootdrop_steam_games') || '[]');
   const cleanTitle = (g.title || '').trim().toLowerCase();
-  
+
   const matchedSteam = steamGames.find(sg => {
     const sName = (sg.name || '').trim().toLowerCase();
     return sName === cleanTitle || (cleanTitle.length > 5 && sName.includes(cleanTitle)) || (sName.length > 5 && cleanTitle.includes(sName));
@@ -1128,9 +1272,7 @@ function openGiveawayDetail(g) {
   modal.classList.add('open');
 }
 
-// ==========================================
 // 3x3 Backlog Challenge Grid Logic
-// ==========================================
 function getChallengeStateForWeek(weekKey) {
   const allStates = JSON.parse(localStorage.getItem(STORAGE_KEYS.CHALLENGES) || '{}');
   return allStates[weekKey] || {
@@ -1171,7 +1313,6 @@ function renderChallengeModal() {
   const weekKey = activeChallengeWeekKey;
   const relativeWeekNum = getRelativeWeekNumber(weekKey);
   const state = getChallengeStateForWeek(weekKey);
-  const tiles = getWeekBlueprints(weekKey);
 
   const modalWeekTitle = document.getElementById('modal-week-title');
   const weekDisplayBadge = document.getElementById('week-display-badge');
@@ -1196,30 +1337,7 @@ function renderChallengeModal() {
     manualText.innerHTML = t('ch_manual_rem', { rem: manualRemaining, max: MAX_MANUAL_OVERRIDES });
   }
 
-  const esMap = window.LootDropI18n?.BLUEPRINTS_ES || {};
-  const evaluated = tiles.map((tile, idx) => {
-    const isManual = !!state.manualOverrides[idx];
-    let isAutoDone = false;
-
-    if (tile.id === 'BEAT_GAME' || tile.id === 'COMPLETION_JOURNEY') {
-      isAutoDone = vaultItems.some(v => v.playStatus === 'beaten');
-    } else if (tile.id === 'VAULT_STARTER' || tile.id === 'UNPLAYED_REVIVAL') {
-      isAutoDone = vaultItems.length > 0;
-    } else if (tile.id === 'TRI_PLAY') {
-      isAutoDone = vaultItems.filter(v => v.playStatus === 'playing').length >= 2;
-    }
-
-    const loc = isEs() && esMap[tile.id];
-    const isCompleted = isManual || isAutoDone;
-    return {
-      ...tile,
-      title: loc ? loc.title : tile.title,
-      desc: loc ? loc.desc : tile.desc,
-      index: idx,
-      isCompleted,
-      isManual
-    };
-  });
+  const evaluated = getEvaluatedTilesForWeek(weekKey);
 
   const gridContainer = document.getElementById('challenge-grid-container');
   if (gridContainer) {
@@ -1271,53 +1389,127 @@ function toggleManualUnlock(tileIdx) {
   renderChallengeModal();
 }
 
+function getEvaluatedTilesForWeek(weekKey) {
+  const tiles = getWeekBlueprints(weekKey);
+  const state = getChallengeStateForWeek(weekKey);
+
+  return tiles.map((tile, idx) => {
+    const isManual = !!(state.manualOverrides && state.manualOverrides[idx]);
+    let isAutoDone = false;
+
+    if (tile.id === 'BEAT_GAME' || tile.id === 'COMPLETION_JOURNEY') {
+      isAutoDone = vaultItems.some(v => v.playStatus === 'beaten');
+    } else if (tile.id === 'VAULT_STARTER' || tile.id === 'UNPLAYED_REVIVAL') {
+      isAutoDone = vaultItems.length > 0;
+    } else if (tile.id === 'TRI_PLAY') {
+      isAutoDone = vaultItems.filter(v => v.playStatus === 'playing').length >= 2;
+    }
+
+    const loc = window.LootDropI18n?.getBlueprintText?.(tile.id);
+    const isCompleted = isManual || isAutoDone;
+    return {
+      ...tile,
+      title: loc ? loc.title : tile.id,
+      desc: loc ? loc.desc : '',
+      index: idx,
+      isCompleted,
+      isManual
+    };
+  });
+}
+
+const CHALLENGE_MILESTONE_PREFIXES = [
+  'momentum_spark',
+  'backlog_slayer',
+  'row_raider',
+  'column_conqueror',
+  'diagonal_drifter',
+  'bingo_architect',
+  'overdrive_runner',
+  'triple_threat',
+  'vault_cleaner',
+  'blackout_champion'
+];
+
 function checkMilestoneWins(evaluated, weekKey) {
-  const completedRows = [0, 1, 2].filter(r => 
+  const completedRows = [0, 1, 2].filter(r =>
     evaluated[r * 3].isCompleted && evaluated[r * 3 + 1].isCompleted && evaluated[r * 3 + 2].isCompleted
   );
 
-  const completedCols = [0, 1, 2].filter(c => 
+  const completedCols = [0, 1, 2].filter(c =>
     evaluated[c].isCompleted && evaluated[c + 3].isCompleted && evaluated[c + 6].isCompleted
   );
 
   const diag1 = evaluated[0].isCompleted && evaluated[4].isCompleted && evaluated[8].isCompleted;
   const diag2 = evaluated[2].isCompleted && evaluated[4].isCompleted && evaluated[6].isCompleted;
-  const totalLines = completedRows.length + completedCols.length + (diag1 ? 1 : 0) + (diag2 ? 1 : 0);
+  const completedDiags = (diag1 ? 1 : 0) + (diag2 ? 1 : 0);
+  const totalLines = completedRows.length + completedCols.length + completedDiags;
+  const completedCount = evaluated.filter(tItem => tItem.isCompleted).length;
   const isBlackout = evaluated.every(tItem => tItem.isCompleted);
 
   const claimedMilestones = JSON.parse(localStorage.getItem(STORAGE_KEYS.MILESTONES) || '{}');
-  const esMilestones = window.LootDropI18n?.MILESTONES_ES || {};
-  const locM = (baseKey, enName, enSub, enTrophy) => {
-    const mEs = isEs() && esMilestones[baseKey];
-    return {
-      name: mEs ? mEs.name : enName,
-      sub: mEs ? mEs.sub : enSub,
-      trophy: mEs ? mEs.trophy : enTrophy
-    };
+  const locM = (baseKey) => {
+    const loc = window.LootDropI18n?.getMilestoneText?.(baseKey);
+    return loc || { name: baseKey, sub: '', trophy: baseKey };
   };
 
   const milestones = [
     {
+      id: `momentum_spark_${weekKey}`,
+      ...locM('momentum_spark'),
+      isEligible: completedCount >= 2
+    },
+    {
       id: `backlog_slayer_${weekKey}`,
-      ...locM('backlog_slayer', 'Backlog Slayer Trophy & Theme', 'Complete any 3-tile line (row, col, or diag)', '🏆 Backlog Slayer'),
+      ...locM('backlog_slayer'),
       isEligible: totalLines > 0,
       rewardTheme: 'theme-backlog-slayer'
     },
     {
       id: `row_raider_${weekKey}`,
-      ...locM('row_raider', 'Row Raider Trophy', 'Complete any horizontal row this week', '🥇 Row Raider'),
+      ...locM('row_raider'),
       isEligible: completedRows.length > 0
     },
     {
       id: `column_conqueror_${weekKey}`,
-      ...locM('column_conqueror', 'Column Conqueror Trophy', 'Complete any vertical column this week', '🥈 Column Conqueror'),
+      ...locM('column_conqueror'),
       isEligible: completedCols.length > 0
     },
     {
-      id: `blackout_champion_${weekKey}`,
-      ...locM('blackout_champion', 'Blackout Champion Trophy & Vault Cleaner Theme', 'Blackout all 9 tiles on the grid', '⚡ Blackout Champion'),
+      id: `diagonal_drifter_${weekKey}`,
+      ...locM('diagonal_drifter'),
+      isEligible: completedDiags > 0,
+      rewardTheme: 'theme-prism-drift'
+    },
+    {
+      id: `bingo_architect_${weekKey}`,
+      ...locM('bingo_architect'),
+      isEligible: totalLines >= 2,
+      rewardTheme: 'theme-solar-nova'
+    },
+    {
+      id: `overdrive_runner_${weekKey}`,
+      ...locM('overdrive_runner'),
+      isEligible: completedCount >= 6,
+      rewardTheme: 'theme-toxic-overdrive'
+    },
+    {
+      id: `triple_threat_${weekKey}`,
+      ...locM('triple_threat'),
+      isEligible: totalLines >= 3,
+      rewardTheme: 'theme-aurora-sovereign'
+    },
+    {
+      id: `vault_cleaner_${weekKey}`,
+      ...locM('vault_cleaner'),
       isEligible: isBlackout,
       rewardTheme: 'theme-vault-cleaner'
+    },
+    {
+      id: `blackout_champion_${weekKey}`,
+      ...locM('blackout_champion'),
+      isEligible: isBlackout,
+      rewardTheme: 'theme-nebula-blackout'
     }
   ];
 
@@ -1331,22 +1523,46 @@ function checkMilestoneWins(evaluated, weekKey) {
   if (milestonesContainer) {
     milestonesContainer.innerHTML = milestones.map(m => {
       const isClaimed = !!claimedMilestones[m.id];
-      return `
-        <div class="milestone-item ${m.isEligible ? 'unlocked' : ''}">
-          <div class="milestone-info">
-            <span class="milestone-name">${escapeHtml(m.name)}</span>
-            <span class="milestone-sub">${escapeHtml(m.sub)}</span>
-          </div>
-          <button class="btn btn-sm ${isClaimed ? 'btn-outline' : (m.isEligible ? 'btn-primary' : 'btn-secondary')}" 
-                  ${!m.isEligible || isClaimed ? 'disabled' : ''} 
+      const themeObj = m.rewardTheme ? ACCENT_THEMES.find(th => th.id === m.rewardTheme) : null;
+      const themeMeta = themeObj ? getLocalizedThemeMeta(themeObj.id) : null;
+      const swatchHtml = themeObj ? `
+        <span class="milestone-theme-swatch" title="${escapeHtml(themeMeta.title)}">
+          <span class="milestone-swatch-dot" style="background:${themeObj.primary};"></span>
+          <span class="milestone-swatch-dot" style="background:${themeObj.secondary};"></span>
+        </span>` : '';
+
+      const actionHtml = isClaimed && m.rewardTheme
+        ? `<button class="btn btn-sm btn-primary" onclick="equipChallengeTheme('${m.rewardTheme}')">${escapeHtml(t('ch_equip_btn'))}</button>`
+        : `<button class="btn btn-sm ${isClaimed ? 'btn-outline' : (m.isEligible ? 'btn-primary' : 'btn-secondary')}"
+                  ${!m.isEligible || isClaimed ? 'disabled' : ''}
                   onclick="claimMilestone('${m.id}', '${m.rewardTheme || ''}', '${escapeHtml(m.trophy)}')">
             ${escapeHtml(isClaimed ? t('ch_claimed_btn') : (m.isEligible ? t('ch_claim_btn') : t('ch_locked_btn')))}
-          </button>
+          </button>`;
+
+      return `
+        <div class="milestone-item ${m.isEligible || isClaimed ? 'unlocked' : ''}">
+          <div class="milestone-info">
+            <span class="milestone-name">${escapeHtml(m.name)} ${swatchHtml}</span>
+            <span class="milestone-sub">${escapeHtml(m.sub)}</span>
+          </div>
+          <div class="milestone-actions">
+            ${actionHtml}
+          </div>
         </div>
       `;
     }).join('');
   }
 }
+
+window.equipChallengeTheme = function(themeId) {
+  const themeObj = ACCENT_THEMES.find(th => th.id === themeId);
+  if (!themeObj) return;
+  const meta = getLocalizedThemeMeta(themeId);
+  applyThemeAndBg(themeId, currentBgMode);
+  renderThemeCatalog('all');
+  playGamerChime();
+  showToast(t('toast_theme_applied', { title: meta.title }), '🎨');
+};
 
 window.claimMilestone = function(id, rewardTheme, trophy) {
   const claimedMilestones = JSON.parse(localStorage.getItem(STORAGE_KEYS.MILESTONES) || '{}');
@@ -1372,13 +1588,12 @@ function renderMiniChallengeWidget() {
   const widget = document.getElementById('home-challenge-widget');
   if (!widget) return;
 
-  const state = getChallengeStateForWeek(currentWeekKey);
-  const manualCount = Object.values(state.manualOverrides || {}).filter(Boolean).length;
-  const completedCount = manualCount + (vaultItems.length > 0 ? 1 : 0);
+  const evaluated = getEvaluatedTilesForWeek(currentWeekKey);
+  const completedCount = evaluated.filter(tl => tl.isCompleted).length;
   const pct = Math.min(100, Math.round((completedCount / 9) * 100));
 
   const claimedMilestones = JSON.parse(localStorage.getItem(STORAGE_KEYS.MILESTONES) || '{}');
-  const claimedCount = ['backlog_slayer', 'row_raider', 'column_conqueror', 'blackout_champion']
+  const claimedCount = CHALLENGE_MILESTONE_PREFIXES
     .filter(prefix => !!claimedMilestones[`${prefix}_${currentWeekKey}`]).length;
 
   const progressFill = document.getElementById('home-challenge-progress-fill');
@@ -1392,9 +1607,7 @@ function renderMiniChallengeWidget() {
   if (milestonesText) milestonesText.textContent = t('ch_milestones_progress', { claimed: claimedCount });
 }
 
-// ==========================================
 // Backlog Roulette
-// ==========================================
 function openRouletteModal() {
   document.getElementById('modal-roulette')?.classList.add('open');
 }
@@ -1437,9 +1650,7 @@ function spinRoulette() {
   }, speed);
 }
 
-// ==========================================
 // Profile & Trophies Showcase
-// ==========================================
 function renderProfile() {
   const nameDisplay = document.getElementById('profile-name-display');
   const bioDisplay = document.getElementById('profile-bio-display');
@@ -1464,10 +1675,16 @@ function renderProfile() {
 
   const claimedMilestones = JSON.parse(localStorage.getItem(STORAGE_KEYS.MILESTONES) || '{}');
   const allTrophies = [
-    { title: 'Backlog Slayer', titleEs: 'Backlog Slayer', key: 'backlog_slayer', icon: '🏆', rarity: 'MYTHIC' },
-    { title: 'Row Raider', titleEs: 'Incursor de Fila', key: 'row_raider', icon: '🥇', rarity: 'GOLD' },
-    { title: 'Column Conqueror', titleEs: 'Conquistador de Columna', key: 'column_conqueror', icon: '🥈', rarity: 'SILVER' },
-    { title: 'Blackout Champion', titleEs: 'Campeón Apagón', key: 'blackout_champion', icon: '⚡', rarity: 'MYTHIC' }
+    { key: 'momentum_spark', icon: '⚡', rarity: 'GOLD' },
+    { key: 'backlog_slayer', icon: '🏆', rarity: 'MYTHIC' },
+    { key: 'row_raider', icon: '🥇', rarity: 'GOLD' },
+    { key: 'column_conqueror', icon: '🥈', rarity: 'MYTHIC' },
+    { key: 'diagonal_drifter', icon: '💎', rarity: 'MYTHIC' },
+    { key: 'bingo_architect', icon: '☀️', rarity: 'MYTHIC' },
+    { key: 'overdrive_runner', icon: '☢️', rarity: 'MYTHIC' },
+    { key: 'triple_threat', icon: '🌌', rarity: 'MYTHIC' },
+    { key: 'vault_cleaner', icon: '👑', rarity: 'MYTHIC' },
+    { key: 'blackout_champion', icon: '🌟', rarity: 'MYTHIC' }
   ];
 
   let unlockedCount = 0;
@@ -1481,10 +1698,11 @@ function renderProfile() {
   if (trophiesContainer) {
     trophiesContainer.innerHTML = allTrophies.map(tr => {
       const isUnlocked = Object.keys(claimedMilestones).some(k => k.startsWith(tr.key));
+      const trophyTitle = window.LootDropI18n?.getTrophyText?.(tr.key) || tr.key;
       return `
         <div class="trophy-badge-card ${isUnlocked ? 'unlocked' : ''}">
           <span class="trophy-icon">${tr.icon}</span>
-          <span class="trophy-title">${escapeHtml(isEs() ? tr.titleEs : tr.title)}</span>
+          <span class="trophy-title">${escapeHtml(trophyTitle)}</span>
           <span style="font-size: 9px; color: var(--color-primary); font-weight:800; margin-top:2px;">
             ${escapeHtml(isUnlocked ? t('prof_unlocked_badge') : t('prof_locked_badge'))}
           </span>
@@ -1494,9 +1712,7 @@ function renderProfile() {
   }
 }
 
-// ==========================================
 // Toast Messages & Confetti
-// ==========================================
 function showToast(message, icon = '✨') {
   const toast = document.getElementById('toast-popup');
   const iconEl = document.getElementById('toast-icon');
@@ -1560,9 +1776,7 @@ function triggerConfetti() {
   requestAnimationFrame(frame);
 }
 
-// ==========================================
 // Stats Calculation & Helpers
-// ==========================================
 function updateStats() {
   let activeValue = 0;
   let expiringSoonCount = 0;
@@ -1620,9 +1834,7 @@ function escapeHtml(str) {
   }[tag] || tag));
 }
 
-// ==========================================
 // Alert Settings Sheet UI Synchronization
-// ==========================================
 function initAlertSettingsUI() {
   const masterToggle = document.getElementById('master-alert-toggle');
   const soundToggle = document.getElementById('alert-filter-sound');
@@ -1665,9 +1877,7 @@ function initAlertSettingsUI() {
   });
 }
 
-// ==========================================
 // Setup Global UI Event Listeners
-// ==========================================
 function setupEventListeners() {
   // Modal Closes
   document.querySelectorAll('.close-modal-btn').forEach(btn => {
@@ -1717,10 +1927,8 @@ function setupEventListeners() {
 
   document.getElementById('btn-test-notification')?.addEventListener('click', () => {
     triggerWebsiteAlert(
-      isEs() ? '🚨 Nuevo Drop: Warhammer 40K' : '🚨 New Drop Alert: Warhammer 40K',
-      isEs()
-        ? '¡Warhammer 40,000: Gladius está 100% GRATIS en Steam! Reclámalo antes de que acabe.'
-        : 'Warhammer 40,000: Gladius is currently 100% FREE on Steam! Grab it before it ends.',
+      t('test_alert_drop_title'),
+      t('test_alert_drop_body'),
       'https://store.steampowered.com/',
       '🎮'
     );
@@ -1728,10 +1936,8 @@ function setupEventListeners() {
 
   document.getElementById('btn-fire-test-alert')?.addEventListener('click', () => {
     triggerWebsiteAlert(
-      isEs() ? '⚡ Regalo de Alto Valor: Cyberpunk OST' : '⚡ High-Value Freebie: Cyberpunk OST',
-      isEs()
-        ? '¡La banda sonora digital completa es gratis en GOG! Reclámala para siempre.'
-        : 'The complete digital soundtrack is free on GOG. Claim to keep forever!',
+      t('test_alert_high_title'),
+      t('test_alert_high_body'),
       'https://www.gog.com/',
       '⚡'
     );
@@ -1876,10 +2082,11 @@ function setupEventListeners() {
     if (!selectedGiveaway) return;
     if (navigator.share) {
       navigator.share({
-        title: isEs() ? `LootDrop: ${selectedGiveaway.title} Gratis` : `LootDrop: Free ${selectedGiveaway.title}`,
-        text: isEs()
-          ? `¡Consigue ${selectedGiveaway.title} 100% gratis en ${selectedGiveaway.platforms || 'PC'} antes de que expire!`
-          : `Grab ${selectedGiveaway.title} 100% free on ${selectedGiveaway.platforms || 'PC'} before it expires!`,
+        title: t('share_deal_title', { title: selectedGiveaway.title }),
+        text: t('share_deal_text', {
+          title: selectedGiveaway.title,
+          plat: selectedGiveaway.platforms || 'PC'
+        }),
         url: selectedGiveaway.open_giveaway_url || window.location.href
       }).catch(() => {});
     } else {
@@ -1922,7 +2129,7 @@ function setupEventListeners() {
   // Backup Export
   document.getElementById('btn-export-backup')?.addEventListener('click', () => {
     const backupData = {
-      version: '4.1.0',
+      version: '4.2.0',
       timestamp: Date.now(),
       vault: vaultItems,
       profile: userProfile,
@@ -1986,9 +2193,7 @@ function setupEventListeners() {
   });
 }
 
-// ==========================================
 // Cloudflare R2 Public Reviews System
-// ==========================================
 const R2_REVIEWS_URL = 'https://lootdrop-storage-proxy.hardingbentley67.workers.dev?accountId=public_reviews&filename=lootdrop_reviews.json';
 const R2_AUTH_KEY = 'sb_publishable_htD9aXXk0QHjhG_ifS3nYg_kjUp7osD';
 const SUPABASE_PROJECT_URL = 'https://imcwutouksxeevmofcmn.supabase.co';
@@ -2284,24 +2489,18 @@ function validateReviewModeration(title, comment, authorName) {
   const commentHasPii = containsReviewAddress(comment) || containsReviewPhoneNumber(comment);
   const authorHasPii = containsReviewAddress(authorName) || containsReviewPhoneNumber(authorName);
 
-  if (titleHasPii || containsProfanityOrSlurWords(title)) flagged.push(isEs() ? 'título' : 'headline');
-  if (commentHasPii || containsProfanityOrSlurWords(comment)) flagged.push(isEs() ? 'comentario de reseña' : 'review comment');
-  if (authorHasPii || containsProfanityOrSlurWords(authorName)) flagged.push(isEs() ? 'nombre de jugador' : 'gamer tag');
+  if (titleHasPii || containsProfanityOrSlurWords(title)) flagged.push(t('mod_field_headline'));
+  if (commentHasPii || containsProfanityOrSlurWords(comment)) flagged.push(t('mod_field_comment'));
+  if (authorHasPii || containsProfanityOrSlurWords(authorName)) flagged.push(t('mod_field_tag'));
 
   if (flagged.length > 0) {
     const joined = flagged.length === 1
       ? flagged[0]
       : flagged.length === 2
-        ? `${flagged[0]} ${isEs() ? 'y' : 'and'} ${flagged[1]}`
-        : `${flagged[0]}, ${flagged[1]}${isEs() ? ' y' : ', and'} ${flagged[2]}`;
+        ? t('mod_join_two', { a: flagged[0], b: flagged[1] })
+        : t('mod_join_three', { a: flagged[0], b: flagged[1], c: flagged[2] });
     const hasPii = titleHasPii || commentHasPii || authorHasPii;
-    const errorMessage = isEs()
-      ? (hasPii
-          ? `Se detectó contenido restringido (direcciones o teléfonos) en tu ${joined}. No se permiten direcciones, teléfonos, groserías ni insultos en las reseñas.`
-          : `Se detectaron palabras restringidas en tu ${joined}. No se permiten groserías, insultos ni lenguaje ofensivo en las reseñas.`)
-      : (hasPii
-          ? `Blacklisted content (addresses or phone numbers) detected in your ${joined}. Addresses, phone numbers, swears, slurs, and restricted slang are not allowed in community reviews.`
-          : `Blacklisted words detected in your ${joined}. Swears, slurs, and restricted slang are not allowed in community reviews.`);
+    const errorMessage = t(hasPii ? 'mod_err_pii' : 'mod_err_words', { fields: joined });
     return {
       isAllowed: false,
       errorMessage
@@ -2425,7 +2624,7 @@ const INITIAL_SEED_REVIEWS = [
     rating: 5,
     title: "Best free games tracker hands down!",
     comment: "Never miss an Epic, Steam, or GOG freebie again. The 3x3 challenge grid and Steam library sync make clearing my backlog actually fun. 10/10!",
-    platform: "LootDrop V4.1.0",
+    platform: "LootDrop V4.2.0",
     timestamp: Date.now() - 86400000 * 3,
     helpfulCount: 52,
     isVerifiedClaimer: true
@@ -2440,7 +2639,7 @@ const INITIAL_SEED_REVIEWS = [
     rating: 5,
     title: "Essential for PC and Console gamers",
     comment: "Saved me over $300 in games this year alone. Fast notifications, clean dark cyberpunk UI, zero ads, and instant R2 cloud sync. Absolute perfection!",
-    platform: "LootDrop V4.1.0",
+    platform: "LootDrop V4.2.0",
     timestamp: Date.now() - 86400000 * 6,
     helpfulCount: 41,
     isVerifiedClaimer: true
@@ -2460,7 +2659,7 @@ async function fetchPublicReviewsFromR2() {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${R2_AUTH_KEY}`,
-        'User-Agent': 'LootDrop-Web/4.1.0'
+        'User-Agent': 'LootDrop-Web/4.2.0'
       }
     });
     if (resp.ok) {
@@ -2558,7 +2757,8 @@ function renderAppReviewsPreview() {
     const starStr = '★'.repeat(r.rating || 5) + '☆'.repeat(5 - (r.rating || 5));
     const initial = (cleanAuthor || 'G').trim().charAt(0).toUpperCase();
     const isVoted = votedIds.includes(r.id);
-    const dateFormatted = new Date(r.timestamp || Date.now()).toLocaleDateString(isEs() ? 'es-ES' : undefined, { month: 'short', day: 'numeric' });
+    const dateLocale = window.LootDropI18n?.getMeta?.()?.dateLocale || 'en-US';
+    const dateFormatted = new Date(r.timestamp || Date.now()).toLocaleDateString(dateLocale, { month: 'short', day: 'numeric' });
 
     return `
       <div class="review-item-card" data-review-id="${r.id}" style="margin-bottom: 10px;">
@@ -2624,7 +2824,7 @@ function loadAndRenderReviewsForGame(game) {
     countLabelEl.textContent = t('rev_first_game');
     listEl.innerHTML = `
       <div class="review-empty-state">
-        <p>🎮 ${t('rev_empty_game', { title: escapeHtml(game.title || (isEs() ? 'este juego' : 'this game')) })}</p>
+        <p>🎮 ${t('rev_empty_game', { title: escapeHtml(game.title || t('rev_this_game')) })}</p>
         <p style="font-size: 11px; margin-top: 4px;">${t('rev_empty_hint')}</p>
       </div>
     `;
@@ -2641,6 +2841,7 @@ function loadAndRenderReviewsForGame(game) {
   });
 
   const votedIds = JSON.parse(localStorage.getItem('lootdrop_voted_reviews') || '[]');
+  const dateLocale = window.LootDropI18n?.getMeta?.()?.dateLocale || 'en-US';
 
   listEl.innerHTML = reviews.map(r => {
     const cleanAuthor = sanitizeReviewText(r.authorName || 'Gamer');
@@ -2649,7 +2850,7 @@ function loadAndRenderReviewsForGame(game) {
     const starStr = '★'.repeat(r.rating || 5) + '☆'.repeat(5 - (r.rating || 5));
     const initial = (cleanAuthor || 'G').trim().charAt(0).toUpperCase();
     const isVoted = votedIds.includes(r.id);
-    const dateFormatted = new Date(r.timestamp || Date.now()).toLocaleDateString(isEs() ? 'es-ES' : undefined, { month: 'short', day: 'numeric' });
+    const dateFormatted = new Date(r.timestamp || Date.now()).toLocaleDateString(dateLocale, { month: 'short', day: 'numeric' });
 
     return `
       <div class="review-item-card" data-review-id="${r.id}">
@@ -2717,7 +2918,7 @@ async function voteReviewHelpful(reviewId, game) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${R2_AUTH_KEY}`,
         'X-Account-Id': 'public_reviews',
-        'User-Agent': 'LootDrop-Web/4.1.0'
+        'User-Agent': 'LootDrop-Web/4.2.0'
       },
       body: JSON.stringify(publicReviewsList)
     });
@@ -2735,7 +2936,7 @@ async function postPublicReviewToR2(newReview) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${R2_AUTH_KEY}`,
         'X-Account-Id': 'public_reviews',
-        'User-Agent': 'LootDrop-Web/4.1.0'
+        'User-Agent': 'LootDrop-Web/4.2.0'
       },
       body: JSON.stringify(publicReviewsList.slice(0, 300))
     });
@@ -2769,11 +2970,11 @@ function initReviewsModal() {
     if (isApp) {
       targetAppBtn?.classList.add('active');
       targetGameBtn?.classList.remove('active');
-      if (titleSub) titleSub.textContent = '⭐ LootDrop App (V4.1.0)';
+      if (titleSub) titleSub.textContent = '⭐ LootDrop App (V4.2.0)';
     } else {
       targetGameBtn?.classList.add('active');
       targetAppBtn?.classList.remove('active');
-      if (titleSub) titleSub.textContent = selectedGiveaway?.title || (isEs() ? 'Regalo' : 'Giveaway');
+      if (titleSub) titleSub.textContent = selectedGiveaway?.title || t('rev_giveaway_fallback');
     }
   }
 
@@ -2898,7 +3099,7 @@ function initReviewsModal() {
         rating: currentReviewRating,
         title: title,
         comment: comment,
-        platform: 'Web Edition V4.1.0',
+        platform: 'Web Edition V4.2.0',
         timestamp: Date.now(),
         helpfulCount: 0,
         isVerifiedClaimer: true
@@ -2951,9 +3152,7 @@ function initReviewsModal() {
   updateSettingsAppRatingUI();
 }
 
-// ==========================================
 // Steam Library Sync & DLC Recommender Engine (Web)
-// ==========================================
 const DLC_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 const COSMETIC_OR_OST_REGEX = /\b(soundtrack|ost|original score|art\s*book|digital art|wallpaper|music pack|digital extras|comic book|ringtones)\b/i;
 const DLC_GIVEAWAY_REGEX = /\b(dlc|expansion|season pass|starter pack|booster pack|add-on|addon|bundle|chapter|pass|cosmetic|skin|pack)\b/i;
@@ -3124,9 +3323,7 @@ async function syncWebSteamLibrary(rawInput) {
   localStorage.setItem(STORAGE_KEYS.STEAM_ID, rawInput.trim());
   const hint = document.getElementById('steam-status-hint');
   if (hint) {
-    hint.textContent = isEs()
-      ? `Sincronizando biblioteca Steam de "${parsed.value}"...`
-      : `Syncing public Steam library for "${parsed.value}"...`;
+    hint.textContent = t('steam_syncing_for', { id: parsed.value });
   }
   showToast(t('toast_steam_connecting'), '🔄');
 
@@ -3140,12 +3337,12 @@ async function syncWebSteamLibrary(rawInput) {
     const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
     const errorNode = doc.querySelector('response > error');
     if (errorNode) {
-      throw new Error(errorNode.textContent || (isEs() ? 'Perfil de Steam privado o no encontrado' : 'Steam profile private or not found'));
+      throw new Error(errorNode.textContent || t('steam_err_private'));
     }
 
     const gameNodes = Array.from(doc.querySelectorAll('games > game'));
     if (gameNodes.length === 0) {
-      throw new Error(isEs() ? 'Sin juegos. Asegúrate de que tu perfil y juegos de Steam sean públicos.' : 'No games returned. Ensure Steam Profile & Game Details are Public.');
+      throw new Error(t('steam_err_no_games'));
     }
 
     const parsedGames = gameNodes.map(node => {
@@ -3301,7 +3498,7 @@ function selectCandidateGamesForDlcScanWeb(steamGames, maxGames = 6) {
 }
 
 async function fetchSteamStoreAppDetailsWeb(appId) {
-  const steamLang = isEs() ? 'spanish' : 'english';
+  const steamLang = window.LootDropI18n?.getMeta?.()?.steamLanguage || 'english';
   const url = `https://store.steampowered.com/api/appdetails?appids=${appId}&l=${steamLang}&cc=us`;
   const resp = await fetchWithCorsFallback(url);
   const json = await resp.json();
@@ -3316,7 +3513,7 @@ function buildDlcRecommendationFromStoreData(dlcAppId, data, parentGame) {
   const priceObj = data.price_overview || null;
   const isFree = Boolean(data.is_free) || (priceObj && priceObj.final === 0);
   const discountPercent = priceObj?.discount_percent || 0;
-  const priceFormatted = isFree ? (isEs() ? 'Gratis' : 'Free') : (priceObj?.final_formatted || t('dlc_view_price'));
+  const priceFormatted = isFree ? t('dlc_price_free') : (priceObj?.final_formatted || t('dlc_view_price'));
   const initialPriceFormatted = priceObj?.initial_formatted || '';
   const recsCount = data.recommendations?.total || 0;
   const metacriticScore = data.metacritic?.score || null;
@@ -3424,7 +3621,7 @@ async function refreshWebSteamDlcRecommendations(force = true) {
     const collected = [];
 
     for (const game of candidates) {
-      dlcScanStatus = isEs() ? `Buscando DLCs de ${game.name}...` : `Checking DLCs for ${game.name}...`;
+      dlcScanStatus = t('dlc_scan_checking', { name: game.name });
       updateDlcHubStatusUI();
 
       try {
@@ -3460,12 +3657,10 @@ async function refreshWebSteamDlcRecommendations(force = true) {
 
     saveDlcCache(storeDlcRecommendations);
     dlcScanStatus = collected.length > 0
-      ? (isEs() ? `¡${collected.length} recomendaciones de DLC encontradas!` : `Found ${collected.length} Steam DLC recommendations!`)
-      : (isEs() ? 'Escaneo completo — sin DLCs adicionales en tienda.' : 'Scan complete — no additional store DLCs returned.');
+      ? t('dlc_scan_found', { count: collected.length })
+      : t('dlc_scan_none');
   } catch (err) {
-    dlcScanStatus = isEs()
-      ? `No se pudo completar el escaneo de DLC: ${err.message}`
-      : `Could not finish Steam DLC scan: ${err.message}`;
+    dlcScanStatus = t('dlc_scan_err', { err: err.message });
   } finally {
     isScanningDlcs = false;
     updateDlcBadges();
@@ -3481,9 +3676,7 @@ async function fetchDlcsForSingleGameWeb(appId) {
 
   selectedDlcParentAppId = String(appId);
   isLoadingGameDlcs = true;
-  dlcScanStatus = isEs()
-    ? `Obteniendo DLCs oficiales de Steam para ${parentGame.name}...`
-    : `Fetching official Steam DLCs for ${parentGame.name}...`;
+  dlcScanStatus = t('dlc_scan_single', { name: parentGame.name });
   selectedGameDlcsList = getCombinedDlcRecommendations().filter(d => d.parentAppId === appId);
   updateDlcHubHeader();
   updateDlcHubStatusUI();
@@ -3530,9 +3723,7 @@ async function fetchDlcsForSingleGameWeb(appId) {
 
     dlcScanStatus = '';
   } catch (err) {
-    dlcScanStatus = isEs()
-      ? `No se pudieron cargar DLCs de ${parentGame.name}: ${err.message}`
-      : `Could not fetch DLCs for ${parentGame.name}: ${err.message}`;
+    dlcScanStatus = t('dlc_scan_single_err', { name: parentGame.name, err: err.message });
   } finally {
     isLoadingGameDlcs = false;
     updateDlcBadges();
@@ -3595,12 +3786,8 @@ function renderHomeDlcSection() {
   }
 
   if (recs.length === 0) {
-    const emptyDescFallback = isEs()
-      ? 'Pulsa Escanear para buscar expansiones, ofertas y DLCs gratis en Steam para tus juegos.'
-      : 'Click Scan Now to check the Steam Store for expansions, deals, and free DLC drops for games you own.';
-    const syncedTitle = isEs()
-      ? `${steamGamesList.length} Juegos de Steam Sincronizados`
-      : `${steamGamesList.length} Steam Games Synced`;
+    const emptyDescFallback = t('dlc_home_empty_desc');
+    const syncedTitle = t('dlc_home_synced_title', { count: steamGamesList.length });
     container.innerHTML = `
       <div class="dlc-link-steam-card">
         <div class="dlc-link-steam-top">
@@ -3620,7 +3807,7 @@ function renderHomeDlcSection() {
   }
 
   const freeLbl = t('card_free');
-  const forPrefix = isEs() ? 'Para:' : 'For:';
+  const forPrefix = t('dlc_for_prefix');
   container.innerHTML = `
     <div class="dlc-carousel">
       ${recs.slice(0, 10).map(dlc => {
@@ -3631,7 +3818,7 @@ function renderHomeDlcSection() {
         return `
           <div class="dlc-carousel-card ${cardCls}" data-dlcid="${dlc.dlcAppId}">
             <div class="dlc-thumb-wrap">
-              <img src="${dlc.headerImageUrl}" onerror="this.onerror=null;this.src='https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${dlc.parentAppId}/header.jpg';" alt="${escapeHtml(dlc.name)}" class="dlc-thumb-img" loading="lazy">
+              ${createLazyThumbImgHtml(dlc.headerImageUrl, dlc.name, 'dlc-thumb-img', `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${dlc.parentAppId}/header.jpg`)}
               <div class="dlc-thumb-scrim"></div>
               <span class="dlc-reason-badge ${badgeCls}">${escapeHtml(dlc.reasonBadge)}</span>
               <button class="dlc-dismiss-btn" data-dismiss-dlcid="${dlc.dlcAppId}" title="${escapeHtml(t('dlc_hide_btn'))}">✕</button>
@@ -3671,6 +3858,8 @@ function renderHomeDlcSection() {
       dismissDlcWeb(parseInt(btn.dataset.dismissDlcid, 10));
     });
   });
+
+  initLazyThumbnails(container);
 }
 
 function openDlcHubModal(gameAppId = 'all') {
@@ -3767,7 +3956,7 @@ function renderDlcHubList() {
   }
 
   const freeLbl = t('card_free');
-  const reviewsWord = isEs() ? 'reseñas' : 'reviews';
+  const reviewsWord = t('dlc_reviews_word');
   listEl.innerHTML = filtered.map(dlc => {
     const badgeCls = dlc.isFree ? 'free' : (dlc.discountPercent > 0 ? 'sale' : '');
     const cardCls = dlc.isFree ? 'is-free' : (dlc.discountPercent > 0 ? 'is-sale' : '');
@@ -3777,7 +3966,7 @@ function renderDlcHubList() {
     return `
       <div class="dlc-detail-card ${cardCls}">
         <div class="dlc-thumb-wrap">
-          <img src="${dlc.headerImageUrl}" onerror="this.onerror=null;this.src='https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${dlc.parentAppId}/header.jpg';" alt="${escapeHtml(dlc.name)}" class="dlc-thumb-img" loading="lazy">
+          ${createLazyThumbImgHtml(dlc.headerImageUrl, dlc.name, 'dlc-thumb-img', `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${dlc.parentAppId}/header.jpg`)}
           <div class="dlc-thumb-scrim"></div>
           <span class="dlc-reason-badge ${badgeCls}">${escapeHtml(dlc.reasonBadge)}</span>
           <div class="dlc-parent-pill">🎮 ${escapeHtml(dlc.parentGameName)}${dlc.parentPlaytimeMinutes > 0 ? ` • ${escapeHtml(t('dlc_played_suffix', { hours }))}` : ''}</div>
@@ -3821,6 +4010,8 @@ function renderDlcHubList() {
       if (dlc) openDlcRecommendationWeb(dlc);
     });
   });
+
+  initLazyThumbnails(listEl);
 }
 
 function dismissDlcWeb(dlcAppId) {
@@ -3845,4 +4036,3 @@ function openDlcRecommendationWeb(dlc) {
   const target = dlc.storeUrl || `https://store.steampowered.com/app/${dlc.dlcAppId}`;
   openDealBrowser(target, dlc.name);
 }
-

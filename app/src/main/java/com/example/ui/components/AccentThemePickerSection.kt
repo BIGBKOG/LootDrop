@@ -228,9 +228,9 @@ internal fun AccentThemePickerSection(
                 viewModel.setAccentTheme(theme)
             } else {
                 val msg = if (isEs) {
-                    "🔒 ¡Completa una línea o blackout en Reto Backlog para desbloquear ${theme.localizedTitle(s)}!"
+                    "🔒 ¡Completa un hito en el Reto Backlog 3×3 para desbloquear ${theme.localizedTitle(s)}!"
                 } else {
-                    "🔒 Complete a row or blackout in Backlog Challenge to unlock ${theme.localizedTitle(s)}!"
+                    "🔒 Complete a 3×3 Backlog Challenge milestone to unlock ${theme.localizedTitle(s)}!"
                 }
                 Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
             }

@@ -25,9 +25,14 @@ object BacklogChallengeManager {
 
     const val APP_ID_BACKLOG_CHALLENGE = 777000
 
+    const val MILESTONE_MOMENTUM_SPARK = "milestone_momentum_spark"
     const val MILESTONE_ROW_RAIDER = "milestone_row_raider"
     const val MILESTONE_COLUMN_CONQUEROR = "milestone_column_conqueror"
+    const val MILESTONE_DIAGONAL_DRIFTER = "milestone_diagonal_drifter"
     const val MILESTONE_BACKLOG_SLAYER = "milestone_backlog_slayer"
+    const val MILESTONE_BINGO_ARCHITECT = "milestone_bingo_architect"
+    const val MILESTONE_OVERDRIVE_RUNNER = "milestone_overdrive_runner"
+    const val MILESTONE_TRIPLE_THREAT = "milestone_triple_threat"
     const val MILESTONE_VAULT_CLEANER = "milestone_vault_cleaner"
     const val MILESTONE_BLACKOUT_CHAMPION = "milestone_blackout_champion"
 
@@ -503,9 +508,20 @@ object BacklogChallengeManager {
         val isBlackout = evaluatedTiles.all { it.isCompleted }
         val completedCount = evaluatedTiles.count { it.isCompleted }
 
-        // Milestones
+        // Milestones (10 progressive tiers: Starter -> Line -> Diagonal -> Multi-Line -> Blackout)
         val hasAnyLine = totalLines > 0
         val milestones = listOf(
+            BacklogMilestoneReward(
+                id = "${MILESTONE_MOMENTUM_SPARK}_$weekKey",
+                title = "Momentum Spark Gold Trophy",
+                subtitle = "Complete 2 or more tiles this week to ignite your streak",
+                type = BacklogMilestoneType.TILE_PROGRESS,
+                trophyTitle = "Momentum Spark",
+                trophyApiName = "ACH_MOMENTUM_SPARK",
+                trophyRarity = TrophyRarityTier.GOLD,
+                isUnlocked = completedCount >= 2,
+                isClaimed = preferences.isBacklogMilestoneAwarded(MILESTONE_MOMENTUM_SPARK) || preferences.isBacklogMilestoneAwarded("${MILESTONE_MOMENTUM_SPARK}_$weekKey")
+            ),
             BacklogMilestoneReward(
                 id = "${MILESTONE_BACKLOG_SLAYER}_$weekKey",
                 title = "Backlog Slayer Trophy & Theme",
@@ -539,6 +555,54 @@ object BacklogChallengeManager {
                 trophyRarity = TrophyRarityTier.MYTHIC,
                 isUnlocked = completedCols.isNotEmpty(),
                 isClaimed = preferences.isBacklogMilestoneAwarded(MILESTONE_COLUMN_CONQUEROR) || preferences.isBacklogMilestoneAwarded("${MILESTONE_COLUMN_CONQUEROR}_$weekKey")
+            ),
+            BacklogMilestoneReward(
+                id = "${MILESTONE_DIAGONAL_DRIFTER}_$weekKey",
+                title = "Prism Drift Theme & Diagonal Trophy",
+                subtitle = "Complete either corner diagonal line (↖↘ or ↗↙) this week",
+                type = BacklogMilestoneType.LINE_DIAGONAL,
+                trophyTitle = "Diagonal Drifter",
+                trophyApiName = "ACH_DIAGONAL_DRIFTER",
+                trophyRarity = TrophyRarityTier.MYTHIC,
+                themeReward = AccentTheme.PRISM_DRIFT,
+                isUnlocked = completedDiags.isNotEmpty(),
+                isClaimed = preferences.isBacklogMilestoneAwarded(MILESTONE_DIAGONAL_DRIFTER) || preferences.isBacklogMilestoneAwarded("${MILESTONE_DIAGONAL_DRIFTER}_$weekKey")
+            ),
+            BacklogMilestoneReward(
+                id = "${MILESTONE_BINGO_ARCHITECT}_$weekKey",
+                title = "Solar Nova Theme & Architect Trophy",
+                subtitle = "Complete 2 or more winning lines in the same week",
+                type = BacklogMilestoneType.MULTI_LINE,
+                trophyTitle = "Bingo Architect",
+                trophyApiName = "ACH_BINGO_ARCHITECT",
+                trophyRarity = TrophyRarityTier.MYTHIC,
+                themeReward = AccentTheme.SOLAR_NOVA,
+                isUnlocked = totalLines >= 2,
+                isClaimed = preferences.isBacklogMilestoneAwarded(MILESTONE_BINGO_ARCHITECT) || preferences.isBacklogMilestoneAwarded("${MILESTONE_BINGO_ARCHITECT}_$weekKey")
+            ),
+            BacklogMilestoneReward(
+                id = "${MILESTONE_OVERDRIVE_RUNNER}_$weekKey",
+                title = "Toxic Overdrive Theme & Runner Trophy",
+                subtitle = "Complete 6 or more tiles on the 3×3 board this week",
+                type = BacklogMilestoneType.TILE_PROGRESS,
+                trophyTitle = "Overdrive Runner",
+                trophyApiName = "ACH_OVERDRIVE_RUNNER",
+                trophyRarity = TrophyRarityTier.MYTHIC,
+                themeReward = AccentTheme.TOXIC_OVERDRIVE,
+                isUnlocked = completedCount >= 6,
+                isClaimed = preferences.isBacklogMilestoneAwarded(MILESTONE_OVERDRIVE_RUNNER) || preferences.isBacklogMilestoneAwarded("${MILESTONE_OVERDRIVE_RUNNER}_$weekKey")
+            ),
+            BacklogMilestoneReward(
+                id = "${MILESTONE_TRIPLE_THREAT}_$weekKey",
+                title = "Aurora Sovereign Theme & Triple Threat Trophy",
+                subtitle = "Complete 3 or more winning lines in a single week",
+                type = BacklogMilestoneType.MULTI_LINE,
+                trophyTitle = "Triple Threat",
+                trophyApiName = "ACH_TRIPLE_THREAT",
+                trophyRarity = TrophyRarityTier.MYTHIC,
+                themeReward = AccentTheme.AURORA_SOVEREIGN,
+                isUnlocked = totalLines >= 3,
+                isClaimed = preferences.isBacklogMilestoneAwarded(MILESTONE_TRIPLE_THREAT) || preferences.isBacklogMilestoneAwarded("${MILESTONE_TRIPLE_THREAT}_$weekKey")
             ),
             BacklogMilestoneReward(
                 id = "${MILESTONE_VAULT_CLEANER}_$weekKey",

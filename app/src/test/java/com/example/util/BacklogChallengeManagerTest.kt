@@ -251,4 +251,90 @@ class BacklogChallengeManagerTest {
             assertTrue(immersionTile.isCompleted)
         }
     }
+
+    @Test
+    fun testExpandedMilestonesAndRewardThemes() = runBlocking {
+        val weekKey = "2026-W50"
+
+        // All 7 reward themes start locked
+        assertFalse(preferences.isAccentThemeUnlocked(AccentTheme.BACKLOG_SLAYER))
+        assertFalse(preferences.isAccentThemeUnlocked(AccentTheme.VAULT_CLEANER))
+        assertFalse(preferences.isAccentThemeUnlocked(AccentTheme.NEBULA_BLACKOUT))
+        assertFalse(preferences.isAccentThemeUnlocked(AccentTheme.PRISM_DRIFT))
+        assertFalse(preferences.isAccentThemeUnlocked(AccentTheme.SOLAR_NOVA))
+        assertFalse(preferences.isAccentThemeUnlocked(AccentTheme.TOXIC_OVERDRIVE))
+        assertFalse(preferences.isAccentThemeUnlocked(AccentTheme.AURORA_SOVEREIGN))
+
+        // Base grid exposes all 10 milestone tiers
+        val emptyGrid = BacklogChallengeManager.getOrGenerateGrid(preferences, weekKey)
+        assertEquals(10, emptyGrid.availableMilestones.size)
+
+        // Set up rich library & 5 trophies so several tiles auto-complete
+        val richGame = UnifiedLibraryItem.Steam(
+            SteamGameEntity(
+                appId = 620,
+                name = "Hades",
+                playStatus = PlayStatus.BEATEN,
+                playtimeMinutes = 240,
+                achievementsUnlocked = 10,
+                achievementsTotal = 12
+            )
+        )
+        val secondGame = UnifiedLibraryItem.Steam(
+            SteamGameEntity(
+                appId = 504230,
+                name = "Celeste",
+                playStatus = PlayStatus.PLAYING,
+                playtimeMinutes = 90,
+                achievementsUnlocked = 8,
+                achievementsTotal = 10
+            )
+        )
+        val sampleTrophies = (1..5).map { idx ->
+            SteamAchievementEntity(
+                appId = 620,
+                apiName = "ACH_HADES_$idx",
+                displayName = "Hades Trophy $idx",
+                description = "Earned trophy $idx",
+                isAchieved = true,
+                unlockTimestamp = System.currentTimeMillis() / 1000L,
+                globalPercentage = if (idx == 1) 3.2f else 9.0f,
+                iconUrl = "",
+                gameName = "Hades"
+            )
+        }
+        val gridWithStats = BacklogChallengeManager.getOrGenerateGrid(
+            preferences = preferences,
+            weekKey = weekKey,
+            games = listOf(richGame, secondGame),
+            trophies = sampleTrophies
+        )
+        assertTrue(gridWithStats.completedCount >= 2)
+
+        val momentum = gridWithStats.availableMilestones.first { it.id.startsWith(BacklogChallengeManager.MILESTONE_MOMENTUM_SPARK) }
+        assertTrue("Momentum Spark should unlock at >= 2 completed tiles", momentum.isUnlocked)
+
+        // Check a diagonal (0,4,8) or anti-diagonal (2,4,6) that needs at most 2 manual unlocks
+        val mainDiagPending = listOf(0, 4, 8).filter { !gridWithStats.tiles[it].isCompleted }
+        val antiDiagPending = listOf(2, 4, 6).filter { !gridWithStats.tiles[it].isCompleted }
+        val chosenPending = if (mainDiagPending.size <= 2) mainDiagPending else antiDiagPending
+        assertTrue("At least one diagonal should be completable within 2 manual overrides", chosenPending.size <= 2)
+
+        chosenPending.forEach { BacklogChallengeManager.toggleManualOverride(preferences, weekKey, it) }
+        val diagGrid = BacklogChallengeManager.getOrGenerateGrid(
+            preferences = preferences,
+            weekKey = weekKey,
+            games = listOf(richGame, secondGame),
+            trophies = sampleTrophies
+        )
+        assertTrue(diagGrid.completedDiagonals.isNotEmpty())
+        val diagonalMilestone = diagGrid.availableMilestones.first { it.id.startsWith(BacklogChallengeManager.MILESTONE_DIAGONAL_DRIFTER) }
+        assertTrue("Diagonal Drifter should unlock on diagonal completion", diagonalMilestone.isUnlocked)
+
+        BacklogChallengeManager.checkAndAwardMilestones(diagGrid, database, preferences)
+        assertTrue("Prism Drift theme should unlock on Diagonal Drifter claim", preferences.isAccentThemeUnlocked(AccentTheme.PRISM_DRIFT))
+        val unlocked = database.steamAchievementDao().getAllUnlockedAchievements()
+        assertTrue(unlocked.any { it.apiName == "ACH_MOMENTUM_SPARK" })
+        assertTrue(unlocked.any { it.apiName == "ACH_DIAGONAL_DRIFTER" })
+    }
 }

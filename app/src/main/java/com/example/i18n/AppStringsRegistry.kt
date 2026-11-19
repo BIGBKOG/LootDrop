@@ -16,6 +16,7 @@ object AppStringsRegistry {
 
     fun forContext(context: Context): AppStrings {
         val lang = runCatching { AppPreferences(context).appLanguage }.getOrDefault(AppLanguage.ENGLISH)
+        LocaleAssetCatalog.preload(context, lang)
         return forLanguage(lang)
     }
 }

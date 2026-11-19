@@ -25,6 +25,7 @@ object LocaleSyncHelper {
     }
 
     fun applyAndRefreshSystemSurfaces(context: Context, language: AppLanguage) {
+        LocaleAssetCatalog.preload(context, language)
         applyDefaultLocale(language)
         runCatching { com.example.notifications.NotificationHelper(context) }
         runCatching { com.example.shortcuts.AppShortcutHelper.updateDynamicShortcuts(context) }

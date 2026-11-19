@@ -215,6 +215,28 @@ class GithubReleaseClient(private val context: Context) {
             }
         }
 
+        // Fallback 2: Query GitHub REST API for that specific release tag to locate any uploaded .apk asset
+        for (candidate in candidateTags) {
+            try {
+                val tagApiUrl = "https://api.github.com/repos/$owner/$repo/releases/tags/$candidate"
+                val request = Request.Builder()
+                    .url(tagApiUrl)
+                    .header("User-Agent", "LootDrop-Android-App")
+                    .header("Accept", "application/vnd.github.v3+json")
+                    .build()
+
+                val resolvedFromApi = httpClient.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) null
+                    else extractApkUrlFromReleaseAssetsJson(response.body?.string().orEmpty())
+                }
+                if (resolvedFromApi != null) {
+                    return resolvedFromApi
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed resolving REST tag assets for $candidate: ${e.message}")
+            }
+        }
+
         // Predictable fallback: preserve explicit v/V tag prefix if provided
         val fallbackTag = if (tag.startsWith("v", ignoreCase = true)) tag else "V$cleanTag"
         return "https://github.com/$owner/$repo/releases/download/$fallbackTag/Lootdrop-$fallbackTag.apk"
@@ -289,7 +311,13 @@ class GithubReleaseClient(private val context: Context) {
                 val notes = if (contentMatch.find()) {
                     val rawHtml = contentMatch.group(1) ?: ""
                     try {
-                        android.text.Html.fromHtml(rawHtml, android.text.Html.FROM_HTML_MODE_LEGACY).toString().trim()
+                        val pass1 = android.text.Html.fromHtml(rawHtml, android.text.Html.FROM_HTML_MODE_LEGACY).toString()
+                        val pass2 = if (pass1.contains('<') && pass1.contains('>')) {
+                            android.text.Html.fromHtml(pass1, android.text.Html.FROM_HTML_MODE_LEGACY).toString()
+                        } else {
+                            pass1
+                        }
+                        pass2.replace(Regex("\n{3,}"), "\n\n").trim()
                     } catch (_: Exception) {
                         rawHtml.replace("<[^>]*>".toRegex(), " ").trim()
                     }
@@ -344,23 +372,8 @@ class GithubReleaseClient(private val context: Context) {
             }
             val publishedAt = json.optString("published_at", "").takeIf { it.isNotBlank() }
 
-            var downloadUrl: String? = null
-            var isApk = false
-            val assetsArray = json.optJSONArray("assets")
-            if (assetsArray != null) {
-                for (i in 0 until assetsArray.length()) {
-                    val asset = assetsArray.optJSONObject(i) ?: continue
-                    val assetName = asset.optString("name", "")
-                    val assetUrl = asset.optString("browser_download_url", "").trim()
-                    if (assetName.endsWith(".apk", ignoreCase = true) && assetUrl.isNotBlank()) {
-                        downloadUrl = assetUrl
-                        isApk = true
-                        if (!assetName.contains("debug", ignoreCase = true)) {
-                            break
-                        }
-                    }
-                }
-            }
+            var downloadUrl: String? = extractApkUrlFromReleaseAssetsJson(bodyString)
+            var isApk = downloadUrl != null
 
             if (downloadUrl == null) {
                 downloadUrl = fallbackApkResolver(tagName)?.takeIf { it.isNotBlank() }
@@ -380,6 +393,31 @@ class GithubReleaseClient(private val context: Context) {
                 isApkAvailable = isApk,
                 checkedTimestamp = System.currentTimeMillis()
             )
+        }
+
+        internal fun extractApkUrlFromReleaseAssetsJson(bodyString: String): String? {
+            if (bodyString.isBlank()) return null
+            return try {
+                val json = JSONObject(bodyString)
+                val assetsArray = json.optJSONArray("assets") ?: return null
+                var fallbackDebugUrl: String? = null
+                for (i in 0 until assetsArray.length()) {
+                    val asset = assetsArray.optJSONObject(i) ?: continue
+                    val assetName = asset.optString("name", "")
+                    val assetUrl = asset.optString("browser_download_url", "").trim()
+                    if (assetName.endsWith(".apk", ignoreCase = true) && assetUrl.isNotBlank()) {
+                        if (!assetName.contains("debug", ignoreCase = true)) {
+                            return assetUrl
+                        }
+                        if (fallbackDebugUrl == null) {
+                            fallbackDebugUrl = assetUrl
+                        }
+                    }
+                }
+                fallbackDebugUrl
+            } catch (_: Exception) {
+                null
+            }
         }
 
         internal fun extractApkUrlFromExpandedAssetsHtml(
