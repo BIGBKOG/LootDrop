@@ -5,14 +5,29 @@
  */
 (function (global) {
   const LANG_STORAGE_KEY = 'lootdrop_language';
-  const LOCALE_CACHE_PREFIX = 'lootdrop_locale_cache_v2_';
+  const LOCALE_VERSION = '4.2.0';
+  const LOCALE_CACHE_PREFIX = `lootdrop_locale_cache_${LOCALE_VERSION}_`;
   const SUPPORTED_LANGS = ['en', 'es'];
 
   const localeCache = {};
+  const networkFetched = {};
   const inFlightRequests = {};
 
   function normalizeLanguage(lang) {
     return lang === 'es' ? 'es' : 'en';
+  }
+
+  function pruneLegacyLocaleCaches() {
+    try {
+      const toRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('lootdrop_locale_cache_') && !key.startsWith(LOCALE_CACHE_PREFIX)) {
+          toRemove.push(key);
+        }
+      }
+      toRemove.forEach(k => localStorage.removeItem(k));
+    } catch (_) {}
   }
 
   function getSavedLanguage() {
@@ -50,8 +65,9 @@
     } catch (_) {}
   }
 
+  pruneLegacyLocaleCaches();
   let currentLang = getSavedLanguage();
-  // Hydrate synchronously from localStorage cache if previously downloaded
+  // Hydrate synchronously from version-matched localStorage cache if previously downloaded
   SUPPORTED_LANGS.forEach(lang => {
     const cached = readCachedLocaleFromStorage(lang);
     if (cached) localeCache[lang] = cached;
@@ -59,7 +75,7 @@
 
   async function loadLocale(lang, forceReload = false) {
     const normalized = normalizeLanguage(lang);
-    if (!forceReload && localeCache[normalized]) {
+    if (!forceReload && networkFetched[normalized] && localeCache[normalized]) {
       return localeCache[normalized];
     }
     if (!forceReload && inFlightRequests[normalized]) {
@@ -68,13 +84,14 @@
 
     const request = (async () => {
       try {
-        const res = await fetch(`./locales/${normalized}.json?v=4.2.0`, { cache: 'no-cache' });
+        const res = await fetch(`./locales/${normalized}.json?v=${LOCALE_VERSION}`, { cache: 'no-cache' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (!data || typeof data !== 'object' || !data.strings) {
           throw new Error(`Invalid locale bundle: ${normalized}`);
         }
         localeCache[normalized] = data;
+        networkFetched[normalized] = true;
         writeCachedLocaleToStorage(normalized, data);
         return data;
       } catch (err) {
