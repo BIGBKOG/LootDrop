@@ -414,6 +414,8 @@ class AppPreferences(context: Context) {
         private const val KEY_LAST_GITHUB_CHECK_TIME = "key_last_github_check_time"
         private const val KEY_LAST_DISMISSED_UPDATE_TAG = "key_last_dismissed_update_tag"
         private const val KEY_CACHED_LATEST_VERSION = "key_cached_latest_version"
+        private const val KEY_PENDING_UPDATE_APK_PATH = "key_pending_update_apk_path"
+        private const val KEY_PENDING_UPDATE_VERSION_TAG = "key_pending_update_version_tag"
         private const val KEY_AUTO_BACKUP_ENABLED = "key_auto_backup_enabled"
         private const val KEY_AUTO_BACKUP_FOLDER_URI = "key_auto_backup_folder_uri"
         private const val KEY_AUTO_BACKUP_FOLDER_NAME = "key_auto_backup_folder_name"
@@ -656,6 +658,21 @@ class AppPreferences(context: Context) {
     var cachedLatestGithubVersion: String
         get() = prefs.getString(KEY_CACHED_LATEST_VERSION, "") ?: ""
         set(value) = prefs.edit().putString(KEY_CACHED_LATEST_VERSION, value).apply()
+
+    var pendingUpdateApkPath: String
+        get() = prefs.getString(KEY_PENDING_UPDATE_APK_PATH, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_PENDING_UPDATE_APK_PATH, value).apply()
+
+    var pendingUpdateVersionTag: String
+        get() = prefs.getString(KEY_PENDING_UPDATE_VERSION_TAG, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_PENDING_UPDATE_VERSION_TAG, value).apply()
+
+    fun clearPendingUpdateInstall() {
+        prefs.edit()
+            .remove(KEY_PENDING_UPDATE_APK_PATH)
+            .remove(KEY_PENDING_UPDATE_VERSION_TAG)
+            .apply()
+    }
 
     var steamApiKey: String
         get() = prefs.getString("KEY_STEAM_API_KEY", "") ?: ""

@@ -1,11 +1,11 @@
 /**
- * LootDrop Web V4.2.0 - File-Based Localization Loader
+ * LootDrop Web V4.3.0 - File-Based Localization Loader
  * Dynamically fetches complete language bundles from ./locales/{lang}.json
  * instead of hardcoding English and Spanish strings inline.
  */
 (function (global) {
   const LANG_STORAGE_KEY = 'lootdrop_language';
-  const LOCALE_VERSION = '4.2.0';
+  const LOCALE_VERSION = '4.3.0';
   const LOCALE_CACHE_PREFIX = `lootdrop_locale_cache_${LOCALE_VERSION}_`;
   const SUPPORTED_LANGS = ['en', 'es', 'fr'];
 

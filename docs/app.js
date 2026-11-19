@@ -1,5 +1,5 @@
 /**
- * LootDrop V4.2.0 - Complete Client Application
+ * LootDrop V4.3.0 - Complete Client Application
  * 1-to-1 Web Edition with 23 Accent Themes & Comprehensive Website Alerts
  */
 
@@ -2131,7 +2131,7 @@ function setupEventListeners() {
   // Backup Export
   document.getElementById('btn-export-backup')?.addEventListener('click', () => {
     const backupData = {
-      version: '4.2.0',
+      version: '4.3.0',
       timestamp: Date.now(),
       vault: vaultItems,
       profile: userProfile,
@@ -2626,7 +2626,7 @@ const INITIAL_SEED_REVIEWS = [
     rating: 5,
     title: "Best free games tracker hands down!",
     comment: "Never miss an Epic, Steam, or GOG freebie again. The 3x3 challenge grid and Steam library sync make clearing my backlog actually fun. 10/10!",
-    platform: "LootDrop V4.2.0",
+    platform: "LootDrop V4.3.0",
     timestamp: Date.now() - 86400000 * 3,
     helpfulCount: 52,
     isVerifiedClaimer: true
@@ -2641,7 +2641,7 @@ const INITIAL_SEED_REVIEWS = [
     rating: 5,
     title: "Essential for PC and Console gamers",
     comment: "Saved me over $300 in games this year alone. Fast notifications, clean dark cyberpunk UI, zero ads, and instant R2 cloud sync. Absolute perfection!",
-    platform: "LootDrop V4.2.0",
+    platform: "LootDrop V4.3.0",
     timestamp: Date.now() - 86400000 * 6,
     helpfulCount: 41,
     isVerifiedClaimer: true
@@ -2661,7 +2661,7 @@ async function fetchPublicReviewsFromR2() {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${R2_AUTH_KEY}`,
-        'User-Agent': 'LootDrop-Web/4.2.0'
+        'User-Agent': 'LootDrop-Web/4.3.0'
       }
     });
     if (resp.ok) {
@@ -2920,7 +2920,7 @@ async function voteReviewHelpful(reviewId, game) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${R2_AUTH_KEY}`,
         'X-Account-Id': 'public_reviews',
-        'User-Agent': 'LootDrop-Web/4.2.0'
+        'User-Agent': 'LootDrop-Web/4.3.0'
       },
       body: JSON.stringify(publicReviewsList)
     });
@@ -2938,7 +2938,7 @@ async function postPublicReviewToR2(newReview) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${R2_AUTH_KEY}`,
         'X-Account-Id': 'public_reviews',
-        'User-Agent': 'LootDrop-Web/4.2.0'
+        'User-Agent': 'LootDrop-Web/4.3.0'
       },
       body: JSON.stringify(publicReviewsList.slice(0, 300))
     });
@@ -2972,7 +2972,7 @@ function initReviewsModal() {
     if (isApp) {
       targetAppBtn?.classList.add('active');
       targetGameBtn?.classList.remove('active');
-      if (titleSub) titleSub.textContent = '⭐ LootDrop App (V4.2.0)';
+      if (titleSub) titleSub.textContent = '⭐ LootDrop App (V4.3.0)';
     } else {
       targetGameBtn?.classList.add('active');
       targetAppBtn?.classList.remove('active');
@@ -3101,7 +3101,7 @@ function initReviewsModal() {
         rating: currentReviewRating,
         title: title,
         comment: comment,
-        platform: 'Web Edition V4.2.0',
+        platform: 'Web Edition V4.3.0',
         timestamp: Date.now(),
         helpfulCount: 0,
         isVerifiedClaimer: true

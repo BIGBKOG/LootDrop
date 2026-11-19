@@ -47,28 +47,62 @@ internal class AppUpdateDelegate(
         if (result.isSuccess) {
             val apkFile = result.getOrThrow()
             onState(UpdateDownloadState.ReadyToInstall(apkFile, updateInfo.latestVersion))
-            triggerInstallWithAutoResume(installContext, apkFile)
+            triggerInstallWithAutoResume(installContext, apkFile, updateInfo.latestVersion)
         } else {
             onState(UpdateDownloadState.Error(result.exceptionOrNull()?.localizedMessage ?: s.system.updateDownloadFailed))
         }
     }
 
-    fun triggerInstallWithAutoResume(context: Context, apkFile: File) {
+    fun triggerInstallWithAutoResume(context: Context, apkFile: File, versionTag: String = "") {
         val needsUnknownSourcesGrant = !context.packageManager.canRequestPackageInstalls()
         val launched = AppUpdateInstaller.installApk(context, apkFile)
-        pendingInstallAfterPermissionGrant = !launched && needsUnknownSourcesGrant
+        if (!launched && needsUnknownSourcesGrant) {
+            pendingInstallAfterPermissionGrant = true
+            preferences.pendingUpdateApkPath = apkFile.absolutePath
+            preferences.pendingUpdateVersionTag = versionTag
+        } else {
+            pendingInstallAfterPermissionGrant = false
+            preferences.clearPendingUpdateInstall()
+        }
     }
 
-    fun resumePendingUpdateInstallIfPermitted(context: Context, currentState: UpdateDownloadState) {
-        if (!pendingInstallAfterPermissionGrant) return
-        if (currentState !is UpdateDownloadState.ReadyToInstall) {
-            pendingInstallAfterPermissionGrant = false
-            return
+    fun resumePendingUpdateInstallIfPermitted(
+        context: Context,
+        currentState: UpdateDownloadState,
+        onStateRestored: (UpdateDownloadState) -> Unit = {}
+    ) {
+        val savedPath = preferences.pendingUpdateApkPath
+        val savedTag = preferences.pendingUpdateVersionTag
+        if (!pendingInstallAfterPermissionGrant && savedPath.isBlank()) return
+
+        val candidateFile: File?
+        when (currentState) {
+            is UpdateDownloadState.ReadyToInstall -> {
+                candidateFile = currentState.apkFile
+            }
+            else -> {
+                val restoredFile = if (savedPath.isNotBlank()) File(savedPath) else null
+                if (restoredFile != null && AppUpdateInstaller.hasValidApkFile(restoredFile)) {
+                    candidateFile = restoredFile
+                    onStateRestored(UpdateDownloadState.ReadyToInstall(restoredFile, savedTag))
+                } else {
+                    pendingInstallAfterPermissionGrant = false
+                    preferences.clearPendingUpdateInstall()
+                    return
+                }
+            }
         }
+
         val canInstall = context.packageManager.canRequestPackageInstalls()
-        if (canInstall && AppUpdateInstaller.hasValidApkFile(currentState.apkFile)) {
+        if (canInstall && AppUpdateInstaller.hasValidApkFile(candidateFile)) {
             pendingInstallAfterPermissionGrant = false
-            AppUpdateInstaller.installApk(context, currentState.apkFile)
+            preferences.clearPendingUpdateInstall()
+            AppUpdateInstaller.installApk(context, candidateFile)
+        } else if (!AppUpdateInstaller.hasValidApkFile(candidateFile)) {
+            pendingInstallAfterPermissionGrant = false
+            preferences.clearPendingUpdateInstall()
+        } else {
+            pendingInstallAfterPermissionGrant = true
         }
     }
 

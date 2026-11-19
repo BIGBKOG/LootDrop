@@ -276,8 +276,8 @@ class GithubReleaseClient(private val context: Context) {
             val entryRegex = Pattern.compile("<entry>([\\s\\S]*?)</entry>")
             val idRegex = Pattern.compile("<id>[^<]*/([^</]+)</id>")
             val linkTagRegex = Pattern.compile("<link[^>]*href=\"[^\"]*/releases/tag/([^\"]+)\"")
-            val titleRegex = Pattern.compile("<title>([^<]+)</title>")
-            val updatedRegex = Pattern.compile("<updated>([^<]+)</updated>")
+            val titleRegex = Pattern.compile("<title[^>]*>([^<]+)</title>")
+            val updatedRegex = Pattern.compile("<updated[^>]*>([^<]+)</updated>")
             val contentRegex = Pattern.compile("<content[^>]*>([\\s\\S]*?)</content>")
 
             val matcher = entryRegex.matcher(xml)
@@ -302,7 +302,20 @@ class GithubReleaseClient(private val context: Context) {
                 }
 
                 val titleMatch = titleRegex.matcher(entryText)
-                val title = if (titleMatch.find()) titleMatch.group(1)?.trim().orEmpty().ifBlank { "LootDrop $tag" } else "LootDrop $tag"
+                val rawTitle = if (titleMatch.find()) titleMatch.group(1)?.trim().orEmpty() else ""
+                val decodedTitle = if (rawTitle.isNotBlank()) {
+                    try {
+                        val pass1 = android.text.Html.fromHtml(rawTitle, android.text.Html.FROM_HTML_MODE_LEGACY).toString().trim()
+                        if (pass1.contains('&') && pass1.contains(';')) {
+                            android.text.Html.fromHtml(pass1, android.text.Html.FROM_HTML_MODE_LEGACY).toString().trim()
+                        } else {
+                            pass1
+                        }
+                    } catch (_: Exception) {
+                        rawTitle.replace("&amp;", "&").trim()
+                    }
+                } else ""
+                val title = decodedTitle.ifBlank { "LootDrop $tag" }
 
                 val updatedMatch = updatedRegex.matcher(entryText)
                 val updated = if (updatedMatch.find()) updatedMatch.group(1)?.trim() else null
@@ -429,7 +442,7 @@ class GithubReleaseClient(private val context: Context) {
             val escapedOwner = Pattern.quote(owner)
             val escapedRepo = Pattern.quote(repo)
             val apkRegex = Pattern.compile(
-                "href=\"(?:https://github\\.com)?(/$escapedOwner/$escapedRepo/releases/download/[^\"]+\\.apk)\"",
+                "href=[\"'](?:https://github\\.com)?(/$escapedOwner/$escapedRepo/releases/download/[^\"'\\s?]+\\.apk(?:\\?[^\"'\\s]*)?)[\"']",
                 Pattern.CASE_INSENSITIVE
             )
             val matcher = apkRegex.matcher(html)

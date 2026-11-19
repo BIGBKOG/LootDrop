@@ -240,6 +240,19 @@ object AppUpdateInstaller {
                         }
                     }
 
+                    if (totalBytes > 0L && stagingFile.length() < totalBytes) {
+                        val actualLen = stagingFile.length()
+                        return@withContext Result.failure(
+                            Exception(
+                                when {
+                                    isEs -> "La descarga del APK terminó incompleta ($actualLen / $totalBytes bytes)"
+                                    isFr -> "Le téléchargement de l'APK est incomplet ($actualLen / $totalBytes octets)"
+                                    else -> "APK download ended prematurely ($actualLen / $totalBytes bytes)"
+                                }
+                            )
+                        )
+                    }
+
                     if (!hasValidApkFile(stagingFile)) {
                         val actualLen = stagingFile.length()
                         return@withContext Result.failure(
@@ -381,7 +394,14 @@ object AppUpdateInstaller {
                 }
                 for (resolveInfo in resolvedActivities) {
                     val packageName = resolveInfo.activityInfo.packageName
-                    context.grantUriPermission(packageName, apkUri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    runCatching {
+                        context.grantUriPermission(packageName, apkUri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                }
+                listOf("com.google.android.packageinstaller", "com.android.packageinstaller").forEach { pkg ->
+                    runCatching {
+                        context.grantUriPermission(pkg, apkUri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
                 }
             } catch (_: Exception) {}
 

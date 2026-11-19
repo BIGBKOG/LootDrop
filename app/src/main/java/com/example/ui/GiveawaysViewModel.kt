@@ -637,6 +637,16 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     val isPingingSupabase: StateFlow<Boolean> = _isPingingSupabase.asStateFlow()
 
     init {
+        val savedPendingPath = preferences.pendingUpdateApkPath
+        if (savedPendingPath.isNotBlank()) {
+            val pendingFile = File(savedPendingPath)
+            if (com.example.util.AppUpdateInstaller.hasValidApkFile(pendingFile)) {
+                _updateDownloadState.value = UpdateDownloadState.ReadyToInstall(pendingFile, preferences.pendingUpdateVersionTag)
+                updateDelegate.pendingInstallAfterPermissionGrant = true
+            } else {
+                preferences.clearPendingUpdateInstall()
+            }
+        }
         runCatching { refreshGiveaways() }
         runCatching { updateStorageFootprint() }
         runCatching { refreshPublicReviews() }
@@ -971,7 +981,6 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
         val now = System.currentTimeMillis()
         if (_isLoading.value || (now - lastRefreshTimestamp < 4000L && lastRefreshTimestamp != 0L)) return
         refreshGiveaways(isAutoCheck = true)
-        checkGithubReleases(isManual = false)
     }
 
     // --- GitHub Releases & Updater ---
@@ -991,7 +1000,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
             currentState.versionTag == updateInfo.latestVersion &&
             com.example.util.AppUpdateInstaller.hasValidApkFile(currentState.apkFile)
         ) {
-            updateDelegate.triggerInstallWithAutoResume(installContext, currentState.apkFile)
+            updateDelegate.triggerInstallWithAutoResume(installContext, currentState.apkFile, currentState.versionTag)
             return
         }
         viewModelScope.launch {
@@ -1000,19 +1009,25 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun resumePendingUpdateInstallIfPermitted(context: Context) =
-        updateDelegate.resumePendingUpdateInstallIfPermitted(context, _updateDownloadState.value)
+        updateDelegate.resumePendingUpdateInstallIfPermitted(context, _updateDownloadState.value) {
+            _updateDownloadState.value = it
+        }
 
     fun installDownloadedApk(context: Context) {
         val state = _updateDownloadState.value
-        if (state is UpdateDownloadState.ReadyToInstall) updateDelegate.triggerInstallWithAutoResume(context, state.apkFile)
+        if (state is UpdateDownloadState.ReadyToInstall) {
+            updateDelegate.triggerInstallWithAutoResume(context, state.apkFile, state.versionTag)
+        }
     }
 
     fun resetUpdateDownloadState() {
         updateDelegate.pendingInstallAfterPermissionGrant = false
+        preferences.clearPendingUpdateInstall()
         _updateDownloadState.value = UpdateDownloadState.Idle
     }
 
     fun checkGithubReleases(isManual: Boolean = false) {
+        if (_isCheckingUpdates.value) return
         viewModelScope.launch {
             updateDelegate.checkGithubReleases(
                 isManual = isManual,
