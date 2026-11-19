@@ -785,20 +785,10 @@ function switchTab(tabId) {
 // Fetching Live Giveaways (GamerPower API)
 async function fetchGiveaways() {
   try {
-    let response;
-    try {
-      response = await fetch('https://www.gamerpower.com/api/giveaways', {
-        headers: { 'Accept': 'application/json' }
-      });
-    } catch (_) {
-      response = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent('https://www.gamerpower.com/api/giveaways'));
-    }
-
-    if (!response || !response.ok) {
-      throw new Error('Network error or rate limited');
-    }
-
-    const data = await response.json();
+    const data = await fetchJsonWithCorsFallback('https://www.gamerpower.com/api/giveaways', {
+      skipDirect: false,
+      timeoutMs: 9000
+    });
     if (Array.isArray(data) && data.length > 0) {
       allGiveaways = data;
     } else {
@@ -3277,24 +3267,111 @@ function initSteamAndDlcFeatures() {
   }
 }
 
-async function fetchWithCorsFallback(targetUrl) {
-  const candidates = [
-    targetUrl,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`,
-    `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`
-  ];
+const STEAM_WEB_API_KEY = '22F46E31080D84AE934E0D1A142E6209';
+
+function unwrapCorsProxyPayload(rawText, mode) {
+  let text = String(rawText || '').trim();
+  if (mode === 'allorigins_get') {
+    const wrapper = JSON.parse(text);
+    if (!wrapper || typeof wrapper.contents !== 'string') {
+      throw new Error('Empty proxy wrapper response');
+    }
+    text = wrapper.contents.trim();
+  } else if (mode === 'jina') {
+    const marker = 'Markdown Content:';
+    const markerIdx = text.indexOf(marker);
+    if (markerIdx >= 0) {
+      text = text.slice(markerIdx + marker.length).trim();
+    }
+    if (text.startsWith('```')) {
+      text = text.replace(/^```(?:json|xml)?\s*/i, '').replace(/```\s*$/, '').trim();
+    }
+  }
+  return text;
+}
+
+function extractJsonFromProxyText(rawText) {
+  const trimmed = String(rawText || '').trim();
+  try {
+    return JSON.parse(trimmed);
+  } catch (_) {
+    const start = trimmed.search(/[\{\[]/);
+    if (start >= 0) {
+      return JSON.parse(trimmed.slice(start));
+    }
+    throw new Error('Response was not valid JSON');
+  }
+}
+
+async function fetchWithTimeout(url, timeoutMs = 9500) {
+  const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
+  try {
+    return await fetch(url, ctrl ? { signal: ctrl.signal } : undefined);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+function buildCorsCandidates(targetUrl, skipDirect = true) {
+  const candidates = [];
+  if (!skipDirect) {
+    candidates.push({ url: targetUrl, mode: 'raw' });
+  }
+  candidates.push(
+    { url: `https://r.jina.ai/${targetUrl}`, mode: 'jina' },
+    { url: `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`, mode: 'allorigins_get' },
+    { url: `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`, mode: 'raw' },
+    { url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`, mode: 'raw' },
+    { url: `https://api.cors.lol/?url=${encodeURIComponent(targetUrl)}`, mode: 'raw' }
+  );
+  return candidates;
+}
+
+async function fetchTextWithCorsFallback(targetUrl, { skipDirect = true, timeoutMs = 9500 } = {}) {
+  const candidates = buildCorsCandidates(targetUrl, skipDirect);
   let lastErr = null;
-  for (const url of candidates) {
+  for (const candidate of candidates) {
     try {
-      const resp = await fetch(url);
-      if (resp && resp.ok) {
-        return resp;
+      const resp = await fetchWithTimeout(candidate.url, timeoutMs);
+      if (!resp || !resp.ok) {
+        lastErr = new Error(`HTTP ${resp ? resp.status : 'error'}`);
+        continue;
       }
+      const raw = await resp.text();
+      const text = unwrapCorsProxyPayload(raw, candidate.mode);
+      if (text) return text;
+      lastErr = new Error('Empty proxy response');
     } catch (err) {
       lastErr = err;
     }
   }
   throw lastErr || new Error('Request blocked or network unavailable');
+}
+
+async function fetchJsonWithCorsFallback(targetUrl, { skipDirect = true, timeoutMs = 9500 } = {}) {
+  const candidates = buildCorsCandidates(targetUrl, skipDirect);
+  let lastErr = null;
+  for (const candidate of candidates) {
+    try {
+      const resp = await fetchWithTimeout(candidate.url, timeoutMs);
+      if (!resp || !resp.ok) {
+        lastErr = new Error(`HTTP ${resp ? resp.status : 'error'}`);
+        continue;
+      }
+      const raw = await resp.text();
+      const text = unwrapCorsProxyPayload(raw, candidate.mode);
+      return extractJsonFromProxyText(text);
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr || new Error('Request blocked or network unavailable');
+}
+
+async function fetchWithCorsFallback(targetUrl) {
+  const text = await fetchTextWithCorsFallback(targetUrl, { skipDirect: true });
+  return new Response(text, { status: 200, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
 }
 
 function parseSteamIdentifier(rawInput) {
@@ -3313,6 +3390,57 @@ function parseSteamIdentifier(rawInput) {
   return { type: 'vanity', value: clean };
 }
 
+async function resolveWebSteam64Id(parsed) {
+  if (parsed.type === 'steam64') return parsed.value;
+
+  const vanity = encodeURIComponent(parsed.value);
+  const apiUrl = `https://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key=${STEAM_WEB_API_KEY}&vanityurl=${vanity}&format=json`;
+  try {
+    const json = await fetchJsonWithCorsFallback(apiUrl, { skipDirect: true });
+    if (json?.response?.success === 1 && json.response.steamid) {
+      return String(json.response.steamid);
+    }
+  } catch (_) {}
+
+  for (const xmlUrl of [
+    `https://steamcommunity.com/id/${vanity}/?xml=1`,
+    `https://steamcommunity.com/profiles/${vanity}/?xml=1`
+  ]) {
+    try {
+      const xmlText = await fetchTextWithCorsFallback(xmlUrl, { skipDirect: true });
+      const match = xmlText.match(/<steamID64>(\d{17})<\/steamID64>/);
+      if (match && match[1]) return match[1];
+    } catch (_) {}
+  }
+
+  throw new Error(t('steam_err_private'));
+}
+
+function parseLegacySteamXmlGames(xmlText) {
+  const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
+  const errorNode = doc.querySelector('response > error');
+  if (errorNode) {
+    throw new Error(errorNode.textContent || t('steam_err_private'));
+  }
+  const gameNodes = Array.from(doc.querySelectorAll('games > game'));
+  return gameNodes.map(node => {
+    const appId = parseInt(node.querySelector('appID')?.textContent || '0', 10);
+    const name = (node.querySelector('name')?.textContent || '').trim();
+    const hoursOnRecord = parseFloat((node.querySelector('hoursOnRecord')?.textContent || '0').replace(/,/g, '')) || 0;
+    const hoursLast2Weeks = parseFloat((node.querySelector('hoursLast2Weeks')?.textContent || '0').replace(/,/g, '')) || 0;
+    const logo = (node.querySelector('logo')?.textContent || '').trim();
+    if (!appId || !name) return null;
+    return {
+      appId,
+      name,
+      playtimeMinutes: Math.round(hoursOnRecord * 60),
+      playtime2WeeksMinutes: Math.round(hoursLast2Weeks * 60),
+      headerImageUrl: logo || `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appId}/header.jpg`,
+      storeUrl: `https://store.steampowered.com/app/${appId}`
+    };
+  }).filter(Boolean);
+}
+
 async function syncWebSteamLibrary(rawInput) {
   const parsed = parseSteamIdentifier(rawInput);
   if (!parsed.value) {
@@ -3327,40 +3455,53 @@ async function syncWebSteamLibrary(rawInput) {
   }
   showToast(t('toast_steam_connecting'), '🔄');
 
-  const xmlUrl = parsed.type === 'steam64'
-    ? `https://steamcommunity.com/profiles/${encodeURIComponent(parsed.value)}/games?tab=all&xml=1`
-    : `https://steamcommunity.com/id/${encodeURIComponent(parsed.value)}/games?tab=all&xml=1`;
-
   try {
-    const resp = await fetchWithCorsFallback(xmlUrl);
-    const xmlText = await resp.text();
-    const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
-    const errorNode = doc.querySelector('response > error');
-    if (errorNode) {
-      throw new Error(errorNode.textContent || t('steam_err_private'));
+    const steam64 = await resolveWebSteam64Id(parsed);
+    const ownedApiUrl = `https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=${STEAM_WEB_API_KEY}&steamid=${encodeURIComponent(steam64)}&include_appinfo=1&include_played_free_games=1&format=json`;
+
+    let parsedGames = null;
+    let apiErr = null;
+    try {
+      const json = await fetchJsonWithCorsFallback(ownedApiUrl, { skipDirect: true, timeoutMs: 12000 });
+      const resp = json?.response;
+      if (!resp || (!Object.prototype.hasOwnProperty.call(resp, 'games') && !Object.prototype.hasOwnProperty.call(resp, 'game_count'))) {
+        throw new Error(t('steam_err_no_games'));
+      }
+      const rawGames = Array.isArray(resp.games) ? resp.games : [];
+      parsedGames = rawGames.map(g => {
+        const appId = parseInt(g.appid || '0', 10);
+        const name = String(g.name || '').trim();
+        if (!appId || !name) return null;
+        return {
+          appId,
+          name,
+          playtimeMinutes: Number(g.playtime_forever) || 0,
+          playtime2WeeksMinutes: Number(g.playtime_2weeks) || 0,
+          headerImageUrl: `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appId}/header.jpg`,
+          storeUrl: `https://store.steampowered.com/app/${appId}`
+        };
+      }).filter(Boolean);
+    } catch (err) {
+      apiErr = err;
     }
 
-    const gameNodes = Array.from(doc.querySelectorAll('games > game'));
-    if (gameNodes.length === 0) {
+    if (parsedGames === null) {
+      // Fallback to legacy XML only if API request itself failed (not for explicit privacy errors)
+      if (apiErr && apiErr.message === t('steam_err_no_games')) {
+        throw apiErr;
+      }
+      const xmlUrl = `https://steamcommunity.com/profiles/${encodeURIComponent(steam64)}/games?tab=all&xml=1`;
+      try {
+        const xmlText = await fetchTextWithCorsFallback(xmlUrl, { skipDirect: true });
+        parsedGames = parseLegacySteamXmlGames(xmlText);
+      } catch (_) {
+        throw apiErr || new Error(t('steam_err_private'));
+      }
+    }
+
+    if (!parsedGames || parsedGames.length === 0) {
       throw new Error(t('steam_err_no_games'));
     }
-
-    const parsedGames = gameNodes.map(node => {
-      const appId = parseInt(node.querySelector('appID')?.textContent || '0', 10);
-      const name = (node.querySelector('name')?.textContent || '').trim();
-      const hoursOnRecord = parseFloat((node.querySelector('hoursOnRecord')?.textContent || '0').replace(/,/g, '')) || 0;
-      const hoursLast2Weeks = parseFloat((node.querySelector('hoursLast2Weeks')?.textContent || '0').replace(/,/g, '')) || 0;
-      const logo = (node.querySelector('logo')?.textContent || '').trim();
-      if (!appId || !name) return null;
-      return {
-        appId,
-        name,
-        playtimeMinutes: Math.round(hoursOnRecord * 60),
-        playtime2WeeksMinutes: Math.round(hoursLast2Weeks * 60),
-        headerImageUrl: logo || `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appId}/header.jpg`,
-        storeUrl: `https://store.steampowered.com/app/${appId}`
-      };
-    }).filter(Boolean);
 
     steamGamesList = parsedGames;
     localStorage.setItem(STORAGE_KEYS.STEAM_GAMES, JSON.stringify(steamGamesList));
@@ -3500,8 +3641,7 @@ function selectCandidateGamesForDlcScanWeb(steamGames, maxGames = 6) {
 async function fetchSteamStoreAppDetailsWeb(appId) {
   const steamLang = window.LootDropI18n?.getMeta?.()?.steamLanguage || 'english';
   const url = `https://store.steampowered.com/api/appdetails?appids=${appId}&l=${steamLang}&cc=us`;
-  const resp = await fetchWithCorsFallback(url);
-  const json = await resp.json();
+  const json = await fetchJsonWithCorsFallback(url, { skipDirect: true });
   const entry = json?.[String(appId)];
   if (!entry || !entry.success || !entry.data) return null;
   return entry.data;
