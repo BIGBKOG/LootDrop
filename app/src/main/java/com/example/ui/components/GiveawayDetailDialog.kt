@@ -100,7 +100,7 @@ fun GiveawayDetailDialog(
 ) {
     val context = LocalContext.current
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val screenDensityInfo = LocalScreenDensityInfo.current
     val launcherColor = Color(item.launcherCategory.badgeColorHex)
     val themePrimary = MaterialTheme.colorScheme.primary
@@ -183,9 +183,17 @@ fun GiveawayDetailDialog(
                                 }
                                 Box(modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(GamingDarkSurfaceVariant).padding(horizontal = 7.dp, vertical = 4.dp)) {
                                     val localizedType = when (item.type.lowercase()) {
-                                        "game" -> if (isEs) "Juego" else item.type
+                                        "game" -> when (lang) {
+                                            AppLanguage.SPANISH -> "Juego"
+                                            AppLanguage.FRENCH -> "Jeu"
+                                            AppLanguage.ENGLISH -> item.type
+                                        }
                                         "dlc" -> "DLC"
-                                        "early access" -> if (isEs) "Acceso Anticipado" else item.type
+                                        "early access" -> when (lang) {
+                                            AppLanguage.SPANISH -> "Acceso Anticipado"
+                                            AppLanguage.FRENCH -> "Accès anticipé"
+                                            AppLanguage.ENGLISH -> item.type
+                                        }
                                         else -> item.type
                                     }
                                     Text(localizedType, fontSize = 11.sp, color = TextSecondary)
@@ -195,7 +203,15 @@ fun GiveawayDetailDialog(
                                 try {
                                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(item.metacriticInfo.reviewUrl)).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK })
                                 } catch (_: Exception) {
-                                    Toast.makeText(context, if (isEs) "No se pudo abrir el navegador" else "Could not open browser", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(
+                                        context,
+                                        when (lang) {
+                                            AppLanguage.SPANISH -> "No se pudo abrir el navegador"
+                                            AppLanguage.FRENCH -> "Impossible d'ouvrir le navigateur"
+                                            AppLanguage.ENGLISH -> "Could not open browser"
+                                        },
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 }
                             }
                         }
@@ -217,10 +233,10 @@ fun GiveawayDetailDialog(
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text("⭐ ${String.format(Locale.US, "%.1f", avgGameRating)}", fontSize = 13.sp, fontWeight = FontWeight.Black, color = Color(0xFFFFB800))
-                                val reviewWord = if (isEs) {
-                                    if (reviews.size == 1) "reseña" else "reseñas"
-                                } else {
-                                    if (reviews.size == 1) "Player Review" else "Player Reviews"
+                                val reviewWord = when (lang) {
+                                    AppLanguage.SPANISH -> if (reviews.size == 1) "reseña" else "reseñas"
+                                    AppLanguage.FRENCH -> if (reviews.size == 1) "avis" else "avis"
+                                    AppLanguage.ENGLISH -> if (reviews.size == 1) "Player Review" else "Player Reviews"
                                 }
                                 Text("• ${reviews.size} $reviewWord", fontSize = 12.sp, color = TextPrimary)
                             }
@@ -271,7 +287,17 @@ fun GiveawayDetailDialog(
                                     isSharingCard = true
                                     coroutineScope.launch {
                                         try { ShareGraphicGenerator.shareGraphicCard(context, item, includeTextLink = true) }
-                                        catch (e: Exception) { Toast.makeText(context, if (isEs) "Error al compartir: ${e.message}" else "Share error: ${e.message}", Toast.LENGTH_SHORT).show() }
+                                        catch (e: Exception) {
+                                            Toast.makeText(
+                                                context,
+                                                when (lang) {
+                                                    AppLanguage.SPANISH -> "Error al compartir: ${e.message}"
+                                                    AppLanguage.FRENCH -> "Erreur de partage : ${e.message}"
+                                                    AppLanguage.ENGLISH -> "Share error: ${e.message}"
+                                                },
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
                                         finally { isSharingCard = false }
                                     }
                                 }
@@ -297,14 +323,38 @@ fun GiveawayDetailDialog(
                                     val epochMillis = parsedEndDate.atTime(18, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
                                     val intent = Intent(Intent.ACTION_INSERT).apply {
                                         data = CalendarContract.Events.CONTENT_URI
-                                        putExtra(CalendarContract.Events.TITLE, if (isEs) "Reclamar Gratis: ${item.title}" else "Claim Free: ${item.title}")
-                                        putExtra(CalendarContract.Events.DESCRIPTION, if (isEs) "¡La oferta de '${item.title}' expira pronto!\nPlataformas: ${item.platforms}\nEnlace: ${item.openGiveawayUrl}" else "Giveaway for '${item.title}' expires soon!\nPlatforms: ${item.platforms}\nClaim link: ${item.openGiveawayUrl}")
+                                        putExtra(
+                                            CalendarContract.Events.TITLE,
+                                            when (lang) {
+                                                AppLanguage.SPANISH -> "Reclamar Gratis: ${item.title}"
+                                                AppLanguage.FRENCH -> "Réclamer gratuitement : ${item.title}"
+                                                AppLanguage.ENGLISH -> "Claim Free: ${item.title}"
+                                            }
+                                        )
+                                        putExtra(
+                                            CalendarContract.Events.DESCRIPTION,
+                                            when (lang) {
+                                                AppLanguage.SPANISH -> "¡La oferta de '${item.title}' expira pronto!\nPlataformas: ${item.platforms}\nEnlace: ${item.openGiveawayUrl}"
+                                                AppLanguage.FRENCH -> "L'offre pour « ${item.title} » expire bientôt !\nPlateformes : ${item.platforms}\nLien : ${item.openGiveawayUrl}"
+                                                AppLanguage.ENGLISH -> "Giveaway for '${item.title}' expires soon!\nPlatforms: ${item.platforms}\nClaim link: ${item.openGiveawayUrl}"
+                                            }
+                                        )
                                         putExtra(CalendarContract.Events.EVENT_LOCATION, item.platforms)
                                         putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, epochMillis)
                                         putExtra(CalendarContract.EXTRA_EVENT_END_TIME, epochMillis + 3600_000L)
                                     }
                                     try { context.startActivity(intent) }
-                                    catch (_: Exception) { Toast.makeText(context, if (isEs) "No hay aplicación de calendario instalada" else "No calendar application installed", Toast.LENGTH_SHORT).show() }
+                                    catch (_: Exception) {
+                                        Toast.makeText(
+                                            context,
+                                            when (lang) {
+                                                AppLanguage.SPANISH -> "No hay aplicación de calendario instalada"
+                                                AppLanguage.FRENCH -> "Aucune application d'agenda installée"
+                                                AppLanguage.ENGLISH -> "No calendar application installed"
+                                            },
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
                                 },
                                 modifier = Modifier.fillMaxWidth().testTag("detail_add_to_calendar_button"),
                                 shape = RoundedCornerShape(10.dp),
@@ -313,7 +363,14 @@ fun GiveawayDetailDialog(
                             ) {
                                 Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(16.dp), tint = themePrimary)
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text(if (isEs) "Añadir recordatorio al calendario" else "Set Calendar Reminder", fontSize = 13.sp)
+                                Text(
+                                    when (lang) {
+                                        AppLanguage.SPANISH -> "Añadir recordatorio al calendario"
+                                        AppLanguage.FRENCH -> "Ajouter un rappel au calendrier"
+                                        AppLanguage.ENGLISH -> "Set Calendar Reminder"
+                                    },
+                                    fontSize = 13.sp
+                                )
                             }
                         }
 
@@ -352,7 +409,17 @@ fun GiveawayDetailDialog(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         if (item.categories.isNotEmpty()) {
-                            Text(if (isEs) "CATEGORÍAS Y GÉNEROS" else "SUPPORTED CATEGORIES & GENRES", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = NeonCyan, letterSpacing = 1.sp)
+                            Text(
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "CATEGORÍAS Y GÉNEROS"
+                                    AppLanguage.FRENCH -> "CATÉGORIES ET GENRES"
+                                    AppLanguage.ENGLISH -> "SUPPORTED CATEGORIES & GENRES"
+                                },
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = NeonCyan,
+                                letterSpacing = 1.sp
+                            )
                             Spacer(modifier = Modifier.height(8.dp))
                             Column(
                                 modifier = Modifier

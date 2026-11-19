@@ -93,7 +93,9 @@ object AppUpdateInstaller {
                 .header("Accept", "application/octet-stream, application/vnd.android.package-archive, */*")
                 .build()
 
-            val isEs = AppPreferences(context).appLanguage == AppLanguage.SPANISH
+            val lang = AppPreferences(context).appLanguage
+            val isEs = lang == AppLanguage.SPANISH
+            val isFr = lang == AppLanguage.FRENCH
             var initialResponse = httpClient.newCall(buildDownloadRequest(actualUrl)).execute()
             val initialType = initialResponse.header("Content-Type")?.lowercase().orEmpty()
             if ((initialResponse.code == 404 || initialType.contains("text/html")) && versionTag.isNotBlank()) {
@@ -113,8 +115,11 @@ object AppUpdateInstaller {
                 if (!response.isSuccessful) {
                     return@withContext Result.failure(
                         Exception(
-                            if (isEs) "Error HTTP ${response.code} al descargar la actualización"
-                            else "HTTP error ${response.code} downloading update from GitHub"
+                            when {
+                                isEs -> "Error HTTP ${response.code} al descargar la actualización"
+                                isFr -> "Erreur HTTP ${response.code} lors du téléchargement de la mise à jour"
+                                else -> "HTTP error ${response.code} downloading update from GitHub"
+                            }
                         )
                     )
                 }
@@ -123,15 +128,24 @@ object AppUpdateInstaller {
                 if (contentType.contains("text/html")) {
                     return@withContext Result.failure(
                         Exception(
-                            if (isEs) "El enlace devolvió HTML en lugar de un archivo APK."
-                            else "Download URL returned an HTML web page instead of an APK file. Please check GitHub release assets."
+                            when {
+                                isEs -> "El enlace devolvió HTML en lugar de un archivo APK."
+                                isFr -> "Le lien a renvoyé une page HTML au lieu d'un fichier APK."
+                                else -> "Download URL returned an HTML web page instead of an APK file. Please check GitHub release assets."
+                            }
                         )
                     )
                 }
 
                 val body = response.body
                     ?: return@withContext Result.failure(
-                        Exception(if (isEs) "Respuesta vacía al descargar actualización" else "Empty response body from update download")
+                        Exception(
+                            when {
+                                isEs -> "Respuesta vacía al descargar actualización"
+                                isFr -> "Réponse vide lors du téléchargement de la mise à jour"
+                                else -> "Empty response body from update download"
+                            }
+                        )
                     )
 
                 val totalBytes = body.contentLength()
@@ -169,9 +183,17 @@ object AppUpdateInstaller {
                                     if (downloadedBytes == 0L && bytesRead >= 2) {
                                         if (!isZipMagicHeader(buffer[0], buffer[1])) {
                                             val msg = if (buffer[0] == '<'.code.toByte()) {
-                                                if (isEs) "El enlace devolvió HTML en lugar de un archivo APK." else "Download URL returned an HTML web page instead of an APK file. Please check GitHub release assets."
+                                                when {
+                                                    isEs -> "El enlace devolvió HTML en lugar de un archivo APK."
+                                                    isFr -> "Le lien a renvoyé une page HTML au lieu d'un fichier APK."
+                                                    else -> "Download URL returned an HTML web page instead of an APK file. Please check GitHub release assets."
+                                                }
                                             } else {
-                                                if (isEs) "El archivo descargado no es un paquete APK válido." else "Downloaded file is not a valid Android APK package."
+                                                when {
+                                                    isEs -> "El archivo descargado no es un paquete APK válido."
+                                                    isFr -> "Le fichier téléchargé n'est pas un paquet APK Android valide."
+                                                    else -> "Downloaded file is not a valid Android APK package."
+                                                }
                                             }
                                             return@withContext Result.failure(Exception(msg))
                                         }
@@ -182,9 +204,17 @@ object AppUpdateInstaller {
                                         val first = pendingFirstByte
                                         if (!isZipMagicHeader(first, buffer[0])) {
                                             val msg = if (first == '<'.code.toByte()) {
-                                                if (isEs) "El enlace devolvió HTML en lugar de un archivo APK." else "Download URL returned an HTML web page instead of an APK file. Please check GitHub release assets."
+                                                when {
+                                                    isEs -> "El enlace devolvió HTML en lugar de un archivo APK."
+                                                    isFr -> "Le lien a renvoyé une page HTML au lieu d'un fichier APK."
+                                                    else -> "Download URL returned an HTML web page instead of an APK file. Please check GitHub release assets."
+                                                }
                                             } else {
-                                                if (isEs) "El archivo descargado no es un paquete APK válido." else "Downloaded file is not a valid Android APK package."
+                                                when {
+                                                    isEs -> "El archivo descargado no es un paquete APK válido."
+                                                    isFr -> "Le fichier téléchargé n'est pas un paquet APK Android valide."
+                                                    else -> "Downloaded file is not a valid Android APK package."
+                                                }
                                             }
                                             return@withContext Result.failure(Exception(msg))
                                         }
@@ -214,8 +244,11 @@ object AppUpdateInstaller {
                         val actualLen = stagingFile.length()
                         return@withContext Result.failure(
                             Exception(
-                                if (isEs) "El archivo APK descargado está incompleto o dañado ($actualLen bytes)"
-                                else "Downloaded APK file is incomplete or corrupt ($actualLen bytes)"
+                                when {
+                                    isEs -> "El archivo APK descargado está incompleto o dañado ($actualLen bytes)"
+                                    isFr -> "Le fichier APK téléchargé est incomplet ou corrompu ($actualLen octets)"
+                                    else -> "Downloaded APK file is incomplete or corrupt ($actualLen bytes)"
+                                }
                             )
                         )
                     }
@@ -274,14 +307,19 @@ object AppUpdateInstaller {
      * Triggers the Android system package installer to install the downloaded APK.
      */
     fun installApk(context: Context, apkFile: File): Boolean {
-        val isEs = runCatching { AppPreferences(context).appLanguage == AppLanguage.SPANISH }.getOrDefault(false)
+        val lang = runCatching { AppPreferences(context).appLanguage }.getOrDefault(AppLanguage.ENGLISH)
+        val isEs = lang == AppLanguage.SPANISH
+        val isFr = lang == AppLanguage.FRENCH
         return try {
             if (!hasValidApkFile(apkFile)) {
                 Log.e(TAG, "Cannot install: APK file is missing, incomplete, or corrupt (${apkFile.absolutePath})")
                 showToast(
                     context,
-                    if (isEs) "El archivo APK falta o está incompleto. Vuelve a descargarlo."
-                    else "APK file is missing or incomplete. Please download again.",
+                    when {
+                        isEs -> "El archivo APK falta o está incompleto. Vuelve a descargarlo."
+                        isFr -> "Le fichier APK est manquant ou incomplet. Veuillez le retélécharger."
+                        else -> "APK file is missing or incomplete. Please download again."
+                    },
                     Toast.LENGTH_SHORT
                 )
                 return false
@@ -299,8 +337,11 @@ object AppUpdateInstaller {
                     context.startActivity(manageUnknownSourcesIntent)
                     showToast(
                         context,
-                        if (isEs) "Permite que LootDrop instale apps desconocidas — la instalación continuará al volver."
-                        else "Allow LootDrop to install unknown apps — installation will resume automatically when you return.",
+                        when {
+                            isEs -> "Permite que LootDrop instale apps desconocidas — la instalación continuará al volver."
+                            isFr -> "Autorisez LootDrop à installer des sources inconnues — l'installation reprendra à votre retour."
+                            else -> "Allow LootDrop to install unknown apps — installation will resume automatically when you return."
+                        },
                         Toast.LENGTH_LONG
                     )
                 } catch (e: Exception) {
@@ -365,7 +406,11 @@ object AppUpdateInstaller {
             Log.e(TAG, "No package installer activity available", e)
             showToast(
                 context,
-                if (isEs) "No hay instalador de paquetes disponible." else "No package installer found on this device.",
+                when {
+                    isEs -> "No hay instalador de paquetes disponible."
+                    isFr -> "Aucun installateur de paquets trouvé sur cet appareil."
+                    else -> "No package installer found on this device."
+                },
                 Toast.LENGTH_SHORT
             )
             false
@@ -373,7 +418,11 @@ object AppUpdateInstaller {
             Log.e(TAG, "Failed to launch package installer", e)
             showToast(
                 context,
-                if (isEs) "Error de instalación: ${e.localizedMessage}" else "Install error: ${e.localizedMessage}",
+                when {
+                    isEs -> "Error de instalación: ${e.localizedMessage}"
+                    isFr -> "Erreur d'installation : ${e.localizedMessage}"
+                    else -> "Install error: ${e.localizedMessage}"
+                },
                 Toast.LENGTH_SHORT
             )
             false

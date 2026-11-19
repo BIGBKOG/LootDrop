@@ -11,6 +11,7 @@ object AppStringsRegistry {
         return when (language) {
             AppLanguage.ENGLISH -> StringsEn
             AppLanguage.SPANISH -> StringsEs
+            AppLanguage.FRENCH -> StringsFr
         }
     }
 

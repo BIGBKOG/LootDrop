@@ -72,10 +72,11 @@ const STORAGE_KEYS = {
 
 const t = (key, params) => (window.LootDropI18n ? window.LootDropI18n.t(key, params) : key);
 
-const DEFAULT_PROFILE_NAMES = new Set(['Vault Hunter', 'Cazador de Bóveda']);
+const DEFAULT_PROFILE_NAMES = new Set(['Vault Hunter', 'Cazador de Bóveda', 'Chasseur de Coffre']);
 const DEFAULT_PROFILE_BIOS = new Set([
   'Clearing the backlog, one drop at a time.',
-  'Limpiando el backlog, un drop a la vez.'
+  'Limpiando el backlog, un drop a la vez.',
+  'À la conquête du backlog, un drop à la fois.'
 ]);
 
 function openDealBrowser(url, title = 'Giveaway Deal') {
@@ -273,7 +274,9 @@ function initLanguageControls() {
   syncLanguagePickerSelection();
 
   document.getElementById('btn-lang-toggle')?.addEventListener('click', () => {
-    const next = window.LootDropI18n.getLanguage() === 'es' ? 'en' : 'es';
+    const order = ['en', 'es', 'fr'];
+    const cur = window.LootDropI18n.getLanguage();
+    const next = order[(order.indexOf(cur) + 1) % order.length];
     switchAppLanguage(next, true);
   });
 
@@ -283,6 +286,9 @@ function initLanguageControls() {
   document.getElementById('btn-set-lang-es')?.addEventListener('click', () => {
     switchAppLanguage('es', true);
   });
+  document.getElementById('btn-set-lang-fr')?.addEventListener('click', () => {
+    switchAppLanguage('fr', true);
+  });
 
   document.getElementById('btn-pick-lang-en')?.addEventListener('click', async () => {
     await switchAppLanguage('en', true);
@@ -290,6 +296,10 @@ function initLanguageControls() {
   });
   document.getElementById('btn-pick-lang-es')?.addEventListener('click', async () => {
     await switchAppLanguage('es', true);
+    document.getElementById('modal-language-picker')?.classList.remove('open');
+  });
+  document.getElementById('btn-pick-lang-fr')?.addEventListener('click', async () => {
+    await switchAppLanguage('fr', true);
     document.getElementById('modal-language-picker')?.classList.remove('open');
   });
 
@@ -315,6 +325,7 @@ function syncLanguagePickerSelection() {
   const lang = window.LootDropI18n.getLanguage();
   document.getElementById('btn-pick-lang-en')?.classList.toggle('active', lang === 'en');
   document.getElementById('btn-pick-lang-es')?.classList.toggle('active', lang === 'es');
+  document.getElementById('btn-pick-lang-fr')?.classList.toggle('active', lang === 'fr');
 }
 
 async function switchAppLanguage(lang, showToastMsg = true) {
@@ -356,7 +367,8 @@ async function switchAppLanguage(lang, showToastMsg = true) {
   }
 
   if (showToastMsg) {
-    showToast(t(lang === 'es' ? 'toast_lang_es' : 'toast_lang_en'), '🌐');
+    const toastKey = lang === 'es' ? 'toast_lang_es' : (lang === 'fr' ? 'toast_lang_fr' : 'toast_lang_en');
+    showToast(t(toastKey), '🌐');
   }
 }
 

@@ -1491,7 +1491,7 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun pingSupabaseNow(context: Context) {
-        val isEs = _appLanguage.value == AppLanguage.SPANISH
+        val lang = _appLanguage.value
         viewModelScope.launch {
             _isPingingSupabase.value = true
             val result = SupabaseKeepAliveManager.pingNow(preferences)
@@ -1499,17 +1499,17 @@ class GiveawaysViewModel(application: Application) : AndroidViewModel(applicatio
             _lastSupabaseKeepAliveStatus.value = preferences.lastSupabaseKeepAliveStatus
             _isPingingSupabase.value = false
             result.onSuccess { res ->
-                val msg = if (isEs) {
-                    "✅ Base de datos Supabase activa (HTTP ${res.httpCode} • ${res.latencyMs}ms)"
-                } else {
-                    "✅ Supabase DB active (HTTP ${res.httpCode} • ${res.latencyMs}ms)"
+                val msg = when (lang) {
+                    AppLanguage.SPANISH -> "✅ Base de datos Supabase activa (HTTP ${res.httpCode} • ${res.latencyMs}ms)"
+                    AppLanguage.FRENCH -> "✅ Base Supabase active (HTTP ${res.httpCode} • ${res.latencyMs}ms)"
+                    AppLanguage.ENGLISH -> "✅ Supabase DB active (HTTP ${res.httpCode} • ${res.latencyMs}ms)"
                 }
                 showShortToast(context, msg)
             }.onFailure { err ->
-                val msg = if (isEs) {
-                    "⚠️ Error al hacer ping a Supabase: ${err.message ?: "Sin conexión"}"
-                } else {
-                    "⚠️ Supabase ping failed: ${err.message ?: "Offline"}"
+                val msg = when (lang) {
+                    AppLanguage.SPANISH -> "⚠️ Error al hacer ping a Supabase: ${err.message ?: "Sin conexión"}"
+                    AppLanguage.FRENCH -> "⚠️ Échec du ping Supabase : ${err.message ?: "Hors ligne"}"
+                    AppLanguage.ENGLISH -> "⚠️ Supabase ping failed: ${err.message ?: "Offline"}"
                 }
                 showShortToast(context, msg)
             }

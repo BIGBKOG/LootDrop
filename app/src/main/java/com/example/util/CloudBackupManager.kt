@@ -52,21 +52,29 @@ object CloudBackupManager {
         preferences: AppPreferences,
         emailInput: String = ""
     ): Result<String> = withContext(Dispatchers.IO) {
-        val isEs = preferences.appLanguage == AppLanguage.SPANISH
+        val lang = preferences.appLanguage
+        val isEs = lang == AppLanguage.SPANISH
+        val isFr = lang == AppLanguage.FRENCH
         val cleanUser = username.trim().ifBlank { preferences.userProfileName.trim().ifBlank { "User" } }
         if (cleanUser.length < 3) {
             return@withContext Result.failure(
                 IllegalArgumentException(
-                    if (isEs) "El nombre de usuario / Gamer Tag debe tener al menos 3 caracteres."
-                    else "Gamer Tag / Username must be at least 3 characters."
+                    when {
+                        isEs -> "El nombre de usuario / Gamer Tag debe tener al menos 3 caracteres."
+                        isFr -> "Le nom d'utilisateur / Gamer Tag doit comporter au moins 3 caractères."
+                        else -> "Gamer Tag / Username must be at least 3 characters."
+                    }
                 )
             )
         }
         if (password.length < 6) {
             return@withContext Result.failure(
                 IllegalArgumentException(
-                    if (isEs) "La contraseña debe tener al menos 6 caracteres por seguridad."
-                    else "Password must be at least 6 characters for cloud security."
+                    when {
+                        isEs -> "La contraseña debe tener al menos 6 caracteres por seguridad."
+                        isFr -> "Le mot de passe doit contenir au moins 6 caractères pour votre sécurité."
+                        else -> "Password must be at least 6 characters for cloud security."
+                    }
                 )
             )
         }
@@ -79,16 +87,22 @@ object CloudBackupManager {
         if (!targetEmail.contains("@") || !targetEmail.contains(".")) {
             return@withContext Result.failure(
                 IllegalArgumentException(
-                    if (isEs) "Por favor ingresa un correo electrónico válido."
-                    else "Please enter a valid email address."
+                    when {
+                        isEs -> "Por favor ingresa un correo electrónico válido."
+                        isFr -> "Veuillez saisir une adresse e-mail valide."
+                        else -> "Please enter a valid email address."
+                    }
                 )
             )
         }
         if (!isConfigured()) {
             return@withContext Result.failure(
                 IllegalStateException(
-                    if (isEs) "El servidor en la nube no está configurado."
-                    else "Cloud endpoint is not configured. Please set your secrets in AI Studio."
+                    when {
+                        isEs -> "El servidor en la nube no está configurado."
+                        isFr -> "Le serveur cloud n'est pas configuré."
+                        else -> "Cloud endpoint is not configured. Please set your secrets in AI Studio."
+                    }
                 )
             )
         }
@@ -97,10 +111,10 @@ object CloudBackupManager {
         val pwHash = hashPassword(password, cleanUser)
         val (isAvailable, conflictReason) = checkUsernameAvailability(cleanUser, targetEmail)
         if (!isAvailable) {
-            val err = conflictReason ?: if (isEs) {
-                "El usuario '$cleanUser' ya está ocupado. ¡Elige otro nombre de usuario!"
-            } else {
-                "The username '$cleanUser' is already taken by another gamer. Nobody else can use your username! Please choose a different username."
+            val err = conflictReason ?: when {
+                isEs -> "El usuario '$cleanUser' ya está ocupado. ¡Elige otro nombre de usuario!"
+                isFr -> "Le nom d'utilisateur « $cleanUser » est déjà pris ! Choisissez-en un autre."
+                else -> "The username '$cleanUser' is already taken by another gamer. Nobody else can use your username! Please choose a different username."
             }
             preferences.lastCloudBackupStatus = "❌ $err"
             return@withContext Result.failure(IllegalStateException(err))
@@ -179,10 +193,10 @@ object CloudBackupManager {
                             val errJson = runCatching { JSONObject(body) }.getOrNull()
                             val clean = (errJson?.optString("error_description", "") ?: "").ifBlank { errJson?.optString("msg", "") ?: "" }
                             lastAuthError = if (clean.contains("invalid login", ignoreCase = true) || clean.contains("invalid_grant", ignoreCase = true)) {
-                                if (isEs) {
-                                    "Ya existe una cuenta con '$targetEmail' y otra contraseña. Si es tuya, escribe tu contraseña o pulsa 'Iniciar Sesión'."
-                                } else {
-                                    "An account with email '$targetEmail' is already registered with a different password. If this is your account, please enter your correct password or tap 'Sign In'."
+                                when {
+                                    isEs -> "Ya existe una cuenta con '$targetEmail' y otra contraseña. Si es tuya, escribe tu contraseña o pulsa 'Iniciar Sesión'."
+                                    isFr -> "Un compte avec '$targetEmail' existe déjà avec un autre mot de passe. Saisissez votre mot de passe ou touchez « Se connecter »."
+                                    else -> "An account with email '$targetEmail' is already registered with a different password. If this is your account, please enter your correct password or tap 'Sign In'."
                                 }
                             } else clean
                         }
@@ -198,11 +212,17 @@ object CloudBackupManager {
             preferences.cloudAccountId = accountId
             preferences.cloudAccountPasswordHash = pwHash
             val note = if (targetEmail.contains("@lootdrop.app")) {
-                if (isEs) "Cuenta creada con el nombre '$cleanUser'. Inicia sesión con tus credenciales para activar la sincronización."
-                else "Account created with display name '$cleanUser'. Please sign in with your credentials to activate cloud sync."
+                when {
+                    isEs -> "Cuenta creada con el nombre '$cleanUser'. Inicia sesión con tus credenciales para activar la sincronización."
+                    isFr -> "Compte créé avec le nom « $cleanUser ». Connectez-vous avec vos identifiants pour activer la synchronisation."
+                    else -> "Account created with display name '$cleanUser'. Please sign in with your credentials to activate cloud sync."
+                }
             } else {
-                if (isEs) "Correo de verificación enviado a $targetEmail. Confirma tu correo para activar tu cuenta."
-                else "Verification email sent to $targetEmail. Please verify your email to finish activating your account."
+                when {
+                    isEs -> "Correo de verificación enviado a $targetEmail. Confirma tu correo para activar tu cuenta."
+                    isFr -> "E-mail de vérification envoyé à $targetEmail. Confirmez votre e-mail pour activer votre compte."
+                    else -> "Verification email sent to $targetEmail. Please verify your email to finish activating your account."
+                }
             }
             preferences.lastCloudBackupStatus = "✉️ $note"
             return@withContext Result.failure(IllegalStateException(note))
@@ -210,8 +230,11 @@ object CloudBackupManager {
 
         if (supabaseUrl.isNotBlank() && supabaseKey.isNotBlank() && tokenAcquired.isBlank()) {
             val err = lastAuthError.ifBlank {
-                if (isEs) "No se pudo conectar la cuenta en la nube. Revisa tus credenciales."
-                else "Could not connect cloud account. Please check your credentials."
+                when {
+                    isEs -> "No se pudo conectar la cuenta en la nube. Revisa tus credenciales."
+                    isFr -> "Impossible de connecter le compte cloud. Vérifiez vos identifiants."
+                    else -> "Could not connect cloud account. Please check your credentials."
+                }
             }
             preferences.lastCloudBackupStatus = "❌ $err"
             return@withContext Result.failure(IllegalStateException(err))
@@ -230,7 +253,11 @@ object CloudBackupManager {
         if (refreshTokenAcquired.isNotBlank()) preferences.cloudAccountRefreshToken = refreshTokenAcquired
 
         recordUsernameReservation(cleanUser, targetEmail, pwHash)
-        val successMsg = if (isEs) "¡Cuenta '$cleanUser' conectada con tu perfil!" else "Account '$cleanUser' connected with display name matching your profile!"
+        val successMsg = when {
+            isEs -> "¡Cuenta '$cleanUser' conectada con tu perfil!"
+            isFr -> "Compte « $cleanUser » connecté avec votre profil !"
+            else -> "Account '$cleanUser' connected with display name matching your profile!"
+        }
         preferences.lastCloudBackupStatus = "✅ $successMsg"
         Result.success(cleanUser)
     }
@@ -241,16 +268,30 @@ object CloudBackupManager {
         preferences: AppPreferences,
         emailInput: String = ""
     ): Result<String> = withContext(Dispatchers.IO) {
-        val isEs = preferences.appLanguage == AppLanguage.SPANISH
+        val lang = preferences.appLanguage
+        val isEs = lang == AppLanguage.SPANISH
+        val isFr = lang == AppLanguage.FRENCH
         val cleanIdentifier = usernameOrEmail.trim()
         if (cleanIdentifier.isBlank() || password.isBlank()) {
             return@withContext Result.failure(
-                IllegalArgumentException(if (isEs) "Se requieren usuario y contraseña." else "Username and password are required.")
+                IllegalArgumentException(
+                    when {
+                        isEs -> "Se requieren usuario y contraseña."
+                        isFr -> "Le nom d'utilisateur et le mot de passe sont requis."
+                        else -> "Username and password are required."
+                    }
+                )
             )
         }
         if (!isConfigured()) {
             return@withContext Result.failure(
-                IllegalStateException(if (isEs) "El servidor en la nube no está configurado." else "Cloud endpoint is not configured. Please set your secrets in AI Studio.")
+                IllegalStateException(
+                    when {
+                        isEs -> "El servidor en la nube no está configurado."
+                        isFr -> "Le serveur cloud n'est pas configuré."
+                        else -> "Cloud endpoint is not configured. Please set your secrets in AI Studio."
+                    }
+                )
             )
         }
 
@@ -297,9 +338,17 @@ object CloudBackupManager {
                             val cleanMsg = (errJson?.optString("error_description", "") ?: "").ifBlank { errJson?.optString("msg", "") ?: "" }
                             when {
                                 errCode == "email_not_confirmed" || cleanMsg.contains("Email not confirmed", ignoreCase = true) ->
-                                    failureReason = if (isEs) "Correo sin confirmar. Revisa tu bandeja de entrada." else "Email not confirmed. Please check your email inbox to confirm your account, or disable 'Confirm email' in Supabase Auth settings."
+                                    failureReason = when {
+                                        isEs -> "Correo sin confirmar. Revisa tu bandeja de entrada."
+                                        isFr -> "E-mail non confirmé. Vérifiez votre boîte de réception."
+                                        else -> "Email not confirmed. Please check your email inbox to confirm your account, or disable 'Confirm email' in Supabase Auth settings."
+                                    }
                                 cleanMsg.contains("invalid login", ignoreCase = true) || cleanMsg.contains("invalid_grant", ignoreCase = true) ->
-                                    if (failureReason.isBlank()) failureReason = if (isEs) "Credenciales inválidas. Verifica usuario, correo y contraseña." else "Invalid credentials. Please verify your username, email, and password."
+                                    if (failureReason.isBlank()) failureReason = when {
+                                        isEs -> "Credenciales inválidas. Verifica usuario, correo y contraseña."
+                                        isFr -> "Identifiants invalides. Vérifiez votre nom d'utilisateur, e-mail et mot de passe."
+                                        else -> "Invalid credentials. Please verify your username, email, and password."
+                                    }
                                 failureReason.isBlank() -> failureReason = cleanMsg
                             }
                         }
@@ -351,7 +400,11 @@ object CloudBackupManager {
                             val errJson = runCatching { JSONObject(body) }.getOrNull()
                             val cleanMsg = (errJson?.optString("error_description", "") ?: "").ifBlank { errJson?.optString("msg", "") ?: "" }
                             if (cleanMsg.contains("already registered", ignoreCase = true)) {
-                                failureReason = if (isEs) "Contraseña incorrecta para '$cleanIdentifier'. Inténtalo de nuevo." else "Incorrect password for '$cleanIdentifier'. Please check your password and try again."
+                                failureReason = when {
+                                    isEs -> "Contraseña incorrecta para '$cleanIdentifier'. Inténtalo de nuevo."
+                                    isFr -> "Mot de passe incorrect pour « $cleanIdentifier ». Veuillez réessayer."
+                                    else -> "Incorrect password for '$cleanIdentifier'. Please check your password and try again."
+                                }
                             } else if (cleanMsg.isNotBlank()) failureReason = cleanMsg
                         }
                     }
@@ -361,8 +414,11 @@ object CloudBackupManager {
 
         if (supabaseUrl.isNotBlank() && supabaseKey.isNotBlank() && tokenAcquired.isBlank()) {
             val err = failureReason.ifBlank {
-                if (isEs) "No se pudo iniciar sesión en la nube. Revisa tus credenciales."
-                else "Could not sign in to cloud account. Please check your username, email, and password."
+                when {
+                    isEs -> "No se pudo iniciar sesión en la nube. Revisa tus credenciales."
+                    isFr -> "Impossible de se connecter au cloud. Vérifiez vos identifiants."
+                    else -> "Could not sign in to cloud account. Please check your username, email, and password."
+                }
             }
             preferences.lastCloudBackupStatus = "❌ $err"
             return@withContext Result.failure(IllegalStateException(err))
@@ -383,15 +439,23 @@ object CloudBackupManager {
         if (refreshTokenAcquired.isNotBlank()) preferences.cloudAccountRefreshToken = refreshTokenAcquired
 
         recordUsernameReservation(cleanIdentifier, finalEmail, expectedPwHash)
-        val msg = if (isEs) "Sesión iniciada como '$cleanIdentifier'. Nube conectada." else "Signed in as '$cleanIdentifier'. Cloud Backup connected."
+        val msg = when {
+            isEs -> "Sesión iniciada como '$cleanIdentifier'. Nube conectada."
+            isFr -> "Connecté en tant que « $cleanIdentifier ». Sauvegarde cloud connectée."
+            else -> "Signed in as '$cleanIdentifier'. Cloud Backup connected."
+        }
         preferences.lastCloudBackupStatus = "✅ $msg"
         Result.success(cleanIdentifier)
     }
 
     fun signOut(preferences: AppPreferences) {
-        val isEs = preferences.appLanguage == AppLanguage.SPANISH
+        val lang = preferences.appLanguage
         preferences.clearCloudAccount()
-        preferences.lastCloudBackupStatus = if (isEs) "Sesión cerrada en la cuenta en la nube." else "Signed out of Cloud Account."
+        preferences.lastCloudBackupStatus = when (lang) {
+            AppLanguage.SPANISH -> "Sesión cerrada en la cuenta en la nube."
+            AppLanguage.FRENCH -> "Déconnecté du compte cloud."
+            AppLanguage.ENGLISH -> "Signed out of Cloud Account."
+        }
     }
 
     suspend fun uploadBackupToCloud(
@@ -399,14 +463,24 @@ object CloudBackupManager {
         database: AppDatabase,
         preferences: AppPreferences
     ): Result<String> = withContext(Dispatchers.IO) {
-        val isEs = preferences.appLanguage == AppLanguage.SPANISH
+        val lang = preferences.appLanguage
+        val isEs = lang == AppLanguage.SPANISH
+        val isFr = lang == AppLanguage.FRENCH
         if (!isConfigured()) {
-            val err = if (isEs) "Respaldo en la nube sin configurar." else "Cloud Backup not configured. Set supabase_URL, supabase_ANON_KEY, or CLOUD_BACKUP_URL in AI Studio Secrets."
+            val err = when {
+                isEs -> "Respaldo en la nube sin configurar."
+                isFr -> "Sauvegarde cloud non configurée."
+                else -> "Cloud Backup not configured. Set supabase_URL, supabase_ANON_KEY, or CLOUD_BACKUP_URL in AI Studio Secrets."
+            }
             preferences.lastCloudBackupStatus = "❌ $err"
             return@withContext Result.failure(IllegalStateException(err))
         }
         if (!preferences.isCloudAccountLoggedIn) {
-            val err = if (isEs) "Cuenta requerida. Inicia sesión para conectar tu respaldo." else "Account required. Please sign in to connect your backup."
+            val err = when {
+                isEs -> "Cuenta requerida. Inicia sesión para conectar tu respaldo."
+                isFr -> "Compte requis. Connectez-vous pour lier votre sauvegarde."
+                else -> "Account required. Please sign in to connect your backup."
+            }
             preferences.lastCloudBackupStatus = "🔒 $err"
             return@withContext Result.failure(IllegalStateException(err))
         }
@@ -563,16 +637,32 @@ object CloudBackupManager {
             val now = System.currentTimeMillis()
             preferences.lastCloudBackupTimestamp = now
             val timeFormatted = SimpleDateFormat("hh:mm a", preferences.appLanguage.locale).format(Date(now))
-            val statusText = if (isEs) "✅ Guardado en la nube para '$username' ($sizeKb KB) a las $timeFormatted" else "✅ $responseMessage at $timeFormatted"
+            val statusText = when {
+                isEs -> "✅ Guardado en la nube para '$username' ($sizeKb KB) a las $timeFormatted"
+                isFr -> "✅ Enregistré dans le cloud pour « $username » ($sizeKb Ko) à $timeFormatted"
+                else -> "✅ $responseMessage at $timeFormatted"
+            }
             preferences.lastCloudBackupStatus = statusText
             Result.success(statusText)
         } else {
             val cleanErr = when {
                 detailedError.isNotBlank() -> detailedError
-                token.isBlank() -> if (isEs) "Se requiere sesión activa. Inicia sesión de nuevo." else "Active cloud session required. Please tap 'Sign In' with your password to connect."
-                else -> if (isEs) "El servidor rechazó el respaldo en la nube." else "Cloud backup rejected. Please verify your Supabase credentials or endpoint permissions."
+                token.isBlank() -> when {
+                    isEs -> "Se requiere sesión activa. Inicia sesión de nuevo."
+                    isFr -> "Session cloud active requise. Veuillez vous reconnecter."
+                    else -> "Active cloud session required. Please tap 'Sign In' with your password to connect."
+                }
+                else -> when {
+                    isEs -> "El servidor rechazó el respaldo en la nube."
+                    isFr -> "Le serveur a refusé la sauvegarde cloud."
+                    else -> "Cloud backup rejected. Please verify your Supabase credentials or endpoint permissions."
+                }
             }
-            preferences.lastCloudBackupStatus = if (isEs) "❌ Error al subir: $cleanErr" else "❌ Upload failed: $cleanErr"
+            preferences.lastCloudBackupStatus = when {
+                isEs -> "❌ Error al subir: $cleanErr"
+                isFr -> "❌ Échec de l'envoi : $cleanErr"
+                else -> "❌ Upload failed: $cleanErr"
+            }
             Result.failure(IllegalStateException(cleanErr))
         }
     }
@@ -582,14 +672,24 @@ object CloudBackupManager {
         database: AppDatabase,
         preferences: AppPreferences
     ): Result<RestoreSummary> = withContext(Dispatchers.IO) {
-        val isEs = preferences.appLanguage == AppLanguage.SPANISH
+        val lang = preferences.appLanguage
+        val isEs = lang == AppLanguage.SPANISH
+        val isFr = lang == AppLanguage.FRENCH
         if (!isConfigured()) {
-            val err = if (isEs) "Respaldo en la nube sin configurar." else "Cloud Backup not configured. Set supabase_URL, supabase_ANON_KEY, or CLOUD_BACKUP_URL in AI Studio Secrets."
+            val err = when {
+                isEs -> "Respaldo en la nube sin configurar."
+                isFr -> "Sauvegarde cloud non configurée."
+                else -> "Cloud Backup not configured. Set supabase_URL, supabase_ANON_KEY, or CLOUD_BACKUP_URL in AI Studio Secrets."
+            }
             preferences.lastCloudBackupStatus = "❌ $err"
             return@withContext Result.failure(IllegalStateException(err))
         }
         if (!preferences.isCloudAccountLoggedIn) {
-            val err = if (isEs) "Inicia sesión en tu cuenta para encontrar tu respaldo." else "Please sign in to your cloud account to find your personal backup file."
+            val err = when {
+                isEs -> "Inicia sesión en tu cuenta para encontrar tu respaldo."
+                isFr -> "Connectez-vous à votre compte pour retrouver votre sauvegarde."
+                else -> "Please sign in to your cloud account to find your personal backup file."
+            }
             preferences.lastCloudBackupStatus = "🔒 $err"
             return@withContext Result.failure(IllegalStateException(err))
         }
@@ -676,7 +776,11 @@ object CloudBackupManager {
 
         val validJson = backupJson
         if (validJson.isNullOrBlank()) {
-            val err = if (isEs) "No se encontró respaldo en la nube para '$username'. ¡Sube uno primero!" else "No cloud backup found for account '$username'. You may need to backup first!"
+            val err = when {
+                isEs -> "No se encontró respaldo en la nube para '$username'. ¡Sube uno primero!"
+                isFr -> "Aucune sauvegarde cloud trouvée pour « $username ». Envoyez-en une d'abord !"
+                else -> "No cloud backup found for account '$username'. You may need to backup first!"
+            }
             preferences.lastCloudBackupStatus = "⚠️ $err"
             return@withContext Result.failure(IllegalStateException(err))
         }
@@ -686,10 +790,10 @@ object CloudBackupManager {
             database = database,
             preferences = preferences
         )
-        preferences.lastCloudBackupStatus = if (isEs) {
-            "✅ ¡Se restauraron ${summary.claimedRestoredCount} juegos y perfil para '$username'!"
-        } else {
-            "✅ Restored ${summary.claimedRestoredCount} games & profile for account '$username'!"
+        preferences.lastCloudBackupStatus = when {
+            isEs -> "✅ ¡Se restauraron ${summary.claimedRestoredCount} juegos y perfil para '$username'!"
+            isFr -> "✅ ${summary.claimedRestoredCount} jeux et le profil restaurés pour « $username » !"
+            else -> "✅ Restored ${summary.claimedRestoredCount} games & profile for account '$username'!"
         }
         Result.success(summary)
     }

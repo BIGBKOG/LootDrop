@@ -114,8 +114,16 @@ object PublicReviewsManager {
         isVerifiedClaimer: Boolean,
         isAppReview: Boolean = false
     ): Result<PublicReview> = withContext(Dispatchers.IO) {
-        val isEs = AppPreferences(context).appLanguage == AppLanguage.SPANISH
-        val cleanAuthor = authorName.trim().ifBlank { if (isEs) "Gamer Anónimo" else "Anonymous Gamer" }
+        val lang = AppPreferences(context).appLanguage
+        val isEs = lang == AppLanguage.SPANISH
+        val isFr = lang == AppLanguage.FRENCH
+        val cleanAuthor = authorName.trim().ifBlank {
+            when {
+                isEs -> "Gamer Anónimo"
+                isFr -> "Joueur Anonyme"
+                else -> "Anonymous Gamer"
+            }
+        }
         val cleanTitle = title.trim()
         val cleanComment = comment.trim()
         val isForApp = isAppReview || giveawayId == -1L || gameTitle.contains("LootDrop", ignoreCase = true)
@@ -124,12 +132,16 @@ object PublicReviewsManager {
             title = cleanTitle,
             comment = cleanComment,
             authorName = cleanAuthor,
-            isSpanish = isEs
+            language = lang
         )
         if (!moderation.isAllowed) {
             return@withContext Result.failure(
                 IllegalArgumentException(
-                    moderation.errorMessage ?: if (isEs) "La reseña contiene palabras prohibidas." else "Review contains blacklisted words."
+                    moderation.errorMessage ?: when {
+                        isEs -> "La reseña contiene palabras prohibidas."
+                        isFr -> "L'avis contient des mots interdits."
+                        else -> "Review contains blacklisted words."
+                    }
                 )
             )
         }
@@ -209,13 +221,21 @@ object PublicReviewsManager {
      * Marks a review as helpful, increments count, and uploads to R2.
      */
     suspend fun voteHelpful(context: Context, reviewId: String): Result<Int> = withContext(Dispatchers.IO) {
-        val isEs = AppPreferences(context).appLanguage == AppLanguage.SPANISH
+        val lang = AppPreferences(context).appLanguage
+        val isEs = lang == AppLanguage.SPANISH
+        val isFr = lang == AppLanguage.FRENCH
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val votedSet = prefs.getStringSet(KEY_HELPFUL_VOTED, mutableSetOf())?.toMutableSet() ?: mutableSetOf()
 
         if (votedSet.contains(reviewId)) {
             return@withContext Result.failure(
-                IllegalStateException(if (isEs) "Ya marcaste esta reseña como útil." else "You already marked this review as helpful.")
+                IllegalStateException(
+                    when {
+                        isEs -> "Ya marcaste esta reseña como útil."
+                        isFr -> "Vous avez déjà marqué cet avis comme utile."
+                        else -> "You already marked this review as helpful."
+                    }
+                )
             )
         }
 
@@ -223,7 +243,13 @@ object PublicReviewsManager {
         val index = reviews.indexOfFirst { it.id == reviewId }
         if (index == -1) {
             return@withContext Result.failure(
-                IllegalArgumentException(if (isEs) "Reseña no encontrada." else "Review not found.")
+                IllegalArgumentException(
+                    when {
+                        isEs -> "Reseña no encontrada."
+                        isFr -> "Avis introuvable."
+                        else -> "Review not found."
+                    }
+                )
             )
         }
 

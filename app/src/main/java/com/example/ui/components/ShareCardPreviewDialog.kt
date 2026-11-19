@@ -88,7 +88,7 @@ fun ShareCardPreviewDialog(
 ) {
     val context = LocalContext.current
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val coroutineScope = rememberCoroutineScope()
 
     var cardBitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -105,7 +105,11 @@ fun ShareCardPreviewDialog(
         } catch (e: Exception) {
             Toast.makeText(
                 context,
-                if (isEs) "No se pudo generar la tarjeta: ${e.message}" else "Failed to render share card: ${e.message}",
+                when (lang) {
+                    AppLanguage.SPANISH -> "No se pudo generar la tarjeta: ${e.message}"
+                    AppLanguage.FRENCH -> "Impossible de générer la carte : ${e.message}"
+                    AppLanguage.ENGLISH -> "Failed to render share card: ${e.message}"
+                },
                 Toast.LENGTH_SHORT
             ).show()
         } finally {
@@ -181,10 +185,10 @@ fun ShareCardPreviewDialog(
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = if (isEs) {
-                                    "Gráfico 16:9 listo para Discord, Reddit e Historias"
-                                } else {
-                                    "Instant 16:9 graphic for Discord, Reddit & Stories"
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "Gráfico 16:9 listo para Discord, Reddit e Historias"
+                                    AppLanguage.FRENCH -> "Visuel 16:9 prêt pour Discord, Reddit et Stories"
+                                    AppLanguage.ENGLISH -> "Instant 16:9 graphic for Discord, Reddit & Stories"
                                 },
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -224,7 +228,11 @@ fun ShareCardPreviewDialog(
                     if (bmp != null) {
                         Image(
                             bitmap = bmp.asImageBitmap(),
-                            contentDescription = if (isEs) "Tarjeta generada para ${item.title}" else "Rendered Share Card for ${item.title}",
+                            contentDescription = when (lang) {
+                                AppLanguage.SPANISH -> "Tarjeta generada para ${item.title}"
+                                AppLanguage.FRENCH -> "Carte générée pour ${item.title}"
+                                AppLanguage.ENGLISH -> "Rendered Share Card for ${item.title}"
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .aspectRatio(1200f / 675f)
@@ -249,7 +257,11 @@ fun ShareCardPreviewDialog(
                         }
                     } else {
                         Text(
-                            text = if (isEs) "No se pudo crear la tarjeta" else "Card generation failed",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "No se pudo crear la tarjeta"
+                                AppLanguage.FRENCH -> "Échec de la création de la carte"
+                                AppLanguage.ENGLISH -> "Card generation failed"
+                            },
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.error
                         )
@@ -269,7 +281,11 @@ fun ShareCardPreviewDialog(
                                 } catch (e: Exception) {
                                     Toast.makeText(
                                         context,
-                                        if (isEs) "Error al compartir: ${e.message}" else "Error sharing: ${e.message}",
+                                        when (lang) {
+                                            AppLanguage.SPANISH -> "Error al compartir: ${e.message}"
+                                            AppLanguage.FRENCH -> "Erreur de partage : ${e.message}"
+                                            AppLanguage.ENGLISH -> "Error sharing: ${e.message}"
+                                        },
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 } finally {
@@ -296,7 +312,14 @@ fun ShareCardPreviewDialog(
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(if (isEs) "Abriendo menú de compartir..." else "Launching Share Sheet...", fontSize = 14.sp)
+                        Text(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Abriendo menú de compartir..."
+                                AppLanguage.FRENCH -> "Ouverture du partage..."
+                                AppLanguage.ENGLISH -> "Launching Share Sheet..."
+                            },
+                            fontSize = 14.sp
+                        )
                     } else {
                         Icon(
                             imageVector = Icons.Default.Share,
@@ -305,7 +328,11 @@ fun ShareCardPreviewDialog(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (isEs) "Compartir Imagen (Discord / Historias / SMS)" else "Share Graphic (Discord / Stories / SMS)",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "Compartir Imagen (Discord / Historias / SMS)"
+                                AppLanguage.FRENCH -> "Partager l'image (Discord / Stories / SMS)"
+                                AppLanguage.ENGLISH -> "Share Graphic (Discord / Stories / SMS)"
+                            },
                             fontSize = 13.5.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -346,7 +373,19 @@ fun ShareCardPreviewDialog(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (isSaving) (if (isEs) "Guardando..." else "Saving...") else (if (isEs) "Guardar Imagen" else "Save Image"),
+                            text = if (isSaving) {
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Guardando..."
+                                    AppLanguage.FRENCH -> "Enregistrement..."
+                                    AppLanguage.ENGLISH -> "Saving..."
+                                }
+                            } else {
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Guardar Imagen"
+                                    AppLanguage.FRENCH -> "Enregistrer"
+                                    AppLanguage.ENGLISH -> "Save Image"
+                                }
+                            },
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -386,7 +425,7 @@ fun ShareCardPreviewDialog(
 }
 
 private suspend fun saveCardToGallery(context: Context, bitmap: Bitmap) = withContext(Dispatchers.IO) {
-    val isEs = AppStringsRegistry.forContext(context).language == AppLanguage.SPANISH
+    val lang = AppStringsRegistry.forContext(context).language
     try {
         val filename = "LootDrop_${System.currentTimeMillis()}.png"
         val values = ContentValues().apply {
@@ -408,7 +447,11 @@ private suspend fun saveCardToGallery(context: Context, bitmap: Bitmap) = withCo
             withContext(Dispatchers.Main) {
                 Toast.makeText(
                     context,
-                    if (isEs) "¡Guardada en Imágenes/LootDrop!" else "Saved to Pictures/LootDrop!",
+                    when (lang) {
+                        AppLanguage.SPANISH -> "¡Guardada en Imágenes/LootDrop!"
+                        AppLanguage.FRENCH -> "Enregistrée dans Images/LootDrop !"
+                        AppLanguage.ENGLISH -> "Saved to Pictures/LootDrop!"
+                    },
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -416,7 +459,11 @@ private suspend fun saveCardToGallery(context: Context, bitmap: Bitmap) = withCo
             withContext(Dispatchers.Main) {
                 Toast.makeText(
                     context,
-                    if (isEs) "No se pudo guardar en la galería" else "Unable to save image to gallery",
+                    when (lang) {
+                        AppLanguage.SPANISH -> "No se pudo guardar en la galería"
+                        AppLanguage.FRENCH -> "Impossible d'enregistrer dans la galerie"
+                        AppLanguage.ENGLISH -> "Unable to save image to gallery"
+                    },
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -425,7 +472,11 @@ private suspend fun saveCardToGallery(context: Context, bitmap: Bitmap) = withCo
         withContext(Dispatchers.Main) {
             Toast.makeText(
                 context,
-                if (isEs) "No se pudo guardar en la galería" else "Unable to save image to gallery",
+                when (lang) {
+                    AppLanguage.SPANISH -> "No se pudo guardar en la galería"
+                    AppLanguage.FRENCH -> "Impossible d'enregistrer dans la galerie"
+                    AppLanguage.ENGLISH -> "Unable to save image to gallery"
+                },
                 Toast.LENGTH_SHORT
             ).show()
         }

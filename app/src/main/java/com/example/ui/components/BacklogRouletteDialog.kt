@@ -100,7 +100,7 @@ fun BacklogRouletteDialog(
 ) {
     val context = LocalContext.current
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val lowEnd = LocalLowEndOptimization.current
     val coroutineScope = rememberCoroutineScope()
     val diceRotation = remember { Animatable(0f) }
@@ -232,7 +232,11 @@ fun BacklogRouletteDialog(
                         }
 
                         Text(
-                            text = if (isEs) "¡Backlog Conquistado! 🎉" else "Backlog Conquered! 🎉",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "¡Backlog Conquistado! 🎉"
+                                AppLanguage.FRENCH -> "Backlog conquis ! 🎉"
+                                AppLanguage.ENGLISH -> "Backlog Conquered! 🎉"
+                            },
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary,
@@ -240,10 +244,13 @@ fun BacklogRouletteDialog(
                         )
 
                         Text(
-                            text = if (isEs) {
-                                "No tienes juegos pendientes ni en progreso en tu biblioteca Todos+Pago. ¡Choca esos cinco! Consigue más juegos gratis en Descubrir o rejugar un clásico."
-                            } else {
-                                "You don't have any unplayed or in-progress games left in your All+Paid library. High five! Grab more free games from the Discover tab or replay an old favorite."
+                            text = when (lang) {
+                                AppLanguage.SPANISH ->
+                                    "No tienes juegos pendientes ni en progreso en tu biblioteca Todos+Pago. ¡Choca esos cinco! Consigue más juegos gratis en Descubrir o rejugar un clásico."
+                                AppLanguage.FRENCH ->
+                                    "Vous n'avez plus aucun jeu en attente ou en cours dans votre bibliothèque Tous+Payants. Bravo ! Récupérez d'autres jeux gratuits dans Découvrir ou rejouez à un classique."
+                                AppLanguage.ENGLISH ->
+                                    "You don't have any unplayed or in-progress games left in your All+Paid library. High five! Grab more free games from the Discover tab or replay an old favorite."
                             },
                             fontSize = 13.sp,
                             color = TextSecondary,
@@ -263,7 +270,14 @@ fun BacklogRouletteDialog(
                                 .padding(top = 12.dp)
                                 .height(46.dp)
                         ) {
-                            Text(if (isEs) "¡Genial!" else "Awesome", fontWeight = FontWeight.Bold)
+                            Text(
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "¡Genial!"
+                                    AppLanguage.FRENCH -> "Génial"
+                                    AppLanguage.ENGLISH -> "Awesome"
+                                },
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 } else {
@@ -274,16 +288,20 @@ fun BacklogRouletteDialog(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = if (isEs) "¿Qué Jugar Ahora?" else "What To Play Next",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "¿Qué Jugar Ahora?"
+                                AppLanguage.FRENCH -> "À quoi jouer ensuite ?"
+                                AppLanguage.ENGLISH -> "What To Play Next"
+                            },
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Black,
                             color = TextPrimary
                         )
                         Text(
-                            text = if (isEs) {
-                                "¡Adiós indecisión! El destino eligió este título entre tus ${candidates.size} juegos pendientes:"
-                            } else {
-                                "Analysis paralysis solved! Fate picked this candidate from your ${candidates.size} backlog titles:"
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "¡Adiós indecisión! El destino eligió este título entre tus ${candidates.size} juegos pendientes:"
+                                AppLanguage.FRENCH -> "Fini l'indécision ! Le destin a choisi ce titre parmi vos ${candidates.size} jeux en attente :"
+                                AppLanguage.ENGLISH -> "Analysis paralysis solved! Fate picked this candidate from your ${candidates.size} backlog titles:"
                             },
                             fontSize = 12.sp,
                             color = TextSecondary,
@@ -426,9 +444,17 @@ fun BacklogRouletteDialog(
                                     ) {
                                         Text(
                                             text = if (targetGame.playStatus == PlayStatus.PLAYING) {
-                                                if (isEs) "🎮 En Progreso" else "🎮 In Progress"
+                                                when (lang) {
+                                                    AppLanguage.SPANISH -> "🎮 En Progreso"
+                                                    AppLanguage.FRENCH -> "🎮 En cours"
+                                                    AppLanguage.ENGLISH -> "🎮 In Progress"
+                                                }
                                             } else {
-                                                if (isEs) "⏳ Sin Jugar" else "⏳ Unplayed"
+                                                when (lang) {
+                                                    AppLanguage.SPANISH -> "⏳ Sin Jugar"
+                                                    AppLanguage.FRENCH -> "⏳ Non joué"
+                                                    AppLanguage.ENGLISH -> "⏳ Unplayed"
+                                                }
                                             },
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.Bold,
@@ -552,10 +578,10 @@ fun BacklogRouletteDialog(
                                                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF10B981))
                                                 ) {
                                                     Text(
-                                                        text = if (isEs) {
-                                                            "Gratis (${targetGame.giveaway.worth})"
-                                                        } else {
-                                                            "Claimed Free (${targetGame.giveaway.worth})"
+                                                        text = when (lang) {
+                                                            AppLanguage.SPANISH -> "Gratis (${targetGame.giveaway.worth})"
+                                                            AppLanguage.FRENCH -> "Obtenu gratuitement (${targetGame.giveaway.worth})"
+                                                            AppLanguage.ENGLISH -> "Claimed Free (${targetGame.giveaway.worth})"
                                                         },
                                                         fontSize = 10.sp,
                                                         fontWeight = FontWeight.SemiBold,
@@ -631,7 +657,11 @@ fun BacklogRouletteDialog(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = if (isEs) "Abrir y Jugar" else "Launch & Play",
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "Abrir y Jugar"
+                                    AppLanguage.FRENCH -> "Lancer et jouer"
+                                    AppLanguage.ENGLISH -> "Launch & Play"
+                                },
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.ExtraBold
                             )

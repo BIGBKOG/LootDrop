@@ -65,7 +65,7 @@ internal fun CalendarHeroBanner(
     reducedMotion: Boolean
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val primaryColor = MaterialTheme.colorScheme.primary
     val secondaryColor = MaterialTheme.colorScheme.secondary
     val surfaceHigh = MaterialTheme.colorScheme.surfaceContainerHigh
@@ -129,7 +129,11 @@ internal fun CalendarHeroBanner(
 
                     Column {
                         Text(
-                            text = if (isEs) "RADAR DE EXPIRACIÓN" else "EXPIRING GAMES RADAR",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "RADAR DE EXPIRACIÓN"
+                                AppLanguage.FRENCH -> "RADAR D'EXPIRATION"
+                                AppLanguage.ENGLISH -> "EXPIRING GAMES RADAR"
+                            },
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Black,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -141,10 +145,10 @@ internal fun CalendarHeroBanner(
                             exit = ExpressiveMotion.expressiveCollapseExit(reducedMotion)
                         ) {
                             Text(
-                                text = if (isEs) {
-                                    "$totalExpiringCount juego${if (totalExpiringCount != 1) "s" else ""} por vencer en próx. 14 días"
-                                } else {
-                                    "$totalExpiringCount game${if (totalExpiringCount != 1) "s" else ""} expiring in next 14 days"
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "$totalExpiringCount juego${if (totalExpiringCount != 1) "s" else ""} por vencer en próx. 14 días"
+                                    AppLanguage.FRENCH -> "$totalExpiringCount jeu${if (totalExpiringCount != 1) "x" else ""} expirant sous 14 jours"
+                                    AppLanguage.ENGLISH -> "$totalExpiringCount game${if (totalExpiringCount != 1) "s" else ""} expiring in next 14 days"
                                 },
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -167,7 +171,11 @@ internal fun CalendarHeroBanner(
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = if (isEs) String.format(Locale.US, "$%.2f GRATIS", totalValueUsd) else String.format(Locale.US, "$%.2f FREE", totalValueUsd),
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> String.format(Locale.US, "$%.2f GRATIS", totalValueUsd)
+                                AppLanguage.FRENCH -> String.format(Locale.US, "$%.2f GRATUIT", totalValueUsd)
+                                AppLanguage.ENGLISH -> String.format(Locale.US, "$%.2f FREE", totalValueUsd)
+                            },
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = NeonGreen
@@ -177,9 +185,17 @@ internal fun CalendarHeroBanner(
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowDown,
                         contentDescription = if (isCompact) {
-                            if (isEs) "Mostrar calendario" else "Show calendar strip"
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Mostrar calendario"
+                                AppLanguage.FRENCH -> "Afficher le calendrier"
+                                AppLanguage.ENGLISH -> "Show calendar strip"
+                            }
                         } else {
-                            if (isEs) "Ocultar calendario" else "Hide calendar strip"
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Ocultar calendario"
+                                AppLanguage.FRENCH -> "Masquer le calendrier"
+                                AppLanguage.ENGLISH -> "Hide calendar strip"
+                            }
                         },
                         tint = primaryColor,
                         modifier = Modifier
@@ -320,7 +336,7 @@ internal fun CalendarEmptyState(
     onResetFilter: () -> Unit
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -355,7 +371,11 @@ internal fun CalendarEmptyState(
 
             Text(
                 text = if (selectedDate != null) {
-                    if (isEs) "Sin Expiraciones en esta Fecha" else "No Expirations on this Date"
+                    when (lang) {
+                        AppLanguage.SPANISH -> "Sin Expiraciones en esta Fecha"
+                        AppLanguage.FRENCH -> "Aucune Expiration à cette Date"
+                        AppLanguage.ENGLISH -> "No Expirations on this Date"
+                    }
                 } else {
                     s.home.calendarEmptyTitle
                 },

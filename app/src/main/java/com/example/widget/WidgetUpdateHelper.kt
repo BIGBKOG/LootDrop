@@ -181,7 +181,7 @@ object WidgetUpdateHelper {
     fun buildLatestDropRemoteViews(context: Context, appWidgetId: Int): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_latest_drop)
         val s = AppStringsRegistry.forContext(context)
-        val isEs = s.language == AppLanguage.SPANISH
+        val lang = s.language
         applyLatestStaticLabels(context, views)
         views.setImageViewResource(R.id.widget_game_image, R.drawable.widget_image_placeholder)
 
@@ -210,9 +210,30 @@ object WidgetUpdateHelper {
         views.setOnClickPendingIntent(R.id.widget_root_latest, openAppPending)
 
         views.setTextViewText(R.id.widget_game_title, s.system.widgetLoadingDrops)
-        views.setTextViewText(R.id.widget_platform_badge, if (isEs) "PC / Consola" else "PC / Console")
-        views.setTextViewText(R.id.widget_original_price, if (isEs) "GRATIS" else "FREE")
-        views.setTextViewText(R.id.widget_metascore, if (isEs) "★ NUEVO" else "★ NEW")
+        views.setTextViewText(
+            R.id.widget_platform_badge,
+            when (lang) {
+                AppLanguage.SPANISH -> "PC / Consola"
+                AppLanguage.FRENCH -> "PC / Console"
+                AppLanguage.ENGLISH -> "PC / Console"
+            }
+        )
+        views.setTextViewText(
+            R.id.widget_original_price,
+            when (lang) {
+                AppLanguage.SPANISH -> "GRATIS"
+                AppLanguage.FRENCH -> "GRATUIT"
+                AppLanguage.ENGLISH -> "FREE"
+            }
+        )
+        views.setTextViewText(
+            R.id.widget_metascore,
+            when (lang) {
+                AppLanguage.SPANISH -> "★ NUEVO"
+                AppLanguage.FRENCH -> "★ NOUVEAU"
+                AppLanguage.ENGLISH -> "★ NEW"
+            }
+        )
 
         return views
     }

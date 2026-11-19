@@ -107,7 +107,7 @@ fun ProfileDialog(
     val context = LocalContext.current
     val s = LocalAppStrings.current
     val lowEnd = LocalLowEndOptimization.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     var nameInput by remember(profile.name) { mutableStateOf(profile.name) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var shouldRemoveAvatar by remember { mutableStateOf(false) }
@@ -187,7 +187,11 @@ fun ProfileDialog(
                                 color = TextPrimary
                             )
                             Text(
-                                text = if (isEs) "Guardado localmente y en respaldos JSON" else "Stored locally & in JSON backups",
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "Guardado localmente y en respaldos JSON"
+                                    AppLanguage.FRENCH -> "Stocké localement et dans les sauvegardes JSON"
+                                    AppLanguage.ENGLISH -> "Stored locally & in JSON backups"
+                                },
                                 fontSize = 11.sp,
                                 color = TextSecondary
                             )
@@ -236,7 +240,11 @@ fun ProfileDialog(
                         }
                         AsyncImage(
                             model = pendingRequest,
-                            contentDescription = if (isEs) "Foto seleccionada" else "Selected Photo",
+                            contentDescription = when (lang) {
+                                AppLanguage.SPANISH -> "Foto seleccionada"
+                                AppLanguage.FRENCH -> "Photo sélectionnée"
+                                AppLanguage.ENGLISH -> "Selected Photo"
+                            },
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize().clip(CircleShape)
                         )
@@ -253,7 +261,11 @@ fun ProfileDialog(
                         }
                         AsyncImage(
                             model = avatarRequest,
-                            contentDescription = if (isEs) "Foto de perfil" else "Profile Photo",
+                            contentDescription = when (lang) {
+                                AppLanguage.SPANISH -> "Foto de perfil"
+                                AppLanguage.FRENCH -> "Photo de profil"
+                                AppLanguage.ENGLISH -> "Profile Photo"
+                            },
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize().clip(CircleShape)
                         )
@@ -267,7 +279,11 @@ fun ProfileDialog(
                     } else {
                         Icon(
                             imageVector = Icons.Default.Person,
-                            contentDescription = if (isEs) "Avatar por defecto" else "Default Avatar",
+                            contentDescription = when (lang) {
+                                AppLanguage.SPANISH -> "Avatar por defecto"
+                                AppLanguage.FRENCH -> "Avatar par défaut"
+                                AppLanguage.ENGLISH -> "Default Avatar"
+                            },
                             tint = NeonCyan.copy(alpha = 0.8f),
                             modifier = Modifier.size(48.dp)
                         )
@@ -451,7 +467,11 @@ fun ProfileDialog(
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Text(
-                                    text = if (isEs) "TROFEOS DE STEAM" else "STEAM TROPHIES",
+                                    text = when (lang) {
+                                        AppLanguage.SPANISH -> "TROFEOS DE STEAM"
+                                        AppLanguage.FRENCH -> "TROPHÉES STEAM"
+                                        AppLanguage.ENGLISH -> "STEAM TROPHIES"
+                                    },
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = Color(0xFFFFD700),
@@ -487,9 +507,17 @@ fun ProfileDialog(
                                             Spacer(modifier = Modifier.width(3.dp))
                                             Text(
                                                 text = if (profile.hasCustomTrophySelection) {
-                                                    if (isEs) "Editar (${displayedTrophies.size})" else "Edit (${displayedTrophies.size})"
+                                                    when (lang) {
+                                                        AppLanguage.SPANISH -> "Editar (${displayedTrophies.size})"
+                                                        AppLanguage.FRENCH -> "Modifier (${displayedTrophies.size})"
+                                                        AppLanguage.ENGLISH -> "Edit (${displayedTrophies.size})"
+                                                    }
                                                 } else {
-                                                    if (isEs) "Elegir" else "Choose"
+                                                    when (lang) {
+                                                        AppLanguage.SPANISH -> "Elegir"
+                                                        AppLanguage.FRENCH -> "Choisir"
+                                                        AppLanguage.ENGLISH -> "Choose"
+                                                    }
                                                 },
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
@@ -508,9 +536,17 @@ fun ProfileDialog(
                                         Text(
                                             text = if (steamTrophies.isNotEmpty()) {
                                                 if (profile.hasCustomTrophySelection) {
-                                                    if (isEs) "${displayedTrophies.size} Mostrados" else "${displayedTrophies.size} Displayed"
+                                                    when (lang) {
+                                                        AppLanguage.SPANISH -> "${displayedTrophies.size} Mostrados"
+                                                        AppLanguage.FRENCH -> "${displayedTrophies.size} Affichés"
+                                                        AppLanguage.ENGLISH -> "${displayedTrophies.size} Displayed"
+                                                    }
                                                 } else {
-                                                    if (isEs) "${steamTrophies.size} Desbloqueados" else "${steamTrophies.size} Unlocked"
+                                                    when (lang) {
+                                                        AppLanguage.SPANISH -> "${steamTrophies.size} Desbloqueados"
+                                                        AppLanguage.FRENCH -> "${steamTrophies.size} Débloqués"
+                                                        AppLanguage.ENGLISH -> "${steamTrophies.size} Unlocked"
+                                                    }
                                                 }
                                             } else s.library.steamLinkedBadge,
                                             fontSize = 10.sp,
@@ -572,7 +608,11 @@ fun ProfileDialog(
                                                     .padding(horizontal = 7.dp, vertical = 2.dp)
                                             ) {
                                                 Text(
-                                                    text = if (isEs) "💎 $mythicCount Mítico" else "💎 $mythicCount Mythic",
+                                                    text = when (lang) {
+                                                        AppLanguage.SPANISH -> "💎 $mythicCount Mítico"
+                                                        AppLanguage.FRENCH -> "💎 $mythicCount Mythique"
+                                                        AppLanguage.ENGLISH -> "💎 $mythicCount Mythic"
+                                                    },
                                                     fontSize = 10.sp,
                                                     fontWeight = FontWeight.ExtraBold,
                                                     color = Color(0xFFE040FB)
@@ -588,7 +628,11 @@ fun ProfileDialog(
                                                     .padding(horizontal = 7.dp, vertical = 2.dp)
                                             ) {
                                                 Text(
-                                                    text = if (isEs) "🥇 $goldCount Oro" else "🥇 $goldCount Gold",
+                                                    text = when (lang) {
+                                                        AppLanguage.SPANISH -> "🥇 $goldCount Oro"
+                                                        AppLanguage.FRENCH -> "🥇 $goldCount Or"
+                                                        AppLanguage.ENGLISH -> "🥇 $goldCount Gold"
+                                                    },
                                                     fontSize = 10.sp,
                                                     fontWeight = FontWeight.ExtraBold,
                                                     color = Color(0xFFFFD700)
@@ -604,7 +648,11 @@ fun ProfileDialog(
                                                     .padding(horizontal = 7.dp, vertical = 2.dp)
                                             ) {
                                                 Text(
-                                                    text = if (isEs) "🥈 $silverCount Plata" else "🥈 $silverCount Silver",
+                                                    text = when (lang) {
+                                                        AppLanguage.SPANISH -> "🥈 $silverCount Plata"
+                                                        AppLanguage.FRENCH -> "🥈 $silverCount Argent"
+                                                        AppLanguage.ENGLISH -> "🥈 $silverCount Silver"
+                                                    },
                                                     fontSize = 10.sp,
                                                     fontWeight = FontWeight.Bold,
                                                     color = Color(0xFFCFD8DC)
@@ -622,7 +670,11 @@ fun ProfileDialog(
                                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                                         ) {
                                             Text(
-                                                text = if (isEs) "⭐ Vitrina Propia" else "⭐ Custom Showcase",
+                                                text = when (lang) {
+                                                    AppLanguage.SPANISH -> "⭐ Vitrina Propia"
+                                                    AppLanguage.FRENCH -> "⭐ Vitrine perso"
+                                                    AppLanguage.ENGLISH -> "⭐ Custom Showcase"
+                                                },
                                                 fontSize = 9.5.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = NeonGreen
@@ -647,7 +699,11 @@ fun ProfileDialog(
                                             verticalArrangement = Arrangement.spacedBy(6.dp)
                                         ) {
                                             Text(
-                                                text = if (isEs) "Sin trofeos elegidos en tu vitrina" else "No trophies chosen for your showcase",
+                                                text = when (lang) {
+                                                    AppLanguage.SPANISH -> "Sin trofeos elegidos en tu vitrina"
+                                                    AppLanguage.FRENCH -> "Aucun trophée sélectionné pour votre vitrine"
+                                                    AppLanguage.ENGLISH -> "No trophies chosen for your showcase"
+                                                },
                                                 fontSize = 12.sp,
                                                 color = TextSecondary,
                                                 fontWeight = FontWeight.SemiBold
@@ -688,7 +744,11 @@ fun ProfileDialog(
                                     verticalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     Text(
-                                        text = if (isEs) "Steam vinculado (${steamUserId.take(8)}...), pero los trofeos aún no se han sincronizado." else "Steam linked (${steamUserId.take(8)}...), but trophies haven't synced yet.",
+                                        text = when (lang) {
+                                            AppLanguage.SPANISH -> "Steam vinculado (${steamUserId.take(8)}...), pero los trofeos aún no se han sincronizado."
+                                            AppLanguage.FRENCH -> "Steam lié (${steamUserId.take(8)}...), mais les trophées ne sont pas encore synchronisés."
+                                            AppLanguage.ENGLISH -> "Steam linked (${steamUserId.take(8)}...), but trophies haven't synced yet."
+                                        },
                                         fontSize = 11.sp,
                                         color = TextSecondary,
                                         textAlign = TextAlign.Center
@@ -839,9 +899,15 @@ private fun ProfileTrophyCard(trophy: SteamAchievementEntity) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 val s = LocalAppStrings.current
-                val isEs = s.language == AppLanguage.SPANISH
+                val lang = s.language
                 Text(
-                    text = trophy.gameName.ifBlank { if (isEs) "Juego de Steam" else "Steam Game" },
+                    text = trophy.gameName.ifBlank {
+                        when (lang) {
+                            AppLanguage.SPANISH -> "Juego de Steam"
+                            AppLanguage.FRENCH -> "Jeu Steam"
+                            AppLanguage.ENGLISH -> "Steam Game"
+                        }
+                    },
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextSecondary,

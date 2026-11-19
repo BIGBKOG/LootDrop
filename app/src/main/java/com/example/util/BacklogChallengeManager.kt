@@ -271,23 +271,26 @@ object BacklogChallengeManager {
         weekKey: String = getCurrentWeekKey(),
         language: AppLanguage = AppLanguage.ENGLISH
     ): String {
-        val isEs = language == AppLanguage.SPANISH
         return try {
             val cal = getCalendarForWeek(weekKey)
             val relativeWeekNum = getRelativeWeekNumber(weekKey)
-            val dateLocale = if (isEs) Locale("es", "ES") else Locale.US
+            val dateLocale = language.locale
             val startFormat = SimpleDateFormat("MMM d", dateLocale)
             val endFormat = SimpleDateFormat("MMM d", dateLocale)
             val startDateStr = startFormat.format(cal.time)
             cal.add(Calendar.DAY_OF_WEEK, 6)
             val endDateStr = endFormat.format(cal.time)
-            if (isEs) {
-                "Semana $relativeWeekNum ($startDateStr – $endDateStr)"
-            } else {
-                "Week $relativeWeekNum ($startDateStr – $endDateStr)"
+            when (language) {
+                AppLanguage.SPANISH -> "Semana $relativeWeekNum ($startDateStr – $endDateStr)"
+                AppLanguage.FRENCH -> "Semaine $relativeWeekNum ($startDateStr – $endDateStr)"
+                AppLanguage.ENGLISH -> "Week $relativeWeekNum ($startDateStr – $endDateStr)"
             }
         } catch (_: Exception) {
-            if (isEs) "Reto Semanal de Backlog" else "Weekly Backlog Challenge"
+            when (language) {
+                AppLanguage.SPANISH -> "Reto Semanal de Backlog"
+                AppLanguage.FRENCH -> "Défi Backlog Hebdo"
+                AppLanguage.ENGLISH -> "Weekly Backlog Challenge"
+            }
         }
     }
 

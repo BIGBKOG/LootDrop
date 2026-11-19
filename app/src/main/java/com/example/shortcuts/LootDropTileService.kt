@@ -51,10 +51,18 @@ class LootDropTileService : TileService() {
 
     private fun updateTileState() {
         val tile = qsTile ?: return
-        val isEs = com.example.i18n.AppStringsRegistry.forContext(this).language == com.example.i18n.AppLanguage.SPANISH
+        val lang = com.example.i18n.AppStringsRegistry.forContext(this).language
         tile.state = Tile.STATE_ACTIVE
-        tile.label = if (isEs) "Drops Gratis" else "Free Drops"
-        tile.subtitle = if (isEs) "Radar Hoy" else "Today's Radar"
+        tile.label = when (lang) {
+            com.example.i18n.AppLanguage.SPANISH -> "Drops Gratis"
+            com.example.i18n.AppLanguage.FRENCH -> "Drops Gratuits"
+            com.example.i18n.AppLanguage.ENGLISH -> "Free Drops"
+        }
+        tile.subtitle = when (lang) {
+            com.example.i18n.AppLanguage.SPANISH -> "Radar Hoy"
+            com.example.i18n.AppLanguage.FRENCH -> "Radar du jour"
+            com.example.i18n.AppLanguage.ENGLISH -> "Today's Radar"
+        }
         tile.icon = Icon.createWithResource(this, R.drawable.ic_stat_gamepad)
         tile.updateTile()
     }

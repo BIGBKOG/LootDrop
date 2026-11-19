@@ -64,12 +64,12 @@ import com.example.ui.theme.SteamBlue
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.XboxGreen
 
-private enum class AlertSubMenu(val shortName: String, val spanishName: String) {
-    ALL("All", "Todo"),
-    STORES("Stores", "Tiendas"),
-    RULES("Rules", "Reglas"),
-    AUDIO("Sound & Timing", "Sonido y Horario"),
-    PREVIEW("Preview", "Vista")
+private enum class AlertSubMenu(val shortName: String, val spanishName: String, val frenchName: String) {
+    ALL("All", "Todo", "Tout"),
+    STORES("Stores", "Tiendas", "Boutiques"),
+    RULES("Rules", "Reglas", "Règles"),
+    AUDIO("Sound & Timing", "Sonido y Horario", "Son & Horaires"),
+    PREVIEW("Preview", "Vista", "Aperçu")
 }
 
 @Composable
@@ -78,7 +78,7 @@ fun AlertsSettingsCategoryContent(
     modifier: Modifier = Modifier
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val context = LocalContext.current
     val isNotificationsEnabled by viewModel.isNotificationsEnabled.collectAsState()
     val isNotifyPlayStation by viewModel.isNotifyPlayStation.collectAsState()
@@ -110,56 +110,116 @@ fun AlertsSettingsCategoryContent(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         val msg = if (isGranted) {
-            if (isEs) "¡Permiso de notificaciones concedido!" else "Notification permission granted!"
+            when (lang) {
+                AppLanguage.SPANISH -> "¡Permiso de notificaciones concedido!"
+                AppLanguage.FRENCH -> "Autorisation de notification accordée !"
+                AppLanguage.ENGLISH -> "Notification permission granted!"
+            }
         } else {
-            if (isEs) "Permiso denegado. Actívalo en los ajustes del sistema." else "Permission denied. Enable in device settings."
+            when (lang) {
+                AppLanguage.SPANISH -> "Permiso denegado. Actívalo en los ajustes del sistema."
+                AppLanguage.FRENCH -> "Autorisation refusée. Activez-la dans les paramètres du système."
+                AppLanguage.ENGLISH -> "Permission denied. Enable in device settings."
+            }
         }
         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
     }
 
     val storeSpecs = listOf(
         StoreAlertSpec(
-            if (isEs) "Ofertas y Drops PlayStation" else "PlayStation Deals & Drops",
-            if (isEs) "Juegos 100% gratis y botín para PS5 y PS4" else "PS5 & PS4 100% discount free games & loot",
+            when (lang) {
+                AppLanguage.SPANISH -> "Ofertas y Drops PlayStation"
+                AppLanguage.FRENCH -> "Offres et Drops PlayStation"
+                AppLanguage.ENGLISH -> "PlayStation Deals & Drops"
+            },
+            when (lang) {
+                AppLanguage.SPANISH -> "Juegos 100% gratis y botín para PS5 y PS4"
+                AppLanguage.FRENCH -> "Jeux et butins 100 % gratuits pour PS5 et PS4"
+                AppLanguage.ENGLISH -> "PS5 & PS4 100% discount free games & loot"
+            },
             PlayStationBlue, isNotifyPlayStation
         ) { viewModel.setNotifyPlayStation(it) },
         StoreAlertSpec(
-            if (isEs) "Ofertas y Drops Xbox" else "Xbox Deals & Drops",
-            if (isEs) "Juegos y claves gratis de Series X|S y Xbox One" else "Series X|S & Xbox One free games & keys",
+            when (lang) {
+                AppLanguage.SPANISH -> "Ofertas y Drops Xbox"
+                AppLanguage.FRENCH -> "Offres et Drops Xbox"
+                AppLanguage.ENGLISH -> "Xbox Deals & Drops"
+            },
+            when (lang) {
+                AppLanguage.SPANISH -> "Juegos y claves gratis de Series X|S y Xbox One"
+                AppLanguage.FRENCH -> "Jeux et clés gratuits Series X|S et Xbox One"
+                AppLanguage.ENGLISH -> "Series X|S & Xbox One free games & keys"
+            },
             XboxGreen, isNotifyXbox
         ) { viewModel.setNotifyXbox(it) },
         StoreAlertSpec(
             "Nintendo Switch eShop",
-            if (isEs) "Ofertas 100% gratis y drops de Switch" else "Switch 100% discount freebies & drops",
+            when (lang) {
+                AppLanguage.SPANISH -> "Ofertas 100% gratis y drops de Switch"
+                AppLanguage.FRENCH -> "Jeux et drops 100 % gratuits sur Switch"
+                AppLanguage.ENGLISH -> "Switch 100% discount freebies & drops"
+            },
             NintendoRed, isNotifyNintendo
         ) { viewModel.setNotifyNintendo(it) },
         StoreAlertSpec(
-            if (isEs) "Promociones Gratis de Steam" else "Steam Free Promotions",
-            if (isEs) "Juegos gratis de Steam y claves 100% rebajadas" else "Steam store free games & 100% off keys",
+            when (lang) {
+                AppLanguage.SPANISH -> "Promociones Gratis de Steam"
+                AppLanguage.FRENCH -> "Promotions Gratuites Steam"
+                AppLanguage.ENGLISH -> "Steam Free Promotions"
+            },
+            when (lang) {
+                AppLanguage.SPANISH -> "Juegos gratis de Steam y claves 100% rebajadas"
+                AppLanguage.FRENCH -> "Jeux gratuits Steam et clés à -100 %"
+                AppLanguage.ENGLISH -> "Steam store free games & 100% off keys"
+            },
             SteamBlue, isNotifySteam
         ) { viewModel.setNotifySteam(it) },
         StoreAlertSpec(
             "Epic Games Store",
-            if (isEs) "Juegos gratis semanales y títulos misteriosos" else "Weekly free games & mystery vault titles",
+            when (lang) {
+                AppLanguage.SPANISH -> "Juegos gratis semanales y títulos misteriosos"
+                AppLanguage.FRENCH -> "Jeux gratuits hebdomadaires et titres mystères"
+                AppLanguage.ENGLISH -> "Weekly free games & mystery vault titles"
+            },
             EpicGamesBlue, isNotifyEpic
         ) { viewModel.setNotifyEpic(it) },
         StoreAlertSpec(
-            "GOG.com Sin DRM",
-            if (isEs) "Juegos clásicos e indies sin DRM gratis" else "DRM-free classic and indie giveaways",
+            when (lang) {
+                AppLanguage.SPANISH -> "GOG.com Sin DRM"
+                AppLanguage.FRENCH -> "GOG.com Sans DRM"
+                AppLanguage.ENGLISH -> "GOG.com DRM-Free"
+            },
+            when (lang) {
+                AppLanguage.SPANISH -> "Juegos clásicos e indies sin DRM gratis"
+                AppLanguage.FRENCH -> "Jeux classiques et indés sans DRM gratuits"
+                AppLanguage.ENGLISH -> "DRM-free classic and indie giveaways"
+            },
             GogPurple, isNotifyGog
         ) { viewModel.setNotifyGog(it) },
         StoreAlertSpec(
             "Google Play / Android",
-            if (isEs) "Juegos móviles Android, apps y packs dentro del juego" else "Android mobile games, apps & in-game packs",
+            when (lang) {
+                AppLanguage.SPANISH -> "Juegos móviles Android, apps y packs dentro del juego"
+                AppLanguage.FRENCH -> "Jeux mobiles Android, apps et packs en jeu"
+                AppLanguage.ENGLISH -> "Android mobile games, apps & in-game packs"
+            },
             Color(0xFF3DDC84), isNotifyAndroid
         ) { viewModel.setNotifyAndroid(it) },
         StoreAlertSpec(
             "Apple App Store / iOS",
-            if (isEs) "Juegos gratis y ofertas para iPhone y iPad" else "iOS (iPhone & iPad) free games & giveaways",
+            when (lang) {
+                AppLanguage.SPANISH -> "Juegos gratis y ofertas para iPhone y iPad"
+                AppLanguage.FRENCH -> "Jeux gratuits et offres pour iPhone et iPad"
+                AppLanguage.ENGLISH -> "iOS (iPhone & iPad) free games & giveaways"
+            },
             Color(0xFF007AFF), isNotifyIos
         ) { viewModel.setNotifyIos(it) },
         StoreAlertSpec(
-            if (isEs) "Otros Launchers de PC" else "Other PC Launchers",
+            when (lang) {
+                AppLanguage.SPANISH -> "Otros Launchers de PC"
+                AppLanguage.FRENCH -> "Autres Launchers PC"
+                AppLanguage.ENGLISH -> "Other PC Launchers"
+            },
             "Ubisoft, itch.io, EA App, Prime Gaming",
             NeonGreen, isNotifyOthers
         ) { viewModel.setNotifyOthers(it) }
@@ -191,7 +251,11 @@ fun AlertsSettingsCategoryContent(
                         modifier = Modifier.padding(horizontal = 12.dp)
                     ) {
                         Text(
-                            text = if (isEs) subMenu.spanishName else subMenu.shortName,
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> subMenu.spanishName
+                                AppLanguage.FRENCH -> subMenu.frenchName
+                                AppLanguage.ENGLISH -> subMenu.shortName
+                            },
                             fontSize = 12.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                             color = if (isSelected) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.onSurface
@@ -223,7 +287,11 @@ fun AlertsSettingsCategoryContent(
                                     .background(if (isNotificationsEnabled) NeonGreen else Color.Gray)
                             )
                             Text(
-                                text = if (isEs) "Motor Inteligente de Alertas" else "Smart Push Alerts Engine",
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "Motor Inteligente de Alertas"
+                                    AppLanguage.FRENCH -> "Moteur d'Alertes Intelligent"
+                                    AppLanguage.ENGLISH -> "Smart Push Alerts Engine"
+                                },
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -231,11 +299,17 @@ fun AlertsSettingsCategoryContent(
                         }
                         Text(
                             text = if (isNotificationsEnabled) {
-                                if (isEs) "Vigilando $monitoredStoresCount tiendas • Alertas al instante"
-                                else "Actively monitoring $monitoredStoresCount stores • Instant alerts on drop"
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Vigilando $monitoredStoresCount tiendas • Alertas al instante"
+                                    AppLanguage.FRENCH -> "Suivi de $monitoredStoresCount boutiques • Alertes instantanées"
+                                    AppLanguage.ENGLISH -> "Actively monitoring $monitoredStoresCount stores • Instant alerts on drop"
+                                }
                             } else {
-                                if (isEs) "Todas las notificaciones en segundo plano están en pausa"
-                                else "All background notifications & alarms are currently paused"
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Todas las notificaciones en segundo plano están en pausa"
+                                    AppLanguage.FRENCH -> "Toutes les notifications en arrière-plan sont en pause"
+                                    AppLanguage.ENGLISH -> "All background notifications & alarms are currently paused"
+                                }
                             },
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -262,19 +336,51 @@ fun AlertsSettingsCategoryContent(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         NotificationStatusChip(
-                            if (isSoundEnabled) (if (isEs) "Sonido SÍ" else "Sound ON") else (if (isEs) "Silencio" else "Silent"),
+                            if (isSoundEnabled) when (lang) {
+                                AppLanguage.SPANISH -> "Sonido SÍ"
+                                AppLanguage.FRENCH -> "Son OUI"
+                                AppLanguage.ENGLISH -> "Sound ON"
+                            } else when (lang) {
+                                AppLanguage.SPANISH -> "Silencio"
+                                AppLanguage.FRENCH -> "Muet"
+                                AppLanguage.ENGLISH -> "Silent"
+                            },
                             isSoundEnabled, Modifier.weight(1f)
                         )
                         NotificationStatusChip(
-                            if (isVibrateEnabled) (if (isEs) "Vibrar SÍ" else "Vibrate ON") else (if (isEs) "Vibrar NO" else "Vibrate OFF"),
+                            if (isVibrateEnabled) when (lang) {
+                                AppLanguage.SPANISH -> "Vibrar SÍ"
+                                AppLanguage.FRENCH -> "Vibreur OUI"
+                                AppLanguage.ENGLISH -> "Vibrate ON"
+                            } else when (lang) {
+                                AppLanguage.SPANISH -> "Vibrar NO"
+                                AppLanguage.FRENCH -> "Vibreur NON"
+                                AppLanguage.ENGLISH -> "Vibrate OFF"
+                            },
                             isVibrateEnabled, Modifier.weight(1f)
                         )
                         NotificationStatusChip(
-                            if (isKeepForeverOnly) (if (isEs) "Para Siempre" else "Keep-Only") else (if (isEs) "Todas" else "All Deals"),
+                            if (isKeepForeverOnly) when (lang) {
+                                AppLanguage.SPANISH -> "Para Siempre"
+                                AppLanguage.FRENCH -> "À Vie"
+                                AppLanguage.ENGLISH -> "Keep-Only"
+                            } else when (lang) {
+                                AppLanguage.SPANISH -> "Todas"
+                                AppLanguage.FRENCH -> "Toutes"
+                                AppLanguage.ENGLISH -> "All Deals"
+                            },
                             isKeepForeverOnly, Modifier.weight(1f)
                         )
                         NotificationStatusChip(
-                            if (isRichArtEnabled) (if (isEs) "Portada" else "Poster Art") else (if (isEs) "Compacta" else "Compact"),
+                            if (isRichArtEnabled) when (lang) {
+                                AppLanguage.SPANISH -> "Portada"
+                                AppLanguage.FRENCH -> "Jaquette"
+                                AppLanguage.ENGLISH -> "Poster Art"
+                            } else when (lang) {
+                                AppLanguage.SPANISH -> "Compacta"
+                                AppLanguage.FRENCH -> "Compacte"
+                                AppLanguage.ENGLISH -> "Compact"
+                            },
                             isRichArtEnabled, Modifier.weight(1f)
                         )
                     }
@@ -308,7 +414,11 @@ fun AlertsSettingsCategoryContent(
                                 letterSpacing = 1.sp
                             )
                             Text(
-                                text = if (isEs) "Activa o silencia cada tienda por separado" else "Toggle alerts per store independently",
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "Activa o silencia cada tienda por separado"
+                                    AppLanguage.FRENCH -> "Activez ou coupez chaque boutique séparément"
+                                    AppLanguage.ENGLISH -> "Toggle alerts per store independently"
+                                },
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -318,11 +428,29 @@ fun AlertsSettingsCategoryContent(
                             TextButton(
                                 onClick = { storeSpecs.forEach { it.onToggle(true) } },
                                 enabled = isNotificationsEnabled
-                            ) { Text(if (isEs) "Todas" else "All On", fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                            ) {
+                                Text(
+                                    when (lang) {
+                                        AppLanguage.SPANISH -> "Todas"
+                                        AppLanguage.FRENCH -> "Tout activer"
+                                        AppLanguage.ENGLISH -> "All On"
+                                    },
+                                    fontSize = 11.sp, fontWeight = FontWeight.Bold
+                                )
+                            }
                             TextButton(
                                 onClick = { storeSpecs.forEach { it.onToggle(false) } },
                                 enabled = isNotificationsEnabled
-                            ) { Text(if (isEs) "Silenciar" else "Mute All", fontSize = 11.sp, color = TextMuted) }
+                            ) {
+                                Text(
+                                    when (lang) {
+                                        AppLanguage.SPANISH -> "Silenciar"
+                                        AppLanguage.FRENCH -> "Tout couper"
+                                        AppLanguage.ENGLISH -> "Mute All"
+                                    },
+                                    fontSize = 11.sp, color = TextMuted
+                                )
+                            }
                         }
                     }
 
@@ -398,17 +526,21 @@ fun AlertsSettingsCategoryContent(
 
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = if (isEs) "Valor Mínimo Original del Juego:" else "Minimum Original Game Value:",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "Valor Mínimo Original del Juego:"
+                                AppLanguage.FRENCH -> "Valeur Minimale d'Origine du Jeu :"
+                                AppLanguage.ENGLISH -> "Minimum Original Game Value:"
+                            },
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
                             color = if (isNotificationsEnabled) MaterialTheme.colorScheme.onSurface else TextMuted
                         )
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             items(
-                                if (isEs) {
-                                    listOf(0f to "Cualquiera ($0+)", 5f to "Valor $5+", 10f to "Valor $10+", 20f to "Valor $20+", 30f to "Valor $30+ (AAA)")
-                                } else {
-                                    listOf(0f to "Any ($0+)", 5f to "Worth $5+", 10f to "Worth $10+", 20f to "Worth $20+", 30f to "Worth $30+ (AAA)")
+                                when (lang) {
+                                    AppLanguage.SPANISH -> listOf(0f to "Cualquiera ($0+)", 5f to "Valor $5+", 10f to "Valor $10+", 20f to "Valor $20+", 30f to "Valor $30+ (AAA)")
+                                    AppLanguage.FRENCH -> listOf(0f to "Tous ($0+)", 5f to "Valeur $5+", 10f to "Valeur $10+", 20f to "Valeur $20+", 30f to "Valeur $30+ (AAA)")
+                                    AppLanguage.ENGLISH -> listOf(0f to "Any ($0+)", 5f to "Worth $5+", 10f to "Worth $10+", 20f to "Worth $20+", 30f to "Worth $30+ (AAA)")
                                 }
                             ) { (threshold, label) ->
                                 FilterChip(
@@ -438,7 +570,11 @@ fun AlertsSettingsCategoryContent(
             ) {
                 Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = if (isEs) "ENTREGA, AUDIO Y HORARIO SILENCIOSO" else "DELIVERY, AUDIO & QUIET SCHEDULE",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "ENTREGA, AUDIO Y HORARIO SILENCIOSO"
+                            AppLanguage.FRENCH -> "LIVRAISON, AUDIO & PLAGE SILENCIEUSE"
+                            AppLanguage.ENGLISH -> "DELIVERY, AUDIO & QUIET SCHEDULE"
+                        },
                         fontSize = 11.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.primary,
@@ -447,7 +583,11 @@ fun AlertsSettingsCategoryContent(
 
                     SimpleSettingSwitchRow(
                         title = s.settings.alertsSoundTitle,
-                        subtitle = if (isEs) "Reproduce un sonido al detectar nuevas ofertas gratis" else "Play alert tone when new freebies are discovered",
+                        subtitle = when (lang) {
+                            AppLanguage.SPANISH -> "Reproduce un sonido al detectar nuevas ofertas gratis"
+                            AppLanguage.FRENCH -> "Joue un son lorsqu'une nouvelle offre gratuite est détectée"
+                            AppLanguage.ENGLISH -> "Play alert tone when new freebies are discovered"
+                        },
                         checked = isSoundEnabled,
                         enabled = isNotificationsEnabled,
                         mutedColor = TextMuted,
@@ -457,7 +597,11 @@ fun AlertsSettingsCategoryContent(
 
                     SimpleSettingSwitchRow(
                         title = s.settings.alertsVibrateTitle,
-                        subtitle = if (isEs) "Vibra al aparecer nuevas ofertas" else "Vibrate device when new deals drop",
+                        subtitle = when (lang) {
+                            AppLanguage.SPANISH -> "Vibra al aparecer nuevas ofertas"
+                            AppLanguage.FRENCH -> "Fait vibrer l'appareil lors de nouvelles offres"
+                            AppLanguage.ENGLISH -> "Vibrate device when new deals drop"
+                        },
                         checked = isVibrateEnabled,
                         enabled = isNotificationsEnabled,
                         mutedColor = TextMuted,
@@ -467,7 +611,11 @@ fun AlertsSettingsCategoryContent(
 
                     SimpleSettingSwitchRow(
                         title = s.settings.alertsRichArtTitle,
-                        subtitle = if (isEs) "Descarga y muestra portadas en alta resolución en las alertas" else "Download and display high-res game posters inside alerts",
+                        subtitle = when (lang) {
+                            AppLanguage.SPANISH -> "Descarga y muestra portadas en alta resolución en las alertas"
+                            AppLanguage.FRENCH -> "Télécharge et affiche des jaquettes HD dans les alertes"
+                            AppLanguage.ENGLISH -> "Download and display high-res game posters inside alerts"
+                        },
                         checked = isRichArtEnabled,
                         enabled = isNotificationsEnabled,
                         mutedColor = TextMuted,
@@ -477,7 +625,11 @@ fun AlertsSettingsCategoryContent(
 
                     SimpleSettingSwitchRow(
                         title = s.settings.alertsActionBtnsTitle,
-                        subtitle = if (isEs) "Incluye botones de 'Reclamar', '★ Guardar' y 'Compartir'" else "Include 'Claim Free', '★ Bookmark', and 'Share' buttons in alerts",
+                        subtitle = when (lang) {
+                            AppLanguage.SPANISH -> "Incluye botones de 'Reclamar', '★ Guardar' y 'Compartir'"
+                            AppLanguage.FRENCH -> "Inclut les boutons 'Réclamer', '★ Favoris' et 'Partager'"
+                            AppLanguage.ENGLISH -> "Include 'Claim Free', '★ Bookmark', and 'Share' buttons in alerts"
+                        },
                         checked = isActionsEnabled,
                         enabled = isNotificationsEnabled,
                         mutedColor = TextMuted,
@@ -488,10 +640,17 @@ fun AlertsSettingsCategoryContent(
                     SimpleSettingSwitchRow(
                         title = s.settings.alertsQuietHoursTitle,
                         subtitle = if (isQuietHours) {
-                            if (isEs) "Silenciando alertas entre $quietHoursStart:00 y $quietHoursEnd:00"
-                            else "Muting alerts between $quietHoursStart:00 and $quietHoursEnd:00"
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Silenciando alertas entre $quietHoursStart:00 y $quietHoursEnd:00"
+                                AppLanguage.FRENCH -> "Alertes en sourdine de ${quietHoursStart}h00 à ${quietHoursEnd}h00"
+                                AppLanguage.ENGLISH -> "Muting alerts between $quietHoursStart:00 and $quietHoursEnd:00"
+                            }
                         } else {
-                            if (isEs) "Las alertas se envían las 24 horas" else "Alerts deliver around the clock"
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Las alertas se envían las 24 horas"
+                                AppLanguage.FRENCH -> "Les alertes arrivent 24h/24"
+                                AppLanguage.ENGLISH -> "Alerts deliver around the clock"
+                            }
                         },
                         checked = isQuietHours,
                         enabled = isNotificationsEnabled,
@@ -504,21 +663,29 @@ fun AlertsSettingsCategoryContent(
 
                     if (isQuietHours) {
                         Text(
-                            text = if (isEs) "Horarios Silenciosos Predefinidos:" else "Quiet Hours Schedule Presets:",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "Horarios Silenciosos Predefinidos:"
+                                AppLanguage.FRENCH -> "Plages Horaires Silencieuses Prédéfinies :"
+                                AppLanguage.ENGLISH -> "Quiet Hours Schedule Presets:"
+                            },
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             items(
-                                if (isEs) {
-                                    listOf(
+                                when (lang) {
+                                    AppLanguage.SPANISH -> listOf(
                                         Triple("Noche (23:00 - 8:00)", 23, 8),
                                         Triple("Madrugada (1:00 - 9:00)", 1, 9),
                                         Triple("Trabajo (9:00 - 17:00)", 9, 17)
                                     )
-                                } else {
-                                    listOf(
+                                    AppLanguage.FRENCH -> listOf(
+                                        Triple("Nuit (23h - 8h)", 23, 8),
+                                        Triple("Nuit tardive (1h - 9h)", 1, 9),
+                                        Triple("Travail (9h - 17h)", 9, 17)
+                                    )
+                                    AppLanguage.ENGLISH -> listOf(
                                         Triple("Night (11 PM - 8 AM)", 23, 8),
                                         Triple("Late Night (1 AM - 9 AM)", 1, 9),
                                         Triple("Work (9 AM - 5 PM)", 9, 17)
@@ -544,7 +711,11 @@ fun AlertsSettingsCategoryContent(
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Icon(Icons.Default.Sync, contentDescription = null, tint = NeonGreen, modifier = Modifier.size(15.dp))
                             Text(
-                                text = if (isEs) "Frecuencia de Escaneo en Segundo Plano:" else "Background Scanner Frequency:",
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "Frecuencia de Escaneo en Segundo Plano:"
+                                    AppLanguage.FRENCH -> "Fréquence d'Analyse en Arrière-plan :"
+                                    AppLanguage.ENGLISH -> "Background Scanner Frequency:"
+                                },
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = if (isNotificationsEnabled) MaterialTheme.colorScheme.onSurface else TextMuted
@@ -552,10 +723,10 @@ fun AlertsSettingsCategoryContent(
                         }
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             items(
-                                if (isEs) {
-                                    listOf(2 to "2h", 4 to "4h", 8 to "8h", 24 to "Diario", 0 to "Manual")
-                                } else {
-                                    listOf(2 to "2h", 4 to "4h", 8 to "8h", 24 to "Daily", 0 to "Manual")
+                                when (lang) {
+                                    AppLanguage.SPANISH -> listOf(2 to "2h", 4 to "4h", 8 to "8h", 24 to "Diario", 0 to "Manual")
+                                    AppLanguage.FRENCH -> listOf(2 to "2h", 4 to "4h", 8 to "8h", 24 to "Quotidien", 0 to "Manuel")
+                                    AppLanguage.ENGLISH -> listOf(2 to "2h", 4 to "4h", 8 to "8h", 24 to "Daily", 0 to "Manual")
                                 }
                             ) { (hours, label) ->
                                 FilterChip(
@@ -574,7 +745,11 @@ fun AlertsSettingsCategoryContent(
 
                     SimpleSettingSwitchRow(
                         title = s.settings.alertsWifiOnlyTitle,
-                        subtitle = if (isEs) "Ejecutar escaneos en segundo plano solo con Wi-Fi" else "Only run background scans when connected to Wi-Fi",
+                        subtitle = when (lang) {
+                            AppLanguage.SPANISH -> "Ejecutar escaneos en segundo plano solo con Wi-Fi"
+                            AppLanguage.FRENCH -> "Exécuter les analyses en arrière-plan uniquement en Wi-Fi"
+                            AppLanguage.ENGLISH -> "Only run background scans when connected to Wi-Fi"
+                        },
                         checked = wifiOnly,
                         enabled = isNotificationsEnabled,
                         mutedColor = TextMuted,
@@ -596,7 +771,11 @@ fun AlertsSettingsCategoryContent(
         ) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    text = if (isEs) "ACCIONES Y PRUEBA DE NOTIFICACIONES" else "ACTIONS & NOTIFICATION TESTING",
+                    text = when (lang) {
+                        AppLanguage.SPANISH -> "ACCIONES Y PRUEBA DE NOTIFICACIONES"
+                        AppLanguage.FRENCH -> "ACTIONS & TEST DE NOTIFICATIONS"
+                        AppLanguage.ENGLISH -> "ACTIONS & NOTIFICATION TESTING"
+                    },
                     fontSize = 11.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.primary,
@@ -611,7 +790,11 @@ fun AlertsSettingsCategoryContent(
                 ) {
                     Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(16.dp))
                     Text(
-                        if (isEs) "  Abrir Bandeja e Historial de Alertas" else "  Open Alert Inbox & History",
+                        when (lang) {
+                            AppLanguage.SPANISH -> "  Abrir Bandeja e Historial de Alertas"
+                            AppLanguage.FRENCH -> "  Ouvrir la Boîte de Réception & l'Historique"
+                            AppLanguage.ENGLISH -> "  Open Alert Inbox & History"
+                        },
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -627,7 +810,11 @@ fun AlertsSettingsCategoryContent(
                                 viewModel.sendTestNotification(isRichPreview = isRichArtEnabled)
                                 Toast.makeText(
                                     context,
-                                    if (isEs) "¡Alerta de prueba enviada! Revisa la barra." else "Rich game alert test sent! Check shade.",
+                                    when (lang) {
+                                        AppLanguage.SPANISH -> "¡Alerta de prueba enviada! Revisa la barra."
+                                        AppLanguage.FRENCH -> "Alerte test envoyée ! Vérifiez vos notifications."
+                                        AppLanguage.ENGLISH -> "Rich game alert test sent! Check shade."
+                                    },
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
@@ -638,7 +825,14 @@ fun AlertsSettingsCategoryContent(
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
                     ) {
                         Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Text(if (isEs) "  Probar Juego" else "  Test Game Drop", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "  Probar Juego"
+                                AppLanguage.FRENCH -> "  Tester Jeu"
+                                AppLanguage.ENGLISH -> "  Test Game Drop"
+                            },
+                            fontSize = 12.sp, fontWeight = FontWeight.Bold
+                        )
                     }
 
                     OutlinedButton(
@@ -647,7 +841,11 @@ fun AlertsSettingsCategoryContent(
                                 viewModel.sendEndingSoonTestNotification()
                                 Toast.makeText(
                                     context,
-                                    if (isEs) "¡Alerta urgente enviada! Revisa la barra." else "Expiring Soon alert test sent! Check shade.",
+                                    when (lang) {
+                                        AppLanguage.SPANISH -> "¡Alerta urgente enviada! Revisa la barra."
+                                        AppLanguage.FRENCH -> "Alerte urgente envoyée ! Vérifiez vos notifications."
+                                        AppLanguage.ENGLISH -> "Expiring Soon alert test sent! Check shade."
+                                    },
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
@@ -658,7 +856,14 @@ fun AlertsSettingsCategoryContent(
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF5252))
                     ) {
                         Icon(Icons.Default.HourglassTop, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Text(if (isEs) "  Probar Urgente" else "  Test Expiring", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "  Probar Urgente"
+                                AppLanguage.FRENCH -> "  Tester Urgent"
+                                AppLanguage.ENGLISH -> "  Test Expiring"
+                            },
+                            fontSize = 12.sp, fontWeight = FontWeight.Bold
+                        )
                     }
                 }
 
@@ -670,7 +875,11 @@ fun AlertsSettingsCategoryContent(
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE040FB))
                 ) {
                     Text(
-                        if (isEs) "💎  Vista Previa de Aviso Trofeo Mítico" else "💎  Preview Mythic Trophy Popup Toast",
+                        when (lang) {
+                            AppLanguage.SPANISH -> "💎  Vista Previa de Aviso Trofeo Mítico"
+                            AppLanguage.FRENCH -> "💎  Aperçu du Toast Trophée Mythique"
+                            AppLanguage.ENGLISH -> "💎  Preview Mythic Trophy Popup Toast"
+                        },
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
                     )

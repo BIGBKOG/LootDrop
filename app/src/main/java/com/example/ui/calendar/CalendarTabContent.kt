@@ -68,6 +68,7 @@ import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 private val CALENDAR_LOCALE_ES: Locale = Locale.forLanguageTag("es")
+private val CALENDAR_LOCALE_FR: Locale = Locale.forLanguageTag("fr")
 
 private data class CalendarIndexSummary(
     val dayExpiringCountMap: Map<LocalDate, Int>,
@@ -103,7 +104,7 @@ fun CalendarTabContent(
     modifier: Modifier = Modifier
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val today = remember { LocalDate.now() }
     val upcomingDays = remember(today) {
         ExpirationCalendarUtils.getUpcomingCalendarDays(today, daysCount = 15)
@@ -225,7 +226,11 @@ fun CalendarTabContent(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (isEs) "CALENDARIO DE EXPIRACIÓN • PRÓX. 14 DÍAS" else "EXPIRATION CALENDAR • NEXT 14 DAYS",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "CALENDARIO DE EXPIRACIÓN • PRÓX. 14 DÍAS"
+                                AppLanguage.FRENCH -> "CALENDRIER D'EXPIRATION • 14 PROCH. JOURS"
+                                AppLanguage.ENGLISH -> "EXPIRATION CALENDAR • NEXT 14 DAYS"
+                            },
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
@@ -234,7 +239,11 @@ fun CalendarTabContent(
 
                         if (selectedCalendarDate != null) {
                             Text(
-                                text = if (isEs) "Limpiar Fecha" else "Clear Date Filter",
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "Limpiar Fecha"
+                                    AppLanguage.FRENCH -> "Effacer la Date"
+                                    AppLanguage.ENGLISH -> "Clear Date Filter"
+                                },
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = NeonCyan,
@@ -256,9 +265,20 @@ fun CalendarTabContent(
                         // "All" pill button
                         item {
                             CalendarDayChip(
-                                label = if (isEs) "TODO" else "ALL",
-                                dateNumber = "14D",
-                                month = if (isEs) "RANGO" else "RANGE",
+                                label = when (lang) {
+                                    AppLanguage.SPANISH -> "TODO"
+                                    AppLanguage.FRENCH -> "TOUT"
+                                    AppLanguage.ENGLISH -> "ALL"
+                                },
+                                dateNumber = when (lang) {
+                                    AppLanguage.FRENCH -> "14J"
+                                    else -> "14D"
+                                },
+                                month = when (lang) {
+                                    AppLanguage.SPANISH -> "RANGO"
+                                    AppLanguage.FRENCH -> "PLAGE"
+                                    AppLanguage.ENGLISH -> "RANGE"
+                                },
                                 expiringCount = totalExpiringIn14Days,
                                 isSelected = selectedCalendarDate == null,
                                 reducedMotion = reducedMotion,
@@ -275,20 +295,28 @@ fun CalendarTabContent(
                                 1L -> "TOM"
                                 else -> day.dayOfWeek.name.take(3)
                             }
-                            val label = if (!isEs) {
-                                enLabel
-                            } else when (daysBetween) {
-                                0L -> "HOY"
-                                1L -> "MAÑ"
-                                else -> day.dayOfWeek.getDisplayName(TextStyle.SHORT, CALENDAR_LOCALE_ES)
-                                    .replace(".", "").uppercase().take(3)
+                            val label = when (lang) {
+                                AppLanguage.ENGLISH -> enLabel
+                                AppLanguage.SPANISH -> when (daysBetween) {
+                                    0L -> "HOY"
+                                    1L -> "MAÑ"
+                                    else -> day.dayOfWeek.getDisplayName(TextStyle.SHORT, CALENDAR_LOCALE_ES)
+                                        .replace(".", "").uppercase().take(3)
+                                }
+                                AppLanguage.FRENCH -> when (daysBetween) {
+                                    0L -> "AUJ."
+                                    1L -> "DEM"
+                                    else -> day.dayOfWeek.getDisplayName(TextStyle.SHORT, CALENDAR_LOCALE_FR)
+                                        .replace(".", "").uppercase().take(3)
+                                }
                             }
                             val count = dayExpiringCountMap[day] ?: 0
-                            val monthStr = if (isEs) {
-                                day.month.getDisplayName(TextStyle.SHORT, CALENDAR_LOCALE_ES)
+                            val monthStr = when (lang) {
+                                AppLanguage.SPANISH -> day.month.getDisplayName(TextStyle.SHORT, CALENDAR_LOCALE_ES)
                                     .replace(".", "").uppercase().take(3)
-                            } else {
-                                day.month.name.take(3)
+                                AppLanguage.FRENCH -> day.month.getDisplayName(TextStyle.SHORT, CALENDAR_LOCALE_FR)
+                                    .replace(".", "").uppercase().take(3)
+                                AppLanguage.ENGLISH -> day.month.name.take(3)
                             }
 
                             CalendarDayChip(
@@ -360,11 +388,23 @@ fun CalendarTabContent(
             // Results count header
             item(key = "calendar_results_header") {
                 val headerTitle = if (selectedCalendarDate != null) {
-                    val dateLocale = if (isEs) CALENDAR_LOCALE_ES else Locale.ENGLISH
+                    val dateLocale = when (lang) {
+                        AppLanguage.SPANISH -> CALENDAR_LOCALE_ES
+                        AppLanguage.FRENCH -> CALENDAR_LOCALE_FR
+                        AppLanguage.ENGLISH -> Locale.ENGLISH
+                    }
                     val formatter = DateTimeFormatter.ofPattern("EEEE, MMMM d", dateLocale)
-                    if (isEs) "Expiran el ${selectedCalendarDate!!.format(formatter)}" else "Expiring on ${selectedCalendarDate!!.format(formatter)}"
+                    when (lang) {
+                        AppLanguage.SPANISH -> "Expiran el ${selectedCalendarDate!!.format(formatter)}"
+                        AppLanguage.FRENCH -> "Expirent le ${selectedCalendarDate!!.format(formatter)}"
+                        AppLanguage.ENGLISH -> "Expiring on ${selectedCalendarDate!!.format(formatter)}"
+                    }
                 } else {
-                    if (isEs) "Expiraciones (${selectedScope.localizedLabel(s)})" else "${selectedScope.localizedLabel(s)} Expirations"
+                    when (lang) {
+                        AppLanguage.SPANISH -> "Expiraciones (${selectedScope.localizedLabel(s)})"
+                        AppLanguage.FRENCH -> "Expirations (${selectedScope.localizedLabel(s)})"
+                        AppLanguage.ENGLISH -> "${selectedScope.localizedLabel(s)} Expirations"
+                    }
                 }
 
                 Row(
@@ -394,7 +434,11 @@ fun CalendarTabContent(
                     }
 
                     Text(
-                        text = if (isEs) "${filteredTimelineItems.size} juegos" else "${filteredTimelineItems.size} games",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "${filteredTimelineItems.size} juegos"
+                            AppLanguage.FRENCH -> "${filteredTimelineItems.size} jeux"
+                            AppLanguage.ENGLISH -> "${filteredTimelineItems.size} games"
+                        },
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -531,13 +575,21 @@ fun CalendarTabContent(
                                     )
                                     Column {
                                         Text(
-                                            text = if (isEs) "Juegos Sin Fecha Límite (${ongoingGiveaways.size})" else "Ongoing Giveaways (${ongoingGiveaways.size})",
+                                            text = when (lang) {
+                                                AppLanguage.SPANISH -> "Juegos Sin Fecha Límite (${ongoingGiveaways.size})"
+                                                AppLanguage.FRENCH -> "Offres Sans Date Limite (${ongoingGiveaways.size})"
+                                                AppLanguage.ENGLISH -> "Ongoing Giveaways (${ongoingGiveaways.size})"
+                                            },
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Text(
-                                            text = if (isEs) "Promociones activas hasta que se agoten las claves" else "Active promotions available until publisher keys run out",
+                                            text = when (lang) {
+                                                AppLanguage.SPANISH -> "Promociones activas hasta que se agoten las claves"
+                                                AppLanguage.FRENCH -> "Promotions actives jusqu'à épuisement des clés"
+                                                AppLanguage.ENGLISH -> "Active promotions available until publisher keys run out"
+                                            },
                                             fontSize = 11.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -559,9 +611,17 @@ fun CalendarTabContent(
                                 ) {
                                     Text(
                                         text = if (showOngoingGiveaways) {
-                                            if (isEs) "Ocultar" else "Hide"
+                                            when (lang) {
+                                                AppLanguage.SPANISH -> "Ocultar"
+                                                AppLanguage.FRENCH -> "Masquer"
+                                                AppLanguage.ENGLISH -> "Hide"
+                                            }
                                         } else {
-                                            if (isEs) "Ver" else "Show"
+                                            when (lang) {
+                                                AppLanguage.SPANISH -> "Ver"
+                                                AppLanguage.FRENCH -> "Voir"
+                                                AppLanguage.ENGLISH -> "Show"
+                                            }
                                         },
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,

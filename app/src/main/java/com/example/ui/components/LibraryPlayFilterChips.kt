@@ -95,7 +95,6 @@ fun LibraryPlayFilterChips(
     modifier: Modifier = Modifier
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
     val reducedMotion = !isAnimationsEnabled || isLowEndOptimization
 
     Column(
@@ -215,11 +214,15 @@ fun LibraryPlayFilterChips(
         ) {
             steamSyncStatus?.let { status ->
                 val isSuccess = status.contains("Synced", ignoreCase = true) ||
-                    status.contains("Sincroniz", ignoreCase = true)
+                    status.contains("Sincroniz", ignoreCase = true) ||
+                    status.contains("Synchronis", ignoreCase = true)
                 val isError = status.contains("failed", ignoreCase = true) ||
                     status.contains("Could not", ignoreCase = true) ||
                     status.contains("Error", ignoreCase = true) ||
-                    status.contains("No se pudo", ignoreCase = true)
+                    status.contains("No se pudo", ignoreCase = true) ||
+                    status.contains("Impossible", ignoreCase = true) ||
+                    status.contains("Échec", ignoreCase = true) ||
+                    status.contains("Erreur", ignoreCase = true)
                 val bannerBg = when {
                     isSuccess -> NeonGreen.copy(alpha = 0.15f)
                     isError -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.85f)
@@ -417,7 +420,7 @@ fun LibraryPlayFilterChips(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (selectedFilter != LibraryPlayFilter.ALL) {
-                        val filterLabel = if (isEs) selectedFilter.localizedLabel(s) else selectedFilter.displayName
+                        val filterLabel = if (s.language != AppLanguage.ENGLISH) selectedFilter.localizedLabel(s) else selectedFilter.displayName
                         ActiveFilterPill(filterLabel) { onFilterSelect(LibraryPlayFilter.ALL) }
                     }
                     if (selectedPlayability != PlayabilityFilter.ALL) {

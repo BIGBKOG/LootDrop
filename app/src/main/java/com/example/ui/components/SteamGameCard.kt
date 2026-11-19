@@ -104,7 +104,7 @@ fun SteamGameCard(
 ) {
     val context = LocalContext.current
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     var isStatusMenuOpen by remember { mutableStateOf(false) }
     var isStorageDialogOpen by remember { mutableStateOf(false) }
     var storageInputText by remember(game.manualInstallSizeGb) {
@@ -231,7 +231,11 @@ fun SteamGameCard(
                                 .padding(horizontal = 6.dp, vertical = 2.5.dp)
                         ) {
                             Text(
-                                text = if (isEs) "🎁 RECLAMADO EN LOOTDROP" else "🎁 LOOTDROP CLAIMED",
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "🎁 RECLAMADO EN LOOTDROP"
+                                    AppLanguage.FRENCH -> "🎁 RÉCLAMÉ SUR LOOTDROP"
+                                    AppLanguage.ENGLISH -> "🎁 LOOTDROP CLAIMED"
+                                },
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = NeonGreen
@@ -380,17 +384,21 @@ fun SteamGameCard(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Text(
-                                    text = if (isEs) {
-                                        "Logros: ${game.achievementsUnlocked}/${game.achievementsTotal}"
-                                    } else {
-                                        "Achievements: ${game.achievementsUnlocked}/${game.achievementsTotal}"
+                                    text = when (lang) {
+                                        AppLanguage.SPANISH -> "Logros: ${game.achievementsUnlocked}/${game.achievementsTotal}"
+                                        AppLanguage.FRENCH -> "Succès : ${game.achievementsUnlocked}/${game.achievementsTotal}"
+                                        AppLanguage.ENGLISH -> "Achievements: ${game.achievementsUnlocked}/${game.achievementsTotal}"
                                     },
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 if (onOpenAchievements != null) {
                                     Text(
-                                        text = if (isEs) "• Guías ➔" else "• Walkthroughs ➔",
+                                        text = when (lang) {
+                                            AppLanguage.SPANISH -> "• Guías ➔"
+                                            AppLanguage.FRENCH -> "• Guides ➔"
+                                            AppLanguage.ENGLISH -> "• Walkthroughs ➔"
+                                        },
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = NeonCyan
@@ -450,7 +458,7 @@ fun SteamGameCard(
                             .padding(horizontal = 6.dp, vertical = 2.5.dp)
                     ) {
                         Text(
-                            text = if (isEs) hardware.deckStatus.localizedLabel(s) else hardware.deckStatus.pillLabel,
+                            text = if (lang != AppLanguage.ENGLISH) hardware.deckStatus.localizedLabel(s) else hardware.deckStatus.pillLabel,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = when (hardware.deckStatus) {
@@ -518,7 +526,11 @@ fun SteamGameCard(
                         )
                         if (hardware.isManualOverride) {
                             Text(
-                                text = if (isEs) "(manual)" else "(custom)",
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "(manual)"
+                                    AppLanguage.FRENCH -> "(perso)"
+                                    AppLanguage.ENGLISH -> "(custom)"
+                                },
                                 fontSize = 9.sp,
                                 color = Color(0xFFC4B5FD)
                             )
@@ -578,7 +590,11 @@ fun SteamGameCard(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = if (isEs) "Jugar" else "Play",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "Jugar"
+                                AppLanguage.FRENCH -> "Jouer"
+                                AppLanguage.ENGLISH -> "Play"
+                            },
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1
@@ -603,7 +619,11 @@ fun SteamGameCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Extension,
-                                contentDescription = if (isEs) "Ver DLCs de ${game.name}" else "View DLCs for ${game.name}",
+                                contentDescription = when (lang) {
+                                    AppLanguage.SPANISH -> "Ver DLCs de ${game.name}"
+                                    AppLanguage.FRENCH -> "Voir les DLC de ${game.name}"
+                                    AppLanguage.ENGLISH -> "View DLCs for ${game.name}"
+                                },
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
@@ -638,12 +658,20 @@ fun SteamGameCard(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                            contentDescription = if (isEs) "Abrir ${game.name} en Steam" else "Open ${game.name} on Steam Store",
+                            contentDescription = when (lang) {
+                                AppLanguage.SPANISH -> "Abrir ${game.name} en Steam"
+                                AppLanguage.FRENCH -> "Ouvrir ${game.name} sur Steam"
+                                AppLanguage.ENGLISH -> "Open ${game.name} on Steam Store"
+                            },
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = if (isEs) "Tienda" else "Store",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "Tienda"
+                                AppLanguage.FRENCH -> "Boutique"
+                                AppLanguage.ENGLISH -> "Store"
+                            },
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                             maxLines = 1
@@ -707,10 +735,10 @@ fun SteamGameCard(
                     }
 
                     Text(
-                        text = if (isEs) {
-                            "Registra el tamaño exacto en tu Steam Deck, ROG Ally o PC. Ingresa gigabytes (GB) o restablece al valor estimado (${hardware.estimatedSizeGb} GB)."
-                        } else {
-                            "Track the exact install size on your Steam Deck, ROG Ally, or PC drive. Enter manual gigabytes (GB) or reset to restore estimated size (${hardware.estimatedSizeGb} GB)."
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "Registra el tamaño exacto en tu Steam Deck, ROG Ally o PC. Ingresa gigabytes (GB) o restablece al valor estimado (${hardware.estimatedSizeGb} GB)."
+                            AppLanguage.FRENCH -> "Suivez la taille exacte sur Steam Deck, ROG Ally ou PC. Saisissez les gigaoctets (Go) ou réinitialisez l'estimation (${hardware.estimatedSizeGb} Go)."
+                            AppLanguage.ENGLISH -> "Track the exact install size on your Steam Deck, ROG Ally, or PC drive. Enter manual gigabytes (GB) or reset to restore estimated size (${hardware.estimatedSizeGb} GB)."
                         },
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -721,7 +749,15 @@ fun SteamGameCard(
                         value = storageInputText,
                         onValueChange = { storageInputText = it },
                         label = { Text(s.library.hardwareEnterGbLabel) },
-                        placeholder = { Text(if (isEs) "ej. 15.5" else "e.g. 15.5") },
+                        placeholder = {
+                            Text(
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "ej. 15.5"
+                                    AppLanguage.FRENCH -> "ex. 15.5"
+                                    AppLanguage.ENGLISH -> "e.g. 15.5"
+                                }
+                            )
+                        },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = MaterialTheme.colorScheme.primary,

@@ -1,6 +1,7 @@
 package com.example.data.model
 
 import androidx.compose.runtime.Immutable
+import com.example.i18n.AppLanguage
 import com.example.util.MetacriticCatalog
 
 private val PLATFORM_SPLIT_ALL_REGEX = Regex("[,/| ]+")
@@ -131,9 +132,14 @@ data class GiveawayItem(
         get() = availableLaunchers.filter { it.launcherType != LauncherType.OTHER }.size > 1
 
     val availableLaunchers: List<LauncherOption>
-        get() = getAvailableLaunchers(false)
+        get() = getAvailableLaunchers(AppLanguage.ENGLISH)
 
-    fun getAvailableLaunchers(isSpanish: Boolean = false): List<LauncherOption> {
+    fun getAvailableLaunchers(isSpanish: Boolean = false): List<LauncherOption> =
+        getAvailableLaunchers(if (isSpanish) AppLanguage.SPANISH else AppLanguage.ENGLISH)
+
+    fun getAvailableLaunchers(language: AppLanguage): List<LauncherOption> {
+        val isEs = language == AppLanguage.SPANISH
+        val isFr = language == AppLanguage.FRENCH
         val lower = platforms.lowercase()
         val tokens = lower.split(LAUNCHER_SPLIT_REGEX).map { it.trim() }
         val encodedTitle = try {
@@ -149,7 +155,11 @@ data class GiveawayItem(
                 LauncherOption(
                     launcherType = LauncherType.STEAM,
                     name = "Steam",
-                    subtitle = if (isSpanish) "Reclamar en Tienda Steam (PC)" else "Claim on Steam Store (PC)",
+                    subtitle = when {
+                        isEs -> "Reclamar en Tienda Steam (PC)"
+                        isFr -> "Réclamer sur Steam (PC)"
+                        else -> "Claim on Steam Store (PC)"
+                    },
                     url = steamUrl,
                     badgeColorHex = 0xFF66C0F4
                 )
@@ -162,7 +172,11 @@ data class GiveawayItem(
                 LauncherOption(
                     launcherType = LauncherType.EPIC,
                     name = "Epic Games Store",
-                    subtitle = if (isSpanish) "Reclamar en Epic Games Store" else "Claim on Epic Games Store",
+                    subtitle = when {
+                        isEs -> "Reclamar en Epic Games Store"
+                        isFr -> "Réclamer sur Epic Games Store"
+                        else -> "Claim on Epic Games Store"
+                    },
                     url = epicUrl,
                     badgeColorHex = 0xFF0078F2
                 )
@@ -213,7 +227,11 @@ data class GiveawayItem(
                 LauncherOption(
                     launcherType = LauncherType.NINTENDO,
                     name = "Nintendo eShop",
-                    subtitle = if (isSpanish) "Nintendo Switch eShop (100% Gratis)" else "Nintendo Switch eShop (100% Off)",
+                    subtitle = when {
+                        isEs -> "Nintendo Switch eShop (100% Gratis)"
+                        isFr -> "Nintendo Switch eShop (100 % Gratuit)"
+                        else -> "Nintendo Switch eShop (100% Off)"
+                    },
                     url = nintendoUrl,
                     badgeColorHex = 0xFFE60012
                 )
@@ -226,7 +244,11 @@ data class GiveawayItem(
                 LauncherOption(
                     launcherType = LauncherType.GOG,
                     name = "GOG.com",
-                    subtitle = if (isSpanish) "Reclamar sin DRM en GOG" else "Claim DRM-Free on GOG",
+                    subtitle = when {
+                        isEs -> "Reclamar sin DRM en GOG"
+                        isFr -> "Réclamer sans DRM sur GOG"
+                        else -> "Claim DRM-Free on GOG"
+                    },
                     url = gogUrl,
                     badgeColorHex = 0xFFBA55D3
                 )
@@ -238,7 +260,11 @@ data class GiveawayItem(
                 LauncherOption(
                     launcherType = LauncherType.UBISOFT,
                     name = "Ubisoft Connect",
-                    subtitle = if (isSpanish) "Página de Tienda Ubisoft" else "Ubisoft Store page",
+                    subtitle = when {
+                        isEs -> "Página de Tienda Ubisoft"
+                        isFr -> "Page Boutique Ubisoft"
+                        else -> "Ubisoft Store page"
+                    },
                     url = openGiveawayUrl,
                     badgeColorHex = 0xFF00A2FF
                 )
@@ -250,7 +276,11 @@ data class GiveawayItem(
                 LauncherOption(
                     launcherType = LauncherType.ITCH_IO,
                     name = "itch.io",
-                    subtitle = if (isSpanish) "Reclamar indie sin DRM en itch.io" else "Claim indie DRM-Free on itch.io",
+                    subtitle = when {
+                        isEs -> "Reclamar indie sin DRM en itch.io"
+                        isFr -> "Réclamer indé sans DRM sur itch.io"
+                        else -> "Claim indie DRM-Free on itch.io"
+                    },
                     url = if (openGiveawayUrl.contains("itch.io")) openGiveawayUrl else "https://itch.io/search?q=$encodedTitle",
                     badgeColorHex = 0xFFFA5C5C
                 )
@@ -262,7 +292,11 @@ data class GiveawayItem(
                 LauncherOption(
                     launcherType = LauncherType.PRIME,
                     name = "Prime Gaming",
-                    subtitle = if (isSpanish) "Reclamar vía Amazon Prime Gaming" else "Claim via Amazon Prime Gaming",
+                    subtitle = when {
+                        isEs -> "Reclamar vía Amazon Prime Gaming"
+                        isFr -> "Réclamer via Amazon Prime Gaming"
+                        else -> "Claim via Amazon Prime Gaming"
+                    },
                     url = if (openGiveawayUrl.contains("gaming.amazon.com")) openGiveawayUrl else "https://gaming.amazon.com/home",
                     badgeColorHex = 0xFFFF9900
                 )
@@ -274,7 +308,11 @@ data class GiveawayItem(
                 LauncherOption(
                     launcherType = LauncherType.EA_ORIGIN,
                     name = "EA App",
-                    subtitle = if (isSpanish) "Tienda Electronic Arts" else "Electronic Arts Store",
+                    subtitle = when {
+                        isEs -> "Tienda Electronic Arts"
+                        isFr -> "Boutique Electronic Arts"
+                        else -> "Electronic Arts Store"
+                    },
                     url = openGiveawayUrl,
                     badgeColorHex = 0xFFFF4500
                 )
@@ -286,7 +324,11 @@ data class GiveawayItem(
                 LauncherOption(
                     launcherType = LauncherType.BATTLENET,
                     name = "Battle.net",
-                    subtitle = if (isSpanish) "Tienda Blizzard Battle.net" else "Blizzard Battle.net Store",
+                    subtitle = when {
+                        isEs -> "Tienda Blizzard Battle.net"
+                        isFr -> "Boutique Blizzard Battle.net"
+                        else -> "Blizzard Battle.net Store"
+                    },
                     url = openGiveawayUrl,
                     badgeColorHex = 0xFF00B4FF
                 )
@@ -299,7 +341,11 @@ data class GiveawayItem(
                 LauncherOption(
                     launcherType = LauncherType.ANDROID,
                     name = "Google Play / Android",
-                    subtitle = if (isSpanish) "Reclamar en Google Play Store (Android)" else "Claim on Google Play Store (Android)",
+                    subtitle = when {
+                        isEs -> "Reclamar en Google Play Store (Android)"
+                        isFr -> "Réclamer sur Google Play Store (Android)"
+                        else -> "Claim on Google Play Store (Android)"
+                    },
                     url = androidUrl,
                     badgeColorHex = 0xFF3DDC84
                 )
@@ -312,7 +358,11 @@ data class GiveawayItem(
                 LauncherOption(
                     launcherType = LauncherType.IOS,
                     name = "Apple App Store / iOS",
-                    subtitle = if (isSpanish) "Reclamar en App Store (iPhone y iPad)" else "Claim on App Store (iPhone & iPad)",
+                    subtitle = when {
+                        isEs -> "Reclamar en App Store (iPhone y iPad)"
+                        isFr -> "Réclamer sur App Store (iPhone et iPad)"
+                        else -> "Claim on App Store (iPhone & iPad)"
+                    },
                     url = iosUrl,
                     badgeColorHex = 0xFF007AFF
                 )
@@ -323,8 +373,16 @@ data class GiveawayItem(
         options.add(
             LauncherOption(
                 launcherType = LauncherType.OTHER,
-                name = if (isSpanish) "Página Oficial del Regalo" else "Official Giveaway Page",
-                subtitle = if (isSpanish) "Promoción directa y canje de clave" else "Direct promotion & key redemption",
+                name = when {
+                    isEs -> "Página Oficial del Regalo"
+                    isFr -> "Page Officielle de l'Offre"
+                    else -> "Official Giveaway Page"
+                },
+                subtitle = when {
+                    isEs -> "Promoción directa y canje de clave"
+                    isFr -> "Promotion directe et échange de clé"
+                    else -> "Direct promotion & key redemption"
+                },
                 url = openGiveawayUrl,
                 badgeColorHex = 0xFF00E5FF,
                 isDirectStore = false

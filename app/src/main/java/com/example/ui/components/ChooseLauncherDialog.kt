@@ -78,11 +78,12 @@ fun ChooseLauncherDialog(
     ownershipStatus: com.example.ui.GiveawaysViewModel.OwnershipStatus? = null,
     onDismiss: () -> Unit,
     onLauncherClaimed: (url: String, launcherName: String) -> Unit,
-    launchers: List<LauncherOption> = item.getAvailableLaunchers(LocalAppStrings.current.language == AppLanguage.SPANISH)
+    launchers: List<LauncherOption> = item.getAvailableLaunchers(LocalAppStrings.current.language)
 ) {
     val context = LocalContext.current
     val s = LocalAppStrings.current
     val isEs = s.language == AppLanguage.SPANISH
+    val isFr = s.language == AppLanguage.FRENCH
     val lowEnd = LocalLowEndOptimization.current
     val dialogContainerModifier = if (lowEnd) {
         Modifier
@@ -168,7 +169,11 @@ fun ChooseLauncherDialog(
                             )
                             val platformCount = launchers.filter { it.launcherType != LauncherType.OTHER }.size
                             Text(
-                                text = if (isEs) "Disponible en $platformCount plataformas" else "Available on $platformCount platforms",
+                                text = when {
+                                    isEs -> "Disponible en $platformCount plataformas"
+                                    isFr -> "Disponible sur $platformCount plateformes"
+                                    else -> "Available on $platformCount platforms"
+                                },
                                 fontSize = 12.sp,
                                 color = NeonGreen,
                                 fontWeight = FontWeight.SemiBold
@@ -240,7 +245,11 @@ fun ChooseLauncherDialog(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
-                                text = if (isEs) "100% GRATIS" else "100% OFF",
+                                text = when {
+                                    isEs -> "100% GRATIS"
+                                    isFr -> "100 % GRATUIT"
+                                    else -> "100% OFF"
+                                },
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = NeonGreen
@@ -279,20 +288,28 @@ fun ChooseLauncherDialog(
                             )
                             Column {
                                 Text(
-                                    text = if (isEs) "YA TIENES ESTE JUEGO" else "YOU ALREADY HAVE THIS",
+                                    text = when {
+                                        isEs -> "YA TIENES ESTE JUEGO"
+                                        isFr -> "VOUS POSSÉDEZ DÉJÀ CE JEU"
+                                        else -> "YOU ALREADY HAVE THIS"
+                                    },
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = Color(0xFF10B981),
                                     letterSpacing = 0.5.sp
                                 )
-                                val sourceText = if (isEs) {
-                                    when {
+                                val sourceText = when {
+                                    isEs -> when {
                                         ownershipStatus.inVault && ownershipStatus.inSteam -> "En tu Bóveda y biblioteca de Steam"
                                         ownershipStatus.inVault -> "Ya guardado en tu Bóveda"
                                         else -> "Ya está en tu biblioteca de Steam"
                                     }
-                                } else {
-                                    when {
+                                    isFr -> when {
+                                        ownershipStatus.inVault && ownershipStatus.inSteam -> "Dans votre Coffre et bibliothèque Steam"
+                                        ownershipStatus.inVault -> "Déjà enregistré dans votre Coffre"
+                                        else -> "Déjà dans votre bibliothèque Steam"
+                                    }
+                                    else -> when {
                                         ownershipStatus.inVault && ownershipStatus.inSteam -> "In your Vault & Steam Library"
                                         ownershipStatus.inVault -> "Already saved in your Vault"
                                         else -> "Already in your Steam Library"
@@ -312,7 +329,11 @@ fun ChooseLauncherDialog(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 Text(
-                    text = if (isEs) "Selecciona en qué tienda reclamar este juego:" else "Select which launcher to claim this game on:",
+                    text = when {
+                        isEs -> "Selecciona en qué tienda reclamar este juego:"
+                        isFr -> "Choisissez sur quelle boutique réclamer ce jeu :"
+                        else -> "Select which launcher to claim this game on:"
+                    },
                     fontSize = 12.sp,
                     color = TextSecondary
                 )
@@ -364,6 +385,7 @@ private fun LauncherOptionRow(
 ) {
     val s = LocalAppStrings.current
     val isEs = s.language == AppLanguage.SPANISH
+    val isFr = s.language == AppLanguage.FRENCH
     val lowEnd = LocalLowEndOptimization.current
     val interactionSource = remember { MutableInteractionSource() }
     val brandColor = Color(option.badgeColorHex)
@@ -448,7 +470,11 @@ private fun LauncherOptionRow(
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = if (isEs) "Reclamar" else "Claim",
+                        text = when {
+                            isEs -> "Reclamar"
+                            isFr -> "Réclamer"
+                            else -> "Claim"
+                        },
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = brandColor

@@ -94,11 +94,20 @@ private enum class CompletionFilter(val label: String) {
     IN_PROGRESS("⭐ 40-79% Progress"),
     ALL("All Games");
 
-    fun localized(isEs: Boolean): String = if (!isEs) label else when (this) {
-        ALMOST_DONE -> "🔥 80%+ Casi listos"
-        MASTERED -> "👑 100% Completados"
-        IN_PROGRESS -> "⭐ 40-79% En progreso"
-        ALL -> "Todos"
+    fun localized(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> label
+        AppLanguage.SPANISH -> when (this) {
+            ALMOST_DONE -> "🔥 80%+ Casi listos"
+            MASTERED -> "👑 100% Completados"
+            IN_PROGRESS -> "⭐ 40-79% En progreso"
+            ALL -> "Todos"
+        }
+        AppLanguage.FRENCH -> when (this) {
+            ALMOST_DONE -> "🔥 80 %+ Presque fini"
+            MASTERED -> "👑 100 % Maîtrisés"
+            IN_PROGRESS -> "⭐ 40-79 % En cours"
+            ALL -> "Tous"
+        }
     }
 }
 
@@ -120,7 +129,7 @@ fun TrophyShowcaseContent(
 ) {
     val context = LocalContext.current
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val effectiveLowEnd = isLowEndOptimization || LocalLowEndOptimization.current
     val reducedMotion = !isAnimationsEnabled || effectiveLowEnd
     var selectedFilter by remember { mutableStateOf(CompletionFilter.ALMOST_DONE) }
@@ -219,7 +228,11 @@ fun TrophyShowcaseContent(
                             )
                         }
                         Text(
-                            text = if (isEs) "RASTREADOR CASI AL 100%" else "CLOSEST TO 100% TRACKER",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "RASTREADOR CASI AL 100%"
+                                AppLanguage.FRENCH -> "SUIVI PROCHE DU 100 %"
+                                AppLanguage.ENGLISH -> "CLOSEST TO 100% TRACKER"
+                            },
                             style = MaterialTheme.typography.titleSmall,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
@@ -234,7 +247,11 @@ fun TrophyShowcaseContent(
                         ) {
                             val nearCount = filterCounts[0]
                             Text(
-                                text = if (isEs) "$nearCount casi al 100%" else "$nearCount near 100%",
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "$nearCount casi al 100%"
+                                    AppLanguage.FRENCH -> "$nearCount près du 100 %"
+                                    AppLanguage.ENGLISH -> "$nearCount near 100%"
+                                },
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
@@ -244,7 +261,11 @@ fun TrophyShowcaseContent(
                 }
 
                 Text(
-                    text = if (isEs) "Juegos a punto de completar al 100% para conseguir Trofeos Míticos fácilmente." else "Spotlight games on the verge of 100% completion for easy Mythical Trophies.",
+                    text = when (lang) {
+                        AppLanguage.SPANISH -> "Juegos a punto de completar al 100% para conseguir Trofeos Míticos fácilmente."
+                        AppLanguage.FRENCH -> "Jeux proches du 100 % pour décrocher facilement des trophées mythiques."
+                        AppLanguage.ENGLISH -> "Spotlight games on the verge of 100% completion for easy Mythical Trophies."
+                    },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -272,7 +293,7 @@ fun TrophyShowcaseContent(
                             onClick = { selectedFilter = filter },
                             label = {
                                 Text(
-                                    text = "${filter.localized(isEs)} ($count)",
+                                    text = "${filter.localized(lang)} ($count)",
                                     fontSize = 11.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                                 )
@@ -307,7 +328,11 @@ fun TrophyShowcaseContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (isEs) "No hay juegos en esta categoría. ¡Sincroniza tu biblioteca de Steam para ordenar por progreso!" else "No games found in this category. Sync your Steam library to rank games by completion!",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "No hay juegos en esta categoría. ¡Sincroniza tu biblioteca de Steam para ordenar por progreso!"
+                            AppLanguage.FRENCH -> "Aucun jeu dans cette catégorie. Synchronisez votre bibliothèque Steam pour trier par progression !"
+                            AppLanguage.ENGLISH -> "No games found in this category. Sync your Steam library to rank games by completion!"
+                        },
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -347,7 +372,7 @@ private fun TrophyOverviewHeader(
     onOpenSteamSettings: () -> Unit
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val spinAngle = if (isSyncing && !reducedMotion) {
         val infiniteTransition = rememberInfiniteTransition(label = "trophy_spin")
         infiniteTransition.animateFloat(
@@ -406,7 +431,11 @@ private fun TrophyOverviewHeader(
                     }
                     Column {
                         Text(
-                            text = if (isEs) "CAZADOR DE LOGROS Y VITRINA" else "ACHIEVEMENT HUNTER & TROPHY SHOWCASE",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "CAZADOR DE LOGROS Y VITRINA"
+                                AppLanguage.FRENCH -> "CHASSEUR DE SUCCÈS & VITRINE"
+                                AppLanguage.ENGLISH -> "ACHIEVEMENT HUNTER & TROPHY SHOWCASE"
+                            },
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFFE040FB),
@@ -414,9 +443,17 @@ private fun TrophyOverviewHeader(
                         )
                         Text(
                             text = if (steamUserId.isNotBlank()) {
-                                if (isEs) "Vinculado: $steamUserId" else "Linked: $steamUserId"
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Vinculado: $steamUserId"
+                                    AppLanguage.FRENCH -> "Lié : $steamUserId"
+                                    AppLanguage.ENGLISH -> "Linked: $steamUserId"
+                                }
                             } else {
-                                if (isEs) "Toca Sincronizar para vincular Steam" else "Tap Sync to link Steam"
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Toca Sincronizar para vincular Steam"
+                                    AppLanguage.FRENCH -> "Appuyez sur Synchroniser pour lier Steam"
+                                    AppLanguage.ENGLISH -> "Tap Sync to link Steam"
+                                }
                             },
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -538,7 +575,7 @@ private fun TrophyWallSection(
     onTrophyClick: (SteamAchievementEntity) -> Unit
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -569,7 +606,11 @@ private fun TrophyWallSection(
                     )
                 }
                 Text(
-                    text = if (isEs) "MURO DE TROFEOS: MÁS RAROS" else "TROPHY WALL: RAREST UNLOCKED",
+                    text = when (lang) {
+                        AppLanguage.SPANISH -> "MURO DE TROFEOS: MÁS RAROS"
+                        AppLanguage.FRENCH -> "MUR DE TROPHÉES : PLUS RARES"
+                        AppLanguage.ENGLISH -> "TROPHY WALL: RAREST UNLOCKED"
+                    },
                     style = MaterialTheme.typography.titleSmall,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
@@ -582,12 +623,25 @@ private fun TrophyWallSection(
                         .background(Color(0xFFFFB800).copy(alpha = 0.18f))
                         .padding(horizontal = 5.dp, vertical = 1.dp)
                 ) {
-                    Text(text = if (isEs) "RAREZA" else "RARITY", fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFFFB800))
+                    Text(
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "RAREZA"
+                            AppLanguage.FRENCH -> "RARETÉ"
+                            AppLanguage.ENGLISH -> "RARITY"
+                        },
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFFFFB800)
+                    )
                 }
             }
 
             Text(
-                text = if (isEs) "${trophies.size} trofeos" else "${trophies.size} trophies",
+                text = when (lang) {
+                    AppLanguage.SPANISH -> "${trophies.size} trofeos"
+                    AppLanguage.FRENCH -> "${trophies.size} trophées"
+                    AppLanguage.ENGLISH -> "${trophies.size} trophies"
+                },
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -605,7 +659,11 @@ private fun TrophyWallSection(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = if (isEs) "Aún no hay trofeos desbloqueados. ¡Vincula tu cuenta de Steam para lucir tus logros más raros!" else "No unlocked trophies found yet. Link your Steam account to showcase your rarest achievements!",
+                    text = when (lang) {
+                        AppLanguage.SPANISH -> "Aún no hay trofeos desbloqueados. ¡Vincula tu cuenta de Steam para lucir tus logros más raros!"
+                        AppLanguage.FRENCH -> "Aucun trophée débloqué pour l'instant. Liez votre compte Steam pour exposer vos succès les plus rares !"
+                        AppLanguage.ENGLISH -> "No unlocked trophies found yet. Link your Steam account to showcase your rarest achievements!"
+                    },
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -634,7 +692,7 @@ private fun TrophyWallCard(
     onClick: () -> Unit
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val tier = trophy.rarityTier
     val tierColor = tier.color
     val isMythic = tier == TrophyRarityTier.MYTHIC
@@ -722,7 +780,11 @@ private fun TrophyWallCard(
             // Description
             Text(
                 text = trophy.description.ifBlank {
-                    if (isEs) "Desbloqueado en ${trophy.gameName}" else "Unlocked in ${trophy.gameName}"
+                    when (lang) {
+                        AppLanguage.SPANISH -> "Desbloqueado en ${trophy.gameName}"
+                        AppLanguage.FRENCH -> "Débloqué dans ${trophy.gameName}"
+                        AppLanguage.ENGLISH -> "Unlocked in ${trophy.gameName}"
+                    }
                 },
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -743,7 +805,7 @@ private fun ClosestGameCard(
 ) {
     val context = LocalContext.current
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val percent = game.achievementsPercentage
     val remaining = (game.achievementsTotal - game.achievementsUnlocked).coerceAtLeast(0)
     val isNearHundred = percent in 80..99 && remaining in 1..5
@@ -809,7 +871,11 @@ private fun ClosestGameCard(
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = if (isEs) "🔥 ¡SOLO FALTAN $remaining PARA EL 100%!" else "🔥 ONLY $remaining LEFT FOR 100%!",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "🔥 ¡SOLO FALTAN $remaining PARA EL 100%!"
+                                AppLanguage.FRENCH -> "🔥 PLUS QUE $remaining POUR LE 100 % !"
+                                AppLanguage.ENGLISH -> "🔥 ONLY $remaining LEFT FOR 100%!"
+                            },
                             fontSize = 10.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = NeonCyan
@@ -826,7 +892,11 @@ private fun ClosestGameCard(
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = if (isEs) "👑 100% COMPLETADO" else "👑 100% MASTERED",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "👑 100% COMPLETADO"
+                                AppLanguage.FRENCH -> "👑 100 % MAÎTRISÉ"
+                                AppLanguage.ENGLISH -> "👑 100% MASTERED"
+                            },
                             fontSize = 10.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = NeonGreen
@@ -893,7 +963,11 @@ private fun ClosestGameCard(
                         horizontalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         Text(
-                            text = if (isMastered) s.library.steamViewTrophies else if (isEs) "Ver Guías" else "View Walkthroughs",
+                            text = if (isMastered) s.library.steamViewTrophies else when (lang) {
+                                AppLanguage.SPANISH -> "Ver Guías"
+                                AppLanguage.FRENCH -> "Voir les guides"
+                                AppLanguage.ENGLISH -> "View Walkthroughs"
+                            },
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary

@@ -206,7 +206,7 @@ private fun HomeQuickStatsStrip(
     modifier: Modifier = Modifier
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     Card(
         modifier = modifier.fillMaxWidth().testTag("home_quick_stats_strip"),
         shape = RoundedCornerShape(20.dp),
@@ -237,11 +237,19 @@ private fun HomeQuickStatsStrip(
                 Column {
                     val availableCount = if (uiStats.activeGiveawaysCount > 0) uiStats.activeGiveawaysCount else uiStats.newFreebiesCount
                     Text(
-                        if (isEs) "$availableCount Disponibles" else "$availableCount Available",
+                        when (lang) {
+                            AppLanguage.SPANISH -> "$availableCount Disponibles"
+                            AppLanguage.FRENCH -> "$availableCount Disponibles"
+                            AppLanguage.ENGLISH -> "$availableCount Available"
+                        },
                         fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        if (isEs) "Explorar Gratis ➔" else "Explore Free ➔",
+                        when (lang) {
+                            AppLanguage.SPANISH -> "Explorar Gratis ➔"
+                            AppLanguage.FRENCH -> "Explorer Gratuit ➔"
+                            AppLanguage.ENGLISH -> "Explore Free ➔"
+                        },
                         fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = NeonCyan
                     )
                 }
@@ -271,7 +279,11 @@ private fun HomeQuickStatsStrip(
                     val savedFormatted = String.format(Locale.US, "$%.2f", uiStats.claimedTotalSavedUsd)
                     Text(savedFormatted, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = NeonGreen)
                     Text(
-                        if (isEs) "Mi Bóveda ➔" else "Claimed Vault ➔",
+                        when (lang) {
+                            AppLanguage.SPANISH -> "Mi Bóveda ➔"
+                            AppLanguage.FRENCH -> "Mon Coffre ➔"
+                            AppLanguage.ENGLISH -> "Claimed Vault ➔"
+                        },
                         fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

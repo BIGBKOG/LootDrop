@@ -24,6 +24,7 @@ import com.example.i18n.LocaleAssetCatalog
 import com.example.i18n.LocaleSyncHelper
 import com.example.i18n.StringsEn
 import com.example.i18n.StringsEs
+import com.example.i18n.StringsFr
 import com.example.i18n.localizedLabel
 import com.example.i18n.localizedTitle
 import com.example.preferences.AppPreferences
@@ -63,10 +64,16 @@ class LocalizationTest {
 
         prefs.appLanguage = AppLanguage.SPANISH
         prefs.hasSelectedInitialLanguage = true
-        val reloaded = AppPreferences(context)
-        assertTrue(reloaded.hasSelectedInitialLanguage)
-        assertEquals(AppLanguage.SPANISH, reloaded.appLanguage)
+        val reloadedEs = AppPreferences(context)
+        assertTrue(reloadedEs.hasSelectedInitialLanguage)
+        assertEquals(AppLanguage.SPANISH, reloadedEs.appLanguage)
         assertEquals(AppLanguage.SPANISH, AppStringsRegistry.forContext(context).language)
+
+        prefs.appLanguage = AppLanguage.FRENCH
+        val reloadedFr = AppPreferences(context)
+        assertEquals(AppLanguage.FRENCH, reloadedFr.appLanguage)
+        assertEquals(AppLanguage.FRENCH, AppLanguage.fromCode("fr"))
+        assertEquals(AppLanguage.FRENCH, AppStringsRegistry.forContext(context).language)
     }
 
     @Test
@@ -84,6 +91,10 @@ class LocalizationTest {
         assertTrue(viewModel.hasSelectedInitialLanguage.value)
         assertEquals(AppLanguage.SPANISH, viewModel.appLanguage.value)
         assertEquals(AppLanguage.SPANISH, AppPreferences(app).appLanguage)
+
+        viewModel.setAppLanguage(AppLanguage.FRENCH)
+        assertEquals(AppLanguage.FRENCH, viewModel.appLanguage.value)
+        assertEquals(AppLanguage.FRENCH, AppPreferences(app).appLanguage)
 
         viewModel.setAppLanguage(AppLanguage.ENGLISH)
         assertEquals(AppLanguage.ENGLISH, viewModel.appLanguage.value)
@@ -114,10 +125,17 @@ class LocalizationTest {
         composeTestRule.onNodeWithTag("initial_lang_confirm_button").performScrollTo().assertIsDisplayed()
         composeTestRule.onNodeWithText(StringsEs.common.initialLangConfirmEs).assertExists()
 
+        composeTestRule.onNodeWithTag("initial_lang_option_fr").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+
+        assertEquals(AppLanguage.FRENCH, previewed)
+        composeTestRule.onNodeWithTag("initial_lang_confirm_button").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText(StringsFr.common.initialLangConfirmFr).assertExists()
+
         composeTestRule.onNodeWithTag("initial_lang_confirm_button").performClick()
         composeTestRule.waitForIdle()
 
-        assertEquals(AppLanguage.SPANISH, confirmed)
+        assertEquals(AppLanguage.FRENCH, confirmed)
     }
 
     @Test
@@ -149,6 +167,12 @@ class LocalizationTest {
 
         assertEquals(AppLanguage.SPANISH, viewModel.appLanguage.value)
         composeTestRule.onNodeWithText(StringsEs.settings.generalDisplayBehaviorSection).assertExists()
+
+        composeTestRule.onNodeWithTag("settings_language_fr").performScrollTo().performClick()
+        composeTestRule.waitForIdle()
+
+        assertEquals(AppLanguage.FRENCH, viewModel.appLanguage.value)
+        composeTestRule.onNodeWithText(StringsFr.settings.generalDisplayBehaviorSection).assertExists()
 
         composeTestRule.onNodeWithTag("settings_language_en").performScrollTo().performClick()
         composeTestRule.waitForIdle()
@@ -212,11 +236,67 @@ class LocalizationTest {
     }
 
     @Test
-    fun `locale asset catalog loads en and es json asset files for enum and theme labels`() {
+    fun `french string resources, launcher options, challenge weeks, and moderation localize accurately`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val frContext = LocaleSyncHelper.localizedContext(context, AppLanguage.FRENCH)
+
+        assertEquals("LootDrop", frContext.getString(R.string.app_name))
+        assertEquals("RÉCLAMER", frContext.getString(R.string.widget_claim_btn))
+        assertEquals("DÉTAILS", frContext.getString(R.string.widget_details_btn))
+        assertEquals("MON COFFRE", frContext.getString(R.string.widget_vault_btn))
+
+        // Verify French translations resolve via AppStringsRegistry and differ from English
+        assertEquals(StringsFr, AppStringsRegistry.forLanguage(AppLanguage.FRENCH))
+        assertNotEquals(StringsEn.common.tabHome, StringsFr.common.tabHome)
+        assertNotEquals(StringsEn.home.homeHeroSubtitle, StringsFr.home.homeHeroSubtitle)
+        assertNotEquals(StringsEn.library.trophiesWallTitle, StringsFr.library.trophiesWallTitle)
+        assertNotEquals(StringsEn.dialogs.detailClaimFree, StringsFr.dialogs.detailClaimFree)
+        assertNotEquals(StringsEn.settings.aboutPatreonBtn, StringsFr.settings.aboutPatreonBtn)
+        assertNotEquals(StringsEn.system.notifActionClaimFree, StringsFr.system.notifActionClaimFree)
+
+        // Backlog week display name in French
+        val weekFr = BacklogChallengeManager.getWeekDisplayName("2026-W10", AppLanguage.FRENCH)
+        assertTrue(weekFr.contains("Semaine"))
+
+        // Giveaway launcher options in French
+        val item = GiveawayItem(
+            id = 501,
+            title = "Control",
+            worth = "$29.99",
+            numericWorth = 29.99,
+            thumbnail = "",
+            image = "",
+            description = "",
+            instructions = "",
+            openGiveawayUrl = "https://gamerpower.com/control",
+            publishedDate = "",
+            type = "Game",
+            platforms = "PC, Steam",
+            endDate = "N/A",
+            users = 100,
+            status = "Active"
+        )
+        val frLaunchers = item.getAvailableLaunchers(AppLanguage.FRENCH)
+        assertTrue(frLaunchers.any { it.name.contains("Page Officielle de l'Offre") })
+
+        // Review moderation validation in French
+        val validationFr = ReviewModerationFilter.validateReviewInput(
+            title = "",
+            comment = "",
+            authorName = "Tester",
+            language = AppLanguage.FRENCH
+        )
+        assertFalse(validationFr.isAllowed)
+        assertTrue(validationFr.errorMessage!!.contains("titre"))
+    }
+
+    @Test
+    fun `locale asset catalog loads en, es, and fr json asset files for enum and theme labels`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         LocaleAssetCatalog.clearCacheForTesting()
         LocaleAssetCatalog.preload(context, AppLanguage.ENGLISH)
         LocaleAssetCatalog.preload(context, AppLanguage.SPANISH)
+        LocaleAssetCatalog.preload(context, AppLanguage.FRENCH)
 
         assertEquals(
             "Rewards (7)",
@@ -227,12 +307,20 @@ class LocalizationTest {
             com.example.preferences.AccentCategory.REWARDS.localizedLabel(StringsEs)
         )
         assertEquals(
+            "Récompenses (7)",
+            com.example.preferences.AccentCategory.REWARDS.localizedLabel(StringsFr)
+        )
+        assertEquals(
             "Aurora Sovereign",
             com.example.preferences.AccentTheme.AURORA_SOVEREIGN.localizedTitle(StringsEn)
         )
         assertEquals(
             "Aurora Soberana",
             com.example.preferences.AccentTheme.AURORA_SOVEREIGN.localizedTitle(StringsEs)
+        )
+        assertEquals(
+            "Aurore Souveraine",
+            com.example.preferences.AccentTheme.AURORA_SOVEREIGN.localizedTitle(StringsFr)
         )
         assertEquals(
             "OLED Midnight",
@@ -243,12 +331,20 @@ class LocalizationTest {
             com.example.preferences.BackgroundTheme.OLED_BLACK.localizedTitle(StringsEs)
         )
         assertEquals(
+            "Minuit OLED",
+            com.example.preferences.BackgroundTheme.OLED_BLACK.localizedTitle(StringsFr)
+        )
+        assertEquals(
             "Newest First",
             com.example.ui.SortOption.NEWEST.localizedLabel(StringsEn)
         )
         assertEquals(
             "Más recientes",
             com.example.ui.SortOption.NEWEST.localizedLabel(StringsEs)
+        )
+        assertEquals(
+            "Plus récents",
+            com.example.ui.SortOption.NEWEST.localizedLabel(StringsFr)
         )
     }
 }

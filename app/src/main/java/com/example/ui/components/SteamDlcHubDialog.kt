@@ -97,7 +97,7 @@ fun SteamDlcHubDialog(
     }
 
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     var activeFilter by remember { mutableStateOf(DlcFilterMode.ALL) }
     val sourceList = if (selectedGame != null) selectedGameDlcs else recommendations
     val isBusy = if (selectedGame != null) isLoadingGameDlcs else isLoadingLibraryDlcs
@@ -185,11 +185,24 @@ fun SteamDlcHubDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (isEs) "Mostrando DLCs de ${selectedGame.name}" else "Showing DLCs for ${selectedGame.name}",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "Mostrando DLCs de ${selectedGame.name}"
+                                AppLanguage.FRENCH -> "DLC de ${selectedGame.name}"
+                                AppLanguage.ENGLISH -> "Showing DLCs for ${selectedGame.name}"
+                            },
                             fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis
                         )
-                        Text(if (isEs) "Ver toda la biblioteca (${recommendations.size}) ➔" else "View All Library (${recommendations.size}) ➔", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = DlcPurple)
+                        Text(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Ver toda la biblioteca (${recommendations.size}) ➔"
+                                AppLanguage.FRENCH -> "Toute la bibliothèque (${recommendations.size}) ➔"
+                                AppLanguage.ENGLISH -> "View All Library (${recommendations.size}) ➔"
+                            },
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = DlcPurple
+                        )
                     }
                 }
 
@@ -199,14 +212,21 @@ fun SteamDlcHubDialog(
                 ) {
                     DlcFilterMode.entries.forEach { mode ->
                         val isSelected = activeFilter == mode
-                        val localizedModeLabel = if (isEs) {
-                            when (mode) {
+                        val localizedModeLabel = when (lang) {
+                            AppLanguage.SPANISH -> when (mode) {
                                 DlcFilterMode.ALL -> "Todos"
                                 DlcFilterMode.FREE -> "Gratis"
                                 DlcFilterMode.ON_SALE -> "En Oferta"
                                 DlcFilterMode.TOP_RATED -> "Mejor Valorados"
                             }
-                        } else mode.label
+                            AppLanguage.FRENCH -> when (mode) {
+                                DlcFilterMode.ALL -> "Tous"
+                                DlcFilterMode.FREE -> "Gratuits"
+                                DlcFilterMode.ON_SALE -> "En promo"
+                                DlcFilterMode.TOP_RATED -> "Mieux notés"
+                            }
+                            AppLanguage.ENGLISH -> mode.label
+                        }
                         FilterChip(
                             selected = isSelected,
                             onClick = { activeFilter = mode },
@@ -249,16 +269,32 @@ fun SteamDlcHubDialog(
                             Icon(Icons.Default.Extension, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(44.dp))
                             Text(
                                 text = when {
-                                    activeFilter != DlcFilterMode.ALL -> if (isEs) "Sin resultados en este filtro" else "No ${activeFilter.label} Found"
-                                    selectedGame != null -> if (isEs) "Sin DLCs en tienda" else "No Store DLCs Listed"
+                                    activeFilter != DlcFilterMode.ALL -> when (lang) {
+                                        AppLanguage.SPANISH -> "Sin resultados en este filtro"
+                                        AppLanguage.FRENCH -> "Aucun résultat pour ce filtre"
+                                        AppLanguage.ENGLISH -> "No ${activeFilter.label} Found"
+                                    }
+                                    selectedGame != null -> when (lang) {
+                                        AppLanguage.SPANISH -> "Sin DLCs en tienda"
+                                        AppLanguage.FRENCH -> "Aucun DLC listé"
+                                        AppLanguage.ENGLISH -> "No Store DLCs Listed"
+                                    }
                                     else -> s.dialogs.dlcEmptyTitle
                                 },
                                 fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = when {
-                                    activeFilter != DlcFilterMode.ALL -> if (isEs) "Prueba volver a 'Todos' o escanea tu biblioteca de nuevo." else "Try switching back to 'All Picks' or scanning your library again."
-                                    selectedGame != null -> if (isEs) "${selectedGame.name} no tiene expansiones DLC listadas en Steam." else "${selectedGame.name} doesn't have listed expansion DLCs on the Steam Store."
+                                    activeFilter != DlcFilterMode.ALL -> when (lang) {
+                                        AppLanguage.SPANISH -> "Prueba volver a 'Todos' o escanea tu biblioteca de nuevo."
+                                        AppLanguage.FRENCH -> "Essayez de revenir à « Tous » ou analysez à nouveau votre bibliothèque."
+                                        AppLanguage.ENGLISH -> "Try switching back to 'All Picks' or scanning your library again."
+                                    }
+                                    selectedGame != null -> when (lang) {
+                                        AppLanguage.SPANISH -> "${selectedGame.name} no tiene expansiones DLC listadas en Steam."
+                                        AppLanguage.FRENCH -> "${selectedGame.name} n'a aucune extension DLC listée sur Steam."
+                                        AppLanguage.ENGLISH -> "${selectedGame.name} doesn't have listed expansion DLCs on the Steam Store."
+                                    }
                                     else -> s.dialogs.dlcEmptySubtitle
                                 },
                                 fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center
@@ -300,7 +336,6 @@ private fun SteamDlcDetailCard(
 ) {
     val context = LocalContext.current
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
     val lowEnd = LocalLowEndOptimization.current
     val borderColor = dlcCardBorderColor(dlc)
     val headerImageRequest = remember(context, dlc.headerImageUrl, lowEnd) {

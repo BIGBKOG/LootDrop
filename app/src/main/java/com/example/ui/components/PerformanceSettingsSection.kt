@@ -55,7 +55,7 @@ fun PreRenderingPerformanceSection(
     onSelectFrameRate: (TargetFrameRate) -> Unit
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val context = LocalContext.current
     val perfProfile = remember(context) { DevicePerformanceHelper.getProfile(context) }
 
@@ -87,20 +87,29 @@ fun PreRenderingPerformanceSection(
                     Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
                     Column {
                         Text(
-                            if (isEs) "Perfil de SoC y Memoria Detectado" else "Detected SoC & Memory Profile",
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Perfil de SoC y Memoria Detectado"
+                                AppLanguage.FRENCH -> "Profil SoC & Mémoire Détecté"
+                                AppLanguage.ENGLISH -> "Detected SoC & Memory Profile"
+                            },
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        val summaryText = if (isEs) {
-                            buildString {
+                        val summaryText = when (lang) {
+                            AppLanguage.SPANISH -> buildString {
                                 append("${perfProfile.processorCores} Núcleos • ${perfProfile.totalRamMb}MB RAM • ${perfProfile.memoryClassMb}MB Heap")
                                 if (perfProfile.isLowRamDevice) append(" • Modo Poca RAM")
                                 if (perfProfile.isPowerSaveMode) append(" • Ahorro de Batería")
                                 if (perfProfile.isLowEndDevice) append(" • Optimizado Gama Baja") else append(" • Alto Rendimiento")
                             }
-                        } else {
-                            perfProfile.telemetrySummary
+                            AppLanguage.FRENCH -> buildString {
+                                append("${perfProfile.processorCores} Cœurs • ${perfProfile.totalRamMb} Mo RAM • ${perfProfile.memoryClassMb} Mo Heap")
+                                if (perfProfile.isLowRamDevice) append(" • Faible RAM")
+                                if (perfProfile.isPowerSaveMode) append(" • Économie d'Énergie")
+                                if (perfProfile.isLowEndDevice) append(" • Optimisé Entrée de Gamme") else append(" • Haute Performance")
+                            }
+                            AppLanguage.ENGLISH -> perfProfile.telemetrySummary
                         }
                         Text(summaryText, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -134,16 +143,20 @@ fun PreRenderingPerformanceSection(
         ) {
             Column(modifier = Modifier.weight(1f).padding(end = 10.dp)) {
                 Text(
-                    if (isEs) "Aceleración para Gama Baja" else "Low-End Device Acceleration",
+                    when (lang) {
+                        AppLanguage.SPANISH -> "Aceleración para Gama Baja"
+                        AppLanguage.FRENCH -> "Accélération Appareils Modestes"
+                        AppLanguage.ENGLISH -> "Low-End Device Acceleration"
+                    },
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = if (isEs) {
-                        "Reduce a la mitad la RAM de imágenes con texturas RGB_565 de 16 bits, pausa animaciones infinitas inactivas, omite el renderizado de pestañas ocultas y optimiza GPU."
-                    } else {
-                        "Halves image RAM via 16-bit RGB_565 textures, pauses idle infinite animation clocks, skips off-screen tab rendering, and optimizes GPU passes."
+                    text = when (lang) {
+                        AppLanguage.SPANISH -> "Reduce a la mitad la RAM de imágenes con texturas RGB_565 de 16 bits, pausa animaciones infinitas inactivas, omite el renderizado de pestañas ocultas y optimiza GPU."
+                        AppLanguage.FRENCH -> "Divise par deux la RAM image via textures RGB_565 16 bits, met en pause les animations inactives, ignore les onglets masqués et optimise le GPU."
+                        AppLanguage.ENGLISH -> "Halves image RAM via 16-bit RGB_565 textures, pauses idle infinite animation clocks, skips off-screen tab rendering, and optimizes GPU passes."
                     },
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -159,9 +172,17 @@ fun PreRenderingPerformanceSection(
                     ) {
                         Text(
                             text = if (isLowEndOptimization) {
-                                if (isEs) "⚡ ACELERACIÓN ACTIVA" else "⚡ ACCELERATION ACTIVE"
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "⚡ ACELERACIÓN ACTIVA"
+                                    AppLanguage.FRENCH -> "⚡ ACCÉLÉRATION ACTIVE"
+                                    AppLanguage.ENGLISH -> "⚡ ACCELERATION ACTIVE"
+                                }
                             } else {
-                                if (isEs) "MODO ESTÁNDAR" else "STANDARD MODE"
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "MODO ESTÁNDAR"
+                                    AppLanguage.FRENCH -> "MODE STANDARD"
+                                    AppLanguage.ENGLISH -> "STANDARD MODE"
+                                }
                             },
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
@@ -169,10 +190,10 @@ fun PreRenderingPerformanceSection(
                         )
                     }
                     Text(
-                        text = if (isEs) {
-                            "${perfProfile.processorCores} Núcleos • ${perfProfile.totalRamMb}MB RAM • ${perfProfile.memoryClassMb}MB Heap"
-                        } else {
-                            "${perfProfile.processorCores} Cores • ${perfProfile.totalRamMb}MB RAM • ${perfProfile.memoryClassMb}MB Heap"
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "${perfProfile.processorCores} Núcleos • ${perfProfile.totalRamMb}MB RAM • ${perfProfile.memoryClassMb}MB Heap"
+                            AppLanguage.FRENCH -> "${perfProfile.processorCores} Cœurs • ${perfProfile.totalRamMb} Mo RAM • ${perfProfile.memoryClassMb} Mo Heap"
+                            AppLanguage.ENGLISH -> "${perfProfile.processorCores} Cores • ${perfProfile.totalRamMb}MB RAM • ${perfProfile.memoryClassMb}MB Heap"
                         },
                         fontSize = 10.sp,
                         color = TextMuted
@@ -192,10 +213,10 @@ fun PreRenderingPerformanceSection(
 
         Spacer(modifier = Modifier.height(2.dp))
         Text(
-            text = if (isEs) {
-                "Elige la tasa de refresco objetivo para la UI (60 FPS, 90 FPS, 120 FPS):"
-            } else {
-                "Select UI pre-rendering frame rate target (60 FPS, 90 FPS, 120 FPS):"
+            text = when (lang) {
+                AppLanguage.SPANISH -> "Elige la tasa de refresco objetivo para la UI (60 FPS, 90 FPS, 120 FPS):"
+                AppLanguage.FRENCH -> "Choisissez la fréquence d'images cible de l'interface (60 FPS, 90 FPS, 120 FPS) :"
+                AppLanguage.ENGLISH -> "Select UI pre-rendering frame rate target (60 FPS, 90 FPS, 120 FPS):"
             },
             fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -252,7 +273,11 @@ fun PreRenderingPerformanceSection(
                 if (isSelected) {
                     Icon(
                         Icons.Default.Check,
-                        contentDescription = if (s.language == com.example.i18n.AppLanguage.SPANISH) "Seleccionado" else "Selected",
+                        contentDescription = when (s.language) {
+                            AppLanguage.SPANISH -> "Seleccionado"
+                            AppLanguage.FRENCH -> "Sélectionné"
+                            AppLanguage.ENGLISH -> "Selected"
+                        },
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)
                     )

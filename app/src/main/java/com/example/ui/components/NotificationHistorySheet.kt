@@ -98,12 +98,19 @@ import java.util.Date
 import java.util.Locale
 
 private val NOTIF_LOCALE_ES: Locale = Locale.forLanguageTag("es")
+private val NOTIF_LOCALE_FR: Locale = Locale.forLanguageTag("fr")
 
-private enum class AlertFilter(val label: String, val spanishLabel: String) {
-    ALL("All Alerts", "Todas"),
-    MAJOR_GAMES("🔥 Games", "🔥 Juegos"),
-    ENDING_SOON("⏳ Ending Soon", "⏳ Por Vencer"),
-    DLC("🎁 DLC & Loot", "🎁 DLC y Botín")
+private enum class AlertFilter(val label: String, val spanishLabel: String, val frenchLabel: String) {
+    ALL("All Alerts", "Todas", "Toutes"),
+    MAJOR_GAMES("🔥 Games", "🔥 Juegos", "🔥 Jeux"),
+    ENDING_SOON("⏳ Ending Soon", "⏳ Por Vencer", "⏳ Bientôt fini"),
+    DLC("🎁 DLC & Loot", "🎁 DLC y Botín", "🎁 DLC et Butin");
+
+    fun labelFor(lang: AppLanguage): String = when (lang) {
+        AppLanguage.SPANISH -> spanishLabel
+        AppLanguage.FRENCH -> frenchLabel
+        AppLanguage.ENGLISH -> label
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -114,7 +121,7 @@ fun NotificationHistorySheet(
     onOpenSettings: () -> Unit
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val context = LocalContext.current
     val lowEnd = LocalLowEndOptimization.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -187,7 +194,11 @@ fun NotificationHistorySheet(
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                 ) {
                                     Text(
-                                        text = if (isEs) "$unreadCount NUEVAS" else "$unreadCount NEW",
+                                        text = when (lang) {
+                                            AppLanguage.SPANISH -> "$unreadCount NUEVAS"
+                                            AppLanguage.FRENCH -> "$unreadCount NOUVELLES"
+                                            AppLanguage.ENGLISH -> "$unreadCount NEW"
+                                        },
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.ExtraBold,
                                         color = NeonGreen
@@ -196,7 +207,11 @@ fun NotificationHistorySheet(
                             }
                         }
                         Text(
-                            text = if (isEs) "${history.size} notificaciones registradas" else "${history.size} total notifications recorded",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "${history.size} notificaciones registradas"
+                                AppLanguage.FRENCH -> "${history.size} notifications enregistrées"
+                                AppLanguage.ENGLISH -> "${history.size} total notifications recorded"
+                            },
                             fontSize = 12.sp,
                             color = TextSecondary
                         )
@@ -210,7 +225,11 @@ fun NotificationHistorySheet(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Settings,
-                            contentDescription = if (isEs) "Ajustes de Alertas" else "Alert Settings",
+                            contentDescription = when (lang) {
+                                AppLanguage.SPANISH -> "Ajustes de Alertas"
+                                AppLanguage.FRENCH -> "Paramètres des alertes"
+                                AppLanguage.ENGLISH -> "Alert Settings"
+                            },
                             tint = TextSecondary
                         )
                     }
@@ -260,7 +279,7 @@ fun NotificationHistorySheet(
                             selected = isSelected,
                             onClick = { selectedFilter = filter },
                             modifier = chipModifier,
-                            label = { Text(if (isEs) filter.spanishLabel else filter.label, fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                            label = { Text(filter.labelFor(lang), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
                                 selectedLabelColor = Color.White,
@@ -297,7 +316,11 @@ fun NotificationHistorySheet(
                                 viewModel.clearAllNotificationHistory()
                                 Toast.makeText(
                                     context,
-                                    if (isEs) "Historial de notificaciones borrado" else "Notification history cleared",
+                                    when (lang) {
+                                        AppLanguage.SPANISH -> "Historial de notificaciones borrado"
+                                        AppLanguage.FRENCH -> "Historique des notifications effacé"
+                                        AppLanguage.ENGLISH -> "Notification history cleared"
+                                    },
                                     Toast.LENGTH_SHORT
                                 ).show()
                             },
@@ -345,9 +368,17 @@ fun NotificationHistorySheet(
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = if (history.isEmpty()) {
-                                if (isEs) "Sin Alertas Todavía" else "No Alerts Yet"
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Sin Alertas Todavía"
+                                    AppLanguage.FRENCH -> "Aucune alerte pour le moment"
+                                    AppLanguage.ENGLISH -> "No Alerts Yet"
+                                }
                             } else {
-                                if (isEs) "No hay alertas en este filtro" else "No matching alerts in this filter"
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "No hay alertas en este filtro"
+                                    AppLanguage.FRENCH -> "Aucune alerte dans ce filtre"
+                                    AppLanguage.ENGLISH -> "No matching alerts in this filter"
+                                }
                             },
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
@@ -358,8 +389,11 @@ fun NotificationHistorySheet(
                             text = if (history.isEmpty()) {
                                 s.settings.alertsHistoryEmpty
                             } else {
-                                if (isEs) "Prueba cambiar a 'Todas' para ver el historial completo de alertas."
-                                else "Try switching to 'All Alerts' to see your complete notifications log."
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Prueba cambiar a 'Todas' para ver el historial completo de alertas."
+                                    AppLanguage.FRENCH -> "Passez à « Toutes » pour voir tout l'historique des alertes."
+                                    AppLanguage.ENGLISH -> "Try switching to 'All Alerts' to see your complete notifications log."
+                                }
                             },
                             fontSize = 12.sp,
                             color = TextSecondary,
@@ -377,7 +411,15 @@ fun NotificationHistorySheet(
                         ) {
                             Icon(imageVector = Icons.Default.NotificationsActive, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(if (isEs) "Enviar Alerta de Prueba" else "Send Rich Test Alert", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Enviar Alerta de Prueba"
+                                    AppLanguage.FRENCH -> "Envoyer une alerte de test"
+                                    AppLanguage.ENGLISH -> "Send Rich Test Alert"
+                                },
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
@@ -477,9 +519,9 @@ private fun NotificationHistoryCard(
     modifier: Modifier = Modifier
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val context = LocalContext.current
-    val relativeTime = remember(entity.timestamp, isEs) { formatRelativeTimestamp(entity.timestamp, isEs) }
+    val relativeTime = remember(entity.timestamp, lang) { formatRelativeTimestamp(entity.timestamp, lang) }
 
     val interactionSource = remember { MutableInteractionSource() }
     val scaleModifier = if (lowEnd) {
@@ -558,9 +600,17 @@ private fun NotificationHistoryCard(
 
                 // Channel badge pill on thumbnail
                 val channelTag = when (entity.channelType) {
-                    "ENDING_SOON" -> if (isEs) "⏳ VENCE" else "⏳ ENDING"
+                    "ENDING_SOON" -> when (lang) {
+                        AppLanguage.SPANISH -> "⏳ VENCE"
+                        AppLanguage.FRENCH -> "⏳ EXP."
+                        AppLanguage.ENGLISH -> "⏳ ENDING"
+                    }
                     "DLC" -> "🎁 DLC"
-                    else -> if (isEs) "GRATIS" else "FREE"
+                    else -> when (lang) {
+                        AppLanguage.SPANISH -> "GRATIS"
+                        AppLanguage.FRENCH -> "GRATUIT"
+                        AppLanguage.ENGLISH -> "FREE"
+                    }
                 }
                 val channelBg = when (entity.channelType) {
                     "ENDING_SOON" -> Color(0xFFFF5252)
@@ -642,7 +692,11 @@ private fun NotificationHistoryCard(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = if (isEs) "Valor: " else "Value: ",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "Valor: "
+                            AppLanguage.FRENCH -> "Valeur : "
+                            AppLanguage.ENGLISH -> "Value: "
+                        },
                         fontSize = 11.sp,
                         color = TextSecondary
                     )
@@ -675,7 +729,15 @@ private fun NotificationHistoryCard(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(imageVector = Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(12.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(if (isEs) "Reclamar" else "Claim Free", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Reclamar"
+                                    AppLanguage.FRENCH -> "Réclamer"
+                                    AppLanguage.ENGLISH -> "Claim Free"
+                                },
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
 
@@ -691,7 +753,15 @@ private fun NotificationHistoryCard(
                     ) {
                         Icon(imageVector = Icons.Default.BookmarkBorder, contentDescription = null, modifier = Modifier.size(12.dp))
                         Spacer(modifier = Modifier.width(3.dp))
-                        Text(if (isEs) "Guardar" else "Save", fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                        Text(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Guardar"
+                                AppLanguage.FRENCH -> "Sauvegarder"
+                                AppLanguage.ENGLISH -> "Save"
+                            },
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
 
                     IconButton(
@@ -706,7 +776,7 @@ private fun NotificationHistoryCard(
     }
 }
 
-private fun formatRelativeTimestamp(timestamp: Long, isEs: Boolean): String {
+private fun formatRelativeTimestamp(timestamp: Long, lang: AppLanguage): String {
     val diff = System.currentTimeMillis() - timestamp
     val seconds = diff / 1000
     val minutes = seconds / 60
@@ -714,13 +784,37 @@ private fun formatRelativeTimestamp(timestamp: Long, isEs: Boolean): String {
     val days = hours / 24
 
     return when {
-        minutes < 1 -> if (isEs) "Ahora mismo" else "Just now"
-        minutes < 60 -> if (isEs) "Hace ${minutes}m" else "${minutes}m ago"
-        hours < 24 -> if (isEs) "Hace ${hours}h" else "${hours}h ago"
-        days == 1L -> if (isEs) "Ayer" else "Yesterday"
-        days < 7 -> if (isEs) "Hace ${days}d" else "${days}d ago"
+        minutes < 1 -> when (lang) {
+            AppLanguage.SPANISH -> "Ahora mismo"
+            AppLanguage.FRENCH -> "À l'instant"
+            AppLanguage.ENGLISH -> "Just now"
+        }
+        minutes < 60 -> when (lang) {
+            AppLanguage.SPANISH -> "Hace ${minutes}m"
+            AppLanguage.FRENCH -> "Il y a ${minutes} min"
+            AppLanguage.ENGLISH -> "${minutes}m ago"
+        }
+        hours < 24 -> when (lang) {
+            AppLanguage.SPANISH -> "Hace ${hours}h"
+            AppLanguage.FRENCH -> "Il y a ${hours} h"
+            AppLanguage.ENGLISH -> "${hours}h ago"
+        }
+        days == 1L -> when (lang) {
+            AppLanguage.SPANISH -> "Ayer"
+            AppLanguage.FRENCH -> "Hier"
+            AppLanguage.ENGLISH -> "Yesterday"
+        }
+        days < 7 -> when (lang) {
+            AppLanguage.SPANISH -> "Hace ${days}d"
+            AppLanguage.FRENCH -> "Il y a ${days} j"
+            AppLanguage.ENGLISH -> "${days}d ago"
+        }
         else -> {
-            val locale = if (isEs) NOTIF_LOCALE_ES else Locale.getDefault()
+            val locale = when (lang) {
+                AppLanguage.SPANISH -> NOTIF_LOCALE_ES
+                AppLanguage.FRENCH -> NOTIF_LOCALE_FR
+                AppLanguage.ENGLISH -> Locale.getDefault()
+            }
             val sdf = SimpleDateFormat("MMM d", locale)
             sdf.format(Date(timestamp))
         }

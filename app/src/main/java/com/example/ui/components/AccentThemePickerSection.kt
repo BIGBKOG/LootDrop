@@ -63,7 +63,7 @@ internal fun AccentThemePickerSection(
     context: Context
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     var selectedAccentCategory by remember { mutableStateOf(AccentCategory.ALL) }
     var accentViewMode by remember { mutableStateOf("grid") }
 
@@ -140,7 +140,16 @@ internal fun AccentThemePickerSection(
                             .background(activePrimary)
                             .padding(horizontal = 7.dp, vertical = 3.dp)
                     ) {
-                        Text(if (isEs) "100% GRATIS" else "100% OFF", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF0B0F19))
+                        Text(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "100% GRATIS"
+                                AppLanguage.FRENCH -> "100% GRATUIT"
+                                AppLanguage.ENGLISH -> "100% OFF"
+                            },
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFF0B0F19)
+                        )
                     }
                     Box(
                         modifier = Modifier
@@ -149,10 +158,27 @@ internal fun AccentThemePickerSection(
                             .border(0.5.dp, activeSecondary, RoundedCornerShape(5.dp))
                             .padding(horizontal = 7.dp, vertical = 3.dp)
                     ) {
-                        Text(if (isEs) "Reclamar Gratis" else "Free Claim", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = activeSecondary)
+                        Text(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Reclamar Gratis"
+                                AppLanguage.FRENCH -> "Réclamer"
+                                AppLanguage.ENGLISH -> "Free Claim"
+                            },
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = activeSecondary
+                        )
                     }
                     Spacer(modifier = Modifier.weight(1f))
-                    Text(if (isEs) "Vista Previa" else "Live Preview", fontSize = 10.sp, color = TextMuted)
+                    Text(
+                        when (lang) {
+                            AppLanguage.SPANISH -> "Vista Previa"
+                            AppLanguage.FRENCH -> "Aperçu"
+                            AppLanguage.ENGLISH -> "Live Preview"
+                        },
+                        fontSize = 10.sp,
+                        color = TextMuted
+                    )
                 }
             }
         }
@@ -206,9 +232,17 @@ internal fun AccentThemePickerSection(
                         Icon(
                             imageVector = icon,
                             contentDescription = if (mode == "grid") {
-                                if (isEs) "Vista en cuadrícula" else "Grid View"
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Vista en cuadrícula"
+                                    AppLanguage.FRENCH -> "Vue grille"
+                                    AppLanguage.ENGLISH -> "Grid View"
+                                }
                             } else {
-                                if (isEs) "Vista en carrusel" else "Carousel View"
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Vista en carrusel"
+                                    AppLanguage.FRENCH -> "Vue carrousel"
+                                    AppLanguage.ENGLISH -> "Carousel View"
+                                }
                             },
                             tint = if (active) Color(0xFF0B0F19) else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(16.dp)
@@ -227,10 +261,10 @@ internal fun AccentThemePickerSection(
             if (unlocked) {
                 viewModel.setAccentTheme(theme)
             } else {
-                val msg = if (isEs) {
-                    "🔒 ¡Completa un hito en el Reto Backlog 3×3 para desbloquear ${theme.localizedTitle(s)}!"
-                } else {
-                    "🔒 Complete a 3×3 Backlog Challenge milestone to unlock ${theme.localizedTitle(s)}!"
+                val msg = when (lang) {
+                    AppLanguage.SPANISH -> "🔒 ¡Completa un hito en el Reto Backlog 3×3 para desbloquear ${theme.localizedTitle(s)}!"
+                    AppLanguage.FRENCH -> "🔒 Terminez un palier du Défi Backlog 3×3 pour débloquer ${theme.localizedTitle(s)} !"
+                    AppLanguage.ENGLISH -> "🔒 Complete a 3×3 Backlog Challenge milestone to unlock ${theme.localizedTitle(s)}!"
                 }
                 Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
             }
@@ -281,10 +315,28 @@ internal fun AccentThemePickerSection(
                                                 modifier = Modifier.size(16.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)),
                                                 contentAlignment = Alignment.Center
                                             ) {
-                                                Icon(Icons.Default.Check, contentDescription = if (isEs) "Seleccionado" else "Selected", tint = Color.White, modifier = Modifier.size(12.dp))
+                                                Icon(
+                                                    Icons.Default.Check,
+                                                    contentDescription = when (lang) {
+                                                        AppLanguage.SPANISH -> "Seleccionado"
+                                                        AppLanguage.FRENCH -> "Sélectionné"
+                                                        AppLanguage.ENGLISH -> "Selected"
+                                                    },
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(12.dp)
+                                                )
                                             }
                                         } else if (!isUnlocked) {
-                                            Icon(Icons.Default.Lock, contentDescription = if (isEs) "Bloqueado" else "Locked", tint = Color.White, modifier = Modifier.size(12.dp))
+                                            Icon(
+                                                Icons.Default.Lock,
+                                                contentDescription = when (lang) {
+                                                    AppLanguage.SPANISH -> "Bloqueado"
+                                                    AppLanguage.FRENCH -> "Verrouillé"
+                                                    AppLanguage.ENGLISH -> "Locked"
+                                                },
+                                                tint = Color.White,
+                                                modifier = Modifier.size(12.dp)
+                                            )
                                         }
                                     }
                                 }
@@ -339,7 +391,16 @@ internal fun AccentThemePickerSection(
                                     modifier = Modifier.size(26.dp).clip(CircleShape).background(Brush.linearGradient(listOf(primary, secondary))),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    if (!isUnlocked) Icon(Icons.Default.Lock, contentDescription = if (isEs) "Bloqueado" else "Locked", tint = Color.White, modifier = Modifier.size(14.dp))
+                                    if (!isUnlocked) Icon(
+                                        Icons.Default.Lock,
+                                        contentDescription = when (lang) {
+                                            AppLanguage.SPANISH -> "Bloqueado"
+                                            AppLanguage.FRENCH -> "Verrouillé"
+                                            AppLanguage.ENGLISH -> "Locked"
+                                        },
+                                        tint = Color.White,
+                                        modifier = Modifier.size(14.dp)
+                                    )
                                 }
                                 if (isSelected) {
                                     Box(modifier = Modifier.clip(RoundedCornerShape(5.dp)).background(primary).padding(horizontal = 6.dp, vertical = 2.dp)) {
@@ -347,7 +408,16 @@ internal fun AccentThemePickerSection(
                                     }
                                 } else if (!isUnlocked) {
                                     Box(modifier = Modifier.clip(RoundedCornerShape(5.dp)).background(Color(0xFF334155)).padding(horizontal = 6.dp, vertical = 2.dp)) {
-                                        Text(if (isEs) "BLOQUEADO" else "LOCKED", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFCBD5E1))
+                                        Text(
+                                            when (lang) {
+                                                AppLanguage.SPANISH -> "BLOQUEADO"
+                                                AppLanguage.FRENCH -> "VERROUILLÉ"
+                                                AppLanguage.ENGLISH -> "LOCKED"
+                                            },
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFFCBD5E1)
+                                        )
                                     }
                                 }
                             }
@@ -360,7 +430,11 @@ internal fun AccentThemePickerSection(
                             )
                             Text(
                                 text = if (!isUnlocked) {
-                                    if (isEs) "Desbloquea en Reto Backlog" else "Unlock via Backlog Challenge"
+                                    when (lang) {
+                                        AppLanguage.SPANISH -> "Desbloquea en Reto Backlog"
+                                        AppLanguage.FRENCH -> "Débloquer via Défi Backlog"
+                                        AppLanguage.ENGLISH -> "Unlock via Backlog Challenge"
+                                    }
                                 } else theme.localizedDescription(s),
                                 fontSize = 11.sp,
                                 color = if (!isUnlocked) Color(0xFFFBBF24) else MaterialTheme.colorScheme.onSurfaceVariant,

@@ -141,7 +141,7 @@ private fun MythicToastContent(
     val context = LocalContext.current
     val s = LocalAppStrings.current
     val lowEnd = LocalLowEndOptimization.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val mythicColor = Color(0xFFE040FB)
     val mythicGold = Color(0xFFFFD700)
 
@@ -248,7 +248,11 @@ private fun MythicToastContent(
                                 .padding(horizontal = 5.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = if (isEs) "💎 MÍTICO DESBLOQUEADO" else "💎 MYTHIC UNLOCKED",
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "💎 MÍTICO DESBLOQUEADO"
+                                    AppLanguage.FRENCH -> "💎 MYTHIQUE DÉBLOQUÉ"
+                                    AppLanguage.ENGLISH -> "💎 MYTHIC UNLOCKED"
+                                },
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Black,
                                 color = mythicColor,
@@ -258,7 +262,11 @@ private fun MythicToastContent(
 
                         // Unlock rarity
                         Text(
-                            text = if (isEs) "Top ${achievement.formattedRarity} global" else "Top ${achievement.formattedRarity}",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "Top ${achievement.formattedRarity} global"
+                                AppLanguage.FRENCH -> "Top ${achievement.formattedRarity} mondial"
+                                AppLanguage.ENGLISH -> "Top ${achievement.formattedRarity}"
+                            },
                             fontSize = 11.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = mythicGold
@@ -339,7 +347,11 @@ private fun MythicToastContent(
                         )
                         Spacer(modifier = Modifier.width(3.dp))
                         Text(
-                            text = if (isEs) "Ver" else "View",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "Ver"
+                                AppLanguage.FRENCH -> "Voir"
+                                AppLanguage.ENGLISH -> "View"
+                            },
                             fontSize = 11.sp,
                             fontWeight = FontWeight.ExtraBold
                         )

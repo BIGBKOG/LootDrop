@@ -75,7 +75,7 @@ fun PublicReviewsSection(
     modifier: Modifier = Modifier
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     var isWriteDialogOpen by remember { mutableStateOf(false) }
     val avgRating = remember(reviews) { if (reviews.isEmpty()) 5.0 else reviews.map { it.rating }.average() }
     val reviewCount = reviews.size
@@ -134,10 +134,10 @@ fun PublicReviewsSection(
                             }
                         }
                         Text(
-                            text = if (isEs) {
-                                if (reviewCount == 1) "1 reseña de jugadores" else "$reviewCount reseñas de jugadores"
-                            } else {
-                                if (reviewCount == 1) "1 review from players" else "$reviewCount reviews from players"
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> if (reviewCount == 1) "1 reseña de jugadores" else "$reviewCount reseñas de jugadores"
+                                AppLanguage.FRENCH -> if (reviewCount == 1) "1 avis de joueur" else "$reviewCount avis de joueurs"
+                                AppLanguage.ENGLISH -> if (reviewCount == 1) "1 review from players" else "$reviewCount reviews from players"
                             },
                             fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -179,7 +179,11 @@ fun PublicReviewsSection(
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(s.dialogs.reviewsNoReviewsYet, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center)
                     Text(
-                        text = if (isEs) "Comparte tu puntuación y opinión con la comunidad. Se sincronizan públicamente en la nube R2." else "Share your rating and thoughts with the community. Reviews sync publicly to our R2 cloud.",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "Comparte tu puntuación y opinión con la comunidad. Se sincronizan públicamente en la nube R2."
+                            AppLanguage.FRENCH -> "Partagez votre note et votre avis avec la communauté. Synchronisation publique sur notre cloud R2."
+                            AppLanguage.ENGLISH -> "Share your rating and thoughts with the community. Reviews sync publicly to our R2 cloud."
+                        },
                         fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(4.dp))
@@ -224,7 +228,7 @@ fun ReviewCard(
     modifier: Modifier = Modifier
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -272,24 +276,43 @@ fun ReviewCard(
                                         .border(0.8.dp, ReviewStarGold.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
                                         .padding(horizontal = 5.dp, vertical = 1.dp)
                                 ) {
-                                    Text(if (isEs) "⭐ RESEÑA APP" else "⭐ APP REVIEW", fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = ReviewStarGold)
+                                    Text(
+                                        when (lang) {
+                                            AppLanguage.SPANISH -> "⭐ RESEÑA APP"
+                                            AppLanguage.FRENCH -> "⭐ AVIS APP"
+                                            AppLanguage.ENGLISH -> "⭐ APP REVIEW"
+                                        },
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = ReviewStarGold
+                                    )
                                 }
                             } else if (review.isVerifiedClaimer) {
                                 Icon(Icons.Default.Verified, contentDescription = s.dialogs.reviewsVerifiedClaimer, tint = NeonGreen, modifier = Modifier.size(14.dp))
                             }
                         }
 
-                        val timeAgo = remember(review.timestamp, isEs) {
+                        val timeAgo = remember(review.timestamp, lang) {
                             runCatching {
                                 DateUtils.getRelativeTimeSpanString(
                                     review.timestamp, System.currentTimeMillis(),
                                     DateUtils.MINUTE_IN_MILLIS, DateUtils.FORMAT_ABBREV_RELATIVE
                                 ).toString()
-                            }.getOrDefault(if (isEs) "Reciente" else "Recently")
+                            }.getOrDefault(
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Reciente"
+                                    AppLanguage.FRENCH -> "Récent"
+                                    AppLanguage.ENGLISH -> "Recently"
+                                }
+                            )
                         }
                         Text(
                             text = if (review.isForApp) {
-                                if (isEs) "App LootDrop • $timeAgo" else "LootDrop App • $timeAgo"
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "App LootDrop • $timeAgo"
+                                    AppLanguage.FRENCH -> "Appli LootDrop • $timeAgo"
+                                    AppLanguage.ENGLISH -> "LootDrop App • $timeAgo"
+                                }
                             } else "${review.platform} • $timeAgo",
                             fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -366,7 +389,7 @@ fun LootDropAppRatingCard(
     modifier: Modifier = Modifier
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     var isWriteDialogOpen by remember { mutableStateOf(false) }
     var isBrowseDialogOpen by remember { mutableStateOf(false) }
 
@@ -396,7 +419,15 @@ fun LootDropAppRatingCard(
                     }
                     Column {
                         Text(s.dialogs.reviewsAppRatingTitle.uppercase(), fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = ReviewStarGold, letterSpacing = 0.8.sp)
-                        Text(if (isEs) "Reseñas de la comunidad en Cloudflare R2" else "Community Reviews on Cloudflare R2", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Reseñas de la comunidad en Cloudflare R2"
+                                AppLanguage.FRENCH -> "Avis de la communauté sur Cloudflare R2"
+                                AppLanguage.ENGLISH -> "Community Reviews on Cloudflare R2"
+                            },
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
 
@@ -436,17 +467,26 @@ fun LootDropAppRatingCard(
                             }
                         }
                         Text(
-                            text = if (isEs) {
-                                if (count == 1) "1 valoración y reseña" else "$count valoraciones y reseñas"
-                            } else {
-                                "$count player ${if (count == 1) "rating" else "ratings"} & reviews"
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> if (count == 1) "1 valoración y reseña" else "$count valoraciones y reseñas"
+                                AppLanguage.FRENCH -> if (count == 1) "1 note et avis" else "$count notes et avis"
+                                AppLanguage.ENGLISH -> "$count player ${if (count == 1) "rating" else "ratings"} & reviews"
                             },
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
-                Text(if (isEs) "🏆 Obra Maestra" else "🏆 Masterpiece", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = NeonGreen)
+                Text(
+                    when (lang) {
+                        AppLanguage.SPANISH -> "🏆 Obra Maestra"
+                        AppLanguage.FRENCH -> "🏆 Chef-d'œuvre"
+                        AppLanguage.ENGLISH -> "🏆 Masterpiece"
+                    },
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = NeonGreen
+                )
             }
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -467,7 +507,15 @@ fun LootDropAppRatingCard(
                     shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
-                    Text(if (isEs) "Ver todas (${reviews.size})" else "All Reviews (${reviews.size})", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        when (lang) {
+                            AppLanguage.SPANISH -> "Ver todas (${reviews.size})"
+                            AppLanguage.FRENCH -> "Tout voir (${reviews.size})"
+                            AppLanguage.ENGLISH -> "All Reviews (${reviews.size})"
+                        },
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
         }

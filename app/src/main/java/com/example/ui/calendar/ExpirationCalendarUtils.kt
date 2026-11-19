@@ -21,6 +21,7 @@ object ExpirationCalendarUtils {
     private const val MAX_DATE_CACHE = 256
     private val cacheLock = Any()
     private val LOCALE_ES: Locale = Locale.forLanguageTag("es")
+    private val LOCALE_FR: Locale = Locale.forLanguageTag("fr")
     private val INVALID_DATE_SENTINEL: LocalDate = LocalDate.MIN
     private val PARSED_DATE_CACHE = object : LinkedHashMap<String, LocalDate>(64, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, LocalDate>?): Boolean = size > MAX_DATE_CACHE
@@ -98,22 +99,22 @@ object ExpirationCalendarUtils {
         if (endDateStr.isNullOrBlank() || endDateStr.equals("N/A", ignoreCase = true)) {
             return s.home.expLimitedKeys
         }
-        val isEs = s.language == AppLanguage.SPANISH
+        val lang = s.language
         return try {
             val trimmed = endDateStr.trim()
             val localDate = parseExpirationDate(trimmed) ?: return s.home.expEndsSoon
             val today = now.toLocalDate()
             val daysBetween = ChronoUnit.DAYS.between(today, localDate)
 
-            val dayShort = if (isEs) {
-                localDate.dayOfWeek.getDisplayName(TextStyle.SHORT, LOCALE_ES).replace(".", "").uppercase()
-            } else {
-                localDate.dayOfWeek.name.take(3)
+            val dayShort = when (lang) {
+                AppLanguage.SPANISH -> localDate.dayOfWeek.getDisplayName(TextStyle.SHORT, LOCALE_ES).replace(".", "").uppercase()
+                AppLanguage.FRENCH -> localDate.dayOfWeek.getDisplayName(TextStyle.SHORT, LOCALE_FR).replace(".", "").uppercase()
+                AppLanguage.ENGLISH -> localDate.dayOfWeek.name.take(3)
             }
-            val monthShort = if (isEs) {
-                localDate.month.getDisplayName(TextStyle.SHORT, LOCALE_ES).replace(".", "").uppercase()
-            } else {
-                localDate.month.name.take(3)
+            val monthShort = when (lang) {
+                AppLanguage.SPANISH -> localDate.month.getDisplayName(TextStyle.SHORT, LOCALE_ES).replace(".", "").uppercase()
+                AppLanguage.FRENCH -> localDate.month.getDisplayName(TextStyle.SHORT, LOCALE_FR).replace(".", "").uppercase()
+                AppLanguage.ENGLISH -> localDate.month.name.take(3)
             }
 
             when {

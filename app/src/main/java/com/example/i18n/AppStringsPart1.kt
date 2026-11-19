@@ -31,7 +31,7 @@ data class CommonAndNavStrings(
     val retry: String,
     val tapToView: String,
     val gameFallback: String,
-    // First-boot language selector (intentionally clear in both languages)
+    // First-boot language selector (intentionally clear in all supported languages)
     val initialLangBadge: String,
     val initialLangTitle: String,
     val initialLangSubtitle: String,
@@ -39,8 +39,11 @@ data class CommonAndNavStrings(
     val initialLangEnglishDesc: String,
     val initialLangSpanishTitle: String,
     val initialLangSpanishDesc: String,
+    val initialLangFrenchTitle: String,
+    val initialLangFrenchDesc: String,
     val initialLangConfirmEn: String,
     val initialLangConfirmEs: String,
+    val initialLangConfirmFr: String,
     val initialLangFootnote: String,
     // Top bar & banners
     val checkNotificationsCd: String,

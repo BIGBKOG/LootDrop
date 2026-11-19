@@ -69,7 +69,7 @@ internal fun HomeRecentSteamGamesSection(
     modifier: Modifier = Modifier
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -96,7 +96,11 @@ internal fun HomeRecentSteamGamesSection(
                         Icon(Icons.Default.SportsEsports, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(13.dp))
                     }
                     Text(
-                        text = if (isEs) "ACTIVIDAD RECIENTE EN STEAM" else "RECENT STEAM ACTIVITY",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "ACTIVIDAD RECIENTE EN STEAM"
+                            AppLanguage.FRENCH -> "ACTIVITÉ RÉCENTE STEAM"
+                            AppLanguage.ENGLISH -> "RECENT STEAM ACTIVITY"
+                        },
                         style = MaterialTheme.typography.titleSmall,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Black,
@@ -105,7 +109,11 @@ internal fun HomeRecentSteamGamesSection(
                     )
                 }
                 Text(
-                    text = if (isEs) "Tus 3 juegos jugados recientemente y logros" else "Your 3 most recent played games & achievements",
+                    text = when (lang) {
+                        AppLanguage.SPANISH -> "Tus 3 juegos jugados recientemente y logros"
+                        AppLanguage.FRENCH -> "Vos 3 jeux joués récemment et succès"
+                        AppLanguage.ENGLISH -> "Your 3 most recent played games & achievements"
+                    },
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -133,7 +141,14 @@ internal fun HomeRecentSteamGamesSection(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Icon(Icons.Default.Sync, contentDescription = s.library.steamSyncCd, tint = NeonCyan, modifier = Modifier.size(13.dp))
-                                Text(if (isEs) "Sincr." else "Sync", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = NeonCyan)
+                                Text(
+                                    when (lang) {
+                                        AppLanguage.SPANISH -> "Sincr."
+                                        AppLanguage.FRENCH -> "Synchro"
+                                        AppLanguage.ENGLISH -> "Sync"
+                                    },
+                                    fontSize = 11.sp, fontWeight = FontWeight.Bold, color = NeonCyan
+                                )
                             }
                         }
                     }
@@ -161,9 +176,17 @@ internal fun HomeRecentSteamGamesSection(
                     }
                     Text(
                         text = if (steamUserId.isBlank()) {
-                            if (isEs) "Conecta tu Cuenta de Steam" else "Connect Your Steam Account"
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Conecta tu Cuenta de Steam"
+                                AppLanguage.FRENCH -> "Connectez Votre Compte Steam"
+                                AppLanguage.ENGLISH -> "Connect Your Steam Account"
+                            }
                         } else {
-                            if (isEs) "Sin Juegos de Steam Sincronizados" else "No Steam Games Synced"
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Sin Juegos de Steam Sincronizados"
+                                AppLanguage.FRENCH -> "Aucun Jeu Steam Synchronisé"
+                                AppLanguage.ENGLISH -> "No Steam Games Synced"
+                            }
                         },
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
@@ -174,8 +197,11 @@ internal fun HomeRecentSteamGamesSection(
                         text = if (steamUserId.isBlank()) {
                             s.home.homeRecentSteamEmpty
                         } else {
-                            if (isEs) "Sincroniza tu biblioteca de Steam para importar horas jugadas, títulos recientes y logros."
-                            else "Sync your Steam library to import your playtime, recently played games, and achievements."
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Sincroniza tu biblioteca de Steam para importar horas jugadas, títulos recientes y logros."
+                                AppLanguage.FRENCH -> "Synchronisez votre bibliothèque Steam pour importer vos heures de jeu, titres récents et succès."
+                                AppLanguage.ENGLISH -> "Sync your Steam library to import your playtime, recently played games, and achievements."
+                            }
                         },
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -195,9 +221,17 @@ internal fun HomeRecentSteamGamesSection(
                             Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(16.dp))
                             Text(
                                 text = if (steamUserId.isBlank()) {
-                                    if (isEs) "Conectar ID de Steam" else "Connect Steam ID"
+                                    when (lang) {
+                                        AppLanguage.SPANISH -> "Conectar ID de Steam"
+                                        AppLanguage.FRENCH -> "Connecter ID Steam"
+                                        AppLanguage.ENGLISH -> "Connect Steam ID"
+                                    }
                                 } else {
-                                    if (isEs) "Gestionar Steam" else "Manage Steam Sync"
+                                    when (lang) {
+                                        AppLanguage.SPANISH -> "Gestionar Steam"
+                                        AppLanguage.FRENCH -> "Gérer Steam"
+                                        AppLanguage.ENGLISH -> "Manage Steam Sync"
+                                    }
                                 },
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp
@@ -227,7 +261,7 @@ private fun HomeRecentSteamGameCard(
 ) {
     val context = LocalContext.current
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val lowEnd = LocalLowEndOptimization.current
     val headerImageRequest = remember(context, game.headerImageUrl, lowEnd) {
         buildGiveawayImageRequest(
@@ -281,7 +315,11 @@ private fun HomeRecentSteamGameCard(
                     ) {
                         Icon(Icons.Default.AccessTime, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(13.dp))
                         Text(
-                            if (isEs) "${game.playtimeHours} jugadas" else "${game.playtimeHours} total played",
+                            when (lang) {
+                                AppLanguage.SPANISH -> "${game.playtimeHours} jugadas"
+                                AppLanguage.FRENCH -> "${game.playtimeHours} jouées"
+                                AppLanguage.ENGLISH -> "${game.playtimeHours} total played"
+                            },
                             fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = NeonCyan
                         )
                     }
@@ -293,7 +331,11 @@ private fun HomeRecentSteamGameCard(
                             String.format(Locale.US, "%.1fh", recentHours)
                         }
                         Text(
-                            if (isEs) "$formattedRecent en las últimas 2 sem." else "$formattedRecent past 2 weeks",
+                            when (lang) {
+                                AppLanguage.SPANISH -> "$formattedRecent en las últimas 2 sem."
+                                AppLanguage.FRENCH -> "$formattedRecent ces 2 dern. sem."
+                                AppLanguage.ENGLISH -> "$formattedRecent past 2 weeks"
+                            },
                             fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -351,12 +393,23 @@ private fun HomeRecentSteamGameCard(
                             ) {
                                 Icon(Icons.Default.EmojiEvents, contentDescription = null, tint = accent, modifier = Modifier.size(14.dp))
                                 Text(
-                                    text = if (isEs) "Logros: ${game.achievementsUnlocked}/${game.achievementsTotal}" else "Achievements: ${game.achievementsUnlocked}/${game.achievementsTotal}",
+                                    text = when (lang) {
+                                        AppLanguage.SPANISH -> "Logros: ${game.achievementsUnlocked}/${game.achievementsTotal}"
+                                        AppLanguage.FRENCH -> "Succès : ${game.achievementsUnlocked}/${game.achievementsTotal}"
+                                        AppLanguage.ENGLISH -> "Achievements: ${game.achievementsUnlocked}/${game.achievementsTotal}"
+                                    },
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
-                                Text(if (isEs) "• Ver Guías ➔" else "• View Guides ➔", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = NeonCyan)
+                                Text(
+                                    when (lang) {
+                                        AppLanguage.SPANISH -> "• Ver Guías ➔"
+                                        AppLanguage.FRENCH -> "• Voir Guides ➔"
+                                        AppLanguage.ENGLISH -> "• View Guides ➔"
+                                    },
+                                    fontSize = 11.sp, fontWeight = FontWeight.Bold, color = NeonCyan
+                                )
                             }
                             Text("${game.achievementsPercentage}%", fontSize = 11.sp, fontWeight = FontWeight.Black, color = accent)
                         }
@@ -385,13 +438,21 @@ private fun HomeRecentSteamGameCard(
                                 modifier = Modifier.size(13.dp)
                             )
                             Text(
-                                text = if (isEs) "Sin logros de Steam para este título" else "No Steam Achievements for this title",
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "Sin logros de Steam para este título"
+                                    AppLanguage.FRENCH -> "Aucun succès Steam pour ce titre"
+                                    AppLanguage.ENGLISH -> "No Steam Achievements for this title"
+                                },
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Text(
-                            text = if (isEs) "Sin sincr." else "Unsynced",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "Sin sincr."
+                                AppLanguage.FRENCH -> "Non synchro"
+                                AppLanguage.ENGLISH -> "Unsynced"
+                            },
                             fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Medium

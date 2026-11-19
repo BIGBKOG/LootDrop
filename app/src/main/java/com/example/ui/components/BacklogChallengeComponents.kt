@@ -62,7 +62,7 @@ internal fun MilestonesShelf(
     onEquipTheme: (AccentTheme) -> Unit
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val unclaimedCount = milestones.count { it.isUnlocked && !it.isClaimed }
     val claimedCount = milestones.count { it.isClaimed }
 
@@ -85,7 +85,11 @@ internal fun MilestonesShelf(
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
-                    text = if (isEs) "🏆 Recompensas de Hitos" else "🏆 Milestone Rewards",
+                    text = when (lang) {
+                        AppLanguage.SPANISH -> "🏆 Recompensas de Hitos"
+                        AppLanguage.FRENCH -> "🏆 Récompenses d'étapes"
+                        AppLanguage.ENGLISH -> "🏆 Milestone Rewards"
+                    },
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -112,7 +116,11 @@ internal fun MilestonesShelf(
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = if (isEs) "$unclaimedCount NUEVAS" else "$unclaimedCount NEW",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "$unclaimedCount NUEVAS"
+                                AppLanguage.FRENCH -> "$unclaimedCount NOUV."
+                                AppLanguage.ENGLISH -> "$unclaimedCount NEW"
+                            },
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Black,
                             color = Color.White
@@ -131,7 +139,11 @@ internal fun MilestonesShelf(
                         .testTag("claim_all_backlog_milestones")
                 ) {
                     Text(
-                        text = if (isEs) "Reclamar Todo" else "Claim All",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "Reclamar Todo"
+                            AppLanguage.FRENCH -> "Tout réclamer"
+                            AppLanguage.ENGLISH -> "Claim All"
+                        },
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black
@@ -155,7 +167,7 @@ internal fun MilestoneItemRow(
     onEquipTheme: (AccentTheme) -> Unit
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val isUnlocked = milestone.isUnlocked
     val isClaimed = milestone.isClaimed
     val rewardTheme = milestone.themeReward
@@ -196,19 +208,31 @@ internal fun MilestoneItemRow(
             when {
                 isClaimed -> Icon(
                     imageVector = Icons.Default.CheckCircle,
-                    contentDescription = if (isEs) "Reclamado" else "Claimed",
+                    contentDescription = when (lang) {
+                        AppLanguage.SPANISH -> "Reclamado"
+                        AppLanguage.FRENCH -> "Réclamé"
+                        AppLanguage.ENGLISH -> "Claimed"
+                    },
                     tint = Color(0xFF10B981),
                     modifier = Modifier.size(20.dp)
                 )
                 isUnlocked -> Icon(
                     imageVector = Icons.Default.Stars,
-                    contentDescription = if (isEs) "Desbloqueado" else "Unlocked",
+                    contentDescription = when (lang) {
+                        AppLanguage.SPANISH -> "Desbloqueado"
+                        AppLanguage.FRENCH -> "Débloqué"
+                        AppLanguage.ENGLISH -> "Unlocked"
+                    },
                     tint = Color(0xFFF59E0B),
                     modifier = Modifier.size(20.dp)
                 )
                 else -> Icon(
                     imageVector = Icons.Default.Lock,
-                    contentDescription = if (isEs) "Bloqueado" else "Locked",
+                    contentDescription = when (lang) {
+                        AppLanguage.SPANISH -> "Bloqueado"
+                        AppLanguage.FRENCH -> "Verrouillé"
+                        AppLanguage.ENGLISH -> "Locked"
+                    },
                     tint = rewardTheme?.darkPrimary?.copy(alpha = 0.8f) ?: Color(0xFF64748B),
                     modifier = Modifier.size(16.dp)
                 )
@@ -270,7 +294,15 @@ internal fun MilestoneItemRow(
                         modifier = Modifier.size(12.dp),
                         tint = Color.White
                     )
-                    Text(if (isEs) "Equipar" else "Equip", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        when (lang) {
+                            AppLanguage.SPANISH -> "Equipar"
+                            AppLanguage.FRENCH -> "Équiper"
+                            AppLanguage.ENGLISH -> "Equip"
+                        },
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         } else if (isClaimed) {
@@ -281,7 +313,11 @@ internal fun MilestoneItemRow(
                     .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
                 Text(
-                    text = if (isEs) "En Vitrina" else "In Showcase",
+                    text = when (lang) {
+                        AppLanguage.SPANISH -> "En Vitrina"
+                        AppLanguage.FRENCH -> "En vitrine"
+                        AppLanguage.ENGLISH -> "In Showcase"
+                    },
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF34D399)
@@ -289,7 +325,19 @@ internal fun MilestoneItemRow(
             }
         } else {
             Text(
-                text = if (isUnlocked) (if (isEs) "Listo para Reclamar" else "Ready to Claim") else (if (isEs) "Bloqueado" else "Locked"),
+                text = if (isUnlocked) {
+                    when (lang) {
+                        AppLanguage.SPANISH -> "Listo para Reclamar"
+                        AppLanguage.FRENCH -> "Prêt à réclamer"
+                        AppLanguage.ENGLISH -> "Ready to Claim"
+                    }
+                } else {
+                    when (lang) {
+                        AppLanguage.SPANISH -> "Bloqueado"
+                        AppLanguage.FRENCH -> "Verrouillé"
+                        AppLanguage.ENGLISH -> "Locked"
+                    }
+                },
                 fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = if (isUnlocked) Color(0xFFFBBF24) else TextMuted
@@ -307,7 +355,7 @@ internal fun TileDetailDialog(
 ) {
     val context = LocalContext.current
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -341,10 +389,10 @@ internal fun TileDetailDialog(
                                 color = Color.White
                             )
                             Text(
-                                text = if (isEs) {
-                                    "Categoría: ${tile.category.localizedDisplayName(s)}"
-                                } else {
-                                    "Category: ${tile.category.localizedDisplayName(s)}"
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "Categoría: ${tile.category.localizedDisplayName(s)}"
+                                    AppLanguage.FRENCH -> "Catégorie : ${tile.category.localizedDisplayName(s)}"
+                                    AppLanguage.ENGLISH -> "Category: ${tile.category.localizedDisplayName(s)}"
                                 },
                                 fontSize = 11.sp,
                                 color = Color(0xFF94A3B8)
@@ -383,10 +431,10 @@ internal fun TileDetailDialog(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = if (isEs) {
-                            "Progreso: ${tile.currentProgress} / ${tile.targetRequirement}"
-                        } else {
-                            "Progress: ${tile.currentProgress} / ${tile.targetRequirement}"
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "Progreso: ${tile.currentProgress} / ${tile.targetRequirement}"
+                            AppLanguage.FRENCH -> "Progression : ${tile.currentProgress} / ${tile.targetRequirement}"
+                            AppLanguage.ENGLISH -> "Progress: ${tile.currentProgress} / ${tile.targetRequirement}"
                         },
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
@@ -406,9 +454,17 @@ internal fun TileDetailDialog(
                             )
                             Text(
                                 text = if (tile.manualOverrideDone) {
-                                    if (isEs) "Manual" else "Manual Done"
+                                    when (lang) {
+                                        AppLanguage.SPANISH -> "Manual"
+                                        AppLanguage.FRENCH -> "Validé manuellement"
+                                        AppLanguage.ENGLISH -> "Manual Done"
+                                    }
                                 } else {
-                                    if (isEs) "Auto-Completado" else "Auto-Completed"
+                                    when (lang) {
+                                        AppLanguage.SPANISH -> "Auto-Completado"
+                                        AppLanguage.FRENCH -> "Auto-complété"
+                                        AppLanguage.ENGLISH -> "Auto-Completed"
+                                    }
                                 },
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
@@ -434,7 +490,11 @@ internal fun TileDetailDialog(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = if (isEs) "💡 Sugerido de tu Biblioteca:" else "💡 Recommended From Library:",
+                                    text = when (lang) {
+                                        AppLanguage.SPANISH -> "💡 Sugerido de tu Biblioteca:"
+                                        AppLanguage.FRENCH -> "💡 Recommandé de votre bibliothèque :"
+                                        AppLanguage.ENGLISH -> "💡 Recommended From Library:"
+                                    },
                                     fontSize = 10.sp,
                                     color = Color(0xFF38BDF8),
                                     fontWeight = FontWeight.SemiBold
@@ -465,7 +525,15 @@ internal fun TileDetailDialog(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
-                                        Text(if (isEs) "Abrir" else "Launch", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        Text(
+                                            when (lang) {
+                                                AppLanguage.SPANISH -> "Abrir"
+                                                AppLanguage.FRENCH -> "Lancer"
+                                                AppLanguage.ENGLISH -> "Launch"
+                                            },
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
                                         Icon(
                                             imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                                             contentDescription = null,
@@ -498,9 +566,21 @@ internal fun TileDetailDialog(
                     ) {
                         Text(
                             text = when {
-                                tile.manualOverrideDone -> if (isEs) "Quitar Marca Manual (Liberar espacio)" else "Clear Manual Unlock (Free up slot)"
-                                grid.canManualOverrideMore -> if (isEs) "Marcar como Hecho (${grid.remainingManualOverrides} disp.)" else "Mark Done Manually (${grid.remainingManualOverrides} left)"
-                                else -> if (isEs) "Límite Manual Alcanzado (2/2 Usados)" else "Manual Unlock Limit Reached (2/2 Used)"
+                                tile.manualOverrideDone -> when (lang) {
+                                    AppLanguage.SPANISH -> "Quitar Marca Manual (Liberar espacio)"
+                                    AppLanguage.FRENCH -> "Retirer la validation manuelle"
+                                    AppLanguage.ENGLISH -> "Clear Manual Unlock (Free up slot)"
+                                }
+                                grid.canManualOverrideMore -> when (lang) {
+                                    AppLanguage.SPANISH -> "Marcar como Hecho (${grid.remainingManualOverrides} disp.)"
+                                    AppLanguage.FRENCH -> "Valider manuellement (${grid.remainingManualOverrides} restant)"
+                                    AppLanguage.ENGLISH -> "Mark Done Manually (${grid.remainingManualOverrides} left)"
+                                }
+                                else -> when (lang) {
+                                    AppLanguage.SPANISH -> "Límite Manual Alcanzado (2/2 Usados)"
+                                    AppLanguage.FRENCH -> "Limite manuelle atteinte (2/2 utilisés)"
+                                    AppLanguage.ENGLISH -> "Manual Unlock Limit Reached (2/2 Used)"
+                                }
                             },
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
@@ -509,16 +589,20 @@ internal fun TileDetailDialog(
 
                     Text(
                         text = when {
-                            tile.manualOverrideDone -> if (isEs) "Toca para desmarcar y liberar 1 de tus 2 usos semanales" else "Tap to uncheck and free up 1 of your 2 weekly manual unlocks"
-                            grid.canManualOverrideMore -> if (isEs) {
-                                "Margen: ${grid.manualOverridesUsed}/${grid.maxManualOverrides} usados esta semana"
-                            } else {
-                                "Allowance: ${grid.manualOverridesUsed}/${grid.maxManualOverrides} used this week"
+                            tile.manualOverrideDone -> when (lang) {
+                                AppLanguage.SPANISH -> "Toca para desmarcar y liberar 1 de tus 2 usos semanales"
+                                AppLanguage.FRENCH -> "Appuyez pour décocher et libérer 1 de vos 2 validations hebdomadaires"
+                                AppLanguage.ENGLISH -> "Tap to uncheck and free up 1 of your 2 weekly manual unlocks"
                             }
-                            else -> if (isEs) {
-                                "Límite de 2 desbloqueos manuales esta semana. Libera otra casilla primero."
-                            } else {
-                                "Limit of 2 manual unlocks reached this week. Clear another tile first to use here."
+                            grid.canManualOverrideMore -> when (lang) {
+                                AppLanguage.SPANISH -> "Margen: ${grid.manualOverridesUsed}/${grid.maxManualOverrides} usados esta semana"
+                                AppLanguage.FRENCH -> "Quota : ${grid.manualOverridesUsed}/${grid.maxManualOverrides} utilisés cette semaine"
+                                AppLanguage.ENGLISH -> "Allowance: ${grid.manualOverridesUsed}/${grid.maxManualOverrides} used this week"
+                            }
+                            else -> when (lang) {
+                                AppLanguage.SPANISH -> "Límite de 2 desbloqueos manuales esta semana. Libera otra casilla primero."
+                                AppLanguage.FRENCH -> "Limite de 2 validations manuelles atteinte cette semaine. Libérez d'abord une autre case."
+                                AppLanguage.ENGLISH -> "Limit of 2 manual unlocks reached this week. Clear another tile first to use here."
                             }
                         },
                         fontSize = 10.sp,

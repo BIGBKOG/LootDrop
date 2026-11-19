@@ -93,7 +93,7 @@ internal fun DlcReasonBadge(dlc: SteamDlcRecommendation, modifier: Modifier = Mo
 
 @Composable
 internal fun DlcPriceDisplay(dlc: SteamDlcRecommendation, stackVertical: Boolean) {
-    val isEs = LocalAppStrings.current.language == AppLanguage.SPANISH
+    val lang = LocalAppStrings.current.language
     val content: @Composable () -> Unit = {
         if (dlc.initialPriceFormatted.isNotBlank() && dlc.initialPriceFormatted != dlc.priceFormatted) {
             Text(
@@ -116,7 +116,13 @@ internal fun DlcPriceDisplay(dlc: SteamDlcRecommendation, stackVertical: Boolean
                 .padding(horizontal = 8.dp, vertical = 3.dp)
         ) {
             Text(
-                text = if (dlc.isFree) (if (isEs) "GRATIS" else "FREE") else dlc.priceFormatted,
+                text = if (dlc.isFree) {
+                    when (lang) {
+                        AppLanguage.SPANISH -> "GRATIS"
+                        AppLanguage.FRENCH -> "GRATUIT"
+                        AppLanguage.ENGLISH -> "FREE"
+                    }
+                } else dlc.priceFormatted,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = when {
@@ -149,7 +155,7 @@ fun HomeDlcRecommendationsSection(
     modifier: Modifier = Modifier
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     Column(
         modifier = modifier.fillMaxWidth().testTag("home_dlc_recommendations_section"),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -168,18 +174,20 @@ fun HomeDlcRecommendationsSection(
                         Icon(Icons.Default.Extension, contentDescription = null, tint = DlcPurple, modifier = Modifier.size(13.dp))
                     }
                     Text(
-                        text = if (isEs) "DLCS PARA TUS JUEGOS DE STEAM" else "DLC FOR YOUR STEAM GAMES",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "DLCS PARA TUS JUEGOS DE STEAM"
+                            AppLanguage.FRENCH -> "DLC POUR VOS JEUX STEAM"
+                            AppLanguage.ENGLISH -> "DLC FOR YOUR STEAM GAMES"
+                        },
                         style = MaterialTheme.typography.titleSmall, fontSize = 13.sp, fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground, letterSpacing = 0.6.sp
                     )
                 }
                 Text(
-                    text = if (isEs) {
-                        if (recommendations.isNotEmpty()) "${recommendations.size} expansiones y drops gratis para tus juegos"
-                        else "Selección personalizada de DLCs y extras gratis para tu Steam"
-                    } else {
-                        if (recommendations.isNotEmpty()) "${recommendations.size} expansions & free drops matched to games you own"
-                        else "Personalized DLC picks & free add-ons for your Steam library"
+                    text = when (lang) {
+                        AppLanguage.SPANISH -> if (recommendations.isNotEmpty()) "${recommendations.size} expansiones y drops gratis para tus juegos" else "Selección personalizada de DLCs y extras gratis para tu Steam"
+                        AppLanguage.FRENCH -> if (recommendations.isNotEmpty()) "${recommendations.size} extensions et drops gratuits pour vos jeux" else "Sélection de DLC et contenus gratuits pour votre compte Steam"
+                        AppLanguage.ENGLISH -> if (recommendations.isNotEmpty()) "${recommendations.size} expansions & free drops matched to games you own" else "Personalized DLC picks & free add-ons for your Steam library"
                     },
                     style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -201,7 +209,16 @@ fun HomeDlcRecommendationsSection(
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Icon(Icons.Default.Refresh, contentDescription = s.dialogs.dlcScanBtn, tint = DlcPurple, modifier = Modifier.size(13.dp))
-                                Text(if (isEs) "Escanear" else "Scan", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = DlcPurple)
+                                Text(
+                                    when (lang) {
+                                        AppLanguage.SPANISH -> "Escanear"
+                                        AppLanguage.FRENCH -> "Analyser"
+                                        AppLanguage.ENGLISH -> "Scan"
+                                    },
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = DlcPurple
+                                )
                             }
                         }
                     }
@@ -240,9 +257,22 @@ fun HomeDlcRecommendationsSection(
                                 Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = DlcPurple, modifier = Modifier.size(20.dp))
                             }
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(if (isEs) "Descubre DLCs para tus Juegos" else "Discover DLCs for Games You Own", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                 Text(
-                                    text = if (isEs) "Vincula tu Steam ID para detectar al instante DLCs gratis, ofertas de expansiones y mejores extras." else "Link your Steam ID to automatically spot free DLC drops, expansion sales, and top-rated add-ons for your library.",
+                                    when (lang) {
+                                        AppLanguage.SPANISH -> "Descubre DLCs para tus Juegos"
+                                        AppLanguage.FRENCH -> "Découvrez des DLC pour vos jeux"
+                                        AppLanguage.ENGLISH -> "Discover DLCs for Games You Own"
+                                    },
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = when (lang) {
+                                        AppLanguage.SPANISH -> "Vincula tu Steam ID para detectar al instante DLCs gratis, ofertas de expansiones y mejores extras."
+                                        AppLanguage.FRENCH -> "Liez votre Steam ID pour repérer instantanément les DLC gratuits, promos d'extensions et meilleurs extras."
+                                        AppLanguage.ENGLISH -> "Link your Steam ID to automatically spot free DLC drops, expansion sales, and top-rated add-ons for your library."
+                                    },
                                     fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 16.sp
                                 )
                             }
@@ -277,7 +307,11 @@ fun HomeDlcRecommendationsSection(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(s.system.dlcScanningStore, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                             Text(
-                                text = scanStatus ?: (if (isEs) "Buscando expansiones y ofertas para tus juegos" else "Finding expansions & deals for your owned games"),
+                                text = scanStatus ?: when (lang) {
+                                    AppLanguage.SPANISH -> "Buscando expansiones y ofertas para tus juegos"
+                                    AppLanguage.FRENCH -> "Recherche d'extensions et promos pour vos jeux"
+                                    AppLanguage.ENGLISH -> "Finding expansions & deals for your owned games"
+                                },
                                 fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis
                             )
                         }
@@ -298,8 +332,25 @@ fun HomeDlcRecommendationsSection(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(modifier = Modifier.weight(1f).padding(end = 10.dp)) {
-                            Text(if (isEs) "Listo para Escanear Steam" else "Ready to Scan Your Steam Library", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                            Text(scanStatus ?: (if (isEs) "Toca Escanear para buscar expansiones y DLCs gratis." else "Tap Scan to find expansions, sales & free DLCs for your games."), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Listo para Escanear Steam"
+                                    AppLanguage.FRENCH -> "Prêt à analyser Steam"
+                                    AppLanguage.ENGLISH -> "Ready to Scan Your Steam Library"
+                                },
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                scanStatus ?: when (lang) {
+                                    AppLanguage.SPANISH -> "Toca Escanear para buscar expansiones y DLCs gratis."
+                                    AppLanguage.FRENCH -> "Touchez Analyser pour trouver des extensions et DLC gratuits."
+                                    AppLanguage.ENGLISH -> "Tap Scan to find expansions, sales & free DLCs for your games."
+                                },
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                         Button(
                             onClick = onRefreshDlcs,
@@ -307,7 +358,15 @@ fun HomeDlcRecommendationsSection(
                             colors = ButtonDefaults.buttonColors(containerColor = DlcPurple, contentColor = Color.White),
                             modifier = Modifier.testTag("home_dlc_empty_scan_btn")
                         ) {
-                            Text(if (isEs) "Escanear" else "Scan Now", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Escanear"
+                                    AppLanguage.FRENCH -> "Analyser"
+                                    AppLanguage.ENGLISH -> "Scan Now"
+                                },
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
@@ -336,7 +395,7 @@ private fun HomeDlcCarouselCard(
 ) {
     val context = LocalContext.current
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val lowEnd = LocalLowEndOptimization.current
     val headerImageRequest = remember(context, dlc.headerImageUrl, lowEnd) {
         buildGiveawayImageRequest(
@@ -390,8 +449,13 @@ private fun HomeDlcCarouselCard(
                         .border(1.dp, Color(0xFF66C0F4).copy(alpha = 0.55f), RoundedCornerShape(6.dp))
                         .padding(horizontal = 7.dp, vertical = 3.dp)
                 ) {
+                    val forLabel = when (lang) {
+                        AppLanguage.SPANISH -> "Para"
+                        AppLanguage.FRENCH -> "Pour"
+                        AppLanguage.ENGLISH -> "For"
+                    }
                     Text(
-                        text = "${if (isEs) "Para" else "For"}: ${dlc.parentGameName} • ${dlc.parentPlaytimeFormatted}",
+                        text = "$forLabel: ${dlc.parentGameName} • ${dlc.parentPlaytimeFormatted}",
                         fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF66C0F4),
                         maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
@@ -417,7 +481,23 @@ private fun HomeDlcCarouselCard(
                             contentColor = if (dlc.isFree) Color(0xFF0A0F14) else Color.White
                         )
                     ) {
-                        Text(if (dlc.isFromFreeGiveaway) (if (isEs) "Reclamar Gratis" else "Claim Free") else (if (isEs) "Ver DLC" else "View DLC"), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            if (dlc.isFromFreeGiveaway) {
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Reclamar Gratis"
+                                    AppLanguage.FRENCH -> "Réclamer gratuit"
+                                    AppLanguage.ENGLISH -> "Claim Free"
+                                }
+                            } else {
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Ver DLC"
+                                    AppLanguage.FRENCH -> "Voir le DLC"
+                                    AppLanguage.ENGLISH -> "View DLC"
+                                }
+                            },
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }

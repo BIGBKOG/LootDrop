@@ -68,7 +68,7 @@ fun OfficialOstSection(
 ) {
     val context = LocalContext.current
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val spotifyGreen = Color(0xFF1DB954)
     val youtubeRed = Color(0xFFFF0000)
     val discogsOrange = Color(0xFFFF851B)
@@ -126,9 +126,17 @@ fun OfficialOstSection(
             ) {
                 Text(
                     text = when {
-                        isLoading -> if (isEs) "Buscando OST..." else "Checking OST..."
+                        isLoading -> when (lang) {
+                            AppLanguage.SPANISH -> "Buscando OST..."
+                            AppLanguage.FRENCH -> "Recherche OST..."
+                            AppLanguage.ENGLISH -> "Checking OST..."
+                        }
                         ostInfo != null -> "🎵 ${s.dialogs.ostVerifiedScore}"
-                        else -> if (isEs) "Sin OST" else "No OST"
+                        else -> when (lang) {
+                            AppLanguage.SPANISH -> "Sin OST"
+                            AppLanguage.FRENCH -> "Sans OST"
+                            AppLanguage.ENGLISH -> "No OST"
+                        }
                     },
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
@@ -452,13 +460,21 @@ fun OfficialOstSection(
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
-                            text = if (isEs) "No se encontró banda sonora oficial para este artículo." else "No official soundtrack release found for this item.",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "No se encontró banda sonora oficial para este artículo."
+                                AppLanguage.FRENCH -> "Aucune bande originale officielle trouvée pour cet article."
+                                AppLanguage.ENGLISH -> "No official soundtrack release found for this item."
+                            },
                             fontSize = 12.sp,
                             color = TextMuted
                         )
                     }
                     Text(
-                        text = if (isEs) "Sin OST" else "No OST",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "Sin OST"
+                            AppLanguage.FRENCH -> "Sans OST"
+                            AppLanguage.ENGLISH -> "No OST"
+                        },
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF94A3B8)

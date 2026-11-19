@@ -106,7 +106,7 @@ fun FilterSortBottomSheet(
     onDismiss: () -> Unit
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
@@ -163,10 +163,10 @@ fun FilterSortBottomSheet(
                         ) { count ->
                             if (count > 0) {
                                 Text(
-                                    text = if (isEs) {
-                                        "$count filtro${if (count > 1) "s" else ""} activo${if (count > 1) "s" else ""}"
-                                    } else {
-                                        "$count active filter${if (count > 1) "s" else ""}"
+                                    text = when (lang) {
+                                        AppLanguage.SPANISH -> "$count filtro${if (count > 1) "s" else ""} activo${if (count > 1) "s" else ""}"
+                                        AppLanguage.FRENCH -> "$count filtre${if (count > 1) "s" else ""} actif${if (count > 1) "s" else ""}"
+                                        AppLanguage.ENGLISH -> "$count active filter${if (count > 1) "s" else ""}"
                                     },
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.SemiBold,
@@ -174,7 +174,11 @@ fun FilterSortBottomSheet(
                                 )
                             } else {
                                 Text(
-                                    text = if (isEs) "Mostrando todos los juegos gratis activos" else "Showing all active free giveaways",
+                                    text = when (lang) {
+                                        AppLanguage.SPANISH -> "Mostrando todos los juegos gratis activos"
+                                        AppLanguage.FRENCH -> "Affichage de tous les jeux gratuits actifs"
+                                        AppLanguage.ENGLISH -> "Showing all active free giveaways"
+                                    },
                                     fontSize = 11.sp,
                                     color = TextSecondary
                                 )
@@ -305,7 +309,11 @@ fun FilterSortBottomSheet(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = if (isEs) "Elige una o combina varias plataformas (ej. PlayStation + Xbox):" else "Select one or combine multiple platforms (e.g. PlayStation + Xbox):",
+                text = when (lang) {
+                    AppLanguage.SPANISH -> "Elige una o combina varias plataformas (ej. PlayStation + Xbox):"
+                    AppLanguage.FRENCH -> "Sélectionnez ou combinez plusieurs plateformes (ex. PlayStation + Xbox) :"
+                    AppLanguage.ENGLISH -> "Select one or combine multiple platforms (e.g. PlayStation + Xbox):"
+                },
                 fontSize = 11.sp,
                 color = TextSecondary
             )
@@ -474,7 +482,11 @@ fun FilterSortBottomSheet(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = if (isEs) "Filtra juegos gratis por género, formato o estilo de juego:" else "Filter free games by genre, game format, or gameplay style:",
+                text = when (lang) {
+                    AppLanguage.SPANISH -> "Filtra juegos gratis por género, formato o estilo de juego:"
+                    AppLanguage.FRENCH -> "Filtrez les jeux gratuits par genre, format ou style de jeu :"
+                    AppLanguage.ENGLISH -> "Filter free games by genre, game format, or gameplay style:"
+                },
                 fontSize = 11.sp,
                 color = TextSecondary
             )
@@ -519,9 +531,17 @@ fun FilterSortBottomSheet(
                         )
                         Text(
                             text = if (selectedCategories.isEmpty()) {
-                                if (isEs) "Elegir Categorías (Todas)" else "Choose Categories (All Active)"
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Elegir Categorías (Todas)"
+                                    AppLanguage.FRENCH -> "Choisir les catégories (Toutes)"
+                                    AppLanguage.ENGLISH -> "Choose Categories (All Active)"
+                                }
                             } else {
-                                if (isEs) "Elegir Categorías (${selectedCategories.size} sel.)" else "Choose Categories (${selectedCategories.size} selected)"
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Elegir Categorías (${selectedCategories.size} sel.)"
+                                    AppLanguage.FRENCH -> "Catégories (${selectedCategories.size} sél.)"
+                                    AppLanguage.ENGLISH -> "Choose Categories (${selectedCategories.size} selected)"
+                                }
                             },
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
@@ -542,9 +562,17 @@ fun FilterSortBottomSheet(
                     ) {
                         Text(
                             text = if (selectedCategories.isEmpty()) {
-                                if (isEs) "ELEGIR ▾" else "SELECT ▾"
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "ELEGIR ▾"
+                                    AppLanguage.FRENCH -> "CHOISIR ▾"
+                                    AppLanguage.ENGLISH -> "SELECT ▾"
+                                }
                             } else {
-                                if (isEs) "${selectedCategories.size} ACTIVAS ▾" else "${selectedCategories.size} ACTIVE ▾"
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "${selectedCategories.size} ACTIVAS ▾"
+                                    AppLanguage.FRENCH -> "${selectedCategories.size} ACTIVES ▾"
+                                    AppLanguage.ENGLISH -> "${selectedCategories.size} ACTIVE ▾"
+                                }
                             },
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Black,
@@ -754,7 +782,11 @@ fun FilterSortBottomSheet(
                         label = "apply_button_count"
                     ) { count ->
                         Text(
-                            text = if (isEs) "Aplicar y Ver ($count Ofertas)" else "Apply & View ($count Freebies)",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "Aplicar y Ver ($count Ofertas)"
+                                AppLanguage.FRENCH -> "Appliquer et voir ($count offres)"
+                                AppLanguage.ENGLISH -> "Apply & View ($count Freebies)"
+                            },
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )

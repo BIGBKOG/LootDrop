@@ -84,7 +84,7 @@ internal fun HomeBestFreeGamesSection(
     modifier: Modifier = Modifier
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val items = remember(topGames) { topGames.take(3) }
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { items.size.coerceAtLeast(1) })
     val coroutineScope = rememberCoroutineScope()
@@ -122,7 +122,11 @@ internal fun HomeBestFreeGamesSection(
                         )
                     }
                     Text(
-                        text = if (isEs) "MEJORES 3 JUEGOS GRATIS HOY" else "BEST 3 FREE GAMES TODAY",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "MEJORES 3 JUEGOS GRATIS HOY"
+                            AppLanguage.FRENCH -> "TOP 3 JEUX GRATUITS DU JOUR"
+                            AppLanguage.ENGLISH -> "BEST 3 FREE GAMES TODAY"
+                        },
                         style = MaterialTheme.typography.titleSmall,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Black,
@@ -131,7 +135,11 @@ internal fun HomeBestFreeGamesSection(
                     )
                 }
                 Text(
-                    text = if (isEs) "Drops mejor valorados 100% gratis • Desliza tarjetas" else "Top-rated 100% free drops • Swipe cards",
+                    text = when (lang) {
+                        AppLanguage.SPANISH -> "Drops mejor valorados 100% gratis • Desliza tarjetas"
+                        AppLanguage.FRENCH -> "Meilleures offres 100 % gratuites • Balayez"
+                        AppLanguage.ENGLISH -> "Top-rated 100% free drops • Swipe cards"
+                    },
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -148,7 +156,11 @@ internal fun HomeBestFreeGamesSection(
                     if (reducedMotion) {
                         val pageNum = pagerState.currentPage + 1
                         Text(
-                            text = if (isEs) "$pageNum de ${items.size}" else "$pageNum of ${items.size}",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "$pageNum de ${items.size}"
+                                AppLanguage.FRENCH -> "$pageNum sur ${items.size}"
+                                AppLanguage.ENGLISH -> "$pageNum of ${items.size}"
+                            },
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = NeonGreen
@@ -160,7 +172,11 @@ internal fun HomeBestFreeGamesSection(
                             label = "carousel_page_badge"
                         ) { pageNum ->
                             Text(
-                                text = if (isEs) "$pageNum de ${items.size}" else "$pageNum of ${items.size}",
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "$pageNum de ${items.size}"
+                                    AppLanguage.FRENCH -> "$pageNum sur ${items.size}"
+                                    AppLanguage.ENGLISH -> "$pageNum of ${items.size}"
+                                },
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = NeonGreen
@@ -185,7 +201,11 @@ internal fun HomeBestFreeGamesSection(
                     ) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = NeonGreen, strokeWidth = 2.dp)
                         Text(
-                            text = if (isEs) "Cargando los mejores juegos gratis..." else "Loading today's best free games...",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "Cargando los mejores juegos gratis..."
+                                AppLanguage.FRENCH -> "Chargement des meilleurs jeux gratuits..."
+                                AppLanguage.ENGLISH -> "Loading today's best free games..."
+                            },
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -278,7 +298,7 @@ private fun BestFreeGameCard(
 ) {
     val context = LocalContext.current
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val coroutineScope = rememberCoroutineScope()
     val cardInteraction = remember { MutableInteractionSource() }
     val cardSurface = MaterialTheme.colorScheme.surface
@@ -398,7 +418,14 @@ private fun BestFreeGameCard(
                                 .background(Color(0xCC000000))
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
-                            Text(if (isEs) "Termina: ${game.endDate}" else "Ends: ${game.endDate}", fontSize = 10.sp, color = TextSecondary, maxLines = 1)
+                            Text(
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Termina: ${game.endDate}"
+                                    AppLanguage.FRENCH -> "Fin : ${game.endDate}"
+                                    AppLanguage.ENGLISH -> "Ends: ${game.endDate}"
+                                },
+                                fontSize = 10.sp, color = TextSecondary, maxLines = 1
+                            )
                         }
                     }
                 }
@@ -448,7 +475,14 @@ private fun BestFreeGameCard(
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Icon(Icons.Default.SportsEsports, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Text(if (isEs) "Reclamar" else "Claim Loot", fontWeight = FontWeight.Black, fontSize = 12.sp, maxLines = 1)
+                            Text(
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Reclamar"
+                                    AppLanguage.FRENCH -> "Réclamer"
+                                    AppLanguage.ENGLISH -> "Claim Loot"
+                                },
+                                fontWeight = FontWeight.Black, fontSize = 12.sp, maxLines = 1
+                            )
                         }
                     }
 
@@ -480,8 +514,11 @@ private fun BestFreeGameCard(
                                         type = "text/plain"
                                         putExtra(
                                             Intent.EXTRA_TEXT,
-                                            if (isEs) "🔥 Oferta Gratis: ${game.title} (${game.worth})!\nReclámalo aquí: ${game.openGiveawayUrl}\nDetectado con LootDrop"
-                                            else "🔥 Free Game Deal: ${game.title} (${game.worth})!\nClaim here: ${game.openGiveawayUrl}\nTracked with LootDrop"
+                                            when (lang) {
+                                                AppLanguage.SPANISH -> "🔥 Oferta Gratis: ${game.title} (${game.worth})!\nReclámalo aquí: ${game.openGiveawayUrl}\nDetectado con LootDrop"
+                                                AppLanguage.FRENCH -> "🔥 Offre Gratuite : ${game.title} (${game.worth}) !\nRéclamez ici : ${game.openGiveawayUrl}\nRepéré avec LootDrop"
+                                                AppLanguage.ENGLISH -> "🔥 Free Game Deal: ${game.title} (${game.worth})!\nClaim here: ${game.openGiveawayUrl}\nTracked with LootDrop"
+                                            }
                                         )
                                     }
                                     context.startActivity(Intent.createChooser(shareIntent, s.system.notifShareChooser))

@@ -175,7 +175,7 @@ fun GiveawaysTabContent(
 
     val context = LocalContext.current
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     var showBacklogRoulette by remember { mutableStateOf(false) }
     val backlogCandidates = remember(allPaidCombinedItems) {
         allPaidCombinedItems.filter { it.playStatus == PlayStatus.NOT_STARTED || it.playStatus == PlayStatus.PLAYING }
@@ -302,7 +302,11 @@ fun GiveawaysTabContent(
                     } catch (_: Exception) {
                         Toast.makeText(
                             context,
-                            if (isEs) "No se pudo abrir ${item.name}" else "Could not open ${item.name}",
+                            when (lang) {
+                                AppLanguage.SPANISH -> "No se pudo abrir ${item.name}"
+                                AppLanguage.FRENCH -> "Impossible d'ouvrir ${item.name}"
+                                AppLanguage.ENGLISH -> "Could not open ${item.name}"
+                            },
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -339,13 +343,17 @@ private fun ErrorBannerRow(errorMessage: String, onRefresh: () -> Unit) {
 @Composable
 private fun LoadingFeedState(isAllPaidMode: Boolean) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = if (isAllPaidMode) {
-                if (isEs) "Cargando juegos de Steam..." else "Loading Steam library games..."
+                when (lang) {
+                    AppLanguage.SPANISH -> "Cargando juegos de Steam..."
+                    AppLanguage.FRENCH -> "Chargement des jeux Steam..."
+                    AppLanguage.ENGLISH -> "Loading Steam library games..."
+                }
             } else {
                 s.common.syncingFreeGameRadar
             },
@@ -369,7 +377,7 @@ private fun EmptyFeedState(
     onOpenSteamDialog: () -> Unit
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val emptyIconBob = rememberEmptyBob(enabled = isAnimationsEnabled && !isLowEndOptimization)
     val isFiltered = activeFilterCount > 0 || searchQuery.isNotBlank()
     val hasError = errorMessage != null
@@ -399,11 +407,23 @@ private fun EmptyFeedState(
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = when {
-                isAllPaidMode -> if (searchQuery.isNotBlank()) s.home.allPaidNoGamesTitle else (if (isEs) "Sin Juegos en la Biblioteca" else "No Games in Library")
+                isAllPaidMode -> if (searchQuery.isNotBlank()) s.home.allPaidNoGamesTitle else when (lang) {
+                    AppLanguage.SPANISH -> "Sin Juegos en la Biblioteca"
+                    AppLanguage.FRENCH -> "Aucun Jeu dans la Bibliothèque"
+                    AppLanguage.ENGLISH -> "No Games in Library"
+                }
                 tab == MainTab.CLAIMED -> s.home.vaultNoGamesTitle
-                hasError -> if (isEs) "No se Pudieron Cargar las Ofertas" else "Unable to Fetch Giveaways"
+                hasError -> when (lang) {
+                    AppLanguage.SPANISH -> "No se Pudieron Cargar las Ofertas"
+                    AppLanguage.FRENCH -> "Impossible de Charger les Offres"
+                    AppLanguage.ENGLISH -> "Unable to Fetch Giveaways"
+                }
                 isFiltered -> s.home.discoverNoMatchesTitle
-                else -> if (isEs) "No Hay Ofertas Activas" else "No Giveaways Found"
+                else -> when (lang) {
+                    AppLanguage.SPANISH -> "No Hay Ofertas Activas"
+                    AppLanguage.FRENCH -> "Aucune Offre Active"
+                    AppLanguage.ENGLISH -> "No Giveaways Found"
+                }
             },
             fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface
         )
@@ -411,18 +431,36 @@ private fun EmptyFeedState(
         Text(
             text = when {
                 isAllPaidMode -> if (searchQuery.isNotBlank()) {
-                    if (isEs) "Ningún juego coincide con \"${searchQuery.take(20)}\" en tu colección." else "No games match \"${searchQuery.take(20)}\" in your collection."
+                    when (lang) {
+                        AppLanguage.SPANISH -> "Ningún juego coincide con \"${searchQuery.take(20)}\" en tu colección."
+                        AppLanguage.FRENCH -> "Aucun jeu ne correspond à « ${searchQuery.take(20)} » dans votre collection."
+                        AppLanguage.ENGLISH -> "No games match \"${searchQuery.take(20)}\" in your collection."
+                    }
                 } else {
                     s.home.allPaidNoGamesSubtitle
                 }
                 tab == MainTab.CLAIMED -> s.home.vaultNoGamesSubtitle
-                hasError -> errorMessage.ifBlank { if (isEs) "Problema de red o servidor no disponible. Toca reintentar." else "Network issue or server unavailable. Tap retry to check again." }
+                hasError -> errorMessage.ifBlank {
+                    when (lang) {
+                        AppLanguage.SPANISH -> "Problema de red o servidor no disponible. Toca reintentar."
+                        AppLanguage.FRENCH -> "Problème réseau ou serveur indisponible. Appuyez sur réessayer."
+                        AppLanguage.ENGLISH -> "Network issue or server unavailable. Tap retry to check again."
+                    }
+                }
                 isFiltered -> if (searchQuery.isNotBlank()) {
-                    if (isEs) "Ningún juego coincide con \"${searchQuery.take(20)}\" o tus filtros activos." else "No games match \"${searchQuery.take(20)}\" or your active launcher filters."
+                    when (lang) {
+                        AppLanguage.SPANISH -> "Ningún juego coincide con \"${searchQuery.take(20)}\" o tus filtros activos."
+                        AppLanguage.FRENCH -> "Aucun jeu ne correspond à « ${searchQuery.take(20)} » ou à vos filtres actifs."
+                        AppLanguage.ENGLISH -> "No games match \"${searchQuery.take(20)}\" or your active launcher filters."
+                    }
                 } else {
                     s.home.discoverNoMatchesSubtitle
                 }
-                else -> if (isEs) "No hay ofertas activas en este momento. Desliza para actualizar o vuelve pronto." else "Currently no active giveaways reported. Pull down to refresh or check back soon!"
+                else -> when (lang) {
+                    AppLanguage.SPANISH -> "No hay ofertas activas en este momento. Desliza para actualizar o vuelve pronto."
+                    AppLanguage.FRENCH -> "Aucune offre active pour le moment. Tirez pour actualiser ou revenez bientôt !"
+                    AppLanguage.ENGLISH -> "Currently no active giveaways reported. Pull down to refresh or check back soon!"
+                }
             },
             fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 18.sp, textAlign = TextAlign.Center
         )
@@ -632,7 +670,7 @@ private fun InLibraryTopMenus(
     modifier: Modifier = Modifier
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val reducedMotion = !isAnimationsEnabled || isLowEndOptimization
     var isCompactHeader by rememberSaveable { mutableStateOf(false) }
 
@@ -669,17 +707,24 @@ private fun InLibraryTopMenus(
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Icon(Icons.Default.Savings, contentDescription = null, tint = NeonGreen, modifier = Modifier.size(14.dp))
                     Text(
-                        text = if (isEs) {
-                            "${String.format(Locale.US, "$%.2f", uiStats.claimedTotalSavedUsd)} Ahorrados • $totalCount juegos"
-                        } else {
-                            "${String.format(Locale.US, "$%.2f", uiStats.claimedTotalSavedUsd)} Saved • $totalCount games"
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "${String.format(Locale.US, "$%.2f", uiStats.claimedTotalSavedUsd)} Ahorrados • $totalCount juegos"
+                            AppLanguage.FRENCH -> "${String.format(Locale.US, "$%.2f", uiStats.claimedTotalSavedUsd)} Économisés • $totalCount jeux"
+                            AppLanguage.ENGLISH -> "${String.format(Locale.US, "$%.2f", uiStats.claimedTotalSavedUsd)} Saved • $totalCount games"
                         },
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = NeonGreen
                     )
                 }
-                Text(if (isEs) "Expandir" else "Expand", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    when (lang) {
+                        AppLanguage.SPANISH -> "Expandir"
+                        AppLanguage.FRENCH -> "Déplier"
+                        AppLanguage.ENGLISH -> "Expand"
+                    },
+                    fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 

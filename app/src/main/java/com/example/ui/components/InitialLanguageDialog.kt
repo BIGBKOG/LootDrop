@@ -185,6 +185,19 @@ fun InitialLanguageDialog(
                                 onSelectLanguagePreview(AppLanguage.SPANISH)
                             }
                         )
+
+                        LanguageChoiceCard(
+                            language = AppLanguage.FRENCH,
+                            title = strings.common.initialLangFrenchTitle,
+                            subtitle = strings.common.initialLangFrenchDesc,
+                            isSelected = selectedLanguage == AppLanguage.FRENCH,
+                            accentColor = Color(0xFFA855F7),
+                            testTag = "initial_lang_option_fr",
+                            onClick = {
+                                selectedLanguage = AppLanguage.FRENCH
+                                onSelectLanguagePreview(AppLanguage.FRENCH)
+                            }
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(4.dp))
@@ -202,10 +215,10 @@ fun InitialLanguageDialog(
                         )
                     ) {
                         Text(
-                            text = if (selectedLanguage == AppLanguage.SPANISH) {
-                                strings.common.initialLangConfirmEs
-                            } else {
-                                strings.common.initialLangConfirmEn
+                            text = when (selectedLanguage) {
+                                AppLanguage.ENGLISH -> strings.common.initialLangConfirmEn
+                                AppLanguage.SPANISH -> strings.common.initialLangConfirmEs
+                                AppLanguage.FRENCH -> strings.common.initialLangConfirmFr
                             },
                             fontSize = 15.sp,
                             fontWeight = FontWeight.ExtraBold

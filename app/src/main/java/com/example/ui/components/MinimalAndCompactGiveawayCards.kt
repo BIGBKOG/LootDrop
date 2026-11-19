@@ -83,7 +83,7 @@ internal fun MinimalGiveawayCard(
     modifier: Modifier = Modifier
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -119,7 +119,11 @@ internal fun MinimalGiveawayCard(
                     ) {
                         Icon(
                             Icons.Outlined.Info,
-                            contentDescription = if (isEs) "Detalles de ${item.title}" else "Game info for ${item.title}",
+                            contentDescription = when (lang) {
+                                AppLanguage.SPANISH -> "Detalles de ${item.title}"
+                                AppLanguage.FRENCH -> "Infos de ${item.title}"
+                                AppLanguage.ENGLISH -> "Game info for ${item.title}"
+                            },
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(12.dp)
                         )
@@ -152,7 +156,11 @@ internal fun MinimalGiveawayCard(
                 IconButton(onClick = onToggleClaimed, modifier = Modifier.size(32.dp).testTag("library_toggle_minimal_${item.id}")) {
                     Icon(
                         imageVector = if (item.isClaimed) Icons.Default.CheckCircle else Icons.Outlined.CheckCircleOutline,
-                        contentDescription = if (item.isClaimed) s.home.badgeInVault else (if (isEs) "Añadir a Bóveda" else "Add to Library"),
+                        contentDescription = if (item.isClaimed) s.home.badgeInVault else when (lang) {
+                            AppLanguage.SPANISH -> "Añadir a Bóveda"
+                            AppLanguage.FRENCH -> "Ajouter au coffre"
+                            AppLanguage.ENGLISH -> "Add to Library"
+                        },
                         tint = if (item.isClaimed) NeonGreen else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp).graphicsLayer { scaleX = claimedScale; scaleY = claimedScale }
                     )
@@ -167,9 +175,17 @@ internal fun MinimalGiveawayCard(
                 ) {
                     Text(
                         text = if (item.hasMultipleLaunchers) {
-                            if (isEs) "Tiendas ▾" else "Launchers ▾"
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Tiendas ▾"
+                                AppLanguage.FRENCH -> "Lanceurs ▾"
+                                AppLanguage.ENGLISH -> "Launchers ▾"
+                            }
                         } else {
-                            if (isEs) "Reclamar" else "Claim"
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Reclamar"
+                                AppLanguage.FRENCH -> "Réclamer"
+                                AppLanguage.ENGLISH -> "Claim"
+                            }
                         },
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
@@ -203,7 +219,7 @@ internal fun CompactGiveawayCard(
     modifier: Modifier = Modifier
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -244,14 +260,22 @@ internal fun CompactGiveawayCard(
                         .border(1.2.dp, launcherColor.copy(alpha = 0.9f), CircleShape)
                         .clickable(
                             onClick = onClick,
-                            onClickLabel = if (isEs) "Ver detalles de ${item.title}" else "View info for ${item.title}"
+                            onClickLabel = when (lang) {
+                                AppLanguage.SPANISH -> "Ver detalles de ${item.title}"
+                                AppLanguage.FRENCH -> "Voir les infos de ${item.title}"
+                                AppLanguage.ENGLISH -> "View info for ${item.title}"
+                            }
                         )
                         .testTag("info_symbol_compact_${item.id}"),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         Icons.Outlined.Info,
-                        contentDescription = if (isEs) "Detalles de ${item.title}" else "Game info for ${item.title}",
+                        contentDescription = when (lang) {
+                            AppLanguage.SPANISH -> "Detalles de ${item.title}"
+                            AppLanguage.FRENCH -> "Infos de ${item.title}"
+                            AppLanguage.ENGLISH -> "Game info for ${item.title}"
+                        },
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(16.dp)
                     )
@@ -283,9 +307,17 @@ internal fun CompactGiveawayCard(
                             Icon(if (item.hasMultipleLaunchers) Icons.Default.SportsEsports else Icons.AutoMirrored.Filled.OpenInNew, null, modifier = Modifier.size(12.dp))
                             Text(
                                 text = if (item.hasMultipleLaunchers) {
-                                    if (isEs) "Tiendas ▾" else "Launchers ▾"
+                                    when (lang) {
+                                        AppLanguage.SPANISH -> "Tiendas ▾"
+                                        AppLanguage.FRENCH -> "Lanceurs ▾"
+                                        AppLanguage.ENGLISH -> "Launchers ▾"
+                                    }
                                 } else {
-                                    if (isEs) "Reclamar" else "Claim"
+                                    when (lang) {
+                                        AppLanguage.SPANISH -> "Reclamar"
+                                        AppLanguage.FRENCH -> "Réclamer"
+                                        AppLanguage.ENGLISH -> "Claim"
+                                    }
                                 },
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold

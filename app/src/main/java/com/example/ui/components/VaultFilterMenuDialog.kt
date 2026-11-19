@@ -76,7 +76,7 @@ fun VaultFilterMenuDialog(
     onDismiss: () -> Unit
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val isAllPaid = viewMode == LibraryViewMode.ALL_PAID
     val isAnyFilterActive = selectedFilter != LibraryPlayFilter.ALL ||
             selectedPlayability != PlayabilityFilter.ALL ||
@@ -139,7 +139,11 @@ fun VaultFilterMenuDialog(
                         Column {
                             Text(
                                 text = if (isAllPaid) {
-                                    if (isEs) "Filtros de Steam" else "Steam Library Filters"
+                                    when (lang) {
+                                        AppLanguage.SPANISH -> "Filtros de Steam"
+                                        AppLanguage.FRENCH -> "Filtres Steam"
+                                        AppLanguage.ENGLISH -> "Steam Library Filters"
+                                    }
                                 } else {
                                     s.library.vaultFiltersBtn
                                 },
@@ -148,7 +152,11 @@ fun VaultFilterMenuDialog(
                                 color = TextPrimary
                             )
                             Text(
-                                text = if (isEs) "Filtra por estado, hardware y espacio en disco" else "Filter by status, hardware & storage size",
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "Filtra por estado, hardware y espacio en disco"
+                                    AppLanguage.FRENCH -> "Filtrer par statut, matériel et espace disque"
+                                    AppLanguage.ENGLISH -> "Filter by status, hardware & storage size"
+                                },
                                 fontSize = 11.sp,
                                 color = TextSecondary
                             )
@@ -234,7 +242,7 @@ fun VaultFilterMenuDialog(
                                 }
 
                                 SelectablePill(
-                                    label = if (isEs) filter.localizedLabel(s) else filter.displayName,
+                                    label = if (lang != AppLanguage.ENGLISH) filter.localizedLabel(s) else filter.displayName,
                                     count = count,
                                     isSelected = isSelected,
                                     activeColor = chipColor,
@@ -331,7 +339,11 @@ fun VaultFilterMenuDialog(
                 ) {
                     Text(
                         text = if (isAnyFilterActive) {
-                            if (isEs) "Aplicar Filtros" else "Apply Filters"
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Aplicar Filtros"
+                                AppLanguage.FRENCH -> "Appliquer les filtres"
+                                AppLanguage.ENGLISH -> "Apply Filters"
+                            }
                         } else {
                             s.common.close
                         },

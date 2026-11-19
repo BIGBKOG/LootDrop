@@ -7,14 +7,16 @@
   const LANG_STORAGE_KEY = 'lootdrop_language';
   const LOCALE_VERSION = '4.2.0';
   const LOCALE_CACHE_PREFIX = `lootdrop_locale_cache_${LOCALE_VERSION}_`;
-  const SUPPORTED_LANGS = ['en', 'es'];
+  const SUPPORTED_LANGS = ['en', 'es', 'fr'];
 
   const localeCache = {};
   const networkFetched = {};
   const inFlightRequests = {};
 
   function normalizeLanguage(lang) {
-    return lang === 'es' ? 'es' : 'en';
+    if (lang === 'es') return 'es';
+    if (lang === 'fr') return 'fr';
+    return 'en';
   }
 
   function pruneLegacyLocaleCaches() {
@@ -33,16 +35,18 @@
   function getSavedLanguage() {
     try {
       const saved = localStorage.getItem(LANG_STORAGE_KEY);
-      if (saved === 'en' || saved === 'es') return saved;
+      if (saved === 'en' || saved === 'es' || saved === 'fr') return saved;
     } catch (_) {}
     const browserLang = (navigator.language || navigator.userLanguage || 'en').toLowerCase();
-    return browserLang.startsWith('es') ? 'es' : 'en';
+    if (browserLang.startsWith('es')) return 'es';
+    if (browserLang.startsWith('fr')) return 'fr';
+    return 'en';
   }
 
   function hasExplicitLanguageSelection() {
     try {
       const saved = localStorage.getItem(LANG_STORAGE_KEY);
-      return saved === 'en' || saved === 'es';
+      return saved === 'en' || saved === 'es' || saved === 'fr';
     } catch (_) {
       return true;
     }
@@ -118,11 +122,27 @@
   function getMeta() {
     const data = getLocaleData(currentLang);
     if (data && data.meta) return data.meta;
+    if (currentLang === 'es') {
+      return {
+        code: 'es',
+        dateLocale: 'es-ES',
+        steamLanguage: 'spanish',
+        toggleBadge: '🌐 ES'
+      };
+    }
+    if (currentLang === 'fr') {
+      return {
+        code: 'fr',
+        dateLocale: 'fr-FR',
+        steamLanguage: 'french',
+        toggleBadge: '🌐 FR'
+      };
+    }
     return {
-      code: currentLang,
-      dateLocale: currentLang === 'es' ? 'es-ES' : 'en-US',
-      steamLanguage: currentLang === 'es' ? 'spanish' : 'english',
-      toggleBadge: currentLang === 'es' ? '🌐 ES' : '🌐 EN'
+      code: 'en',
+      dateLocale: 'en-US',
+      steamLanguage: 'english',
+      toggleBadge: '🌐 EN'
     };
   }
 
@@ -203,12 +223,15 @@
 
     const toggleBtn = document.getElementById('btn-lang-toggle');
     if (toggleBtn) {
-      toggleBtn.textContent = getMeta().toggleBadge || (currentLang === 'es' ? '🌐 ES' : '🌐 EN');
+      const fallbackBadge = currentLang === 'es' ? '🌐 ES' : (currentLang === 'fr' ? '🌐 FR' : '🌐 EN');
+      toggleBtn.textContent = getMeta().toggleBadge || fallbackBadge;
     }
     const settingsBtnEn = document.getElementById('btn-set-lang-en');
     const settingsBtnEs = document.getElementById('btn-set-lang-es');
+    const settingsBtnFr = document.getElementById('btn-set-lang-fr');
     settingsBtnEn?.classList.toggle('active', currentLang === 'en');
     settingsBtnEs?.classList.toggle('active', currentLang === 'es');
+    settingsBtnFr?.classList.toggle('active', currentLang === 'fr');
   }
 
   async function setLanguage(lang, persist = true) {
@@ -236,6 +259,7 @@
     loadLocale,
     getLanguage: () => currentLang,
     isSpanish: () => currentLang === 'es',
+    isFrench: () => currentLang === 'fr',
     hasExplicitLanguageSelection,
     getLocaleData,
     getMeta,

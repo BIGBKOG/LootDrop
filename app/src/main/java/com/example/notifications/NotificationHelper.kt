@@ -279,7 +279,9 @@ class NotificationHelper(val context: Context) {
         if (!shouldNotifyForGiveaway(item)) return
 
         val s = AppStringsRegistry.forContext(context)
-        val isEs = s.language == AppLanguage.SPANISH
+        val lang = s.language
+        val isEs = lang == AppLanguage.SPANISH
+        val isFr = lang == AppLanguage.FRENCH
         val isGame = item.type.contains("Game", ignoreCase = true)
         val channelId = if (item.isWishlisted || isGame) CHANNEL_MAJOR_GAMES else CHANNEL_DLC
 
@@ -353,7 +355,11 @@ class NotificationHelper(val context: Context) {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            val wishlistSubPrefix = if (isEs) "❤️ EN TU LISTA DE DESEADOS" else "❤️ ON YOUR WISHLIST"
+            val wishlistSubPrefix = when {
+                isEs -> "❤️ EN TU LISTA DE DESEADOS"
+                isFr -> "❤️ DANS VOTRE LISTE DE SOUHAITS"
+                else -> "❤️ ON YOUR WISHLIST"
+            }
             val builder = NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(R.drawable.ic_stat_gamepad)
                 .setContentTitle(title)
@@ -390,24 +396,31 @@ class NotificationHelper(val context: Context) {
                         .bigPicture(bitmap)
                         .setBigContentTitle(
                             if (item.isWishlisted) {
-                                if (isEs) "🎯 EN TU LISTA DE DESEADOS: ${item.title}" else "🎯 ON YOUR WISHLIST: ${item.title}"
+                                when {
+                                    isEs -> "🎯 EN TU LISTA DE DESEADOS: ${item.title}"
+                                    isFr -> "🎯 DANS VOS SOUHAITS : ${item.title}"
+                                    else -> "🎯 ON YOUR WISHLIST: ${item.title}"
+                                }
                             } else {
                                 String.format(s.system.notifBigFreeFormat, item.title)
                             }
                         )
                         .setSummaryText(
-                            if (isEs) "${item.description.take(120)}... • Plataforma: ${item.platforms}"
-                            else "${item.description.take(120)}... • Platform: ${item.platforms}"
+                            when {
+                                isEs -> "${item.description.take(120)}... • Plataforma: ${item.platforms}"
+                                isFr -> "${item.description.take(120)}... • Plateforme : ${item.platforms}"
+                                else -> "${item.description.take(120)}... • Platform: ${item.platforms}"
+                            }
                         )
                 )
             } else {
                 builder.setStyle(
                     NotificationCompat.BigTextStyle()
                         .bigText(
-                            if (isEs) {
-                                "${if (item.isWishlisted) "❤️ [EN TU LISTA DE DESEADOS]\n\n" else ""}${item.description}\n\nPlataforma: ${item.platforms}\nValor: $worthText"
-                            } else {
-                                "${if (item.isWishlisted) "❤️ [ON YOUR WISHLIST]\n\n" else ""}${item.description}\n\nPlatform: ${item.platforms}\nValue: $worthText"
+                            when {
+                                isEs -> "${if (item.isWishlisted) "❤️ [EN TU LISTA DE DESEADOS]\n\n" else ""}${item.description}\n\nPlataforma: ${item.platforms}\nValor: $worthText"
+                                isFr -> "${if (item.isWishlisted) "❤️ [DANS VOTRE LISTE DE SOUHAITS]\n\n" else ""}${item.description}\n\nPlateforme : ${item.platforms}\nValeur : $worthText"
+                                else -> "${if (item.isWishlisted) "❤️ [ON YOUR WISHLIST]\n\n" else ""}${item.description}\n\nPlatform: ${item.platforms}\nValue: $worthText"
                             }
                         )
                 )
@@ -429,7 +442,9 @@ class NotificationHelper(val context: Context) {
         if (!isNotificationsEnabled || isQuietHoursActive()) return
 
         val s = AppStringsRegistry.forContext(context)
-        val isEs = s.language == AppLanguage.SPANISH
+        val lang = s.language
+        val isEs = lang == AppLanguage.SPANISH
+        val isFr = lang == AppLanguage.FRENCH
         val storeName = item.launcherCategory.localizedDisplayName(s)
         val title = String.format(s.system.notifEndingTitleFormat, item.title)
         val content = String.format(s.system.notifEndingContentFormat, storeName)
@@ -491,19 +506,29 @@ class NotificationHelper(val context: Context) {
                     NotificationCompat.BigPictureStyle()
                         .bigPicture(bitmap)
                         .setBigContentTitle(
-                            if (isEs) "⏳ No Te Lo Pierdas: ${item.title}" else "⏳ Don't Miss Out: ${item.title}"
+                            when {
+                                isEs -> "⏳ No Te Lo Pierdas: ${item.title}"
+                                isFr -> "⏳ Ne le manquez pas : ${item.title}"
+                                else -> "⏳ Don't Miss Out: ${item.title}"
+                            }
                         )
                         .setSummaryText(
-                            if (isEs) "La oferta termina pronto en ${item.platforms}. Toca para reclamar antes de que vuelva a su precio."
-                            else "Offer ends soon on ${item.platforms}. Tap to claim before price returns."
+                            when {
+                                isEs -> "La oferta termina pronto en ${item.platforms}. Toca para reclamar antes de que vuelva a su precio."
+                                isFr -> "L'offre se termine bientôt sur ${item.platforms}. Touchez pour réclamer avant la fin."
+                                else -> "Offer ends soon on ${item.platforms}. Tap to claim before price returns."
+                            }
                         )
                 )
             } else {
                 builder.setStyle(
                     NotificationCompat.BigTextStyle()
                         .bigText(
-                            if (isEs) "Este regalo 100% gratis de ${item.title} en ${item.platforms} expira pronto. ¡Consíguelo antes de que termine la oferta!"
-                            else "This 100% free giveaway for ${item.title} on ${item.platforms} is expiring soon. Grab it before the free offer ends!"
+                            when {
+                                isEs -> "Este regalo 100% gratis de ${item.title} en ${item.platforms} expira pronto. ¡Consíguelo antes de que termine la oferta!"
+                                isFr -> "Ce jeu 100 % gratuit (${item.title} sur ${item.platforms}) expire bientôt. Récupérez-le avant la fin de l'offre !"
+                                else -> "This 100% free giveaway for ${item.title} on ${item.platforms} is expiring soon. Grab it before the free offer ends!"
+                            }
                         )
                 )
             }
@@ -542,7 +567,9 @@ class NotificationHelper(val context: Context) {
         )
 
         val s = AppStringsRegistry.forContext(context)
-        val isEs = s.language == AppLanguage.SPANISH
+        val lang = s.language
+        val isEs = lang == AppLanguage.SPANISH
+        val isFr = lang == AppLanguage.FRENCH
         CoroutineScope(Dispatchers.IO).launch {
             val sampleItem = GiveawayItem(
                 id = 99999,
@@ -551,12 +578,16 @@ class NotificationHelper(val context: Context) {
                 numericWorth = 39.99,
                 thumbnail = "https://www.gamerpower.com/offers/1/64070a996dc8e.jpg",
                 image = "https://www.gamerpower.com/offers/1/64070a996dc8e.jpg",
-                description = if (isEs) {
-                    "Del legendario creador Hideo Kojima llega una experiencia única. ¡Consigue gratis la edición completa para PC!"
-                } else {
-                    "From legendary game creator Hideo Kojima comes a genre-defying experience. Grab the full PC edition completely free!"
+                description = when {
+                    isEs -> "Del legendario creador Hideo Kojima llega una experiencia única. ¡Consigue gratis la edición completa para PC!"
+                    isFr -> "Du légendaire créateur Hideo Kojima arrive une expérience unique. Récupérez l'édition PC complète gratuitement !"
+                    else -> "From legendary game creator Hideo Kojima comes a genre-defying experience. Grab the full PC edition completely free!"
                 },
-                instructions = if (isEs) "Reclama en Epic Games Store antes de que termine." else "Claim on Epic Games Store before promotion ends.",
+                instructions = when {
+                    isEs -> "Reclama en Epic Games Store antes de que termine."
+                    isFr -> "Réclamez sur l'Epic Games Store avant la fin de l'offre."
+                    else -> "Claim on Epic Games Store before promotion ends."
+                },
                 openGiveawayUrl = "https://store.epicgames.com",
                 publishedDate = "2026-10-19",
                 type = "Game",
@@ -573,14 +604,26 @@ class NotificationHelper(val context: Context) {
             val builder = NotificationCompat.Builder(context, CHANNEL_MAJOR_GAMES)
                 .setSmallIcon(R.drawable.ic_stat_gamepad)
                 .setContentTitle(
-                    if (isEs) "🎮 GRATIS AHORA en Epic Games: Death Stranding"
-                    else "🎮 FREE NOW on Epic Games: Death Stranding"
+                    when {
+                        isEs -> "🎮 GRATIS AHORA en Epic Games: Death Stranding"
+                        isFr -> "🎮 GRATUIT sur Epic Games : Death Stranding"
+                        else -> "🎮 FREE NOW on Epic Games: Death Stranding"
+                    }
                 )
                 .setContentText(
-                    if (isEs) "Valorado en $39.99 • ¡100% GRATIS! Reclámalo para siempre."
-                    else "Worth $39.99 • 100% OFF! Claim now to keep forever."
+                    when {
+                        isEs -> "Valorado en $39.99 • ¡100% GRATIS! Reclámalo para siempre."
+                        isFr -> "Valeur 39,99 $ • 100 % GRATUIT ! Réclamez pour le garder à vie."
+                        else -> "Worth $39.99 • 100% OFF! Claim now to keep forever."
+                    }
                 )
-                .setSubText(if (isEs) "Epic Games • Valor $39.99" else "Epic Games • Worth $39.99")
+                .setSubText(
+                    when {
+                        isEs -> "Epic Games • Valor $39.99"
+                        isFr -> "Epic Games • Valeur 39,99 $"
+                        else -> "Epic Games • Worth $39.99"
+                    }
+                )
                 .setColor(0xFF6C5CE7.toInt())
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
@@ -606,20 +649,29 @@ class NotificationHelper(val context: Context) {
                     NotificationCompat.BigPictureStyle()
                         .bigPicture(bitmap)
                         .setBigContentTitle(
-                            if (isEs) "🎮 ¡Death Stranding: Director's Cut está Gratis!"
-                            else "🎮 Death Stranding: Director's Cut is Free!"
+                            when {
+                                isEs -> "🎮 ¡Death Stranding: Director's Cut está Gratis!"
+                                isFr -> "🎮 Death Stranding: Director's Cut est gratuit !"
+                                else -> "🎮 Death Stranding: Director's Cut is Free!"
+                            }
                         )
                         .setSummaryText(
-                            if (isEs) "Gratis por tiempo limitado en Epic Games Store • Valor $39.99"
-                            else "Free for a limited time on Epic Games Store • Worth $39.99"
+                            when {
+                                isEs -> "Gratis por tiempo limitado en Epic Games Store • Valor $39.99"
+                                isFr -> "Gratuit pour une durée limitée sur Epic Games Store • Valeur 39,99 $"
+                                else -> "Free for a limited time on Epic Games Store • Worth $39.99"
+                            }
                         )
                 )
             } else {
                 builder.setStyle(
                     NotificationCompat.BigTextStyle()
                         .bigText(
-                            if (isEs) "Del legendario creador Hideo Kojima llega una experiencia única en su versión Director's Cut. 100% Gratis en Epic Games Store (Valor $39.99)."
-                            else "From legendary game creator Hideo Kojima comes a genre-defying experience. Now expanded in this definitive Director's Cut. 100% Free on Epic Games Store (Worth $39.99)."
+                            when {
+                                isEs -> "Del legendario creador Hideo Kojima llega una experiencia única en su versión Director's Cut. 100% Gratis en Epic Games Store (Valor $39.99)."
+                                isFr -> "Du légendaire Hideo Kojima arrive une expérience unique en version Director's Cut. 100 % Gratuit sur Epic Games Store (Valeur 39,99 $)."
+                                else -> "From legendary game creator Hideo Kojima comes a genre-defying experience. Now expanded in this definitive Director's Cut. 100% Free on Epic Games Store (Worth $39.99)."
+                            }
                         )
                 )
             }
@@ -674,7 +726,9 @@ class NotificationHelper(val context: Context) {
         if (!isNotificationsEnabled) return
 
         val s = AppStringsRegistry.forContext(context)
-        val isEs = s.language == AppLanguage.SPANISH
+        val lang = s.language
+        val isEs = lang == AppLanguage.SPANISH
+        val isFr = lang == AppLanguage.FRENCH
         val title = String.format(s.system.notifUpdateTitleFormat, updateInfo.latestVersion)
         val content = s.system.notifUpdateContent
 
@@ -693,7 +747,13 @@ class NotificationHelper(val context: Context) {
             .setSmallIcon(R.drawable.ic_stat_gamepad)
             .setContentTitle(title)
             .setContentText(content)
-            .setSubText(if (isEs) "Actualización en la App" else "In-App Update")
+            .setSubText(
+                when {
+                    isEs -> "Actualización en la App"
+                    isFr -> "Mise à jour intégrée"
+                    else -> "In-App Update"
+                }
+            )
             .setColor(0xFF00E5FF.toInt())
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
@@ -714,7 +774,9 @@ class NotificationHelper(val context: Context) {
         if (!isNotificationsEnabled || isQuietHoursActive()) return
 
         val s = AppStringsRegistry.forContext(context)
-        val isEs = s.language == AppLanguage.SPANISH
+        val lang = s.language
+        val isEs = lang == AppLanguage.SPANISH
+        val isFr = lang == AppLanguage.FRENCH
         val title = String.format(s.system.notifChallengeTitleFormat, weekDisplayName)
         val content = s.system.notifChallengeContent
 
@@ -741,8 +803,11 @@ class NotificationHelper(val context: Context) {
             .setStyle(
                 NotificationCompat.BigTextStyle()
                     .bigText(
-                        if (isEs) "$content\n\n¡Juega tu backlog, completa juegos y desbloquea recompensas!"
-                        else "$content\n\nPlay your backlog, beat games, and unlock cosmetic rewards!"
+                        when {
+                            isEs -> "$content\n\n¡Juega tu backlog, completa juegos y desbloquea recompensas!"
+                            isFr -> "$content\n\nJouez à votre backlog, terminez des jeux et débloquez des récompenses !"
+                            else -> "$content\n\nPlay your backlog, beat games, and unlock cosmetic rewards!"
+                        }
                     )
             )
 
@@ -760,7 +825,9 @@ class NotificationHelper(val context: Context) {
         if (!isNotificationsEnabled || isQuietHoursActive()) return
 
         val s = AppStringsRegistry.forContext(context)
-        val isEs = s.language == AppLanguage.SPANISH
+        val lang = s.language
+        val isEs = lang == AppLanguage.SPANISH
+        val isFr = lang == AppLanguage.FRENCH
         val title = String.format(s.system.notifMythicTitleFormat, achievement.displayName)
         val content = String.format(s.system.notifMythicContentFormat, achievement.gameName, achievement.formattedRarity)
 
@@ -784,8 +851,11 @@ class NotificationHelper(val context: Context) {
                 .setContentTitle(title)
                 .setContentText(content)
                 .setSubText(
-                    if (isEs) "💎 Trofeo Mítico • ${achievement.formattedRarity}"
-                    else "💎 Mythic Trophy • ${achievement.formattedRarity}"
+                    when {
+                        isEs -> "💎 Trofeo Mítico • ${achievement.formattedRarity}"
+                        isFr -> "💎 Trophée Mythique • ${achievement.formattedRarity}"
+                        else -> "💎 Mythic Trophy • ${achievement.formattedRarity}"
+                    }
                 )
                 .setColor(0xFFE040FB.toInt())
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -806,22 +876,28 @@ class NotificationHelper(val context: Context) {
                     NotificationCompat.BigPictureStyle()
                         .bigPicture(bitmap)
                         .setBigContentTitle(
-                            if (isEs) "💎 Trofeo Mítico: ${achievement.displayName}"
-                            else "💎 Mythic Trophy: ${achievement.displayName}"
+                            when {
+                                isEs -> "💎 Trofeo Mítico: ${achievement.displayName}"
+                                isFr -> "💎 Trophée Mythique : ${achievement.displayName}"
+                                else -> "💎 Mythic Trophy: ${achievement.displayName}"
+                            }
                         )
                         .setSummaryText(
-                            if (isEs) "${achievement.gameName} • ¡Solo el ${achievement.formattedRarity} global lo desbloqueó!"
-                            else "${achievement.gameName} • Only ${achievement.formattedRarity} global unlock rate!"
+                            when {
+                                isEs -> "${achievement.gameName} • ¡Solo el ${achievement.formattedRarity} global lo desbloqueó!"
+                                isFr -> "${achievement.gameName} • Débloqué par seulement ${achievement.formattedRarity} des joueurs !"
+                                else -> "${achievement.gameName} • Only ${achievement.formattedRarity} global unlock rate!"
+                            }
                         )
                 )
             } else {
                 builder.setStyle(
                     NotificationCompat.BigTextStyle()
                         .bigText(
-                            if (isEs) {
-                                "${achievement.description.ifBlank { "¡Desbloqueaste un trofeo Mítico ultra raro en ${achievement.gameName}!" }}\n\nTasa global de desbloqueo: ${achievement.formattedRarity}"
-                            } else {
-                                "${achievement.description.ifBlank { "You unlocked an ultra-rare Mythic trophy in ${achievement.gameName}!" }}\n\nGlobal unlock rate: ${achievement.formattedRarity}"
+                            when {
+                                isEs -> "${achievement.description.ifBlank { "¡Desbloqueaste un trofeo Mítico ultra raro en ${achievement.gameName}!" }}\n\nTasa global de desbloqueo: ${achievement.formattedRarity}"
+                                isFr -> "${achievement.description.ifBlank { "Vous avez débloqué un trophée Mythique ultra-rare dans ${achievement.gameName} !" }}\n\nTaux d'obtention mondial : ${achievement.formattedRarity}"
+                                else -> "${achievement.description.ifBlank { "You unlocked an ultra-rare Mythic trophy in ${achievement.gameName}!" }}\n\nGlobal unlock rate: ${achievement.formattedRarity}"
                             }
                         )
                 )

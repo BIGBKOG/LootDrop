@@ -54,13 +54,21 @@ private fun MetacriticRatingTier.localizedTierLabel(s: AppStrings): String = whe
     MetacriticRatingTier.UNFAVORABLE -> s.library.metacriticUnfavorable
 }
 
-private fun MetacriticRatingTier.localizedTierSummary(s: AppStrings): String =
-    if (s.language == AppLanguage.ENGLISH) summary else when (this) {
+private fun MetacriticRatingTier.localizedTierSummary(s: AppStrings): String = when (s.language) {
+    AppLanguage.ENGLISH -> summary
+    AppLanguage.SPANISH -> when (this) {
         MetacriticRatingTier.UNIVERSAL_ACCLAIM -> "Aclamación universal de la crítica"
         MetacriticRatingTier.GENERALLY_FAVORABLE -> "Críticas mayormente positivas"
         MetacriticRatingTier.MIXED_REVIEWS -> "Críticas mixtas o promedio"
         MetacriticRatingTier.UNFAVORABLE -> "Críticas negativas o desfavorables"
     }
+    AppLanguage.FRENCH -> when (this) {
+        MetacriticRatingTier.UNIVERSAL_ACCLAIM -> "Acclamation universelle des critiques"
+        MetacriticRatingTier.GENERALLY_FAVORABLE -> "Critiques globalement favorables"
+        MetacriticRatingTier.MIXED_REVIEWS -> "Avis mitigés ou moyens"
+        MetacriticRatingTier.UNFAVORABLE -> "Critiques défavorables"
+    }
+}
 
 /**
  * Compact Metacritic score pill for game cards and list items.
@@ -153,7 +161,7 @@ fun MetacriticDetailBadge(
     onClick: (() -> Unit)? = null
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val tier = info.tier
     val isLightColor = tier != MetacriticRatingTier.UNFAVORABLE
 
@@ -199,7 +207,11 @@ fun MetacriticDetailBadge(
                 if (info.score >= 90) {
                     Icon(
                         imageVector = Icons.Default.Star,
-                        contentDescription = if (isEs) "Imprescindible" else "Must-Play",
+                        contentDescription = when (lang) {
+                            AppLanguage.SPANISH -> "Imprescindible"
+                            AppLanguage.FRENCH -> "Incontournable"
+                            AppLanguage.ENGLISH -> "Must-Play"
+                        },
                         tint = tier.badgeColor,
                         modifier = Modifier.size(10.dp)
                     )
@@ -226,7 +238,7 @@ fun MetacriticDetailSection(
     modifier: Modifier = Modifier
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val tier = info.tier
     val isLightColor = tier != MetacriticRatingTier.UNFAVORABLE
 
@@ -268,7 +280,11 @@ fun MetacriticDetailSection(
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = if (isEs) "NOTA METACRITIC" else "METACRITIC SCORE",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "NOTA METACRITIC"
+                                AppLanguage.FRENCH -> "SCORE METACRITIC"
+                                AppLanguage.ENGLISH -> "METACRITIC SCORE"
+                            },
                             fontSize = 12.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -302,10 +318,10 @@ fun MetacriticDetailSection(
         Spacer(modifier = Modifier.height(10.dp))
 
         Text(
-            text = if (isEs) {
-                "Consenso oficial de la crítica verificado mediante CheapShark y GamerPower a partir de publicaciones especializadas."
-            } else {
-                "Accurate critic consensus verified through CheapShark & GamerPower APIs from top editorial review publications worldwide."
+            text = when (lang) {
+                AppLanguage.SPANISH -> "Consenso oficial de la crítica verificado mediante CheapShark y GamerPower a partir de publicaciones especializadas."
+                AppLanguage.FRENCH -> "Consensus officiel de la critique vérifié via les API CheapShark et GamerPower auprès des publications spécialisées."
+                AppLanguage.ENGLISH -> "Accurate critic consensus verified through CheapShark & GamerPower APIs from top editorial review publications worldwide."
             },
             fontSize = 11.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -325,7 +341,11 @@ fun MetacriticDetailSection(
                 } catch (_: Exception) {
                     Toast.makeText(
                         context,
-                        if (isEs) "No se pudo abrir el navegador" else "Could not open browser",
+                        when (lang) {
+                            AppLanguage.SPANISH -> "No se pudo abrir el navegador"
+                            AppLanguage.FRENCH -> "Impossible d'ouvrir le navigateur"
+                            AppLanguage.ENGLISH -> "Could not open browser"
+                        },
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -349,7 +369,11 @@ fun MetacriticDetailSection(
                     modifier = Modifier.size(14.dp)
                 )
                 Text(
-                    text = if (isEs) "Ver '$gameTitle' en Metacritic" else "View '$gameTitle' on Metacritic",
+                    text = when (lang) {
+                        AppLanguage.SPANISH -> "Ver '$gameTitle' en Metacritic"
+                        AppLanguage.FRENCH -> "Voir '$gameTitle' sur Metacritic"
+                        AppLanguage.ENGLISH -> "View '$gameTitle' on Metacritic"
+                    },
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface

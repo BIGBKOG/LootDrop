@@ -53,14 +53,18 @@ fun StorageSettingsCategoryContent(
     onRequestClearClaimedDialog: () -> Unit
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val storageMetrics by viewModel.storageMetrics.collectAsState()
     val isDataSaverMode by viewModel.isDataSaverMode.collectAsState()
     val isAutoPruneExpired by viewModel.isAutoPruneExpired.collectAsState()
 
     // SECTION: Storage & Speed Optimization Suite
     SectionHeader(
-        title = if (isEs) "ACELERADOR DE ALMACENAMIENTO Y RENDIMIENTO" else "STORAGE & PERFORMANCE ACCELERATOR",
+        title = when (lang) {
+            AppLanguage.SPANISH -> "ACELERADOR DE ALMACENAMIENTO Y RENDIMIENTO"
+            AppLanguage.FRENCH -> "ACCÉLÉRATEUR DE STOCKAGE & PERFORMANCES"
+            AppLanguage.ENGLISH -> "STORAGE & PERFORMANCE ACCELERATOR"
+        },
         icon = Icons.Default.Speed
     )
 
@@ -104,7 +108,11 @@ fun StorageSettingsCategoryContent(
                     .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
                 Text(
-                    text = if (isEs) "OPTIMIZADO" else "OPTIMIZED",
+                    text = when (lang) {
+                        AppLanguage.SPANISH -> "OPTIMIZADO"
+                        AppLanguage.FRENCH -> "OPTIMISÉ"
+                        AppLanguage.ENGLISH -> "OPTIMIZED"
+                    },
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -128,7 +136,11 @@ fun StorageSettingsCategoryContent(
             ) {
                 Column {
                     Text(
-                        text = if (isEs) "IMÁGENES" else "IMAGES",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "IMÁGENES"
+                            AppLanguage.FRENCH -> "IMAGES"
+                            AppLanguage.ENGLISH -> "IMAGES"
+                        },
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -152,7 +164,11 @@ fun StorageSettingsCategoryContent(
             ) {
                 Column {
                     Text(
-                        text = if (isEs) "RED" else "NETWORK",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "RED"
+                            AppLanguage.FRENCH -> "RÉSEAU"
+                            AppLanguage.ENGLISH -> "NETWORK"
+                        },
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -176,7 +192,11 @@ fun StorageSettingsCategoryContent(
             ) {
                 Column {
                     Text(
-                        text = if (isEs) "BASE DE DATOS" else "DATABASE",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "BASE DE DATOS"
+                            AppLanguage.FRENCH -> "BASE DE DONNÉES"
+                            AppLanguage.ENGLISH -> "DATABASE"
+                        },
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -237,7 +257,11 @@ fun StorageSettingsCategoryContent(
                 ) {
                     Icon(Icons.Default.Image, contentDescription = null, modifier = Modifier.size(14.dp))
                     Text(
-                        text = if (isEs) "Limpiar Imágenes" else "Clear Images",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "Limpiar Imágenes"
+                            AppLanguage.FRENCH -> "Vider Images"
+                            AppLanguage.ENGLISH -> "Clear Images"
+                        },
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -259,7 +283,11 @@ fun StorageSettingsCategoryContent(
                 ) {
                     Icon(Icons.Default.Storage, contentDescription = null, modifier = Modifier.size(14.dp))
                     Text(
-                        text = if (isEs) "Compactar BD" else "Compact DB",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "Compactar BD"
+                            AppLanguage.FRENCH -> "Compacter BD"
+                            AppLanguage.ENGLISH -> "Compact DB"
+                        },
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -344,7 +372,11 @@ fun StorageSettingsCategoryContent(
 
     // SECTION: Cloud Backup & Sync (Cloudflare R2 Object Storage)
     SectionHeader(
-        title = if (isEs) "RESPALDO EN LA NUBE (CLOUDFLARE R2)" else "CLOUD BACKUP (CLOUDFLARE R2)",
+        title = when (lang) {
+            AppLanguage.SPANISH -> "RESPALDO EN LA NUBE (CLOUDFLARE R2)"
+            AppLanguage.FRENCH -> "SAUVEGARDE CLOUD (CLOUDFLARE R2)"
+            AppLanguage.ENGLISH -> "CLOUD BACKUP (CLOUDFLARE R2)"
+        },
         icon = Icons.Default.Cloud
     )
 
@@ -368,7 +400,11 @@ fun StorageSettingsCategoryContent(
 
     // SECTION: Library & Data Reset
     SectionHeader(
-        title = if (isEs) "GESTIÓN DE DATOS Y BIBLIOTECA" else "DATA & LIBRARY MANAGEMENT",
+        title = when (lang) {
+            AppLanguage.SPANISH -> "GESTIÓN DE DATOS Y BIBLIOTECA"
+            AppLanguage.FRENCH -> "GESTION DES DONNÉES & BIBLIOTHÈQUE"
+            AppLanguage.ENGLISH -> "DATA & LIBRARY MANAGEMENT"
+        },
         icon = Icons.Default.Delete
     )
 
@@ -396,7 +432,11 @@ fun StorageSettingsCategoryContent(
             ) {
                 Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                 Text(
-                    text = if (isEs) "Forzar Re-sincronización desde APIs de Tiendas" else "Force Re-sync All Freebies from Store APIs",
+                    text = when (lang) {
+                        AppLanguage.SPANISH -> "Forzar Re-sincronización desde APIs de Tiendas"
+                        AppLanguage.FRENCH -> "Forcer la Resynchronisation des API Boutiques"
+                        AppLanguage.ENGLISH -> "Force Re-sync All Freebies from Store APIs"
+                    },
                     fontSize = 13.sp
                 )
             }
@@ -410,7 +450,11 @@ fun StorageSettingsCategoryContent(
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
         ) {
             Text(
-                text = if (isEs) "Limpiar Juegos Reclamados 'En Bóveda'" else "Clear 'In Library' Claimed Games",
+                text = when (lang) {
+                    AppLanguage.SPANISH -> "Limpiar Juegos Reclamados 'En Bóveda'"
+                    AppLanguage.FRENCH -> "Vider les Jeux Réclamés 'Dans le Coffre'"
+                    AppLanguage.ENGLISH -> "Clear 'In Library' Claimed Games"
+                },
                 fontSize = 13.sp
             )
         }

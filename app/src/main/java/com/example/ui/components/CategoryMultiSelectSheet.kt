@@ -88,7 +88,7 @@ fun CategoryMultiSelectSheet(
     onDismiss: () -> Unit
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var searchQuery by remember { mutableStateOf("") }
 
@@ -161,9 +161,17 @@ fun CategoryMultiSelectSheet(
                         )
                         Text(
                             text = if (selectedCategories.isEmpty()) {
-                                if (isEs) "Todas las categorías activas (${GameCategory.entries.size})" else "All categories active (${GameCategory.entries.size} total)"
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Todas las categorías activas (${GameCategory.entries.size})"
+                                    AppLanguage.FRENCH -> "Toutes les catégories actives (${GameCategory.entries.size})"
+                                    AppLanguage.ENGLISH -> "All categories active (${GameCategory.entries.size} total)"
+                                }
                             } else {
-                                if (isEs) "${selectedCategories.size} de ${GameCategory.entries.size} seleccionadas" else "${selectedCategories.size} of ${GameCategory.entries.size} categories selected"
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "${selectedCategories.size} de ${GameCategory.entries.size} seleccionadas"
+                                    AppLanguage.FRENCH -> "${selectedCategories.size} sur ${GameCategory.entries.size} sélectionnées"
+                                    AppLanguage.ENGLISH -> "${selectedCategories.size} of ${GameCategory.entries.size} categories selected"
+                                }
                             },
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
@@ -193,7 +201,11 @@ fun CategoryMultiSelectSheet(
                 onValueChange = { searchQuery = it },
                 placeholder = {
                     Text(
-                        text = if (isEs) "Buscar géneros (ej. RPG, Disparos, Acción)" else "Search categories (e.g. RPG, Shooter, Action)",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "Buscar géneros (ej. RPG, Disparos, Acción)"
+                            AppLanguage.FRENCH -> "Rechercher un genre (ex. RPG, Tir, Action)"
+                            AppLanguage.ENGLISH -> "Search categories (e.g. RPG, Shooter, Action)"
+                        },
                         fontSize = 12.sp,
                         color = TextMuted
                     )
@@ -267,9 +279,17 @@ fun CategoryMultiSelectSheet(
                 ) {
                     Text(
                         text = if (selectedCategories.isEmpty()) {
-                            if (isEs) "TODAS ACTIVAS" else "ALL ACTIVE"
+                            when (lang) {
+                                AppLanguage.SPANISH -> "TODAS ACTIVAS"
+                                AppLanguage.FRENCH -> "TOUTES ACTIVES"
+                                AppLanguage.ENGLISH -> "ALL ACTIVE"
+                            }
                         } else {
-                            if (isEs) "${selectedCategories.size} ACTIVAS" else "${selectedCategories.size} ACTIVE"
+                            when (lang) {
+                                AppLanguage.SPANISH -> "${selectedCategories.size} ACTIVAS"
+                                AppLanguage.FRENCH -> "${selectedCategories.size} ACTIVES"
+                                AppLanguage.ENGLISH -> "${selectedCategories.size} ACTIVE"
+                            }
                         },
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Black,
@@ -401,10 +421,10 @@ fun CategoryMultiSelectSheet(
                     text = if (selectedCategories.isEmpty()) {
                         s.home.filterCategoriesSelectAll
                     } else {
-                        if (isEs) {
-                            "Aplicar ${selectedCategories.size} Categoría${if (selectedCategories.size > 1) "s" else ""}"
-                        } else {
-                            "Apply ${selectedCategories.size} Categor${if (selectedCategories.size > 1) "ies" else "y"}"
+                        when (lang) {
+                            AppLanguage.SPANISH -> "Aplicar ${selectedCategories.size} Categoría${if (selectedCategories.size > 1) "s" else ""}"
+                            AppLanguage.FRENCH -> "Appliquer ${selectedCategories.size} catégorie${if (selectedCategories.size > 1) "s" else ""}"
+                            AppLanguage.ENGLISH -> "Apply ${selectedCategories.size} Categor${if (selectedCategories.size > 1) "ies" else "y"}"
                         }
                     },
                     fontSize = 14.sp,

@@ -97,7 +97,8 @@ fun GeneralSettingsCategoryContent(
         )
         listOf(
             Triple(AppLanguage.ENGLISH, s.settings.languageEnglishDesc, "settings_language_en"),
-            Triple(AppLanguage.SPANISH, s.settings.languageSpanishDesc, "settings_language_es")
+            Triple(AppLanguage.SPANISH, s.settings.languageSpanishDesc, "settings_language_es"),
+            Triple(AppLanguage.FRENCH, s.settings.languageFrenchDesc, "settings_language_fr")
         ).forEach { (language, desc, tag) ->
             val isSelected = appLanguage == language
             Row(

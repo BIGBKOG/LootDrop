@@ -92,7 +92,7 @@ fun InAppBrowserDialog(
 ) {
     val context = LocalContext.current
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
     var currentUrl by remember { mutableStateOf(url) }
     var displayTitle by remember { mutableStateOf(title.ifBlank { s.dialogs.detailClaimFree }) }
@@ -184,7 +184,11 @@ fun InAppBrowserDialog(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Lock,
-                                        contentDescription = if (isEs) "Conexión segura" else "Secure Connection",
+                                        contentDescription = when (lang) {
+                                            AppLanguage.SPANISH -> "Conexión segura"
+                                            AppLanguage.FRENCH -> "Connexion sécurisée"
+                                            AppLanguage.ENGLISH -> "Secure Connection"
+                                        },
                                         tint = NeonCyan,
                                         modifier = Modifier.size(10.dp)
                                     )
@@ -384,13 +388,21 @@ fun InAppBrowserDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Warning,
-                                contentDescription = if (isEs) "Renderizado interrumpido" else "Renderer Interrupted",
+                                contentDescription = when (lang) {
+                                    AppLanguage.SPANISH -> "Renderizado interrumpido"
+                                    AppLanguage.FRENCH -> "Rendu interrompu"
+                                    AppLanguage.ENGLISH -> "Renderer Interrupted"
+                                },
                                 tint = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.size(52.dp)
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = if (isEs) "La tienda requiere navegador externo" else "Storefront Requires External Browser",
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "La tienda requiere navegador externo"
+                                    AppLanguage.FRENCH -> "La boutique nécessite un navigateur externe"
+                                    AppLanguage.ENGLISH -> "Storefront Requires External Browser"
+                                },
                                 fontSize = 17.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface,
@@ -398,10 +410,10 @@ fun InAppBrowserDialog(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = if (isEs) {
-                                    "Esta tienda externa usó demasiada memoria o bloqueó la vista integrada. Puedes reclamar el juego directamente en tu navegador."
-                                } else {
-                                    "This external storefront encountered high memory usage or anti-embed protection in the embedded engine. You can claim it directly in your device's browser."
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "Esta tienda externa usó demasiada memoria o bloqueó la vista integrada. Puedes reclamar el juego directamente en tu navegador."
+                                    AppLanguage.FRENCH -> "Cette boutique externe a utilisé trop de mémoire ou bloqué la vue intégrée. Vous pouvez réclamer le jeu directement dans votre navigateur."
+                                    AppLanguage.ENGLISH -> "This external storefront encountered high memory usage or anti-embed protection in the embedded engine. You can claim it directly in your device's browser."
                                 },
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -480,7 +492,11 @@ fun InAppBrowserDialog(
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                    contentDescription = if (isEs) "Avanzar" else "Navigate Forward",
+                                    contentDescription = when (lang) {
+                                        AppLanguage.SPANISH -> "Avanzar"
+                                        AppLanguage.FRENCH -> "Page suivante"
+                                        AppLanguage.ENGLISH -> "Navigate Forward"
+                                    },
                                     tint = if (canGoForward) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                                 )
                             }

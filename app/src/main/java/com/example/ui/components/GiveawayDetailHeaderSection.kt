@@ -96,7 +96,6 @@ internal fun GiveawayDetailHeroBanner(
     onDismiss: () -> Unit
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
     val lowEnd = LocalLowEndOptimization.current
     Box(modifier = Modifier.fillMaxWidth().height(coverHeight)) {
         val detailImageRequest = remember(context, item.id, item.image, item.thumbnail, lowEnd) {
@@ -182,7 +181,7 @@ internal fun GiveawayDetailHeroBanner(
 @Composable
 internal fun DetailOwnershipBanner(ownershipStatus: GiveawaysViewModel.OwnershipStatus) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -197,16 +196,31 @@ internal fun DetailOwnershipBanner(ownershipStatus: GiveawaysViewModel.Ownership
                 Text(if (ownershipStatus.inSteam) "🎮" else "💎", fontSize = 17.sp)
             }
             Column(modifier = Modifier.weight(1f)) {
-                Text(if (isEs) "YA TIENES ESTE JUEGO" else "YOU ALREADY HAVE THIS", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF10B981), letterSpacing = 0.6.sp)
-                val sourceText = if (isEs) {
-                    when {
+                Text(
+                    when (lang) {
+                        AppLanguage.SPANISH -> "YA TIENES ESTE JUEGO"
+                        AppLanguage.FRENCH -> "VOUS POSSÉDEZ DÉJÀ CE JEU"
+                        AppLanguage.ENGLISH -> "YOU ALREADY HAVE THIS"
+                    },
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color(0xFF10B981),
+                    letterSpacing = 0.6.sp
+                )
+                val sourceText = when (lang) {
+                    AppLanguage.SPANISH -> when {
                         ownershipStatus.inVault && ownershipStatus.inSteam -> "¡Guardado en tu Bóveda de LootDrop y en tu biblioteca de Steam!"
                         ownershipStatus.inVault -> "Ya está guardado en tu Bóveda de LootDrop."
                         ownershipStatus.inSteam && ownershipStatus.matchedSteamGameName != null -> "Encontrado en tu Steam como '${ownershipStatus.matchedSteamGameName}'."
                         else -> "Encontrado en tu biblioteca vinculada de Steam."
                     }
-                } else {
-                    when {
+                    AppLanguage.FRENCH -> when {
+                        ownershipStatus.inVault && ownershipStatus.inSteam -> "Enregistré dans votre coffre LootDrop et trouvé dans votre bibliothèque Steam !"
+                        ownershipStatus.inVault -> "Déjà enregistré dans votre coffre LootDrop."
+                        ownershipStatus.inSteam && ownershipStatus.matchedSteamGameName != null -> "Trouvé dans votre bibliothèque Steam sous « ${ownershipStatus.matchedSteamGameName} »."
+                        else -> "Trouvé dans votre bibliothèque Steam liée."
+                    }
+                    AppLanguage.ENGLISH -> when {
                         ownershipStatus.inVault && ownershipStatus.inSteam -> "Saved in your LootDrop Vault and found in your Steam Library!"
                         ownershipStatus.inVault -> "Already saved in your LootDrop Vault."
                         ownershipStatus.inSteam && ownershipStatus.matchedSteamGameName != null -> "Found in your linked Steam library as '${ownershipStatus.matchedSteamGameName}'."
@@ -232,7 +246,7 @@ internal fun DetailActionButtonsBlock(
     onToggleClaimed: () -> Unit
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val lowEnd = LocalLowEndOptimization.current
     val claimSource = remember { MutableInteractionSource() }
     val claimScale = if (lowEnd) {
@@ -265,9 +279,17 @@ internal fun DetailActionButtonsBlock(
             }
             Text(
                 text = if (item.hasMultipleLaunchers) {
-                    if (isEs) "Reclamar • Elegir Tienda ▾" else "Claim • Choose Launcher ▾"
+                    when (lang) {
+                        AppLanguage.SPANISH -> "Reclamar • Elegir Tienda ▾"
+                        AppLanguage.FRENCH -> "Réclamer • Choisir la boutique ▾"
+                        AppLanguage.ENGLISH -> "Claim • Choose Launcher ▾"
+                    }
                 } else {
-                    if (isEs) "Reclamar en $claimDestination" else "Claim on $claimDestination"
+                    when (lang) {
+                        AppLanguage.SPANISH -> "Reclamar en $claimDestination"
+                        AppLanguage.FRENCH -> "Réclamer sur $claimDestination"
+                        AppLanguage.ENGLISH -> "Claim on $claimDestination"
+                    }
                 },
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold
@@ -280,7 +302,11 @@ internal fun DetailActionButtonsBlock(
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(NeonGreen))
             Text(
-                text = if (isEs) "TIENDAS DISPONIBLES (100% GRATIS)" else "AVAILABLE LAUNCHERS (100% OFF)",
+                text = when (lang) {
+                    AppLanguage.SPANISH -> "TIENDAS DISPONIBLES (100% GRATIS)"
+                    AppLanguage.FRENCH -> "LANCEURS DISPONIBLES (100 % GRATUIT)"
+                    AppLanguage.ENGLISH -> "AVAILABLE LAUNCHERS (100% OFF)"
+                },
                 fontSize = 11.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = NeonGreen,
@@ -289,7 +315,7 @@ internal fun DetailActionButtonsBlock(
         }
         Spacer(modifier = Modifier.height(8.dp))
         Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            item.getAvailableLaunchers(isEs).forEach { launcherOption ->
+            item.getAvailableLaunchers(lang).forEach { launcherOption ->
                 DetailLauncherCardRow(launcherOption = launcherOption) {
                     if (onLauncherOptionClick != null) onLauncherOptionClick(launcherOption.url, launcherOption.name)
                     else onClaimClick()
@@ -361,7 +387,14 @@ internal fun DetailActionButtonsBlock(
             if (isSharingCard) {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(if (isEs) "Creando..." else "Rendering...", fontSize = 12.sp)
+                Text(
+                    when (lang) {
+                        AppLanguage.SPANISH -> "Creando..."
+                        AppLanguage.FRENCH -> "Création..."
+                        AppLanguage.ENGLISH -> "Rendering..."
+                    },
+                    fontSize = 12.sp
+                )
             } else {
                 Icon(Icons.Default.Share, null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(6.dp))
@@ -406,7 +439,15 @@ internal fun DetailActionButtonsBlock(
         )
         Spacer(modifier = Modifier.width(6.dp))
         Text(
-            text = if (item.isClaimed) s.dialogs.detailClaimed else if (isEs) "Añadir a 'Mi Bóveda'" else "Add to 'In Library'",
+            text = if (item.isClaimed) {
+                s.dialogs.detailClaimed
+            } else {
+                when (lang) {
+                    AppLanguage.SPANISH -> "Añadir a 'Mi Bóveda'"
+                    AppLanguage.FRENCH -> "Ajouter à « Ma ludothèque »"
+                    AppLanguage.ENGLISH -> "Add to 'In Library'"
+                }
+            },
             fontSize = 13.sp
         )
     }
@@ -418,7 +459,7 @@ internal fun DetailGameTrackerCard(
     onPlayStatusChange: ((PlayStatus) -> Unit)?
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -448,10 +489,26 @@ internal fun DetailGameTrackerCard(
                     ) {
                         Text(
                             text = when (status) {
-                                PlayStatus.NOT_STARTED -> if (isEs) "⏳ Pendiente" else "⏳ Backlog"
-                                PlayStatus.PLAYING -> if (isEs) "🎮 Jugando" else "🎮 Playing"
-                                PlayStatus.BEATEN -> if (isEs) "🏆 Terminado" else "🏆 Finished"
-                                PlayStatus.DROPPED -> if (isEs) "⏸️ Dejado" else "⏸️ Dropped"
+                                PlayStatus.NOT_STARTED -> when (lang) {
+                                    AppLanguage.SPANISH -> "⏳ Pendiente"
+                                    AppLanguage.FRENCH -> "⏳ À faire"
+                                    AppLanguage.ENGLISH -> "⏳ Backlog"
+                                }
+                                PlayStatus.PLAYING -> when (lang) {
+                                    AppLanguage.SPANISH -> "🎮 Jugando"
+                                    AppLanguage.FRENCH -> "🎮 En cours"
+                                    AppLanguage.ENGLISH -> "🎮 Playing"
+                                }
+                                PlayStatus.BEATEN -> when (lang) {
+                                    AppLanguage.SPANISH -> "🏆 Terminado"
+                                    AppLanguage.FRENCH -> "🏆 Terminé"
+                                    AppLanguage.ENGLISH -> "🏆 Finished"
+                                }
+                                PlayStatus.DROPPED -> when (lang) {
+                                    AppLanguage.SPANISH -> "⏸️ Dejado"
+                                    AppLanguage.FRENCH -> "⏸️ Abandonné"
+                                    AppLanguage.ENGLISH -> "⏸️ Dropped"
+                                }
                             },
                             fontSize = 10.sp,
                             fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
@@ -469,7 +526,7 @@ internal fun DetailGameTrackerCard(
 @Composable
 internal fun DetailSteamTelemetryCard(item: GiveawayItem, context: Context) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -482,7 +539,16 @@ internal fun DetailSteamTelemetryCard(item: GiveawayItem, context: Context) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Icon(Icons.Default.SportsEsports, contentDescription = "Steam", tint = Color(0xFF66C0F4), modifier = Modifier.size(16.dp))
-                    Text(if (isEs) "Actividad y Progreso en Steam" else "Steam Activity & Progress", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(
+                        when (lang) {
+                            AppLanguage.SPANISH -> "Actividad y Progreso en Steam"
+                            AppLanguage.FRENCH -> "Activité et progression Steam"
+                            AppLanguage.ENGLISH -> "Steam Activity & Progress"
+                        },
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
                 }
                 if (item.steamAppId != null) {
                     Text(
@@ -501,12 +567,28 @@ internal fun DetailSteamTelemetryCard(item: GiveawayItem, context: Context) {
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column {
-                    Text(if (isEs) "Tiempo Jugado" else "Playtime Logged", fontSize = 10.sp, color = Color(0xFF8F98A0))
+                    Text(
+                        when (lang) {
+                            AppLanguage.SPANISH -> "Tiempo Jugado"
+                            AppLanguage.FRENCH -> "Temps de jeu"
+                            AppLanguage.ENGLISH -> "Playtime Logged"
+                        },
+                        fontSize = 10.sp,
+                        color = Color(0xFF8F98A0)
+                    )
                     Text("${item.steamPlaytimeHours} (${item.steamPlaytimeMinutes} min)", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
                 if (item.steamAchievementsTotal > 0) {
                     Column(horizontalAlignment = Alignment.End) {
-                        Text(if (isEs) "Logros" else "Achievements", fontSize = 10.sp, color = Color(0xFF8F98A0))
+                        Text(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Logros"
+                                AppLanguage.FRENCH -> "Succès"
+                                AppLanguage.ENGLISH -> "Achievements"
+                            },
+                            fontSize = 10.sp,
+                            color = Color(0xFF8F98A0)
+                        )
                         Text(
                             text = "${item.steamAchievementsUnlocked} / ${item.steamAchievementsTotal} (${item.steamAchievementsPercentage}%)",
                             fontSize = 13.sp,

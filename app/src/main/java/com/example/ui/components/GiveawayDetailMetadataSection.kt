@@ -77,7 +77,7 @@ internal fun DetailHardwareReadinessSection(
     onEditStorageClick: () -> Unit
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val hardware = item.hardwareProfile
     Text(s.dialogs.detailHardwareReadinessTitle, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = NeonCyan, letterSpacing = 1.sp)
     Spacer(modifier = Modifier.height(8.dp))
@@ -118,20 +118,35 @@ internal fun DetailHardwareReadinessSection(
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Column(horizontalAlignment = Alignment.End) {
-                        val tierLabel = if (isEs) {
-                            when (hardware.storageTier) {
+                        val tierLabel = when (lang) {
+                            AppLanguage.SPANISH -> when (hardware.storageTier) {
                                 StorageTier.FEATHERWEIGHT -> "Ligero"
                                 StorageTier.COMPACT -> "Compacto"
                                 StorageTier.MEDIUM -> "Medio"
                                 StorageTier.HEAVYWEIGHT -> "Pesado"
                             }
-                        } else hardware.storageTier.label
+                            AppLanguage.FRENCH -> when (hardware.storageTier) {
+                                StorageTier.FEATHERWEIGHT -> "Léger"
+                                StorageTier.COMPACT -> "Compact"
+                                StorageTier.MEDIUM -> "Moyen"
+                                StorageTier.HEAVYWEIGHT -> "Lourd"
+                            }
+                            AppLanguage.ENGLISH -> hardware.storageTier.label
+                        }
                         Text("${hardware.formattedSize} ($tierLabel)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFA78BFA))
                         Text(
                             text = if (hardware.isManualOverride) {
-                                if (isEs) "Tamaño manual" else "Manual override"
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Tamaño manual"
+                                    AppLanguage.FRENCH -> "Taille manuelle"
+                                    AppLanguage.ENGLISH -> "Manual override"
+                                }
                             } else {
-                                if (isEs) "Estimado catálogo" else "Catalog estimate"
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Estimado catálogo"
+                                    AppLanguage.FRENCH -> "Estimation catalogue"
+                                    AppLanguage.ENGLISH -> "Catalog estimate"
+                                }
                             },
                             fontSize = 10.sp,
                             color = TextSecondary
@@ -146,7 +161,15 @@ internal fun DetailHardwareReadinessSection(
                     ) {
                         Icon(Icons.Default.Edit, contentDescription = s.library.hardwareSetCustomSize, tint = Color(0xFFA78BFA), modifier = Modifier.size(12.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(if (isEs) "Editar" else "Edit", fontSize = 11.sp, color = Color(0xFFA78BFA))
+                        Text(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Editar"
+                                AppLanguage.FRENCH -> "Modifier"
+                                AppLanguage.ENGLISH -> "Edit"
+                            },
+                            fontSize = 11.sp,
+                            color = Color(0xFFA78BFA)
+                        )
                     }
                 }
             }
@@ -161,7 +184,7 @@ internal fun DetailMetadataBox(
     ostInfo: OfficialOstInfo?
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -172,7 +195,15 @@ internal fun DetailMetadataBox(
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(if (isEs) "Plataformas" else "Platforms", fontSize = 12.sp, color = TextMuted)
+                Text(
+                    when (lang) {
+                        AppLanguage.SPANISH -> "Plataformas"
+                        AppLanguage.FRENCH -> "Plateformes"
+                        AppLanguage.ENGLISH -> "Platforms"
+                    },
+                    fontSize = 12.sp,
+                    color = TextMuted
+                )
                 Text(item.platforms, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
             }
             if (item.categories.isNotEmpty()) {
@@ -188,7 +219,15 @@ internal fun DetailMetadataBox(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     MetacriticScorePill(score = item.metacriticScore)
-                    Text(if (isEs) "Nota Metacritic" else "Metacritic Score", fontSize = 12.sp, color = TextMuted)
+                    Text(
+                        when (lang) {
+                            AppLanguage.SPANISH -> "Nota Metacritic"
+                            AppLanguage.FRENCH -> "Score Metacritic"
+                            AppLanguage.ENGLISH -> "Metacritic Score"
+                        },
+                        fontSize = 12.sp,
+                        color = TextMuted
+                    )
                 }
                 Text(
                     text = "${item.metacriticScore}/100 • ${item.metacriticInfo.tier.localizedLabel(s)}",
@@ -206,11 +245,27 @@ internal fun DetailMetadataBox(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(if (isEs) "Banda Sonora (OST)" else "Official OST", fontSize = 12.sp, color = TextMuted)
+                Text(
+                    when (lang) {
+                        AppLanguage.SPANISH -> "Banda Sonora (OST)"
+                        AppLanguage.FRENCH -> "Bande originale (OST)"
+                        AppLanguage.ENGLISH -> "Official OST"
+                    },
+                    fontSize = 12.sp,
+                    color = TextMuted
+                )
                 val ostLabel = when {
-                    isOstLoading -> if (isEs) "Consultando bases..." else "Checking databases..."
+                    isOstLoading -> when (lang) {
+                        AppLanguage.SPANISH -> "Consultando bases..."
+                        AppLanguage.FRENCH -> "Recherche en cours..."
+                        AppLanguage.ENGLISH -> "Checking databases..."
+                    }
                     ostInfo != null -> if (!ostInfo.discogsUrl.isNullOrBlank()) "Spotify, YT & Discogs" else "YouTube Music & Spotify"
-                    else -> if (isEs) "Sin OST" else "No OST"
+                    else -> when (lang) {
+                        AppLanguage.SPANISH -> "Sin OST"
+                        AppLanguage.FRENCH -> "Aucune OST"
+                        AppLanguage.ENGLISH -> "No OST"
+                    }
                 }
                 Text(
                     text = ostLabel, fontSize = 12.sp,
@@ -220,9 +275,21 @@ internal fun DetailMetadataBox(
             }
             if (item.users > 0) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(if (isEs) "Reclamado por" else "Claimed by", fontSize = 12.sp, color = TextMuted)
                     Text(
-                        text = if (isEs) "${item.users} jugadores" else "${item.users} gamers",
+                        when (lang) {
+                            AppLanguage.SPANISH -> "Reclamado por"
+                            AppLanguage.FRENCH -> "Réclamé par"
+                            AppLanguage.ENGLISH -> "Claimed by"
+                        },
+                        fontSize = 12.sp,
+                        color = TextMuted
+                    )
+                    Text(
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "${item.users} jugadores"
+                            AppLanguage.FRENCH -> "${item.users} joueurs"
+                            AppLanguage.ENGLISH -> "${item.users} gamers"
+                        },
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                         color = TextPrimary
@@ -242,7 +309,7 @@ internal fun DetailStorageFootprintDialog(
     onSave: (Float?) -> Unit
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Card(
             modifier = Modifier.fillMaxWidth(0.92f).padding(16.dp),
@@ -261,10 +328,10 @@ internal fun DetailStorageFootprintDialog(
                     }
                 }
                 Text(
-                    text = if (isEs) {
-                        "Lleva el control exacto del tamaño de instalación en tu Steam Deck, ROG Ally o PC. Introduce gigabytes (GB) o restablece al estimado (${item.hardwareProfile.estimatedSizeGb} GB)."
-                    } else {
-                        "Track the exact install size on your Steam Deck, ROG Ally, or PC drive. Enter manual gigabytes (GB) or reset to restore estimated size (${item.hardwareProfile.estimatedSizeGb} GB)."
+                    text = when (lang) {
+                        AppLanguage.SPANISH -> "Lleva el control exacto del tamaño de instalación en tu Steam Deck, ROG Ally o PC. Introduce gigabytes (GB) o restablece al estimado (${item.hardwareProfile.estimatedSizeGb} GB)."
+                        AppLanguage.FRENCH -> "Suivez la taille exacte d'installation sur votre Steam Deck, ROG Ally ou PC. Saisissez les gigaoctets (Go) ou réinitialisez l'estimation (${item.hardwareProfile.estimatedSizeGb} Go)."
+                        AppLanguage.ENGLISH -> "Track the exact install size on your Steam Deck, ROG Ally, or PC drive. Enter manual gigabytes (GB) or reset to restore estimated size (${item.hardwareProfile.estimatedSizeGb} GB)."
                     },
                     fontSize = 13.sp, color = TextSecondary, lineHeight = 18.sp
                 )
@@ -272,7 +339,15 @@ internal fun DetailStorageFootprintDialog(
                     value = storageInputText,
                     onValueChange = onInputChange,
                     label = { Text(s.library.hardwareEnterGbLabel) },
-                    placeholder = { Text(if (isEs) "ej. 15.5" else "e.g. 15.5") },
+                    placeholder = {
+                        Text(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "ej. 15.5"
+                                AppLanguage.FRENCH -> "ex. 15.5"
+                                AppLanguage.ENGLISH -> "e.g. 15.5"
+                            }
+                        )
+                    },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = MaterialTheme.colorScheme.outline),
                     modifier = Modifier.fillMaxWidth()
@@ -296,7 +371,7 @@ internal fun DetailStorageFootprintDialog(
 @Composable
 internal fun DetailLauncherCardRow(launcherOption: LauncherOption, onClick: () -> Unit) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(if (isPressed) 0.965f else 1f, spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessLow), label = "detail_launcher_scale")
@@ -322,7 +397,16 @@ internal fun DetailLauncherCardRow(launcherOption: LauncherOption, onClick: () -
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Box(modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(optColor.copy(alpha = 0.2f)).padding(horizontal = 8.dp, vertical = 3.dp)) {
-                    Text(if (isEs) "Reclamar" else "Claim", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = optColor)
+                    Text(
+                        when (lang) {
+                            AppLanguage.SPANISH -> "Reclamar"
+                            AppLanguage.FRENCH -> "Réclamer"
+                            AppLanguage.ENGLISH -> "Claim"
+                        },
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = optColor
+                    )
                 }
                 Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, tint = optColor, modifier = Modifier.size(14.dp))
             }

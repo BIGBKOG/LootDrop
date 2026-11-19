@@ -86,7 +86,7 @@ fun BackupRestoreCard(
     modifier: Modifier = Modifier
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val context = LocalContext.current
     val uiStats by viewModel.uiStats.collectAsState()
     val isBackingUpOrRestoring by viewModel.isBackingUpOrRestoring.collectAsState()
@@ -174,13 +174,21 @@ fun BackupRestoreCard(
 
                     Column {
                         Text(
-                            text = if (isEs) "Respaldar y Restaurar Juegos" else "Backup & Restore Games",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "Respaldar y Restaurar Juegos"
+                                AppLanguage.FRENCH -> "Sauvegarder & Restaurer"
+                                AppLanguage.ENGLISH -> "Backup & Restore Games"
+                            },
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = if (isEs) "Exporta, sincroniza o transfiere tu biblioteca entre dispositivos" else "Export, sync or transfer library across devices",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "Exporta, sincroniza o transfiere tu biblioteca entre dispositivos"
+                                AppLanguage.FRENCH -> "Exportez, synchronisez ou transférez votre bibliothèque"
+                                AppLanguage.ENGLISH -> "Export, sync or transfer library across devices"
+                            },
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -222,7 +230,11 @@ fun BackupRestoreCard(
                     ) {
                         Text("🎮", fontSize = 12.sp)
                         Text(
-                            text = if (isEs) "Bóveda: ${uiStats.claimedCount} reclamados" else "Vault: ${uiStats.claimedCount} claimed",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "Bóveda: ${uiStats.claimedCount} reclamados"
+                                AppLanguage.FRENCH -> "Coffre : ${uiStats.claimedCount} réclamés"
+                                AppLanguage.ENGLISH -> "Vault: ${uiStats.claimedCount} claimed"
+                            },
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = TextPrimary
@@ -235,7 +247,11 @@ fun BackupRestoreCard(
                     ) {
                         Text("⚡", fontSize = 12.sp)
                         Text(
-                            text = if (isEs) "Steam: ${uiStats.steamTotalCount} juegos" else "Steam: ${uiStats.steamTotalCount} games",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "Steam: ${uiStats.steamTotalCount} juegos"
+                                AppLanguage.FRENCH -> "Steam : ${uiStats.steamTotalCount} jeux"
+                                AppLanguage.ENGLISH -> "Steam: ${uiStats.steamTotalCount} games"
+                            },
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = NeonCyan
@@ -474,7 +490,11 @@ fun BackupRestoreCard(
                                             modifier = Modifier.size(18.dp)
                                         )
                                         Text(
-                                            text = if (isEs) "CARPETA DE DESTINO" else "BACKUP DESTINATION",
+                                            text = when (lang) {
+                                                AppLanguage.SPANISH -> "CARPETA DE DESTINO"
+                                                AppLanguage.FRENCH -> "DOSSIER DE DESTINATION"
+                                                AppLanguage.ENGLISH -> "BACKUP DESTINATION"
+                                            },
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -506,13 +526,21 @@ fun BackupRestoreCard(
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = if (isEs) "Archivo: lootdrop_backup_latest.json" else "Sync target: lootdrop_backup_latest.json",
+                                        text = when (lang) {
+                                            AppLanguage.SPANISH -> "Archivo: lootdrop_backup_latest.json"
+                                            AppLanguage.FRENCH -> "Cible : lootdrop_backup_latest.json"
+                                            AppLanguage.ENGLISH -> "Sync target: lootdrop_backup_latest.json"
+                                        },
                                         fontSize = 11.sp,
                                         color = TextMuted
                                     )
                                 } else {
                                     Text(
-                                        text = if (isEs) "Aún no hay carpeta elegida. Pulsa abajo para elegir una carpeta en Google Drive o almacenamiento local." else "No cloud folder selected yet. Tap below to choose a Google Drive folder or device directory.",
+                                        text = when (lang) {
+                                            AppLanguage.SPANISH -> "Aún no hay carpeta elegida. Pulsa abajo para elegir una carpeta en Google Drive o almacenamiento local."
+                                            AppLanguage.FRENCH -> "Aucun dossier choisi. Appuyez ci-dessous pour sélectionner un dossier Google Drive ou local."
+                                            AppLanguage.ENGLISH -> "No cloud folder selected yet. Tap below to choose a Google Drive folder or device directory."
+                                        },
                                         fontSize = 11.sp,
                                         color = Color(0xFFF59E0B),
                                         lineHeight = 15.sp
@@ -539,7 +567,11 @@ fun BackupRestoreCard(
                                             text = if (autoBackupFolderDisplayName.isBlank()) {
                                                 s.settings.backupSelectFolderBtn
                                             } else {
-                                                if (isEs) "Cambiar Carpeta" else "Change Folder"
+                                                when (lang) {
+                                                    AppLanguage.SPANISH -> "Cambiar Carpeta"
+                                                    AppLanguage.FRENCH -> "Changer de dossier"
+                                                    AppLanguage.ENGLISH -> "Change Folder"
+                                                }
                                             },
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold
@@ -576,7 +608,11 @@ fun BackupRestoreCard(
                                     modifier = Modifier.size(14.dp)
                                 )
                                 Text(
-                                    text = if (isEs) "Intervalo de Auto-Respaldo" else "Auto-Backup Interval",
+                                    text = when (lang) {
+                                        AppLanguage.SPANISH -> "Intervalo de Auto-Respaldo"
+                                        AppLanguage.FRENCH -> "Intervalle de sauvegarde"
+                                        AppLanguage.ENGLISH -> "Auto-Backup Interval"
+                                    },
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
@@ -588,10 +624,26 @@ fun BackupRestoreCard(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 val frequencies = listOf(
-                                    1 to (if (isEs) "Diario" else "Daily"),
-                                    2 to (if (isEs) "Cada 2 Días" else "Every 2 Days"),
-                                    3 to (if (isEs) "Cada 3 Días" else "Every 3 Days"),
-                                    7 to (if (isEs) "Semanal" else "Weekly")
+                                    1 to when (lang) {
+                                        AppLanguage.SPANISH -> "Diario"
+                                        AppLanguage.FRENCH -> "Quotidien"
+                                        AppLanguage.ENGLISH -> "Daily"
+                                    },
+                                    2 to when (lang) {
+                                        AppLanguage.SPANISH -> "Cada 2 Días"
+                                        AppLanguage.FRENCH -> "Tous les 2 j"
+                                        AppLanguage.ENGLISH -> "Every 2 Days"
+                                    },
+                                    3 to when (lang) {
+                                        AppLanguage.SPANISH -> "Cada 3 Días"
+                                        AppLanguage.FRENCH -> "Tous les 3 j"
+                                        AppLanguage.ENGLISH -> "Every 3 Days"
+                                    },
+                                    7 to when (lang) {
+                                        AppLanguage.SPANISH -> "Semanal"
+                                        AppLanguage.FRENCH -> "Hebdo"
+                                        AppLanguage.ENGLISH -> "Weekly"
+                                    }
                                 )
 
                                 for ((days, label) in frequencies) {
@@ -680,7 +732,11 @@ fun BackupRestoreCard(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = if (isEs) "Escribiendo en Carpeta..." else "Writing to Cloud Folder...",
+                                    text = when (lang) {
+                                        AppLanguage.SPANISH -> "Escribiendo en Carpeta..."
+                                        AppLanguage.FRENCH -> "Écriture dans le dossier..."
+                                        AppLanguage.ENGLISH -> "Writing to Cloud Folder..."
+                                    },
                                     fontSize = 12.sp
                                 )
                             } else {
@@ -718,18 +774,32 @@ fun BackupRestoreCard(
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(22.dp)
                     )
-                    Text(if (isEs) "¿Restaurar Juegos desde Archivo?" else "Restore Games from File?")
+                    Text(
+                        when (lang) {
+                            AppLanguage.SPANISH -> "¿Restaurar Juegos desde Archivo?"
+                            AppLanguage.FRENCH -> "Restaurer depuis un fichier ?"
+                            AppLanguage.ENGLISH -> "Restore Games from File?"
+                        }
+                    )
                 }
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = if (isEs) "Elige un archivo de respaldo JSON exportado anteriormente para restaurar tu Bóveda reclamada, estados de juego y biblioteca Steam." else "Select a previously exported LootDrop JSON backup file to restore your claimed Vault games, play statuses, and Steam library.",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "Elige un archivo de respaldo JSON exportado anteriormente para restaurar tu Bóveda reclamada, estados de juego y biblioteca Steam."
+                            AppLanguage.FRENCH -> "Sélectionnez un fichier JSON LootDrop exporté précédemment pour restaurer votre coffre, vos statuts de jeu et votre bibliothèque Steam."
+                            AppLanguage.ENGLISH -> "Select a previously exported LootDrop JSON backup file to restore your claimed Vault games, play statuses, and Steam library."
+                        },
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = if (isEs) "• Tus juegos reclamados actuales se conservan\n• Compatible con Google Drive, nube o dispositivo\n• Importación al instante en un toque" else "• Existing claimed games are safely preserved\n• Works with files from Google Drive, cloud, or device\n• Instant one-tap import",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "• Tus juegos reclamados actuales se conservan\n• Compatible con Google Drive, nube o dispositivo\n• Importación al instante en un toque"
+                            AppLanguage.FRENCH -> "• Vos jeux réclamés existants sont conservés\n• Compatible Google Drive, cloud ou appareil\n• Importation instantanée en un geste"
+                            AppLanguage.ENGLISH -> "• Existing claimed games are safely preserved\n• Works with files from Google Drive, cloud, or device\n• Instant one-tap import"
+                        },
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         lineHeight = 17.sp
@@ -748,7 +818,14 @@ fun BackupRestoreCard(
                     ),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text(if (isEs) "Elegir Archivo y Restaurar" else "Select File & Restore", fontWeight = FontWeight.Bold)
+                    Text(
+                        when (lang) {
+                            AppLanguage.SPANISH -> "Elegir Archivo y Restaurar"
+                            AppLanguage.FRENCH -> "Choisir et restaurer"
+                            AppLanguage.ENGLISH -> "Select File & Restore"
+                        },
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             },
             dismissButton = {

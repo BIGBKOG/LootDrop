@@ -1,0 +1,53 @@
+<resources>
+    <string name="app_name">LootDrop</string>
+    <string name="widget_latest_drop_desc">Affiche le jeu gratuit le plus récent avec réclamation rapide et détails de la boutique</string>
+    <string name="widget_radar_stats_desc">Radar en direct des jeux gratuits disponibles et total économisé dans votre coffre</string>
+    <string name="shortcut_expiring_soon_short">Expire bientôt</string>
+    <string name="shortcut_expiring_soon_long">Offres expirant bientôt</string>
+    <string name="shortcut_todays_drops_short">Drops du jour</string>
+    <string name="shortcut_todays_drops_long">Jeux gratuits du jour</string>
+    <string name="shortcut_my_vault_short">Mon coffre</string>
+    <string name="shortcut_my_vault_long">Mon coffre (Jeux réclamés)</string>
+    <string name="tile_free_games_label">Jeux Gratuits</string>
+    <string name="tile_free_games_subtitle">Voir Drops</string>
+    <string name="widget_latest_header">LootDrop • Dernier Drop</string>
+    <string name="widget_refresh_drops">Actualiser les drops</string>
+    <string name="widget_game_artwork">Illustration du jeu</string>
+    <string name="widget_no_cached_games">Aucun jeu gratuit en cache</string>
+    <string name="widget_free_badge">GRATUIT</string>
+    <string name="widget_claim_btn">RÉCLAMER</string>
+    <string name="widget_details_btn">DÉTAILS</string>
+    <string name="widget_radar_header">LootDrop Radar &amp; Coffre</string>
+    <string name="widget_refresh_stats">Actualiser les stats</string>
+    <string name="widget_active_placeholder">-- Actifs</string>
+    <string name="widget_free_drops_label">Drops Gratuits</string>
+    <string name="widget_saved_in_vault_label">Économisé</string>
+    <string name="widget_radar_btn">RADAR</string>
+    <string name="widget_vault_btn">MON COFFRE</string>
+
+    <string name="widget_expiring_soon_label">Radar Fin Proche</string>
+    <string name="widget_expiring_soon_desc">Affiche les 3 prochains jeux gratuits sur le point d\'expirer avec compte à rebours et accès au Calendrier</string>
+    <string name="widget_expiring_header">LootDrop • Expire bientôt</string>
+    <string name="widget_open_calendar_btn">CALENDRIER</string>
+    <string name="widget_expiring_empty">Aucune offre n\'expire bientôt — touchez pour voir le Calendrier</string>
+    <string name="widget_expiring_today">AUJOURD\'HUI !</string>
+
+    <string name="widget_top_drops_label">Top 3 Jeux Gratuits</string>
+    <string name="widget_top_drops_desc">Liste classée des jeux 100 % gratuits les mieux notés et à plus forte valeur du moment</string>
+    <string name="widget_top_drops_header">LootDrop • Top Gratuits</string>
+    <string name="widget_explore_radar_btn">EXPLORER RADAR</string>
+    <string name="widget_top_drops_empty">Touchez pour charger le top gratuit</string>
+
+    <string name="widget_backlog_challenge_label">Défi Backlog 3×3</string>
+    <string name="widget_backlog_challenge_desc">Grille hebdomadaire 3×3 en direct suivant cases complétées, lignes et récompenses</string>
+    <string name="widget_challenge_header">Grille Hebdo 3×3</string>
+    <string name="widget_open_grid_btn">VOIR LA GRILLE</string>
+    <string name="widget_challenge_tiles_label">Cases</string>
+    <string name="widget_challenge_next_label">Défi suivant</string>
+
+    <string name="widget_compact_vault_label">Coffre &amp; Souhaits Compact</string>
+    <string name="widget_compact_vault_desc">Widget compact 2×2 affichant économies du coffre, jeux réclamés et alertes de souhaits</string>
+    <string name="widget_compact_vault_header">Coffre</string>
+    <string name="widget_claimed_label">Réclamés</string>
+    <string name="widget_saved_label">Sauvegardés</string>
+</resources>

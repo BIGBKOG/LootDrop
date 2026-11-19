@@ -62,7 +62,7 @@ internal fun GithubUpdatesSection(
     context: Context
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     SectionHeader(title = s.settings.githubSectionTitle, icon = Icons.Default.NewReleases)
 
     Spacer(modifier = Modifier.height(8.dp))
@@ -94,7 +94,11 @@ internal fun GithubUpdatesSection(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = if (isEs) "Origen: github.com/BIGBKOG/LootDrop" else "Upstream: github.com/BIGBKOG/LootDrop",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "Origen: github.com/BIGBKOG/LootDrop"
+                            AppLanguage.FRENCH -> "Source : github.com/BIGBKOG/LootDrop"
+                            AppLanguage.ENGLISH -> "Upstream: github.com/BIGBKOG/LootDrop"
+                        },
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -109,7 +113,11 @@ internal fun GithubUpdatesSection(
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = if (isEs) "NUEVA: ${appUpdateInfo.latestVersion}" else "NEW: ${appUpdateInfo.latestVersion}",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "NUEVA: ${appUpdateInfo.latestVersion}"
+                                AppLanguage.FRENCH -> "NOUVELLE : ${appUpdateInfo.latestVersion}"
+                                AppLanguage.ENGLISH -> "NEW: ${appUpdateInfo.latestVersion}"
+                            },
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Black,
                             color = NeonGreen
@@ -123,7 +131,11 @@ internal fun GithubUpdatesSection(
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = if (isEs) "ÚLTIMA: ${appUpdateInfo.latestVersion}" else "LATEST: ${appUpdateInfo.latestVersion}",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "ÚLTIMA: ${appUpdateInfo.latestVersion}"
+                                AppLanguage.FRENCH -> "DERNIÈRE : ${appUpdateInfo.latestVersion}"
+                                AppLanguage.ENGLISH -> "LATEST: ${appUpdateInfo.latestVersion}"
+                            },
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -187,7 +199,14 @@ internal fun GithubUpdatesSection(
                 ) {
                     Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(if (isEs) "Lanzamientos" else "Releases", fontSize = 11.sp)
+                    Text(
+                        when (lang) {
+                            AppLanguage.SPANISH -> "Lanzamientos"
+                            AppLanguage.FRENCH -> "Versions"
+                            AppLanguage.ENGLISH -> "Releases"
+                        },
+                        fontSize = 11.sp
+                    )
                 }
             }
 
@@ -205,10 +224,10 @@ internal fun GithubUpdatesSection(
                         Icon(Icons.Default.SystemUpdate, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (isEs) {
-                                "Instalar Actualización (${updateDownloadState.versionTag})"
-                            } else {
-                                "Install Downloaded Update (${updateDownloadState.versionTag})"
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "Instalar Actualización (${updateDownloadState.versionTag})"
+                                AppLanguage.FRENCH -> "Installer la mise à jour (${updateDownloadState.versionTag})"
+                                AppLanguage.ENGLISH -> "Install Downloaded Update (${updateDownloadState.versionTag})"
                             },
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Black,
@@ -227,8 +246,16 @@ internal fun GithubUpdatesSection(
                     val info = appUpdateInfo
                     if (info?.hasUpdate == true) {
                         UpdateActionRow(
-                            buttonText = if (isEs) "Actualizar e Instalar (${info.latestVersion})" else "Update & Install (${info.latestVersion})",
-                            notesLabel = if (isEs) "Notas" else "Notes",
+                            buttonText = when (lang) {
+                                AppLanguage.SPANISH -> "Actualizar e Instalar (${info.latestVersion})"
+                                AppLanguage.FRENCH -> "Mettre à jour (${info.latestVersion})"
+                                AppLanguage.ENGLISH -> "Update & Install (${info.latestVersion})"
+                            },
+                            notesLabel = when (lang) {
+                                AppLanguage.SPANISH -> "Notas"
+                                AppLanguage.FRENCH -> "Notes"
+                                AppLanguage.ENGLISH -> "Notes"
+                            },
                             testTag = "view_update_dialog_button",
                             containerColor = NeonGreen,
                             contentColor = Color.Black,
@@ -237,8 +264,16 @@ internal fun GithubUpdatesSection(
                         )
                     } else if (info != null && info.isApkAvailable) {
                         UpdateActionRow(
-                            buttonText = if (isEs) "Actualizar y Reinstalar (${info.latestVersion})" else "Update & Reinstall (${info.latestVersion})",
-                            notesLabel = if (isEs) "Notas" else "Notes",
+                            buttonText = when (lang) {
+                                AppLanguage.SPANISH -> "Actualizar y Reinstalar (${info.latestVersion})"
+                                AppLanguage.FRENCH -> "Réinstaller (${info.latestVersion})"
+                                AppLanguage.ENGLISH -> "Update & Reinstall (${info.latestVersion})"
+                            },
+                            notesLabel = when (lang) {
+                                AppLanguage.SPANISH -> "Notas"
+                                AppLanguage.FRENCH -> "Notes"
+                                AppLanguage.ENGLISH -> "Notes"
+                            },
                             testTag = "redownload_update_dialog_button",
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -254,7 +289,7 @@ internal fun GithubUpdatesSection(
 
 @Composable
 private fun UpdateDownloadingCard(downloadState: UpdateDownloadState.Downloading) {
-    val isEs = LocalAppStrings.current.language == AppLanguage.SPANISH
+    val lang = LocalAppStrings.current.language
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -272,12 +307,29 @@ private fun UpdateDownloadingCard(downloadState: UpdateDownloadState.Downloading
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Icon(Icons.Default.CloudDownload, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-                Text(if (isEs) "Descargando APK..." else "Downloading APK...", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    when (lang) {
+                        AppLanguage.SPANISH -> "Descargando APK..."
+                        AppLanguage.FRENCH -> "Téléchargement de l'APK..."
+                        AppLanguage.ENGLISH -> "Downloading APK..."
+                    },
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             }
             val pct = when {
                 downloadState.totalBytes > 0L && downloadState.progress > 0f -> "${(downloadState.progress * 100).toInt()}%"
-                downloadState.bytesDownloaded > 0L -> if (isEs) "Descargando..." else "Downloading..."
-                else -> if (isEs) "Conectando..." else "Connecting..."
+                downloadState.bytesDownloaded > 0L -> when (lang) {
+                    AppLanguage.SPANISH -> "Descargando..."
+                    AppLanguage.FRENCH -> "Téléchargement..."
+                    AppLanguage.ENGLISH -> "Downloading..."
+                }
+                else -> when (lang) {
+                    AppLanguage.SPANISH -> "Conectando..."
+                    AppLanguage.FRENCH -> "Connexion..."
+                    AppLanguage.ENGLISH -> "Connecting..."
+                }
             }
             Text(pct, fontSize = 11.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
         }
@@ -300,9 +352,17 @@ private fun UpdateDownloadingCard(downloadState: UpdateDownloadState.Downloading
             )
             Text(
                 text = if (downloadState.bytesDownloaded > 0L) {
-                    if (isEs) "$downloadedMb MB descargados" else "$downloadedMb MB downloaded"
+                    when (lang) {
+                        AppLanguage.SPANISH -> "$downloadedMb MB descargados"
+                        AppLanguage.FRENCH -> "$downloadedMb Mo téléchargés"
+                        AppLanguage.ENGLISH -> "$downloadedMb MB downloaded"
+                    }
                 } else {
-                    if (isEs) "Conectando con GitHub..." else "Connecting to GitHub..."
+                    when (lang) {
+                        AppLanguage.SPANISH -> "Conectando con GitHub..."
+                        AppLanguage.FRENCH -> "Connexion à GitHub..."
+                        AppLanguage.ENGLISH -> "Connecting to GitHub..."
+                    }
                 },
                 fontSize = 10.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -314,7 +374,7 @@ private fun UpdateDownloadingCard(downloadState: UpdateDownloadState.Downloading
 @Composable
 private fun UpdateErrorCard(message: String, onRetry: () -> Unit, onDismiss: () -> Unit) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -327,7 +387,15 @@ private fun UpdateErrorCard(message: String, onRetry: () -> Unit, onDismiss: () 
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = Color(0xFFFF5252), modifier = Modifier.size(16.dp))
-            Text(if (isEs) "Error de descarga: $message" else "Download error: $message", fontSize = 11.sp, color = Color(0xFFFF8A80))
+            Text(
+                when (lang) {
+                    AppLanguage.SPANISH -> "Error de descarga: $message"
+                    AppLanguage.FRENCH -> "Erreur de téléchargement : $message"
+                    AppLanguage.ENGLISH -> "Download error: $message"
+                },
+                fontSize = 11.sp,
+                color = Color(0xFFFF8A80)
+            )
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Button(
@@ -336,7 +404,16 @@ private fun UpdateErrorCard(message: String, onRetry: () -> Unit, onDismiss: () 
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5252))
             ) {
-                Text(if (isEs) "Reintentar Descarga" else "Retry Download", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text(
+                    when (lang) {
+                        AppLanguage.SPANISH -> "Reintentar Descarga"
+                        AppLanguage.FRENCH -> "Réessayer"
+                        AppLanguage.ENGLISH -> "Retry Download"
+                    },
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
             }
             OutlinedButton(onClick = onDismiss, modifier = Modifier.height(34.dp), shape = RoundedCornerShape(8.dp)) {
                 Text(s.common.dismiss, fontSize = 11.sp)

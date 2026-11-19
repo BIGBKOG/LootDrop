@@ -73,6 +73,7 @@ fun WriteReviewDialog(
 ) {
     val s = LocalAppStrings.current
     val isEs = s.language == AppLanguage.SPANISH
+    val isFr = s.language == AppLanguage.FRENCH
     var isAppReview by remember { mutableStateOf(initialIsAppReview || gameTitle.contains("LootDrop", ignoreCase = true)) }
     var rating by remember { mutableIntStateOf(5) }
     var reviewTitle by remember { mutableStateOf("") }
@@ -81,16 +82,22 @@ fun WriteReviewDialog(
     var isSubmitting by remember { mutableStateOf(false) }
     var moderationError by remember { mutableStateOf<String?>(null) }
 
-    val ratingLabels = if (isEs) {
-        listOf(
+    val ratingLabels = when {
+        isEs -> listOf(
             "1 - Evitar / Injugable",
             "2 - Mediocre / Con fallos",
             "3 - Normal / Entretenido",
             "4 - Muy bueno / Recomendado",
             "5 - ¡Obra maestra / Imprescindible!"
         )
-    } else {
-        listOf(
+        isFr -> listOf(
+            "1 - À éviter / Injouable",
+            "2 - Médiocre / Imparfait",
+            "3 - Correct / Sympa entre amis",
+            "4 - Très bon / Recommandé",
+            "5 - Chef-d'œuvre / Incontournable !"
+        )
+        else -> listOf(
             "1 - Skip / Unplayable",
             "2 - Mediocre / Flawed",
             "3 - Average / Fun with Friends",
@@ -131,7 +138,11 @@ fun WriteReviewDialog(
                         )
                         Text(
                             text = if (isAppReview) {
-                                if (isEs) "LootDrop V${BuildConfig.VERSION_NAME} • Radar de Juegos Gratis" else "LootDrop V${BuildConfig.VERSION_NAME} • Free Game Tracker"
+                                when {
+                                    isEs -> "LootDrop V${BuildConfig.VERSION_NAME} • Radar de Juegos Gratis"
+                                    isFr -> "LootDrop V${BuildConfig.VERSION_NAME} • Radar Jeux Gratuits"
+                                    else -> "LootDrop V${BuildConfig.VERSION_NAME} • Free Game Tracker"
+                                }
                             } else gameTitle,
                             fontSize = 12.sp, fontWeight = FontWeight.Medium,
                             color = if (isAppReview) ReviewStarGold else MaterialTheme.colorScheme.primary,
@@ -156,7 +167,11 @@ fun WriteReviewDialog(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = if (isEs) "🎮 Reseña de Juego" else "🎮 Game Review",
+                                text = when {
+                                    isEs -> "🎮 Reseña de Juego"
+                                    isFr -> "🎮 Avis sur le jeu"
+                                    else -> "🎮 Game Review"
+                                },
                                 fontSize = 11.sp,
                                 fontWeight = if (!isAppReview) FontWeight.Bold else FontWeight.Medium,
                                 color = if (!isAppReview) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
@@ -188,7 +203,11 @@ fun WriteReviewDialog(
                             val isSelected = i <= rating
                             Icon(
                                 imageVector = if (isSelected) Icons.Default.Star else Icons.Default.StarBorder,
-                                contentDescription = if (isEs) "$i estrellas" else "$i Stars",
+                                contentDescription = when {
+                                    isEs -> "$i estrellas"
+                                    isFr -> "$i étoiles"
+                                    else -> "$i Stars"
+                                },
                                 tint = if (isSelected) ReviewStarGold else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                 modifier = Modifier.size(38.dp).clip(CircleShape).clickable { rating = i }.testTag("star_picker_$i")
                             )
@@ -202,10 +221,10 @@ fun WriteReviewDialog(
                     onValueChange = { reviewTitle = it; moderationError = null },
                     label = {
                         Text(
-                            text = if (isEs) {
-                                if (isAppReview) "Título (ej. ¡El mejor radar de juegos!)" else "Título (ej. Historia y gráficos increíbles)"
-                            } else {
-                                if (isAppReview) "Review Headline (e.g. Best game tracker ever!)" else "Review Headline (e.g. Incredible story & visuals)"
+                            text = when {
+                                isEs -> if (isAppReview) "Título (ej. ¡El mejor radar de juegos!)" else "Título (ej. Historia y gráficos increíbles)"
+                                isFr -> if (isAppReview) "Titre (ex. Le meilleur radar de jeux !)" else "Titre (ex. Histoire et graphismes incroyables)"
+                                else -> if (isAppReview) "Review Headline (e.g. Best game tracker ever!)" else "Review Headline (e.g. Incredible story & visuals)"
                             },
                             fontSize = 12.sp
                         )
@@ -221,10 +240,10 @@ fun WriteReviewDialog(
                     onValueChange = { reviewComment = it; moderationError = null },
                     label = {
                         Text(
-                            text = if (isEs) {
-                                if (isAppReview) "¿Qué te gusta de LootDrop? (Alertas, temas...)" else s.dialogs.reviewsCommentPlaceholder
-                            } else {
-                                if (isAppReview) "What do you love about LootDrop? (Alerts, themes, backups...)" else "Your thoughts on gameplay, performance, story..."
+                            text = when {
+                                isEs -> if (isAppReview) "¿Qué te gusta de LootDrop? (Alertas, temas...)" else s.dialogs.reviewsCommentPlaceholder
+                                isFr -> if (isAppReview) "Qu'aimez-vous dans LootDrop ? (Alertes, thèmes...)" else s.dialogs.reviewsCommentPlaceholder
+                                else -> if (isAppReview) "What do you love about LootDrop? (Alerts, themes, backups...)" else "Your thoughts on gameplay, performance, story..."
                             },
                             fontSize = 12.sp
                         )
@@ -253,7 +272,11 @@ fun WriteReviewDialog(
                 )
 
                 Text(
-                    text = if (isEs) "☁️ Las reseñas se suben públicamente a Cloudflare R2 y las ven todos los jugadores en Android y Web. Solo lenguaje respetuoso (sin insultos, direcciones ni teléfonos)." else "☁️ Reviews are uploaded publicly to our Cloudflare R2 bucket and visible to all gamers on Android & Web. Respectful language only (no swears, slurs, addresses, or phone numbers).",
+                    text = when {
+                        isEs -> "☁️ Las reseñas se suben públicamente a Cloudflare R2 y las ven todos los jugadores en Android y Web. Solo lenguaje respetuoso (sin insultos, direcciones ni teléfonos)."
+                        isFr -> "☁️ Les avis sont publiés publiquement sur Cloudflare R2 et visibles par tous les joueurs sur Android et Web. Langage respectueux uniquement (sans insultes, adresses ni numéros)."
+                        else -> "☁️ Reviews are uploaded publicly to our Cloudflare R2 bucket and visible to all gamers on Android & Web. Respectful language only (no swears, slurs, addresses, or phone numbers)."
+                    },
                     fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 14.sp
                 )
 
@@ -267,14 +290,28 @@ fun WriteReviewDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(Icons.Default.Warning, contentDescription = if (isEs) "Aviso de moderación" else "Moderation Warning", tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(18.dp))
+                        Icon(
+                            Icons.Default.Warning,
+                            contentDescription = when {
+                                isEs -> "Aviso de moderación"
+                                isFr -> "Avertissement de modération"
+                                else -> "Moderation Warning"
+                            },
+                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.size(18.dp)
+                        )
                         Text(moderationError.orEmpty(), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onErrorContainer, lineHeight = 16.sp)
                     }
                 }
 
                 Button(
                     onClick = {
-                        val validation = ReviewModerationFilter.validateReviewInput(reviewTitle, reviewComment, authorName)
+                        val validation = ReviewModerationFilter.validateReviewInput(
+                            title = reviewTitle,
+                            comment = reviewComment,
+                            authorName = authorName,
+                            language = s.language
+                        )
                         if (!validation.isAllowed) {
                             moderationError = validation.errorMessage
                             isSubmitting = false
@@ -297,7 +334,11 @@ fun WriteReviewDialog(
                         CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color(0xFF0F172A), strokeWidth = 2.dp)
                     } else {
                         Text(
-                            text = if (isEs) "🚀 ${s.dialogs.reviewsSubmitBtn}" else if (isAppReview) "🚀 Post LootDrop App Rating" else "🚀 Post Review to Community",
+                            text = when {
+                                isEs || isFr -> "🚀 ${s.dialogs.reviewsSubmitBtn}"
+                                isAppReview -> "🚀 Post LootDrop App Rating"
+                                else -> "🚀 Post Review to Community"
+                            },
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -319,6 +360,7 @@ fun AllCommunityReviewsDialog(
 ) {
     val s = LocalAppStrings.current
     val isEs = s.language == AppLanguage.SPANISH
+    val isFr = s.language == AppLanguage.FRENCH
     var selectedFilter by remember { mutableStateOf("ALL") }
     var isWriteDialogOpen by remember { mutableStateOf(false) }
 
@@ -349,7 +391,15 @@ fun AllCommunityReviewsDialog(
                         }
                         Column {
                             Text(s.dialogs.reviewsCommunityTitle, fontSize = 15.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
-                            Text(if (isEs) "Sincronizado con Cloudflare R2" else "Synced via Cloudflare R2", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
+                            Text(
+                                when {
+                                    isEs -> "Sincronizado con Cloudflare R2"
+                                    isFr -> "Synchronisé via Cloudflare R2"
+                                    else -> "Synced via Cloudflare R2"
+                                },
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
                         }
                     }
                     IconButton(onClick = onDismiss) {
@@ -364,9 +414,9 @@ fun AllCommunityReviewsDialog(
                 ) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         listOf(
-                            "ALL" to "${if (isEs) "Todas" else "All"} (${reviews.size})",
+                            "ALL" to "${when { isEs -> "Todas"; isFr -> "Tous"; else -> "All" }} (${reviews.size})",
                             "APP" to "⭐ App (${reviews.count { it.isForApp }})",
-                            "GAMES" to "🎮 ${if (isEs) "Juegos" else "Games"} (${reviews.count { !it.isForApp }})"
+                            "GAMES" to "🎮 ${when { isEs -> "Juegos"; isFr -> "Jeux"; else -> "Games" }} (${reviews.count { !it.isForApp }})"
                         ).forEach { (key, label) ->
                             val isSelected = selectedFilter == key
                             Box(
@@ -393,13 +443,25 @@ fun AllCommunityReviewsDialog(
                         border = BorderStroke(1.dp, ReviewStarGold.copy(alpha = 0.6f)),
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                     ) {
-                        Text("✍️ ${if (isEs) "Valorar" else "Rate App"}", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            "✍️ ${when { isEs -> "Valorar"; isFr -> "Noter"; else -> "Rate App" }}",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
 
                 if (filteredReviews.isEmpty()) {
                     Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                        Text(if (isEs) "Aún no hay reseñas en esta categoría." else "No reviews found in this category yet.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            when {
+                                isEs -> "Aún no hay reseñas en esta categoría."
+                                isFr -> "Aucun avis dans cette catégorie pour le moment."
+                                else -> "No reviews found in this category yet."
+                            },
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {

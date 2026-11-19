@@ -87,7 +87,7 @@ fun BacklogChallengeGridDialog(
     val weekSelector = onSelectWeek ?: onSelectMonth
     val context = LocalContext.current
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val lowEnd = LocalLowEndOptimization.current
     var selectedTile by remember { mutableStateOf<BacklogChallengeTile?>(null) }
     var showHowItWorks by remember { mutableStateOf(false) }
@@ -174,7 +174,11 @@ fun BacklogChallengeGridDialog(
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                 ) {
                                     Text(
-                                        text = if (isEs) "¡CARTÓN LLENO!" else "BLACKOUT!",
+                                        text = when (lang) {
+                                            AppLanguage.SPANISH -> "¡CARTÓN LLENO!"
+                                            AppLanguage.FRENCH -> "CARTON PLEIN !"
+                                            AppLanguage.ENGLISH -> "BLACKOUT!"
+                                        },
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Black,
                                         color = Color.Black
@@ -185,10 +189,10 @@ fun BacklogChallengeGridDialog(
 
                         Text(
                             text = if (grid.isCurrentWeek) {
-                                if (isEs) {
-                                    "Se renueva cada lunes • ⏳ Quedan ${grid.daysRemaining} días"
-                                } else {
-                                    "Auto-refreshes every Monday • ⏳ ${grid.daysRemaining} days left"
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Se renueva cada lunes • ⏳ Quedan ${grid.daysRemaining} días"
+                                    AppLanguage.FRENCH -> "Renouvelé chaque lundi • ⏳ ${grid.daysRemaining} j restants"
+                                    AppLanguage.ENGLISH -> "Auto-refreshes every Monday • ⏳ ${grid.daysRemaining} days left"
                                 }
                             } else {
                                 val diff = com.example.util.BacklogChallengeManager.getWeeksBetween(
@@ -196,10 +200,26 @@ fun BacklogChallengeGridDialog(
                                     grid.weekKey
                                 )
                                 when {
-                                    diff == 1 -> if (isEs) "Vista Previa • Empieza el próximo lunes" else "Upcoming Challenge Preview • Starts next Monday"
-                                    diff == 2 -> if (isEs) "Vista Previa • Empieza en 2 semanas" else "Upcoming Challenge Preview • Starts in 2 weeks"
-                                    diff < 0 -> if (isEs) "Archivo Semanal de Retos" else "Weekly Challenge Archive"
-                                    else -> if (isEs) "Vista Previa del Reto" else "Upcoming Challenge Preview"
+                                    diff == 1 -> when (lang) {
+                                        AppLanguage.SPANISH -> "Vista Previa • Empieza el próximo lunes"
+                                        AppLanguage.FRENCH -> "Aperçu à venir • Débute lundi prochain"
+                                        AppLanguage.ENGLISH -> "Upcoming Challenge Preview • Starts next Monday"
+                                    }
+                                    diff == 2 -> when (lang) {
+                                        AppLanguage.SPANISH -> "Vista Previa • Empieza en 2 semanas"
+                                        AppLanguage.FRENCH -> "Aperçu à venir • Débute dans 2 semaines"
+                                        AppLanguage.ENGLISH -> "Upcoming Challenge Preview • Starts in 2 weeks"
+                                    }
+                                    diff < 0 -> when (lang) {
+                                        AppLanguage.SPANISH -> "Archivo Semanal de Retos"
+                                        AppLanguage.FRENCH -> "Archives hebdomadaires"
+                                        AppLanguage.ENGLISH -> "Weekly Challenge Archive"
+                                    }
+                                    else -> when (lang) {
+                                        AppLanguage.SPANISH -> "Vista Previa del Reto"
+                                        AppLanguage.FRENCH -> "Aperçu du défi à venir"
+                                        AppLanguage.ENGLISH -> "Upcoming Challenge Preview"
+                                    }
                                 }
                             },
                             fontSize = 12.sp,
@@ -217,7 +237,11 @@ fun BacklogChallengeGridDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.HelpOutline,
-                                contentDescription = if (isEs) "Cómo funciona" else "How it works",
+                                contentDescription = when (lang) {
+                                    AppLanguage.SPANISH -> "Cómo funciona"
+                                    AppLanguage.FRENCH -> "Comment ça marche"
+                                    AppLanguage.ENGLISH -> "How it works"
+                                },
                                 tint = Color(0xFF94A3B8),
                                 modifier = Modifier.size(20.dp)
                             )
@@ -228,7 +252,11 @@ fun BacklogChallengeGridDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
-                                contentDescription = if (isEs) "Comprobación automática" else "Auto Check",
+                                contentDescription = when (lang) {
+                                    AppLanguage.SPANISH -> "Comprobación automática"
+                                    AppLanguage.FRENCH -> "Vérification auto"
+                                    AppLanguage.ENGLISH -> "Auto Check"
+                                },
                                 tint = Color(0xFFF59E0B),
                                 modifier = Modifier.size(20.dp)
                             )
@@ -296,7 +324,11 @@ fun BacklogChallengeGridDialog(
                                     .padding(horizontal = 5.dp, vertical = 1.dp)
                             ) {
                                 Text(
-                                    text = if (isEs) "ACTIVA" else "ACTIVE",
+                                    text = when (lang) {
+                                        AppLanguage.SPANISH -> "ACTIVA"
+                                        AppLanguage.FRENCH -> "ACTIVE"
+                                        AppLanguage.ENGLISH -> "ACTIVE"
+                                    },
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF38BDF8)
@@ -312,7 +344,11 @@ fun BacklogChallengeGridDialog(
                                     .padding(horizontal = 5.dp, vertical = 1.dp)
                             ) {
                                 Text(
-                                    text = if (isEs) "VISTA PREVIA (Ir a Activa)" else "PREVIEW (Tap for Active)",
+                                    text = when (lang) {
+                                        AppLanguage.SPANISH -> "VISTA PREVIA (Ir a Activa)"
+                                        AppLanguage.FRENCH -> "APERÇU (Aller à l'active)"
+                                        AppLanguage.ENGLISH -> "PREVIEW (Tap for Active)"
+                                    },
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFFA78BFA)
@@ -363,9 +399,17 @@ fun BacklogChallengeGridDialog(
                             )
                             Text(
                                 text = when {
-                                    grid.isBlackout -> if (isEs) "🌟 CARTÓN COMPLETO" else "🌟 FULL BLACKOUT CLEARED"
+                                    grid.isBlackout -> when (lang) {
+                                        AppLanguage.SPANISH -> "🌟 CARTÓN COMPLETO"
+                                        AppLanguage.FRENCH -> "🌟 CARTON PLEIN TERMINÉ"
+                                        AppLanguage.ENGLISH -> "🌟 FULL BLACKOUT CLEARED"
+                                    }
                                     grid.totalLinesCompleted > 0 -> "⚡ " + s.dialogs.challengeLinesDoneFormat.format(grid.totalLinesCompleted)
-                                    else -> if (isEs) "¡Completa una fila, col. o diagonal!" else "Complete any row, col, or diag!"
+                                    else -> when (lang) {
+                                        AppLanguage.SPANISH -> "¡Completa una fila, col. o diagonal!"
+                                        AppLanguage.FRENCH -> "Complétez une ligne, colonne ou diagonale !"
+                                        AppLanguage.ENGLISH -> "Complete any row, col, or diag!"
+                                    }
                                 },
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
@@ -389,15 +433,19 @@ fun BacklogChallengeGridDialog(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = if (isEs) "🎯 Meta: 3 casillas en línea" else "🎯 Goal: Complete 3-in-a-row",
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "🎯 Meta: 3 casillas en línea"
+                                    AppLanguage.FRENCH -> "🎯 Objectif : aligner 3 cases"
+                                    AppLanguage.ENGLISH -> "🎯 Goal: Complete 3-in-a-row"
+                                },
                                 fontSize = 10.sp,
                                 color = TextMuted
                             )
                             Text(
-                                text = if (isEs) {
-                                    "Desbloqueos manuales: ${grid.manualOverridesUsed}/${grid.maxManualOverrides}"
-                                } else {
-                                    "Manual Unlocks: ${grid.manualOverridesUsed}/${grid.maxManualOverrides} used"
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "Desbloqueos manuales: ${grid.manualOverridesUsed}/${grid.maxManualOverrides}"
+                                    AppLanguage.FRENCH -> "Validations manuelles : ${grid.manualOverridesUsed}/${grid.maxManualOverrides}"
+                                    AppLanguage.ENGLISH -> "Manual Unlocks: ${grid.manualOverridesUsed}/${grid.maxManualOverrides} used"
                                 },
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.SemiBold,
@@ -419,22 +467,32 @@ fun BacklogChallengeGridDialog(
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(
-                                text = if (isEs) "🎮 Cómo funciona el Bingo de Backlog:" else "🎮 How Backlog Bingo Works:",
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "🎮 Cómo funciona el Bingo de Backlog:"
+                                    AppLanguage.FRENCH -> "🎮 Comment fonctionne le Bingo du backlog :"
+                                    AppLanguage.ENGLISH -> "🎮 How Backlog Bingo Works:"
+                                },
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFFFBBF24)
                             )
                             Text(
-                                text = if (isEs) {
-                                    "• Renovación semanal: Cada lunes a las 00:00 tu tablero 3×3 se renueva con nuevos retos de todas las categorías. ¡Tus temas y trofeos desbloqueados permanecen para siempre!\n" +
-                                        "• Seguimiento automático: Horas jugadas, juegos terminados y logros de Steam llenan casillas automáticamente.\n" +
-                                        "• 10 Hitos y 7 Temas Exclusivos: Gana recompensas al completar 2 casillas, líneas, diagonales, 6 casillas, 2 o 3 líneas y Cartón Lleno.\n" +
-                                        "• Desbloqueo manual: ¿Juegas en consola o sin conexión? Puedes marcar manualmente hasta 2 casillas por semana (toca una casilla marcada para liberar el espacio)."
-                                } else {
-                                    "• Weekly Auto-Refresh: Every Monday at 00:00, your 3×3 challenge grid automatically refreshes with a fresh set of challenges sampled across all categories. Your unlocked themes and trophies remain permanently unlocked!\n" +
-                                        "• Auto-Tracked: Playtime, beaten status, and Steam achievements automatically fill tiles.\n" +
-                                        "• 10 Milestones & 7 Reward Themes: Earn trophies and exclusive color themes for 2 tiles, rows, columns, diagonals, 6 tiles, 2+ or 3+ lines, and Full Blackout!\n" +
-                                        "• Manual Override: Playing on console/offline? You can manually unlock up to 2 challenges per week (tap an unlocked tile anytime to uncheck and free up a slot)."
+                                text = when (lang) {
+                                    AppLanguage.SPANISH ->
+                                        "• Renovación semanal: Cada lunes a las 00:00 tu tablero 3×3 se renueva con nuevos retos de todas las categorías. ¡Tus temas y trofeos desbloqueados permanecen para siempre!\n" +
+                                            "• Seguimiento automático: Horas jugadas, juegos terminados y logros de Steam llenan casillas automáticamente.\n" +
+                                            "• 10 Hitos y 7 Temas Exclusivos: Gana recompensas al completar 2 casillas, líneas, diagonales, 6 casillas, 2 o 3 líneas y Cartón Lleno.\n" +
+                                            "• Desbloqueo manual: ¿Juegas en consola o sin conexión? Puedes marcar manualmente hasta 2 casillas por semana (toca una casilla marcada para liberar el espacio)."
+                                    AppLanguage.FRENCH ->
+                                        "• Renouvellement hebdomadaire : chaque lundi à 00:00, votre grille 3×3 est actualisée avec de nouveaux défis. Vos thèmes et trophées débloqués restent acquis à vie !\n" +
+                                            "• Suivi automatique : le temps de jeu, les jeux terminés et les succès Steam remplissent les cases automatiquement.\n" +
+                                            "• 10 étapes & 7 thèmes exclusifs : débloquez trophées et thèmes de couleur avec 2 cases, lignes, colonnes, diagonales, 6 cases, 2/3+ lignes et Carton plein !\n" +
+                                            "• Validation manuelle : vous jouez sur console ou hors ligne ? Validez manuellement jusqu'à 2 défis par semaine (touchez une case validée pour la décocher)."
+                                    AppLanguage.ENGLISH ->
+                                        "• Weekly Auto-Refresh: Every Monday at 00:00, your 3×3 challenge grid automatically refreshes with a fresh set of challenges sampled across all categories. Your unlocked themes and trophies remain permanently unlocked!\n" +
+                                            "• Auto-Tracked: Playtime, beaten status, and Steam achievements automatically fill tiles.\n" +
+                                            "• 10 Milestones & 7 Reward Themes: Earn trophies and exclusive color themes for 2 tiles, rows, columns, diagonals, 6 tiles, 2+ or 3+ lines, and Full Blackout!\n" +
+                                            "• Manual Override: Playing on console/offline? You can manually unlock up to 2 challenges per week (tap an unlocked tile anytime to uncheck and free up a slot)."
                                 },
                                 fontSize = 11.sp,
                                 color = Color(0xFFCBD5E1),
@@ -499,7 +557,11 @@ fun BacklogChallengeGridDialog(
                                     val titles = newlyAwarded.joinToString(", ") { it.localizedTitle(s) }
                                     Toast.makeText(
                                         context,
-                                        if (isEs) "🎉 Desbloqueaste $count recompensa(s): $titles" else "🎉 Unlocked $count Milestone(s): $titles!",
+                                        when (lang) {
+                                            AppLanguage.SPANISH -> "🎉 Desbloqueaste $count recompensa(s): $titles"
+                                            AppLanguage.FRENCH -> "🎉 $count étape(s) débloquée(s) : $titles !"
+                                            AppLanguage.ENGLISH -> "🎉 Unlocked $count Milestone(s): $titles!"
+                                        },
                                         Toast.LENGTH_LONG
                                     ).show()
                                 }
@@ -530,20 +592,20 @@ fun BacklogChallengeGridDialog(
                     if (newManual) {
                         Toast.makeText(
                             context,
-                            if (isEs) {
-                                "✅ Casilla marcada manualmente (${grid.manualOverridesUsed + 1}/${grid.maxManualOverrides} usadas)"
-                            } else {
-                                "✅ Challenge manually unlocked (${grid.manualOverridesUsed + 1}/${grid.maxManualOverrides} used)"
+                            when (lang) {
+                                AppLanguage.SPANISH -> "✅ Casilla marcada manualmente (${grid.manualOverridesUsed + 1}/${grid.maxManualOverrides} usadas)"
+                                AppLanguage.FRENCH -> "✅ Défi validé manuellement (${grid.manualOverridesUsed + 1}/${grid.maxManualOverrides} utilisés)"
+                                AppLanguage.ENGLISH -> "✅ Challenge manually unlocked (${grid.manualOverridesUsed + 1}/${grid.maxManualOverrides} used)"
                             },
                             Toast.LENGTH_SHORT
                         ).show()
                     } else {
                         Toast.makeText(
                             context,
-                            if (isEs) {
-                                "Desbloqueo manual liberado (${(grid.manualOverridesUsed - 1).coerceAtLeast(0)}/${grid.maxManualOverrides} usadas)"
-                            } else {
-                                "Manual unlock cleared (${(grid.manualOverridesUsed - 1).coerceAtLeast(0)}/${grid.maxManualOverrides} used)"
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Desbloqueo manual liberado (${(grid.manualOverridesUsed - 1).coerceAtLeast(0)}/${grid.maxManualOverrides} usadas)"
+                                AppLanguage.FRENCH -> "Validation manuelle retirée (${(grid.manualOverridesUsed - 1).coerceAtLeast(0)}/${grid.maxManualOverrides} utilisés)"
+                                AppLanguage.ENGLISH -> "Manual unlock cleared (${(grid.manualOverridesUsed - 1).coerceAtLeast(0)}/${grid.maxManualOverrides} used)"
                             },
                             Toast.LENGTH_SHORT
                         ).show()
@@ -551,10 +613,10 @@ fun BacklogChallengeGridDialog(
                 } else {
                     Toast.makeText(
                         context,
-                        if (isEs) {
-                            "⚠️ ¡Límite alcanzado! Solo puedes marcar manualmente 2 retos por semana."
-                        } else {
-                            "⚠️ Manual unlock limit reached! You can only manually unlock 2 challenges per week."
+                        when (lang) {
+                            AppLanguage.SPANISH -> "⚠️ ¡Límite alcanzado! Solo puedes marcar manualmente 2 retos por semana."
+                            AppLanguage.FRENCH -> "⚠️ Limite atteinte ! Vous ne pouvez valider manuellement que 2 défis par semaine."
+                            AppLanguage.ENGLISH -> "⚠️ Manual unlock limit reached! You can only manually unlock 2 challenges per week."
                         },
                         Toast.LENGTH_LONG
                     ).show()
@@ -572,7 +634,7 @@ private fun BingoTileCard(
     modifier: Modifier = Modifier
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val lowEnd = LocalLowEndOptimization.current
     val targetBorderColor = when {
         tile.isCompleted && isInWinningLine -> Color(0xFFFFD700)
@@ -645,7 +707,11 @@ private fun BingoTileCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = if (isEs) "Completado" else "Completed",
+                            contentDescription = when (lang) {
+                                AppLanguage.SPANISH -> "Completado"
+                                AppLanguage.FRENCH -> "Terminé"
+                                AppLanguage.ENGLISH -> "Completed"
+                            },
                             tint = Color.Black,
                             modifier = Modifier.size(12.dp)
                         )
@@ -683,7 +749,11 @@ private fun BingoTileCard(
             // Bottom pill: Category / Manual indicator
             if (tile.manualOverrideDone) {
                 Text(
-                    text = if (isEs) "Manual" else "Manual Done",
+                    text = when (lang) {
+                        AppLanguage.SPANISH -> "Manual"
+                        AppLanguage.FRENCH -> "Validé"
+                        AppLanguage.ENGLISH -> "Manual Done"
+                    },
                     fontSize = 8.sp,
                     color = Color(0xFFFBBF24),
                     fontWeight = FontWeight.Bold

@@ -77,7 +77,7 @@ fun CloudBackupCard(
     modifier: Modifier = Modifier
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val context = LocalContext.current
     val isConfigured = viewModel.isCloudBackupConfigured
     val isLoggedIn by viewModel.isCloudAccountLoggedIn.collectAsState()
@@ -149,18 +149,34 @@ fun CloudBackupCard(
 
                     Column {
                         Text(
-                            text = if (isEs) "Respaldo Nube Cloudflare R2" else "Cloudflare R2 Cloud Backup",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "Respaldo Nube Cloudflare R2"
+                                AppLanguage.FRENCH -> "Sauvegarde Cloud Cloudflare R2"
+                                AppLanguage.ENGLISH -> "Cloudflare R2 Cloud Backup"
+                            },
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = if (isLoggedIn && isSessionActive) {
-                                if (isEs) "Conectado • Cuenta: $username" else "Connected • Account: $username"
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Conectado • Cuenta: $username"
+                                    AppLanguage.FRENCH -> "Connecté • Compte : $username"
+                                    AppLanguage.ENGLISH -> "Connected • Account: $username"
+                                }
                             } else if (isLoggedIn) {
-                                if (isEs) "Cuenta: $username (Pulsa para iniciar sesión)" else "Account: $username (Tap to Sign In)"
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Cuenta: $username (Pulsa para iniciar sesión)"
+                                    AppLanguage.FRENCH -> "Compte : $username (Appuyez pour connecter)"
+                                    AppLanguage.ENGLISH -> "Account: $username (Tap to Sign In)"
+                                }
                             } else {
-                                if (isEs) "Almacenamiento Cloudflare R2 (10 GB Gratis)" else "Cloudflare R2 Object Storage (10 GB Free)"
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Almacenamiento Cloudflare R2 (10 GB Gratis)"
+                                    AppLanguage.FRENCH -> "Stockage Cloudflare R2 (10 Go gratuits)"
+                                    AppLanguage.ENGLISH -> "Cloudflare R2 Object Storage (10 GB Free)"
+                                }
                             },
                             fontSize = 11.sp,
                             color = if (isLoggedIn && isSessionActive) NeonCyan else if (isLoggedIn) Color(0xFFF59E0B) else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -208,10 +224,26 @@ fun CloudBackupCard(
                         )
                         Text(
                             text = when {
-                                isLoggedIn && isSessionActive -> if (isEs) "R2 Sinc." else "R2 Synced"
-                                isLoggedIn -> if (isEs) "Requiere Sesión" else "Sign In Needed"
-                                isConfigured -> if (isEs) "Sin Conectar" else "Login Needed"
-                                else -> if (isEs) "Sin Config." else "Unconfigured"
+                                isLoggedIn && isSessionActive -> when (lang) {
+                                    AppLanguage.SPANISH -> "R2 Sinc."
+                                    AppLanguage.FRENCH -> "R2 Synchro"
+                                    AppLanguage.ENGLISH -> "R2 Synced"
+                                }
+                                isLoggedIn -> when (lang) {
+                                    AppLanguage.SPANISH -> "Requiere Sesión"
+                                    AppLanguage.FRENCH -> "Connexion requise"
+                                    AppLanguage.ENGLISH -> "Sign In Needed"
+                                }
+                                isConfigured -> when (lang) {
+                                    AppLanguage.SPANISH -> "Sin Conectar"
+                                    AppLanguage.FRENCH -> "Non connecté"
+                                    AppLanguage.ENGLISH -> "Login Needed"
+                                }
+                                else -> when (lang) {
+                                    AppLanguage.SPANISH -> "Sin Config."
+                                    AppLanguage.FRENCH -> "Non configuré"
+                                    AppLanguage.ENGLISH -> "Unconfigured"
+                                }
                             },
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
@@ -228,7 +260,11 @@ fun CloudBackupCard(
 
             // Descriptive Subtitle
             Text(
-                text = if (isEs) "Los respaldos se sincronizan con tu depósito privado de Cloudflare R2. Tus juegos guardados, biblioteca y perfil permanecen protegidos entre dispositivos." else "Backups sync directly to your private Cloudflare R2 bucket. Your saved giveaways, game library, and profile remain securely backed up across devices.",
+                text = when (lang) {
+                    AppLanguage.SPANISH -> "Los respaldos se sincronizan con tu depósito privado de Cloudflare R2. Tus juegos guardados, biblioteca y perfil permanecen protegidos entre dispositivos."
+                    AppLanguage.FRENCH -> "Les sauvegardes sont synchronisées sur votre bucket privé Cloudflare R2. Vos jeux enregistrés, bibliothèque et profil restent protégés entre appareils."
+                    AppLanguage.ENGLISH -> "Backups sync directly to your private Cloudflare R2 bucket. Your saved giveaways, game library, and profile remain securely backed up across devices."
+                },
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 lineHeight = 16.sp
@@ -337,12 +373,20 @@ fun CloudBackupCard(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = if (isEs) "Destino de Almacenamiento:" else "Storage Destination:",
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "Destino de Almacenamiento:"
+                                    AppLanguage.FRENCH -> "Destination de stockage :"
+                                    AppLanguage.ENGLISH -> "Storage Destination:"
+                                },
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = if (isEs) "Depósito Cloudflare R2" else "Cloudflare R2 Bucket",
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "Depósito Cloudflare R2"
+                                    AppLanguage.FRENCH -> "Bucket Cloudflare R2"
+                                    AppLanguage.ENGLISH -> "Cloudflare R2 Bucket"
+                                },
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = NeonCyan
@@ -355,16 +399,23 @@ fun CloudBackupCard(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = if (isEs) "Último Respaldo de Cuenta:" else "Last Account Backup:",
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "Último Respaldo de Cuenta:"
+                                    AppLanguage.FRENCH -> "Dernière sauvegarde :"
+                                    AppLanguage.ENGLISH -> "Last Account Backup:"
+                                },
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = if (lastBackupTimestamp > 0L) {
-                                    val dateLocale = if (isEs) Locale("es") else Locale.US
-                                    SimpleDateFormat("MMM d, yyyy • h:mm a", dateLocale).format(Date(lastBackupTimestamp))
+                                    SimpleDateFormat("MMM d, yyyy • h:mm a", lang.locale).format(Date(lastBackupTimestamp))
                                 } else {
-                                    if (isEs) "Sin respaldo subido aún" else "No backup uploaded yet"
+                                    when (lang) {
+                                        AppLanguage.SPANISH -> "Sin respaldo subido aún"
+                                        AppLanguage.FRENCH -> "Aucune sauvegarde envoyée"
+                                        AppLanguage.ENGLISH -> "No backup uploaded yet"
+                                    }
                                 },
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium,
@@ -387,7 +438,11 @@ fun CloudBackupCard(
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Text(
-                                        text = if (isEs) "⚠️ Sesión desconectada" else "⚠️ Session disconnected",
+                                        text = when (lang) {
+                                            AppLanguage.SPANISH -> "⚠️ Sesión desconectada"
+                                            AppLanguage.FRENCH -> "⚠️ Session déconnectée"
+                                            AppLanguage.ENGLISH -> "⚠️ Session disconnected"
+                                        },
                                         fontSize = 11.sp,
                                         color = Color(0xFFFDE68A),
                                         fontWeight = FontWeight.Medium
@@ -440,13 +495,21 @@ fun CloudBackupCard(
                             )
                             Column {
                                 Text(
-                                    text = if (isEs) "Autenticación de Cuenta Requerida" else "Account Authentication Required",
+                                    text = when (lang) {
+                                        AppLanguage.SPANISH -> "Autenticación de Cuenta Requerida"
+                                        AppLanguage.FRENCH -> "Authentification requise"
+                                        AppLanguage.ENGLISH -> "Account Authentication Required"
+                                    },
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFFF1F5F9)
                                 )
                                 Text(
-                                    text = if (isEs) "Crea una cuenta o inicia sesión con tu contraseña para guardar y recuperar tu respaldo personal." else "Create an account or sign in with your password to anchor and retrieve your personal backup file.",
+                                    text = when (lang) {
+                                        AppLanguage.SPANISH -> "Crea una cuenta o inicia sesión con tu contraseña para guardar y recuperar tu respaldo personal."
+                                        AppLanguage.FRENCH -> "Créez un compte ou connectez-vous avec votre mot de passe pour sauvegarder et récupérer votre profil."
+                                        AppLanguage.ENGLISH -> "Create an account or sign in with your password to anchor and retrieve your personal backup file."
+                                    },
                                     fontSize = 11.sp,
                                     color = Color(0xFF94A3B8),
                                     lineHeight = 15.sp
@@ -585,7 +648,15 @@ fun CloudBackupCard(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(if (isEs) "Subiendo..." else "Uploading...", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Subiendo..."
+                                AppLanguage.FRENCH -> "Envoi..."
+                                AppLanguage.ENGLISH -> "Uploading..."
+                            },
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     } else {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -628,14 +699,30 @@ fun CloudBackupCard(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(if (isEs) "Restaurando..." else "Restoring...", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Restaurando..."
+                                AppLanguage.FRENCH -> "Restauration..."
+                                AppLanguage.ENGLISH -> "Restoring..."
+                            },
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     } else {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Text(if (isEs) "Restaurar" else "Restore", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Restaurar"
+                                    AppLanguage.FRENCH -> "Restaurer"
+                                    AppLanguage.ENGLISH -> "Restore"
+                                },
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
@@ -684,9 +771,17 @@ fun CloudBackupCard(
                         )
                         Text(
                             text = if (isLoggedIn) {
-                                if (isEs) "Auto-sincroniza respaldo a la cuenta '$username' cada día" else "Auto-syncs backup to account '$username' daily"
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Auto-sincroniza respaldo a la cuenta '$username' cada día"
+                                    AppLanguage.FRENCH -> "Synchro auto vers le compte « $username » chaque jour"
+                                    AppLanguage.ENGLISH -> "Auto-syncs backup to account '$username' daily"
+                                }
                             } else {
-                                if (isEs) "Requiere iniciar sesión en cuenta nube" else "Requires cloud account login"
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Requiere iniciar sesión en cuenta nube"
+                                    AppLanguage.FRENCH -> "Connexion au compte cloud requise"
+                                    AppLanguage.ENGLISH -> "Requires cloud account login"
+                                }
                             },
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -725,7 +820,11 @@ fun CloudBackupCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = if (isEs) "Latido Activo de Base Supabase" else "Supabase DB Keep-Alive",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "Latido Activo de Base Supabase"
+                            AppLanguage.FRENCH -> "Maintien Actif Base Supabase"
+                            AppLanguage.ENGLISH -> "Supabase DB Keep-Alive"
+                        },
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -734,10 +833,18 @@ fun CloudBackupCard(
                         lastKeepAliveTimestamp > 0L -> {
                             val formatted = SimpleDateFormat("MMM d • h:mm a", s.language.locale).format(Date(lastKeepAliveTimestamp))
                             val statusHint = if (lastKeepAliveStatus.isNotBlank()) " ($lastKeepAliveStatus)" else ""
-                            if (isEs) "Último ping: $formatted$statusHint" else "Last ping: $formatted$statusHint"
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Último ping: $formatted$statusHint"
+                                AppLanguage.FRENCH -> "Dernier ping : $formatted$statusHint"
+                                AppLanguage.ENGLISH -> "Last ping: $formatted$statusHint"
+                            }
                         }
                         lastKeepAliveStatus.isNotBlank() -> lastKeepAliveStatus
-                        else -> if (isEs) "Auto-ping cada 12h + GitHub cada 2 días" else "Auto-pings every 12h + GitHub every 2 days"
+                        else -> when (lang) {
+                            AppLanguage.SPANISH -> "Auto-ping cada 12h + GitHub cada 2 días"
+                            AppLanguage.FRENCH -> "Auto-ping toutes les 12h + GitHub tous les 2j"
+                            AppLanguage.ENGLISH -> "Auto-pings every 12h + GitHub every 2 days"
+                        }
                     }
                     Text(
                         text = subtitle,
@@ -768,7 +875,11 @@ fun CloudBackupCard(
                         )
                     } else {
                         Text(
-                            text = if (isEs) "Ping" else "Ping DB",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "Ping"
+                                AppLanguage.FRENCH -> "Ping BD"
+                                AppLanguage.ENGLISH -> "Ping DB"
+                            },
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = NeonCyan

@@ -84,7 +84,7 @@ fun StatsBanner(
     isAnimationsEnabled: Boolean = true
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val effectiveAnimations = isAnimationsEnabled && !LocalLowEndOptimization.current
     // Ambient breathing shimmer on border and glow only if animations enabled
     val (borderAlpha, badgeScale) = rememberStatsBannerAnimations(enabled = effectiveAnimations)
@@ -189,7 +189,11 @@ fun StatsBanner(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = if (isEs) "GRATIS" else "FREE",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "GRATIS"
+                            AppLanguage.FRENCH -> "GRATUIT"
+                            AppLanguage.ENGLISH -> "FREE"
+                        },
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = NeonCyan,
@@ -204,7 +208,11 @@ fun StatsBanner(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = if (isEs) "${animatedCount.toInt()} ofertas activas" else "${animatedCount.toInt()} active freebies",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "${animatedCount.toInt()} ofertas activas"
+                            AppLanguage.FRENCH -> "${animatedCount.toInt()} offres actives"
+                            AppLanguage.ENGLISH -> "${animatedCount.toInt()} active freebies"
+                        },
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -248,7 +256,11 @@ fun StatsBanner(
                                     .padding(start = 7.dp, end = 3.dp, top = 3.dp, bottom = 3.dp)
                             ) {
                                 Text(
-                                    text = if (isEs) "${stats.newFreebiesCount} NUEVOS HOY" else "${stats.newFreebiesCount} NEW TODAY",
+                                    text = when (lang) {
+                                        AppLanguage.SPANISH -> "${stats.newFreebiesCount} NUEVOS HOY"
+                                        AppLanguage.FRENCH -> "${stats.newFreebiesCount} NOUVEAUX AUJOURD'HUI"
+                                        AppLanguage.ENGLISH -> "${stats.newFreebiesCount} NEW TODAY"
+                                    },
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = NeonCyan

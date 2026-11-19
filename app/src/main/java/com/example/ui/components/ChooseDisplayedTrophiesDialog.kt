@@ -96,7 +96,7 @@ fun ChooseDisplayedTrophiesDialog(
     onDismiss: () -> Unit
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     // If user has not yet customized, pre-populate with currently showcased items (top 15) so they can easily tweak
     var tempSelectedKeys by remember {
         mutableStateOf(
@@ -192,7 +192,11 @@ fun ChooseDisplayedTrophiesDialog(
                                 color = TextPrimary
                             )
                             Text(
-                                text = if (isEs) "Elige qué logros aparecen en tu perfil" else "Select which achievements appear on your profile",
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "Elige qué logros aparecen en tu perfil"
+                                    AppLanguage.FRENCH -> "Choisissez les succès affichés sur votre profil"
+                                    AppLanguage.ENGLISH -> "Select which achievements appear on your profile"
+                                },
                                 fontSize = 11.sp,
                                 color = TextSecondary
                             )
@@ -236,7 +240,11 @@ fun ChooseDisplayedTrophiesDialog(
                                 .padding(horizontal = 8.dp, vertical = 3.dp)
                         ) {
                             Text(
-                                text = if (isEs) "${tempSelectedKeys.size} / ${allTrophies.size} elegidos" else "${tempSelectedKeys.size} / ${allTrophies.size} Selected",
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "${tempSelectedKeys.size} / ${allTrophies.size} elegidos"
+                                    AppLanguage.FRENCH -> "${tempSelectedKeys.size} / ${allTrophies.size} choisis"
+                                    AppLanguage.ENGLISH -> "${tempSelectedKeys.size} / ${allTrophies.size} Selected"
+                                },
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = if (tempSelectedKeys.isNotEmpty()) NeonCyan else TextMuted
@@ -255,7 +263,16 @@ fun ChooseDisplayedTrophiesDialog(
                             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
                             modifier = Modifier.testTag("choose_trophies_select_all_btn")
                         ) {
-                            Text(if (isEs) "Todos" else "All", fontSize = 11.sp, color = NeonCyan, fontWeight = FontWeight.Bold)
+                            Text(
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Todos"
+                                    AppLanguage.FRENCH -> "Tous"
+                                    AppLanguage.ENGLISH -> "All"
+                                },
+                                fontSize = 11.sp,
+                                color = NeonCyan,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
 
                         TextButton(
@@ -268,7 +285,16 @@ fun ChooseDisplayedTrophiesDialog(
                             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
                             modifier = Modifier.testTag("choose_trophies_rarest_btn")
                         ) {
-                            Text(if (isEs) "Raros" else "Rarest", fontSize = 11.sp, color = Color(0xFFFFD700), fontWeight = FontWeight.Bold)
+                            Text(
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Raros"
+                                    AppLanguage.FRENCH -> "Plus rares"
+                                    AppLanguage.ENGLISH -> "Rarest"
+                                },
+                                fontSize = 11.sp,
+                                color = Color(0xFFFFD700),
+                                fontWeight = FontWeight.Bold
+                            )
                         }
 
                         TextButton(
@@ -300,7 +326,17 @@ fun ChooseDisplayedTrophiesDialog(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text(if (isEs) "Buscar trofeos o juegos..." else "Search trophies or games...", color = TextMuted, fontSize = 12.sp) },
+                    placeholder = {
+                        Text(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Buscar trofeos o juegos..."
+                                AppLanguage.FRENCH -> "Rechercher des trophées ou jeux..."
+                                AppLanguage.ENGLISH -> "Search trophies or games..."
+                            },
+                            color = TextMuted,
+                            fontSize = 12.sp
+                        )
+                    },
                     singleLine = true,
                     leadingIcon = {
                         Icon(
@@ -348,7 +384,14 @@ fun ChooseDisplayedTrophiesDialog(
                     FilterChip(
                         selected = selectedTierFilter == null,
                         onClick = { selectedTierFilter = null },
-                        label = { Text("${if (isEs) "Todos" else "All"} (${allTrophies.size})", fontSize = 11.sp) },
+                        label = {
+                            val allLabel = when (lang) {
+                                AppLanguage.SPANISH -> "Todos"
+                                AppLanguage.FRENCH -> "Tous"
+                                AppLanguage.ENGLISH -> "All"
+                            }
+                            Text("$allLabel (${allTrophies.size})", fontSize = 11.sp)
+                        },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = NeonCyan.copy(alpha = 0.2f),
                             selectedLabelColor = NeonCyan
@@ -368,7 +411,14 @@ fun ChooseDisplayedTrophiesDialog(
                             onClick = {
                                 selectedTierFilter = if (selectedTierFilter == TrophyRarityTier.MYTHIC) null else TrophyRarityTier.MYTHIC
                             },
-                            label = { Text("💎 ${if (isEs) "Mítico" else "Mythic"} ($mythicCount)", fontSize = 11.sp) },
+                            label = {
+                                val mythicLabel = when (lang) {
+                                    AppLanguage.SPANISH -> "Mítico"
+                                    AppLanguage.FRENCH -> "Mythique"
+                                    AppLanguage.ENGLISH -> "Mythic"
+                                }
+                                Text("💎 $mythicLabel ($mythicCount)", fontSize = 11.sp)
+                            },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = Color(0x33E040FB),
                                 selectedLabelColor = Color(0xFFE040FB)
@@ -389,7 +439,14 @@ fun ChooseDisplayedTrophiesDialog(
                             onClick = {
                                 selectedTierFilter = if (selectedTierFilter == TrophyRarityTier.GOLD) null else TrophyRarityTier.GOLD
                             },
-                            label = { Text("🥇 ${if (isEs) "Oro" else "Gold"} ($goldCount)", fontSize = 11.sp) },
+                            label = {
+                                val goldLabel = when (lang) {
+                                    AppLanguage.SPANISH -> "Oro"
+                                    AppLanguage.FRENCH -> "Or"
+                                    AppLanguage.ENGLISH -> "Gold"
+                                }
+                                Text("🥇 $goldLabel ($goldCount)", fontSize = 11.sp)
+                            },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = Color(0x33FFD700),
                                 selectedLabelColor = Color(0xFFFFD700)
@@ -410,7 +467,14 @@ fun ChooseDisplayedTrophiesDialog(
                             onClick = {
                                 selectedTierFilter = if (selectedTierFilter == TrophyRarityTier.SILVER) null else TrophyRarityTier.SILVER
                             },
-                            label = { Text("🥈 ${if (isEs) "Plata" else "Silver"} ($silverCount)", fontSize = 11.sp) },
+                            label = {
+                                val silverLabel = when (lang) {
+                                    AppLanguage.SPANISH -> "Plata"
+                                    AppLanguage.FRENCH -> "Argent"
+                                    AppLanguage.ENGLISH -> "Silver"
+                                }
+                                Text("🥈 $silverLabel ($silverCount)", fontSize = 11.sp)
+                            },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = Color(0x33CFD8DC),
                                 selectedLabelColor = Color(0xFFCFD8DC)
@@ -431,7 +495,14 @@ fun ChooseDisplayedTrophiesDialog(
                             onClick = {
                                 selectedTierFilter = if (selectedTierFilter == TrophyRarityTier.BRONZE) null else TrophyRarityTier.BRONZE
                             },
-                            label = { Text("🥉 ${if (isEs) "Bronce" else "Bronze"} ($bronzeCount)", fontSize = 11.sp) },
+                            label = {
+                                val bronzeLabel = when (lang) {
+                                    AppLanguage.SPANISH -> "Bronce"
+                                    AppLanguage.FRENCH -> "Bronze"
+                                    AppLanguage.ENGLISH -> "Bronze"
+                                }
+                                Text("🥉 $bronzeLabel ($bronzeCount)", fontSize = 11.sp)
+                            },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = Color(0x33CD7F32),
                                 selectedLabelColor = Color(0xFFCD7F32)
@@ -465,7 +536,11 @@ fun ChooseDisplayedTrophiesDialog(
                                 modifier = Modifier.size(32.dp)
                             )
                             Text(
-                                text = if (isEs) "No se encontraron trofeos" else "No matching trophies found",
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "No se encontraron trofeos"
+                                    AppLanguage.FRENCH -> "Aucun trophée correspondant"
+                                    AppLanguage.ENGLISH -> "No matching trophies found"
+                                },
                                 fontSize = 13.sp,
                                 color = TextSecondary,
                                 fontWeight = FontWeight.SemiBold
@@ -554,7 +629,11 @@ fun ChooseDisplayedTrophiesDialog(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (isEs) "Guardar Vitrina (${tempSelectedKeys.size})" else "Save Showcase (${tempSelectedKeys.size})",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "Guardar Vitrina (${tempSelectedKeys.size})"
+                                AppLanguage.FRENCH -> "Enregistrer la vitrine (${tempSelectedKeys.size})"
+                                AppLanguage.ENGLISH -> "Save Showcase (${tempSelectedKeys.size})"
+                            },
                             fontSize = 13.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF0F131F)
@@ -659,9 +738,15 @@ private fun TrophySelectItemRow(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     val s = LocalAppStrings.current
-                    val isEs = s.language == AppLanguage.SPANISH
+                    val lang = s.language
                     Text(
-                        text = trophy.gameName.ifBlank { if (isEs) "Juego de Steam" else "Steam Game" },
+                        text = trophy.gameName.ifBlank {
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Juego de Steam"
+                                AppLanguage.FRENCH -> "Jeu Steam"
+                                AppLanguage.ENGLISH -> "Steam Game"
+                            }
+                        },
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = SteamBlue,

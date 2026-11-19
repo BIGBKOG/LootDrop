@@ -55,7 +55,7 @@ internal fun CustomFontSettingsCard(
     context: Context
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     var isImportingFont by remember { mutableStateOf(false) }
     val fontPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -103,9 +103,19 @@ internal fun CustomFontSettingsCard(
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
                         text = if (hasCustomFont) {
-                            customFontName.ifBlank { if (isEs) "Fuente Personalizada" else "Custom Font" }
+                            customFontName.ifBlank {
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Fuente Personalizada"
+                                    AppLanguage.FRENCH -> "Police personnalisée"
+                                    AppLanguage.ENGLISH -> "Custom Font"
+                                }
+                            }
                         } else {
-                            if (isEs) "Fuente del Sistema" else "System Default Font"
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Fuente del Sistema"
+                                AppLanguage.FRENCH -> "Police du système"
+                                AppLanguage.ENGLISH -> "System Default Font"
+                            }
                         },
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
@@ -122,15 +132,32 @@ internal fun CustomFontSettingsCard(
                                 .border(0.8.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.55f), RoundedCornerShape(6.dp))
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
-                            Text(if (isEs) "PROPIA" else "CUSTOM", fontSize = 9.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
+                            Text(
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "PROPIA"
+                                    AppLanguage.FRENCH -> "PERSO"
+                                    AppLanguage.ENGLISH -> "CUSTOM"
+                                },
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
                         }
                     }
                 }
                 Text(
                     text = if (hasCustomFont) {
-                        if (isEs) "Aplicada en todas las pantallas, tarjetas y menús" else "Applied across all screens, cards & menus"
+                        when (lang) {
+                            AppLanguage.SPANISH -> "Aplicada en todas las pantallas, tarjetas y menús"
+                            AppLanguage.FRENCH -> "Appliquée sur tous les écrans, cartes et menus"
+                            AppLanguage.ENGLISH -> "Applied across all screens, cards & menus"
+                        }
                     } else {
-                        if (isEs) "Importa un archivo .ttf o .otf para personalizar textos" else "Import a .ttf or .otf file to customize all text"
+                        when (lang) {
+                            AppLanguage.SPANISH -> "Importa un archivo .ttf o .otf para personalizar textos"
+                            AppLanguage.FRENCH -> "Importez un fichier .ttf ou .otf pour personnaliser"
+                            AppLanguage.ENGLISH -> "Import a .ttf or .otf file to customize all text"
+                        }
                     },
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -149,7 +176,11 @@ internal fun CustomFontSettingsCard(
         ) {
             Text("Aa Bb Cc 123 • LootDrop", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
             Text(
-                if (isEs) "El veloz zorro marrón reclama juegos gratis de PC y Steam." else "The quick brown fox claims free PC & Steam drops.",
+                when (lang) {
+                    AppLanguage.SPANISH -> "El veloz zorro marrón reclama juegos gratis de PC y Steam."
+                    AppLanguage.FRENCH -> "Portez ce vieux whisky au juge blond qui fume sur Steam."
+                    AppLanguage.ENGLISH -> "The quick brown fox claims free PC & Steam drops."
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -182,8 +213,16 @@ internal fun CustomFontSettingsCard(
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = when {
-                        isImportingFont -> if (isEs) "Importando..." else "Importing..."
-                        hasCustomFont -> if (isEs) "Cambiar Fuente" else "Change Font"
+                        isImportingFont -> when (lang) {
+                            AppLanguage.SPANISH -> "Importando..."
+                            AppLanguage.FRENCH -> "Importation..."
+                            AppLanguage.ENGLISH -> "Importing..."
+                        }
+                        hasCustomFont -> when (lang) {
+                            AppLanguage.SPANISH -> "Cambiar Fuente"
+                            AppLanguage.FRENCH -> "Changer de police"
+                            AppLanguage.ENGLISH -> "Change Font"
+                        }
                         else -> s.settings.appearanceFontImportBtn
                     },
                     fontSize = 12.sp,
@@ -197,7 +236,11 @@ internal fun CustomFontSettingsCard(
                         viewModel.resetCustomFont(context)
                         Toast.makeText(
                             context,
-                            if (isEs) "Fuente predeterminada restaurada" else "Restored default system font",
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Fuente predeterminada restaurada"
+                                AppLanguage.FRENCH -> "Police par défaut restaurée"
+                                AppLanguage.ENGLISH -> "Restored default system font"
+                            },
                             Toast.LENGTH_SHORT
                         ).show()
                     },
@@ -207,7 +250,16 @@ internal fun CustomFontSettingsCard(
                 ) {
                     Icon(Icons.Default.RestartAlt, contentDescription = s.settings.appearanceFontResetBtn, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(if (isEs) "Restablecer" else "Reset", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                    Text(
+                        when (lang) {
+                            AppLanguage.SPANISH -> "Restablecer"
+                            AppLanguage.FRENCH -> "Réinitialiser"
+                            AppLanguage.ENGLISH -> "Reset"
+                        },
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                 }
             }
         }

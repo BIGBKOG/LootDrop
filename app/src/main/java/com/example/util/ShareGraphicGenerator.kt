@@ -140,7 +140,9 @@ object ShareGraphicGenerator {
         includeTextLink: Boolean = true
     ) {
         val s = AppStringsRegistry.forContext(context)
-        val isEs = s.language == AppLanguage.SPANISH
+        val lang = s.language
+        val isEs = lang == AppLanguage.SPANISH
+        val isFr = lang == AppLanguage.FRENCH
         val bitmap = generateCardBitmap(context, item)
         val file = saveBitmapToCache(context, bitmap, item.id)
         val contentUri = getShareableUri(context, file)
@@ -151,23 +153,32 @@ object ShareGraphicGenerator {
                 putExtra(Intent.EXTRA_STREAM, contentUri)
                 putExtra(
                     Intent.EXTRA_SUBJECT,
-                    if (isEs) "Juego Gratis: ${item.title} (100% GRATIS)"
-                    else "Free Game: ${item.title} (100% OFF)"
+                    when {
+                        isEs -> "Juego Gratis: ${item.title} (100% GRATIS)"
+                        isFr -> "Jeu Gratuit : ${item.title} (100 % GRATUIT)"
+                        else -> "Free Game: ${item.title} (100% OFF)"
+                    }
                 )
 
                 if (includeTextLink) {
                     val worthInfo = if (item.worth.isNotBlank() && item.worth != "N/A") " (Orig. ${item.worth})" else ""
                     val expBadge = ExpirationCalendarUtils.getExpirationBadgeText(item.endDate, s = s)
                     val expInfo = if (expBadge.isNotBlank()) {
-                        if (isEs) "\n⏳ Expira: $expBadge" else "\n⏳ Expiration: $expBadge"
+                        when {
+                            isEs -> "\n⏳ Expira: $expBadge"
+                            isFr -> "\n⏳ Expire : $expBadge"
+                            else -> "\n⏳ Expiration: $expBadge"
+                        }
                     } else ""
 
-                    val shareText = if (isEs) {
-                        "🔥 ALERTA JUEGO GRATIS: ${item.title}$worthInfo ¡100% GRATIS en ${item.platforms}!$expInfo\n" +
+                    val shareText = when {
+                        isEs -> "🔥 ALERTA JUEGO GRATIS: ${item.title}$worthInfo ¡100% GRATIS en ${item.platforms}!$expInfo\n" +
                             "👉 Reclámalo aquí: ${item.openGiveawayUrl}\n\n" +
                             "Rastreado con LootDrop Radar de Juegos Gratis (lootdrop.app)"
-                    } else {
-                        "🔥 FREE GAME ALERT: ${item.title}$worthInfo 100% FREE on ${item.platforms}!$expInfo\n" +
+                        isFr -> "🔥 ALERTE JEU GRATUIT : ${item.title}$worthInfo 100 % GRATUIT sur ${item.platforms} !$expInfo\n" +
+                            "👉 Réclamer ici : ${item.openGiveawayUrl}\n\n" +
+                            "Suivi avec LootDrop Radar Jeux Gratuits (lootdrop.app)"
+                        else -> "🔥 FREE GAME ALERT: ${item.title}$worthInfo 100% FREE on ${item.platforms}!$expInfo\n" +
                             "👉 Claim here: ${item.openGiveawayUrl}\n\n" +
                             "Tracked with LootDrop Free Games Radar (lootdrop.app)"
                     }
@@ -223,7 +234,7 @@ object ShareGraphicGenerator {
     }
 
     private fun drawCard(canvas: Canvas, item: GiveawayItem, bannerBitmap: Bitmap?, s: AppStrings = StringsEn) {
-        val isEs = s.language == AppLanguage.SPANISH
+        val lang = s.language
         val cardRect = RectF(0f, 0f, CARD_WIDTH.toFloat(), CARD_HEIGHT.toFloat())
 
         // 1. Base Dark Canvas Background (#090D16 -> #020617)
@@ -262,13 +273,13 @@ object ShareGraphicGenerator {
         canvas.drawRect(RectF(0f, 160f, CARD_WIDTH.toFloat(), BANNER_HEIGHT.toFloat() + 20f), fadePaint)
 
         // 4. Badges on Banner: Top Left "100% OFF" + "FREE TO KEEP"
-        drawTopBadges(canvas, item, isEs)
+        drawTopBadges(canvas, item, lang)
 
         // 5. Expiration Badge: Top Right
         drawExpirationBadge(canvas, item, s)
 
         // 6. Pricing Row: Strikethrough Original Price + FREE Highlight
-        drawPricingRow(canvas, item, isEs)
+        drawPricingRow(canvas, item, lang)
 
         // 7. Game Title (Bold, Multi-line with Drop Shadow)
         val titleBottomY = drawGameTitle(canvas, item.title)
@@ -277,7 +288,7 @@ object ShareGraphicGenerator {
         drawStoreTags(canvas, item, titleBottomY)
 
         // 9. LootDrop Watermark Branding in the Corner
-        drawLootDropWatermark(canvas, isEs)
+        drawLootDropWatermark(canvas, lang)
 
         // 10. Sleek Neon Accent Border
         drawOuterBorder(canvas, cardRect)
@@ -323,13 +334,17 @@ object ShareGraphicGenerator {
         canvas.drawLine(0f, destRect.bottom, destRect.right, 0f, linePaint)
     }
 
-    private fun drawTopBadges(canvas: Canvas, item: GiveawayItem, isEs: Boolean = false) {
+    private fun drawTopBadges(canvas: Canvas, item: GiveawayItem, lang: AppLanguage = AppLanguage.ENGLISH) {
         var startX = 36f
         val topY = 32f
         val badgeHeight = 44f
 
         // 100% OFF Pill (Vibrant Neon Green)
-        val offBadgeText = if (isEs) "100% GRATIS" else "100% OFF"
+        val offBadgeText = when (lang) {
+            AppLanguage.SPANISH -> "100% GRATIS"
+            AppLanguage.FRENCH -> "100 % GRATUIT"
+            AppLanguage.ENGLISH -> "100% OFF"
+        }
         val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             textSize = 22f
             color = Color.parseColor("#022C14") // Dark emerald
@@ -348,7 +363,11 @@ object ShareGraphicGenerator {
         startX += badgeWidth + 14f
 
         // "FREE TO KEEP" Badge (Cyan Accent)
-        val keepText = if (isEs) "PARA SIEMPRE" else "FREE TO KEEP"
+        val keepText = when (lang) {
+            AppLanguage.SPANISH -> "PARA SIEMPRE"
+            AppLanguage.FRENCH -> "À VIE"
+            AppLanguage.ENGLISH -> "FREE TO KEEP"
+        }
         val keepTextPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             textSize = 19f
             color = Color.parseColor("#00E5FF")
@@ -371,15 +390,23 @@ object ShareGraphicGenerator {
     }
 
     private fun drawExpirationBadge(canvas: Canvas, item: GiveawayItem, s: AppStrings = StringsEn) {
-        val isEs = s.language == AppLanguage.SPANISH
+        val lang = s.language
         val rawBadge = ExpirationCalendarUtils.getExpirationBadgeText(item.endDate, s = s)
         val badgeText = if (rawBadge.isNotBlank() && rawBadge != "N/A") {
             "⏳ $rawBadge"
         } else if (item.endDate.isNotBlank() && item.endDate != "N/A") {
             val dateTok = item.endDate.split(" ").firstOrNull() ?: item.endDate
-            if (isEs) "⏳ Termina $dateTok" else "⏳ Ends $dateTok"
+            when (lang) {
+                AppLanguage.SPANISH -> "⏳ Termina $dateTok"
+                AppLanguage.FRENCH -> "⏳ Fin $dateTok"
+                AppLanguage.ENGLISH -> "⏳ Ends $dateTok"
+            }
         } else {
-            if (isEs) "⏳ Tiempo Limitado" else "⏳ Limited Time"
+            when (lang) {
+                AppLanguage.SPANISH -> "⏳ Tiempo Limitado"
+                AppLanguage.FRENCH -> "⏳ Durée Limitée"
+                AppLanguage.ENGLISH -> "⏳ Limited Time"
+            }
         }
 
         val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -409,7 +436,7 @@ object ShareGraphicGenerator {
         canvas.drawText(badgeText, leftX + 17f, topY + 29f, textPaint)
     }
 
-    private fun drawPricingRow(canvas: Canvas, item: GiveawayItem, isEs: Boolean = false) {
+    private fun drawPricingRow(canvas: Canvas, item: GiveawayItem, lang: AppLanguage = AppLanguage.ENGLISH) {
         val startX = 36f
         val baselineY = 405f
 
@@ -443,7 +470,11 @@ object ShareGraphicGenerator {
         currentX += arrowPaint.measureText("➔") + 16f
 
         // 3. FREE Highlight
-        val freeWord = if (isEs) "GRATIS" else "FREE"
+        val freeWord = when (lang) {
+            AppLanguage.SPANISH -> "GRATIS"
+            AppLanguage.FRENCH -> "GRATUIT"
+            AppLanguage.ENGLISH -> "FREE"
+        }
         val freePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             textSize = 34f
             color = Color.parseColor("#00E676") // Neon green
@@ -453,7 +484,11 @@ object ShareGraphicGenerator {
         currentX += freePaint.measureText(freeWord) + 14f
 
         // 4. Savings badge pill
-        val pillText = if (isEs) "(100% DTO.)" else "(100% OFF)"
+        val pillText = when (lang) {
+            AppLanguage.SPANISH -> "(100% DTO.)"
+            AppLanguage.FRENCH -> "(100 % OFFERT)"
+            AppLanguage.ENGLISH -> "(100% OFF)"
+        }
         val pillPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             textSize = 19f
             color = Color.parseColor("#A7F3D0")
@@ -573,7 +608,7 @@ object ShareGraphicGenerator {
         }
     }
 
-    private fun drawLootDropWatermark(canvas: Canvas, isEs: Boolean = false) {
+    private fun drawLootDropWatermark(canvas: Canvas, lang: AppLanguage = AppLanguage.ENGLISH) {
         val rightX = CARD_WIDTH - 36f
         val startY = 540f
 
@@ -595,7 +630,11 @@ object ShareGraphicGenerator {
             color = Color.parseColor("#94A3B8") // Slate muted
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
         }
-        val subText = if (isEs) "Radar de Juegos Gratis • lootdrop.app" else "Free Games Radar • lootdrop.app"
+        val subText = when (lang) {
+            AppLanguage.SPANISH -> "Radar de Juegos Gratis • lootdrop.app"
+            AppLanguage.FRENCH -> "Radar Jeux Gratuits • lootdrop.app"
+            AppLanguage.ENGLISH -> "Free Games Radar • lootdrop.app"
+        }
         val subWidth = subPaint.measureText(subText)
         val subX = rightX - subWidth
         canvas.drawText(subText, subX, startY + 52f, subPaint)

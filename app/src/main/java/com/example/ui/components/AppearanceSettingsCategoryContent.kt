@@ -60,7 +60,7 @@ fun AppearanceSettingsCategoryContent(
     viewModel: GiveawaysViewModel
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val context = LocalContext.current
     val themeMode by viewModel.themeMode.collectAsState()
     val accentTheme by viewModel.accentTheme.collectAsState()
@@ -191,7 +191,11 @@ fun AppearanceSettingsCategoryContent(
     Spacer(modifier = Modifier.height(20.dp))
 
     SectionHeader(
-        title = if (isEs) "ESCALA DE UI Y TAMAÑO EN PANTALLA" else "UI SCALE & SCREEN FOOTPRINT",
+        title = when (lang) {
+            AppLanguage.SPANISH -> "ESCALA DE UI Y TAMAÑO EN PANTALLA"
+            AppLanguage.FRENCH -> "ÉCHELLE DE L'INTERFACE & TAILLE D'ÉCRAN"
+            AppLanguage.ENGLISH -> "UI SCALE & SCREEN FOOTPRINT"
+        },
         icon = Icons.Default.Tune
     )
     Spacer(modifier = Modifier.height(8.dp))
@@ -217,28 +221,52 @@ fun AppearanceSettingsCategoryContent(
         listOf(
             Triple(
                 MainTab.HOME,
-                Icons.Default.Home to (if (isEs) "Inicio (Recomendado)" else "Home (Recommended)"),
-                if (isEs) "Panel con tu actividad Steam y los mejores juegos gratis" else "Dashboard with recent Steam activity & top free game picks"
+                Icons.Default.Home to when (lang) {
+                    AppLanguage.SPANISH -> "Inicio (Recomendado)"
+                    AppLanguage.FRENCH -> "Accueil (Recommandé)"
+                    AppLanguage.ENGLISH -> "Home (Recommended)"
+                },
+                when (lang) {
+                    AppLanguage.SPANISH -> "Panel con tu actividad Steam y los mejores juegos gratis"
+                    AppLanguage.FRENCH -> "Tableau de bord avec votre activité Steam et les meilleurs jeux gratuits"
+                    AppLanguage.ENGLISH -> "Dashboard with recent Steam activity & top free game picks"
+                }
             ),
             Triple(
                 MainTab.DISCOVER,
                 Icons.Default.Explore to s.common.tabDiscover,
-                if (isEs) "Explora todas las ofertas gratis en PC, consolas y móvil" else "Browse all active PC, console & mobile free giveaways"
+                when (lang) {
+                    AppLanguage.SPANISH -> "Explora todas las ofertas gratis en PC, consolas y móvil"
+                    AppLanguage.FRENCH -> "Parcourez toutes les offres gratuites PC, consoles et mobile"
+                    AppLanguage.ENGLISH -> "Browse all active PC, console & mobile free giveaways"
+                }
             ),
             Triple(
                 MainTab.CALENDAR,
                 Icons.Default.CalendarMonth to s.common.tabCalendar,
-                if (isEs) "Radar de vencimiento y calendario de ofertas por terminar" else "Expiration radar & timeline for ending-soon deals"
+                when (lang) {
+                    AppLanguage.SPANISH -> "Radar de vencimiento y calendario de ofertas por terminar"
+                    AppLanguage.FRENCH -> "Radar d'expiration et calendrier des offres bientôt terminées"
+                    AppLanguage.ENGLISH -> "Expiration radar & timeline for ending-soon deals"
+                }
             ),
             Triple(
                 MainTab.CLAIMED,
                 Icons.Default.CheckCircle to s.common.tabClaimed,
-                if (isEs) "Tu bóveda personal de juegos y logros desbloqueados" else "Your saved game vault and unlocked achievements"
+                when (lang) {
+                    AppLanguage.SPANISH -> "Tu bóveda personal de juegos y logros desbloqueados"
+                    AppLanguage.FRENCH -> "Votre coffre de jeux réclamés et succès débloqués"
+                    AppLanguage.ENGLISH -> "Your saved game vault and unlocked achievements"
+                }
             ),
             Triple(
                 MainTab.SETTINGS,
                 Icons.Default.Settings to s.common.tabSettings,
-                if (isEs) "Preferencias de la app, apariencia y configuración" else "App preferences, appearance, and configuration"
+                when (lang) {
+                    AppLanguage.SPANISH -> "Preferencias de la app, apariencia y configuración"
+                    AppLanguage.FRENCH -> "Préférences de l'app, apparence et configuration"
+                    AppLanguage.ENGLISH -> "App preferences, appearance, and configuration"
+                }
             )
         ).forEach { (tab, iconAndLabel, description) ->
             val (icon, label) = iconAndLabel
@@ -320,7 +348,11 @@ private fun SelectableOptionRow(
         if (selected) {
             Icon(
                 Icons.Default.Check,
-                contentDescription = if (LocalAppStrings.current.language == com.example.i18n.AppLanguage.SPANISH) "Seleccionado" else "Selected",
+                contentDescription = when (LocalAppStrings.current.language) {
+                    AppLanguage.SPANISH -> "Seleccionado"
+                    AppLanguage.FRENCH -> "Sélectionné"
+                    AppLanguage.ENGLISH -> "Selected"
+                },
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(18.dp)
             )

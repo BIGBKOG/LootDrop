@@ -68,7 +68,7 @@ fun AppUpdateDialog(
     onViewReleases: (url: String) -> Unit
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val themePrimary = MaterialTheme.colorScheme.primary
 
     Dialog(
@@ -136,10 +136,26 @@ fun AppUpdateDialog(
                             ) {
                                 Text(
                                     text = when (downloadState) {
-                                        is UpdateDownloadState.Downloading -> if (isEs) "DESCARGANDO EN LA APP..." else "DOWNLOADING IN-APP..."
-                                        is UpdateDownloadState.ReadyToInstall -> if (isEs) "LISTO PARA INSTALAR" else "READY TO INSTALL"
-                                        is UpdateDownloadState.Error -> if (isEs) "ERROR DE DESCARGA" else "DOWNLOAD FAILED"
-                                        else -> if (updateInfo.hasUpdate) s.dialogs.updateAvailableTitle.uppercase() else (if (isEs) "VERSIÓN INSTALADA" else "RELEASE INSTALLED")
+                                        is UpdateDownloadState.Downloading -> when (lang) {
+                                            AppLanguage.SPANISH -> "DESCARGANDO EN LA APP..."
+                                            AppLanguage.FRENCH -> "TÉLÉCHARGEMENT..."
+                                            AppLanguage.ENGLISH -> "DOWNLOADING IN-APP..."
+                                        }
+                                        is UpdateDownloadState.ReadyToInstall -> when (lang) {
+                                            AppLanguage.SPANISH -> "LISTO PARA INSTALAR"
+                                            AppLanguage.FRENCH -> "PRÊT À INSTALLER"
+                                            AppLanguage.ENGLISH -> "READY TO INSTALL"
+                                        }
+                                        is UpdateDownloadState.Error -> when (lang) {
+                                            AppLanguage.SPANISH -> "ERROR DE DESCARGA"
+                                            AppLanguage.FRENCH -> "ÉCHEC DU TÉLÉCHARGEMENT"
+                                            AppLanguage.ENGLISH -> "DOWNLOAD FAILED"
+                                        }
+                                        else -> if (updateInfo.hasUpdate) s.dialogs.updateAvailableTitle.uppercase() else when (lang) {
+                                            AppLanguage.SPANISH -> "VERSIÓN INSTALADA"
+                                            AppLanguage.FRENCH -> "VERSION INSTALLÉE"
+                                            AppLanguage.ENGLISH -> "RELEASE INSTALLED"
+                                        }
                                     },
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Black,
@@ -192,7 +208,16 @@ fun AppUpdateDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text(text = if (isEs) "ACTUAL" else "CURRENT", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = TextMuted)
+                            Text(
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "ACTUAL"
+                                    AppLanguage.FRENCH -> "ACTUELLE"
+                                    AppLanguage.ENGLISH -> "CURRENT"
+                                },
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextMuted
+                            )
                             Text(text = "v${updateInfo.currentVersion}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary)
                         }
 
@@ -204,7 +229,16 @@ fun AppUpdateDialog(
                         )
 
                         Column(horizontalAlignment = Alignment.End) {
-                            Text(text = if (isEs) "ÚLTIMA EN GITHUB" else "LATEST GITHUB", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = NeonCyan)
+                            Text(
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "ÚLTIMA EN GITHUB"
+                                    AppLanguage.FRENCH -> "DERNIÈRE GITHUB"
+                                    AppLanguage.ENGLISH -> "LATEST GITHUB"
+                                },
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = NeonCyan
+                            )
                             Text(
                                 text = updateInfo.latestVersion,
                                 fontSize = 15.sp,
@@ -288,7 +322,11 @@ fun AppUpdateDialog(
                                             modifier = Modifier.size(16.dp)
                                         )
                                         Text(
-                                            text = if (isEs) "Descargando APK en la app..." else "Downloading APK in app...",
+                                            text = when (lang) {
+                                                AppLanguage.SPANISH -> "Descargando APK en la app..."
+                                                AppLanguage.FRENCH -> "Téléchargement de l'APK..."
+                                                AppLanguage.ENGLISH -> "Downloading APK in app..."
+                                            },
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.SemiBold,
                                             color = TextPrimary
@@ -343,7 +381,11 @@ fun AppUpdateDialog(
                                         color = TextMuted
                                     )
                                     Text(
-                                        text = if (isEs) "Se abrirá el instalador al terminar" else "Will prompt installer when finished",
+                                        text = when (lang) {
+                                            AppLanguage.SPANISH -> "Se abrirá el instalador al terminar"
+                                            AppLanguage.FRENCH -> "L'installateur s'ouvrira à la fin"
+                                            AppLanguage.ENGLISH -> "Will prompt installer when finished"
+                                        },
                                         fontSize = 10.sp,
                                         color = TextMuted
                                     )
@@ -382,7 +424,11 @@ fun AppUpdateDialog(
                                         color = NeonGreen
                                     )
                                     Text(
-                                        text = if (isEs) "Pulsa el botón inferior para iniciar el instalador" else "Tap button below to launch the package installer",
+                                        text = when (lang) {
+                                            AppLanguage.SPANISH -> "Pulsa el botón inferior para iniciar el instalador"
+                                            AppLanguage.FRENCH -> "Appuyez ci-dessous pour lancer l'installateur"
+                                            AppLanguage.ENGLISH -> "Tap button below to launch the package installer"
+                                        },
                                         fontSize = 11.sp,
                                         color = TextSecondary
                                     )
@@ -414,7 +460,11 @@ fun AppUpdateDialog(
                                 )
                                 Column {
                                     Text(
-                                        text = if (isEs) "Error de descarga en la app" else "In-App Download Error",
+                                        text = when (lang) {
+                                            AppLanguage.SPANISH -> "Error de descarga en la app"
+                                            AppLanguage.FRENCH -> "Erreur de téléchargement"
+                                            AppLanguage.ENGLISH -> "In-App Download Error"
+                                        },
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = Color(0xFFFF5252)
@@ -448,7 +498,11 @@ fun AppUpdateDialog(
                             colors = ButtonDefaults.buttonColors(disabledContainerColor = Color(0xFF26334D))
                         ) {
                             Text(
-                                text = if (isEs) "Descargando y preparando instalador..." else "Downloading & Preparing Installer...",
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "Descargando y preparando instalador..."
+                                    AppLanguage.FRENCH -> "Téléchargement et préparation..."
+                                    AppLanguage.ENGLISH -> "Downloading & Preparing Installer..."
+                                },
                                 fontWeight = FontWeight.Bold,
                                 color = TextMuted,
                                 fontSize = 13.sp
@@ -501,9 +555,21 @@ fun AppUpdateDialog(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = when {
-                                    downloadState is UpdateDownloadState.Error -> if (isEs) "Reintentar Descarga e Instalación" else "Retry Update & Install"
-                                    !updateInfo.hasUpdate -> if (isEs) "Actualizar y Reinstalar (${updateInfo.latestVersion})" else "Update & Reinstall (${updateInfo.latestVersion})"
-                                    else -> if (isEs) "Descargar e Instalar (${updateInfo.latestVersion})" else "Update & Install (${updateInfo.latestVersion})"
+                                    downloadState is UpdateDownloadState.Error -> when (lang) {
+                                        AppLanguage.SPANISH -> "Reintentar Descarga e Instalación"
+                                        AppLanguage.FRENCH -> "Réessayer l'installation"
+                                        AppLanguage.ENGLISH -> "Retry Update & Install"
+                                    }
+                                    !updateInfo.hasUpdate -> when (lang) {
+                                        AppLanguage.SPANISH -> "Actualizar y Reinstalar (${updateInfo.latestVersion})"
+                                        AppLanguage.FRENCH -> "Réinstaller (${updateInfo.latestVersion})"
+                                        AppLanguage.ENGLISH -> "Update & Reinstall (${updateInfo.latestVersion})"
+                                    }
+                                    else -> when (lang) {
+                                        AppLanguage.SPANISH -> "Descargar e Instalar (${updateInfo.latestVersion})"
+                                        AppLanguage.FRENCH -> "Télécharger et installer (${updateInfo.latestVersion})"
+                                        AppLanguage.ENGLISH -> "Update & Install (${updateInfo.latestVersion})"
+                                    }
                                 },
                                 fontWeight = FontWeight.Black,
                                 color = Color.Black,
@@ -536,7 +602,14 @@ fun AppUpdateDialog(
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(if (isEs) "Ver Notas" else "View Notes", fontSize = 11.sp)
+                        Text(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Ver Notas"
+                                AppLanguage.FRENCH -> "Voir les notes"
+                                AppLanguage.ENGLISH -> "View Notes"
+                            },
+                            fontSize = 11.sp
+                        )
                     }
 
                     OutlinedButton(

@@ -200,7 +200,11 @@ fun OnboardingWalkthroughDialog(
 
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                     if (onLanguageChange != null) {
-                                        val nextLang = if (currentLanguage == AppLanguage.ENGLISH) AppLanguage.SPANISH else AppLanguage.ENGLISH
+                                        val nextLang = when (currentLanguage) {
+                                            AppLanguage.ENGLISH -> AppLanguage.SPANISH
+                                            AppLanguage.SPANISH -> AppLanguage.FRENCH
+                                            AppLanguage.FRENCH -> AppLanguage.ENGLISH
+                                        }
                                         Box(
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(8.dp))

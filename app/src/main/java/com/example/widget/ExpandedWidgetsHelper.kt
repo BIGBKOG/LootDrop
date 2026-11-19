@@ -237,7 +237,9 @@ internal object ExpandedWidgetsHelper {
         val localizedContext = LocaleSyncHelper.localizedContextFromPrefs(context)
         val res = localizedContext.resources
         val prefs = AppPreferences(context)
-        val isEs = prefs.appLanguage == AppLanguage.SPANISH
+        val lang = prefs.appLanguage
+        val isEs = lang == AppLanguage.SPANISH
+        val isFr = lang == AppLanguage.FRENCH
 
         views.setTextViewText(R.id.widget_challenge_header_title, res.getString(R.string.widget_challenge_header))
         views.setTextViewText(R.id.widget_challenge_next_label, res.getString(R.string.widget_challenge_next_label))
@@ -295,20 +297,42 @@ internal object ExpandedWidgetsHelper {
             }
 
             views.setTextViewText(R.id.widget_challenge_progress_text, "${grid.completedCount}/9")
-            val lineWord = if (isEs) {
-                if (grid.totalLinesCompleted == 1) "Línea" else "Líneas"
-            } else {
-                if (grid.totalLinesCompleted == 1) "Line" else "Lines"
+            val lineWord = when {
+                isEs -> if (grid.totalLinesCompleted == 1) "Línea" else "Líneas"
+                isFr -> if (grid.totalLinesCompleted == 1) "Ligne" else "Lignes"
+                else -> if (grid.totalLinesCompleted == 1) "Line" else "Lines"
             }
             views.setTextViewText(R.id.widget_challenge_lines_text, "• ${grid.totalLinesCompleted} $lineWord")
-            views.setTextViewText(R.id.widget_challenge_days_badge, "${grid.daysRemaining}d")
+            views.setTextViewText(
+                R.id.widget_challenge_days_badge,
+                if (isFr) "${grid.daysRemaining}j" else "${grid.daysRemaining}d"
+            )
 
             val nextTile = grid.tiles.firstOrNull { !it.isCompleted }
-            val nextHint = nextTile?.title ?: if (isEs) "¡Tablero 3×3 completado!" else "All 9 Tiles Completed!"
+            val nextHint = nextTile?.let {
+                com.example.i18n.LocaleAssetCatalog.getField(
+                    lang,
+                    "challengeTile",
+                    it.challengeType,
+                    "title",
+                    it.title
+                )
+            } ?: when {
+                isEs -> "¡Tablero 3×3 completado!"
+                isFr -> "Grille 3×3 terminée !"
+                else -> "All 9 Tiles Completed!"
+            }
             views.setTextViewText(R.id.widget_challenge_next_hint, nextHint)
         } catch (_: Exception) {
             views.setTextViewText(R.id.widget_challenge_progress_text, "0/9")
-            views.setTextViewText(R.id.widget_challenge_lines_text, if (isEs) "• 0 Líneas" else "• 0 Lines")
+            views.setTextViewText(
+                R.id.widget_challenge_lines_text,
+                when {
+                    isEs -> "• 0 Líneas"
+                    isFr -> "• 0 Lignes"
+                    else -> "• 0 Lines"
+                }
+            )
         }
     }
 

@@ -46,7 +46,7 @@ fun SettingsFooter(
     modifier: Modifier = Modifier
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val context = LocalContext.current
     val patreonUrl = "https://www.patreon.com/cw/LootDrop"
 
@@ -97,13 +97,21 @@ fun SettingsFooter(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = if (isEs) "¡Sé Parte de la Comunidad!" else "Be Part of the Community!",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "¡Sé Parte de la Comunidad!"
+                            AppLanguage.FRENCH -> "Rejoignez la Communauté !"
+                            AppLanguage.ENGLISH -> "Be Part of the Community!"
+                        },
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
                     Text(
-                        text = if (isEs) "Apoya a LootDrop en Patreon y desbloquea ventajas" else "Help support LootDrop on Patreon & unlock backer perks",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "Apoya a LootDrop en Patreon y desbloquea ventajas"
+                            AppLanguage.FRENCH -> "Soutenez LootDrop sur Patreon & débloquez des avantages"
+                            AppLanguage.ENGLISH -> "Help support LootDrop on Patreon & unlock backer perks"
+                        },
                         fontSize = 11.sp,
                         color = TextMuted,
                         lineHeight = 15.sp
@@ -127,7 +135,11 @@ fun SettingsFooter(
                     modifier = Modifier.height(34.dp)
                 ) {
                     Text(
-                        text = if (isEs) "Apoyar ❤️" else "Support ❤️",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "Apoyar ❤️"
+                            AppLanguage.FRENCH -> "Soutenir ❤️"
+                            AppLanguage.ENGLISH -> "Support ❤️"
+                        },
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -139,21 +151,33 @@ fun SettingsFooter(
 
         Image(
             painter = painterResource(id = R.drawable.ic_app_logo),
-            contentDescription = if (isEs) "Logo de LootDrop" else "LootDrop Logo",
+            contentDescription = when (lang) {
+                AppLanguage.SPANISH -> "Logo de LootDrop"
+                AppLanguage.FRENCH -> "Logo LootDrop"
+                AppLanguage.ENGLISH -> "LootDrop Logo"
+            },
             modifier = Modifier
                 .size(48.dp)
                 .clip(RoundedCornerShape(12.dp))
         )
         Spacer(modifier = Modifier.height(10.dp))
         Text(
-            text = if (isEs) "LootDrop V${BuildConfig.VERSION_NAME} • Radar Gratis PC y Consola" else "LootDrop V${BuildConfig.VERSION_NAME} • PC & Console Free Games Radar",
+            text = when (lang) {
+                AppLanguage.SPANISH -> "LootDrop V${BuildConfig.VERSION_NAME} • Radar Gratis PC y Consola"
+                AppLanguage.FRENCH -> "LootDrop V${BuildConfig.VERSION_NAME} • Radar Jeux Gratuits PC & Console"
+                AppLanguage.ENGLISH -> "LootDrop V${BuildConfig.VERSION_NAME} • PC & Console Free Games Radar"
+            },
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = if (isEs) "Datos de ofertas en tiempo real con GamerPower API" else "Real-time giveaways data powered by GamerPower API",
+            text = when (lang) {
+                AppLanguage.SPANISH -> "Datos de ofertas en tiempo real con GamerPower API"
+                AppLanguage.FRENCH -> "Données d'offres en temps réel via l'API GamerPower"
+                AppLanguage.ENGLISH -> "Real-time giveaways data powered by GamerPower API"
+            },
             fontSize = 11.sp,
             color = TextMuted
         )
@@ -166,7 +190,11 @@ fun SettingsFooter(
                 .padding(horizontal = 8.dp, vertical = 3.dp)
         ) {
             Text(
-                text = if (isEs) "✓ 100% AOSP Puro • Cero Servicios Google (GMS)" else "✓ 100% Pure AOSP • Zero Google Play Services (GMS)",
+                text = when (lang) {
+                    AppLanguage.SPANISH -> "✓ 100% AOSP Puro • Cero Servicios Google (GMS)"
+                    AppLanguage.FRENCH -> "✓ 100 % AOSP Pur • Zéro Services Google (GMS)"
+                    AppLanguage.ENGLISH -> "✓ 100% Pure AOSP • Zero Google Play Services (GMS)"
+                },
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
                 color = NeonGreen
@@ -174,7 +202,11 @@ fun SettingsFooter(
         }
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = if (isEs) "Hecho por BIGBKOG" else "Made by BIGBKOG",
+            text = when (lang) {
+                AppLanguage.SPANISH -> "Hecho por BIGBKOG"
+                AppLanguage.FRENCH -> "Créé par BIGBKOG"
+                AppLanguage.ENGLISH -> "Made by BIGBKOG"
+            },
             fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.primary

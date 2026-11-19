@@ -43,7 +43,7 @@ internal fun LiveNotificationPreviewCard(
     isActionsEnabled: Boolean
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
@@ -64,7 +64,11 @@ internal fun LiveNotificationPreviewCard(
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        text = if (isEs) "VISTA PREVIA EN VIVO" else "LIVE NOTIFICATION PREVIEW",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "VISTA PREVIA EN VIVO"
+                            AppLanguage.FRENCH -> "APERÇU EN DIRECT"
+                            AppLanguage.ENGLISH -> "LIVE NOTIFICATION PREVIEW"
+                        },
                         fontSize = 11.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.primary,
@@ -73,9 +77,17 @@ internal fun LiveNotificationPreviewCard(
                 }
                 Text(
                     text = if (isNotificationsEnabled) {
-                        if (isEs) "Así se verá en tu dispositivo" else "How it looks on your device"
+                        when (lang) {
+                            AppLanguage.SPANISH -> "Así se verá en tu dispositivo"
+                            AppLanguage.FRENCH -> "Voici l'aperçu sur votre appareil"
+                            AppLanguage.ENGLISH -> "How it looks on your device"
+                        }
                     } else {
-                        if (isEs) "Alertas en pausa" else "Notifications paused"
+                        when (lang) {
+                            AppLanguage.SPANISH -> "Alertas en pausa"
+                            AppLanguage.FRENCH -> "Notifications en pause"
+                            AppLanguage.ENGLISH -> "Notifications paused"
+                        }
                     },
                     fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -111,7 +123,15 @@ internal fun LiveNotificationPreviewCard(
                         }
                         Text("LootDrop", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         Text("•", fontSize = 10.sp, color = TextMuted)
-                        Text(if (isEs) "ahora" else "now", fontSize = 11.sp, color = TextMuted)
+                        Text(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "ahora"
+                                AppLanguage.FRENCH -> "maintenant"
+                                AppLanguage.ENGLISH -> "now"
+                            },
+                            fontSize = 11.sp,
+                            color = TextMuted
+                        )
                         Spacer(modifier = Modifier.weight(1f))
                         Box(
                             modifier = Modifier
@@ -119,19 +139,36 @@ internal fun LiveNotificationPreviewCard(
                                 .background(Color(0xFF6C5CE7).copy(alpha = 0.25f))
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
-                            Text(if (isEs) "🔥 Juegos Destacados" else "🔥 Major Games", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB388FF))
+                            Text(
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "🔥 Juegos Destacados"
+                                    AppLanguage.FRENCH -> "🔥 Grands jeux"
+                                    AppLanguage.ENGLISH -> "🔥 Major Games"
+                                },
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFB388FF)
+                            )
                         }
                     }
 
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
-                            text = if (isEs) "🎮 GRATIS AHORA en Epic Games: Death Stranding" else "🎮 FREE NOW on Epic Games: Death Stranding",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "🎮 GRATIS AHORA en Epic Games: Death Stranding"
+                                AppLanguage.FRENCH -> "🎮 GRATUIT sur Epic Games : Death Stranding"
+                                AppLanguage.ENGLISH -> "🎮 FREE NOW on Epic Games: Death Stranding"
+                            },
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
                         Text(
-                            text = if (isEs) "Valorado en $39.99 • ¡Reclámalo para siempre! Toca para ver." else "Worth $39.99 • Claim it to keep forever! Tap to view details.",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "Valorado en $39.99 • ¡Reclámalo para siempre! Toca para ver."
+                                AppLanguage.FRENCH -> "Valeur 39,99 $ • À garder à vie ! Touchez pour voir les détails."
+                                AppLanguage.ENGLISH -> "Worth $39.99 • Claim it to keep forever! Tap to view details."
+                            },
                             fontSize = 11.sp,
                             color = Color(0xFFB0BAC9),
                             lineHeight = 15.sp
@@ -163,7 +200,16 @@ internal fun LiveNotificationPreviewCard(
                                         .background(NeonGreen)
                                         .padding(horizontal = 7.dp, vertical = 3.dp)
                                 ) {
-                                    Text(if (isEs) "100% GRATIS" else "100% OFF", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF0B0F19))
+                                    Text(
+                                        when (lang) {
+                                            AppLanguage.SPANISH -> "100% GRATIS"
+                                            AppLanguage.FRENCH -> "100 % GRATUIT"
+                                            AppLanguage.ENGLISH -> "100% OFF"
+                                        },
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color(0xFF0B0F19)
+                                    )
                                 }
                                 Text(
                                     text = "Death Stranding: Director's Cut • PC",

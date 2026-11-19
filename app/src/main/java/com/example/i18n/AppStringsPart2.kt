@@ -128,6 +128,7 @@ data class SettingsAndAboutStrings(
     val languageCardSubtitle: String,
     val languageEnglishDesc: String,
     val languageSpanishDesc: String,
+    val languageFrenchDesc: String,
     val languageActiveBadge: String,
     // General
     val generalReviewsSection: String,

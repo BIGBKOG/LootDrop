@@ -19,6 +19,12 @@ enum class AppLanguage(
         nativeName = "Español",
         shortBadge = "ES",
         flagEmoji = "🇪🇸"
+    ),
+    FRENCH(
+        code = "fr",
+        nativeName = "Français",
+        shortBadge = "FR",
+        flagEmoji = "🇫🇷"
     );
 
     val locale: Locale
@@ -28,6 +34,7 @@ enum class AppLanguage(
         fun fromCode(code: String?): AppLanguage {
             return when (code?.trim()?.lowercase()) {
                 "es", "es-es", "es-mx", "es-419", "spanish", "español" -> SPANISH
+                "fr", "fr-fr", "fr-ca", "fr-be", "fr-ch", "french", "français", "francais" -> FRENCH
                 else -> ENGLISH
             }
         }

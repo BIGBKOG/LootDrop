@@ -90,7 +90,7 @@ fun NotificationSettingsSheet(
     onOpenInbox: (() -> Unit)? = null
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val context = LocalContext.current
     val appPrefs = remember { AppPreferences(context) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -122,39 +122,128 @@ fun NotificationSettingsSheet(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         val msg = if (isGranted) {
-            if (isEs) "¡Permiso de notificaciones concedido!" else "Notification permission granted!"
+            when (lang) {
+                AppLanguage.SPANISH -> "¡Permiso de notificaciones concedido!"
+                AppLanguage.FRENCH -> "Autorisation des notifications accordée !"
+                AppLanguage.ENGLISH -> "Notification permission granted!"
+            }
         } else {
-            if (isEs) "Permiso denegado. Actívalo en los ajustes del sistema." else "Notification permission denied. Enable in system settings."
+            when (lang) {
+                AppLanguage.SPANISH -> "Permiso denegado. Actívalo en los ajustes del sistema."
+                AppLanguage.FRENCH -> "Autorisation refusée. Activez-la dans les paramètres système."
+                AppLanguage.ENGLISH -> "Notification permission denied. Enable in system settings."
+            }
         }
         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
     }
 
     val storeSpecs = listOf(
-        StoreAlertSpec("PlayStation Store (PS5 / PS4)", if (isEs) "Ofertas y rebajas al 100% en PS Store" else "PS Store giveaways & 100% discount promotions", PlayStationBlue, isNotifyPlayStation) {
+        StoreAlertSpec(
+            "PlayStation Store (PS5 / PS4)",
+            when (lang) {
+                AppLanguage.SPANISH -> "Ofertas y rebajas al 100% en PS Store"
+                AppLanguage.FRENCH -> "Jeux gratuits et promos à 100 % sur le PS Store"
+                AppLanguage.ENGLISH -> "PS Store giveaways & 100% discount promotions"
+            },
+            PlayStationBlue,
+            isNotifyPlayStation
+        ) {
             isNotifyPlayStation = it; notificationHelper.isNotifyPlayStation = it
         },
-        StoreAlertSpec("Xbox Series X|S & Xbox One", if (isEs) "Promociones gratis en tienda Xbox" else "Xbox Marketplace free game promotions", XboxGreen, isNotifyXbox) {
+        StoreAlertSpec(
+            "Xbox Series X|S & Xbox One",
+            when (lang) {
+                AppLanguage.SPANISH -> "Promociones gratis en tienda Xbox"
+                AppLanguage.FRENCH -> "Promotions de jeux gratuits sur le Xbox Store"
+                AppLanguage.ENGLISH -> "Xbox Marketplace free game promotions"
+            },
+            XboxGreen,
+            isNotifyXbox
+        ) {
             isNotifyXbox = it; notificationHelper.isNotifyXbox = it
         },
-        StoreAlertSpec("Nintendo Switch eShop", if (isEs) "Juegos gratis al 100% y drops en Switch" else "Nintendo Switch 100% discount freebies & drops", NintendoRed, isNotifyNintendo) {
+        StoreAlertSpec(
+            "Nintendo Switch eShop",
+            when (lang) {
+                AppLanguage.SPANISH -> "Juegos gratis al 100% y drops en Switch"
+                AppLanguage.FRENCH -> "Jeux à -100 % et offres sur Nintendo Switch"
+                AppLanguage.ENGLISH -> "Nintendo Switch 100% discount freebies & drops"
+            },
+            NintendoRed,
+            isNotifyNintendo
+        ) {
             isNotifyNintendo = it; notificationHelper.isNotifyNintendo = it
         },
-        StoreAlertSpec("Steam", if (isEs) "Promociones gratis en Steam y 100% descuento" else "Steam store free promotions & 100% off deals", SteamBlue, isNotifySteam) {
+        StoreAlertSpec(
+            "Steam",
+            when (lang) {
+                AppLanguage.SPANISH -> "Promociones gratis en Steam y 100% descuento"
+                AppLanguage.FRENCH -> "Promotions gratuites et offres à -100 % sur Steam"
+                AppLanguage.ENGLISH -> "Steam store free promotions & 100% off deals"
+            },
+            SteamBlue,
+            isNotifySteam
+        ) {
             isNotifySteam = it; notificationHelper.isNotifySteam = it
         },
-        StoreAlertSpec("Epic Games Store", if (isEs) "Juegos gratis semanales y títulos misteriosos" else "Weekly free games vault & mystery deals", EpicGamesBlue, isNotifyEpic) {
+        StoreAlertSpec(
+            "Epic Games Store",
+            when (lang) {
+                AppLanguage.SPANISH -> "Juegos gratis semanales y títulos misteriosos"
+                AppLanguage.FRENCH -> "Jeux gratuits hebdomadaires et jeux mystères"
+                AppLanguage.ENGLISH -> "Weekly free games vault & mystery deals"
+            },
+            EpicGamesBlue,
+            isNotifyEpic
+        ) {
             isNotifyEpic = it; notificationHelper.isNotifyEpic = it
         },
-        StoreAlertSpec("GOG.com", if (isEs) "Juegos clásicos e indies sin DRM en PC" else "DRM-free PC classic and indie game drops", GogPurple, isNotifyGog) {
+        StoreAlertSpec(
+            "GOG.com",
+            when (lang) {
+                AppLanguage.SPANISH -> "Juegos clásicos e indies sin DRM en PC"
+                AppLanguage.FRENCH -> "Classiques et jeux indés PC sans DRM"
+                AppLanguage.ENGLISH -> "DRM-free PC classic and indie game drops"
+            },
+            GogPurple,
+            isNotifyGog
+        ) {
             isNotifyGog = it; notificationHelper.isNotifyGog = it
         },
-        StoreAlertSpec("Google Play / Android", if (isEs) "Juegos móviles, apps y paquetes gratis" else "Android mobile games, apps & in-game pack promotions", Color(0xFF3DDC84), isNotifyAndroid) {
+        StoreAlertSpec(
+            "Google Play / Android",
+            when (lang) {
+                AppLanguage.SPANISH -> "Juegos móviles, apps y paquetes gratis"
+                AppLanguage.FRENCH -> "Jeux mobiles, applis et packs gratuits"
+                AppLanguage.ENGLISH -> "Android mobile games, apps & in-game pack promotions"
+            },
+            Color(0xFF3DDC84),
+            isNotifyAndroid
+        ) {
             isNotifyAndroid = it; notificationHelper.isNotifyAndroid = it
         },
-        StoreAlertSpec("Apple App Store / iOS", if (isEs) "Títulos gratis y promos para iPhone y iPad" else "iOS (iPhone & iPad) free titles & giveaway promos", Color(0xFF007AFF), isNotifyIos) {
+        StoreAlertSpec(
+            "Apple App Store / iOS",
+            when (lang) {
+                AppLanguage.SPANISH -> "Títulos gratis y promos para iPhone y iPad"
+                AppLanguage.FRENCH -> "Titres gratuits et promos pour iPhone et iPad"
+                AppLanguage.ENGLISH -> "iOS (iPhone & iPad) free titles & giveaway promos"
+            },
+            Color(0xFF007AFF),
+            isNotifyIos
+        ) {
             isNotifyIos = it; notificationHelper.isNotifyIos = it
         },
-        StoreAlertSpec(if (isEs) "Otros Launchers de PC" else "Other PC Launchers", "Ubisoft, itch.io, EA App, Prime Gaming", NeonGreen, isNotifyOthers) {
+        StoreAlertSpec(
+            when (lang) {
+                AppLanguage.SPANISH -> "Otros Launchers de PC"
+                AppLanguage.FRENCH -> "Autres lanceurs PC"
+                AppLanguage.ENGLISH -> "Other PC Launchers"
+            },
+            "Ubisoft, itch.io, EA App, Prime Gaming",
+            NeonGreen,
+            isNotifyOthers
+        ) {
             isNotifyOthers = it; notificationHelper.isNotifyOthers = it
         }
     )
@@ -193,8 +282,25 @@ fun NotificationSettingsSheet(
                         Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(20.dp))
                     }
                     Column {
-                        Text(if (isEs) "Centro de Notificaciones y Alertas" else "Notification Hub & Alerts", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                        Text(if (isEs) "Alertas inteligentes, portadas y canales" else "Smart push alerts, rich game artwork & channels", fontSize = 12.sp, color = TextSecondary)
+                        Text(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Centro de Notificaciones y Alertas"
+                                AppLanguage.FRENCH -> "Centre de notifications et d'alertes"
+                                AppLanguage.ENGLISH -> "Notification Hub & Alerts"
+                            },
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Text(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Alertas inteligentes, portadas y canales"
+                                AppLanguage.FRENCH -> "Alertes intelligentes, visuels et canaux"
+                                AppLanguage.ENGLISH -> "Smart push alerts, rich game artwork & channels"
+                            },
+                            fontSize = 12.sp,
+                            color = TextSecondary
+                        )
                     }
                 }
                 IconButton(onClick = onDismiss) {
@@ -219,8 +325,25 @@ fun NotificationSettingsSheet(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(if (isEs) "Activar Alertas Inteligentes" else "Enable Smart Push Alerts", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                        Text(if (isEs) "Recibe alertas con portada cuando salgan juegos gratis" else "Receive rich alerts with game artwork when free deals drop", fontSize = 12.sp, color = TextSecondary)
+                        Text(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Activar Alertas Inteligentes"
+                                AppLanguage.FRENCH -> "Activer les alertes intelligentes"
+                                AppLanguage.ENGLISH -> "Enable Smart Push Alerts"
+                            },
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Text(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Recibe alertas con portada cuando salgan juegos gratis"
+                                AppLanguage.FRENCH -> "Recevez des alertes illustrées dès qu'un jeu gratuit sort"
+                                AppLanguage.ENGLISH -> "Receive rich alerts with game artwork when free deals drop"
+                            },
+                            fontSize = 12.sp,
+                            color = TextSecondary
+                        )
                     }
                     Switch(
                         checked = isNotificationsEnabled,
@@ -258,7 +381,11 @@ fun NotificationSettingsSheet(
             ) {
                 Column {
                     Text(
-                        text = if (isEs) "CANALES DE NOTIFICACIÓN ACTIVOS" else "ACTIVE NOTIFICATION CHANNELS",
+                        text = when (lang) {
+                            AppLanguage.SPANISH -> "CANALES DE NOTIFICACIÓN ACTIVOS"
+                            AppLanguage.FRENCH -> "CANAUX DE NOTIFICATION ACTIFS"
+                            AppLanguage.ENGLISH -> "ACTIVE NOTIFICATION CHANNELS"
+                        },
                         fontSize = 10.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = TextMuted,
@@ -266,13 +393,45 @@ fun NotificationSettingsSheet(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ChannelStatusBadge(if (isEs) "🔥 Juegos" else "🔥 Games", NeonCyan, Modifier.weight(1f))
-                        ChannelStatusBadge(if (isEs) "⏳ Por Vencer" else "⏳ Ending Soon", Color(0xFFFF5252), Modifier.weight(1f))
+                        ChannelStatusBadge(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "🔥 Juegos"
+                                AppLanguage.FRENCH -> "🔥 Jeux"
+                                AppLanguage.ENGLISH -> "🔥 Games"
+                            },
+                            NeonCyan,
+                            Modifier.weight(1f)
+                        )
+                        ChannelStatusBadge(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "⏳ Por Vencer"
+                                AppLanguage.FRENCH -> "⏳ Bientôt fini"
+                                AppLanguage.ENGLISH -> "⏳ Ending Soon"
+                            },
+                            Color(0xFFFF5252),
+                            Modifier.weight(1f)
+                        )
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ChannelStatusBadge(if (isEs) "🎁 DLC y Botín" else "🎁 DLC & Loot", Color(0xFFB388FF), Modifier.weight(1f))
-                        ChannelStatusBadge(if (isEs) "🔔 Sistema" else "🔔 System Sync", NeonGreen, Modifier.weight(1f))
+                        ChannelStatusBadge(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "🎁 DLC y Botín"
+                                AppLanguage.FRENCH -> "🎁 DLC et Butin"
+                                AppLanguage.ENGLISH -> "🎁 DLC & Loot"
+                            },
+                            Color(0xFFB388FF),
+                            Modifier.weight(1f)
+                        )
+                        ChannelStatusBadge(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "🔔 Sistema"
+                                AppLanguage.FRENCH -> "🔔 Synchro système"
+                                AppLanguage.ENGLISH -> "🔔 System Sync"
+                            },
+                            NeonGreen,
+                            Modifier.weight(1f)
+                        )
                     }
                 }
             }
@@ -311,7 +470,17 @@ fun NotificationSettingsSheet(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-            Text(if (isEs) "AJUSTE FINO DE ALERTAS" else "SMART ALERT TUNING", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
+            Text(
+                when (lang) {
+                    AppLanguage.SPANISH -> "AJUSTE FINO DE ALERTAS"
+                    AppLanguage.FRENCH -> "RÉGLAGE FIN DES ALERTES"
+                    AppLanguage.ENGLISH -> "SMART ALERT TUNING"
+                },
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextMuted,
+                letterSpacing = 1.sp
+            )
             Spacer(modifier = Modifier.height(8.dp))
 
             Box(
@@ -371,7 +540,11 @@ fun NotificationSettingsSheet(
 
                     SimpleSettingSwitchRow(
                         title = s.settings.alertsSoundTitle,
-                        subtitle = if (isEs) "Reproduce tono cuando llegan ofertas nuevas" else "Play audio chime when new giveaways drop",
+                        subtitle = when (lang) {
+                            AppLanguage.SPANISH -> "Reproduce tono cuando llegan ofertas nuevas"
+                            AppLanguage.FRENCH -> "Joue un son lorsqu'une nouvelle offre arrive"
+                            AppLanguage.ENGLISH -> "Play audio chime when new giveaways drop"
+                        },
                         checked = isSoundEnabled,
                         enabled = isNotificationsEnabled,
                         titleColor = TextPrimary,
@@ -385,7 +558,11 @@ fun NotificationSettingsSheet(
 
                     SimpleSettingSwitchRow(
                         title = s.settings.alertsVibrateTitle,
-                        subtitle = if (isEs) "Vibra cuando llega un juego gratis nuevo" else "Vibrate on new free game arrival",
+                        subtitle = when (lang) {
+                            AppLanguage.SPANISH -> "Vibra cuando llega un juego gratis nuevo"
+                            AppLanguage.FRENCH -> "Vibre à l'arrivée d'un nouveau jeu gratuit"
+                            AppLanguage.ENGLISH -> "Vibrate on new free game arrival"
+                        },
                         checked = isVibrateEnabled,
                         enabled = isNotificationsEnabled,
                         titleColor = TextPrimary,
@@ -399,7 +576,11 @@ fun NotificationSettingsSheet(
 
                     SimpleSettingSwitchRow(
                         title = s.settings.alertsRichArtTitle,
-                        subtitle = if (isEs) "Muestra portadas en alta calidad en la notificación" else "Display BigPicture artwork inside notifications",
+                        subtitle = when (lang) {
+                            AppLanguage.SPANISH -> "Muestra portadas en alta calidad en la notificación"
+                            AppLanguage.FRENCH -> "Affiche les jaquettes HD dans les notifications"
+                            AppLanguage.ENGLISH -> "Display BigPicture artwork inside notifications"
+                        },
                         checked = isRichArtEnabled,
                         enabled = isNotificationsEnabled,
                         titleColor = TextPrimary,
@@ -413,7 +594,11 @@ fun NotificationSettingsSheet(
 
                     SimpleSettingSwitchRow(
                         title = s.settings.alertsActionBtnsTitle,
-                        subtitle = if (isEs) "Incluye botones de 'Reclamar', '★ Guardar' y 'Compartir'" else "Include 'Claim Free', '★ Bookmark', and 'Share' buttons in alerts",
+                        subtitle = when (lang) {
+                            AppLanguage.SPANISH -> "Incluye botones de 'Reclamar', '★ Guardar' y 'Compartir'"
+                            AppLanguage.FRENCH -> "Inclut les boutons « Réclamer », « ★ Favoris » et « Partager »"
+                            AppLanguage.ENGLISH -> "Include 'Claim Free', '★ Bookmark', and 'Share' buttons in alerts"
+                        },
                         checked = isActionsEnabled,
                         enabled = isNotificationsEnabled,
                         titleColor = TextPrimary,
@@ -427,7 +612,11 @@ fun NotificationSettingsSheet(
 
                     Column {
                         Text(
-                            text = if (isEs) "Valor Mínimo Original del Juego:" else "Minimum Original Game Value:",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "Valor Mínimo Original del Juego:"
+                                AppLanguage.FRENCH -> "Valeur minimale d'origine du jeu :"
+                                AppLanguage.ENGLISH -> "Minimum Original Game Value:"
+                            },
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
                             color = if (isNotificationsEnabled) TextPrimary else TextMuted
@@ -435,10 +624,10 @@ fun NotificationSettingsSheet(
                         Spacer(modifier = Modifier.height(6.dp))
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             items(
-                                if (isEs) {
-                                    listOf(0f to "Cualquiera", 5f to "Valor $5+", 10f to "Valor $10+", 20f to "Valor $20+", 30f to "Valor $30+ (AAA)")
-                                } else {
-                                    listOf(0f to "Any Value", 5f to "Worth $5+", 10f to "Worth $10+", 20f to "Worth $20+", 30f to "Worth $30+ (AAA)")
+                                when (lang) {
+                                    AppLanguage.SPANISH -> listOf(0f to "Cualquiera", 5f to "Valor $5+", 10f to "Valor $10+", 20f to "Valor $20+", 30f to "Valor $30+ (AAA)")
+                                    AppLanguage.FRENCH -> listOf(0f to "Tout", 5f to "5 $+", 10f to "10 $+", 20f to "20 $+", 30f to "30 $+ (AAA)")
+                                    AppLanguage.ENGLISH -> listOf(0f to "Any Value", 5f to "Worth $5+", 10f to "Worth $10+", 20f to "Worth $20+", 30f to "Worth $30+ (AAA)")
                                 }
                             ) { (threshold, label) ->
                                 FilterChip(
@@ -462,8 +651,16 @@ fun NotificationSettingsSheet(
                     HorizontalDivider(color = GamingCardBorder, thickness = 0.5.dp)
 
                     SimpleSettingSwitchRow(
-                        title = if (isEs) "Horas Silenciosas (23:00 - 8:00)" else "Quiet Hours (11 PM - 8 AM)",
-                        subtitle = if (isEs) "Silencia sonidos y alertas mientras duermes" else "Silence alert sounds & notifications while you sleep",
+                        title = when (lang) {
+                            AppLanguage.SPANISH -> "Horas Silenciosas (23:00 - 8:00)"
+                            AppLanguage.FRENCH -> "Heures silencieuses (23h - 8h)"
+                            AppLanguage.ENGLISH -> "Quiet Hours (11 PM - 8 AM)"
+                        },
+                        subtitle = when (lang) {
+                            AppLanguage.SPANISH -> "Silencia sonidos y alertas mientras duermes"
+                            AppLanguage.FRENCH -> "Coupe les sons et alertes pendant votre sommeil"
+                            AppLanguage.ENGLISH -> "Silence alert sounds & notifications while you sleep"
+                        },
                         checked = isQuietHours,
                         enabled = isNotificationsEnabled,
                         titleColor = TextPrimary,
@@ -496,7 +693,11 @@ fun NotificationSettingsSheet(
                         Icon(Icons.Default.Sync, contentDescription = null, tint = NeonGreen, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (isEs) "Frecuencia Automática de Revisión:" else "Automatic Check Frequency:",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "Frecuencia Automática de Revisión:"
+                                AppLanguage.FRENCH -> "Fréquence de vérification auto :"
+                                AppLanguage.ENGLISH -> "Automatic Check Frequency:"
+                            },
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
                             color = if (isNotificationsEnabled) TextPrimary else TextMuted
@@ -505,10 +706,10 @@ fun NotificationSettingsSheet(
 
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         items(
-                            if (isEs) {
-                                listOf(2 to "2 Horas", 4 to "4 Horas", 8 to "8 Horas", 24 to "Diario", 0 to "Manual")
-                            } else {
-                                listOf(2 to "2 Hours", 4 to "4 Hours", 8 to "8 Hours", 24 to "Daily", 0 to "Manual")
+                            when (lang) {
+                                AppLanguage.SPANISH -> listOf(2 to "2 Horas", 4 to "4 Horas", 8 to "8 Horas", 24 to "Diario", 0 to "Manual")
+                                AppLanguage.FRENCH -> listOf(2 to "2 heures", 4 to "4 heures", 8 to "8 heures", 24 to "Quotidien", 0 to "Manuel")
+                                AppLanguage.ENGLISH -> listOf(2 to "2 Hours", 4 to "4 Hours", 8 to "8 Hours", 24 to "Daily", 0 to "Manual")
                             }
                         ) { (hours, label) ->
                             FilterChip(
@@ -520,7 +721,11 @@ fun NotificationSettingsSheet(
                                     NotificationScheduler.schedulePeriodicSync(context)
                                     Toast.makeText(
                                         context,
-                                        if (isEs) "Sincronización ajustada a $label" else "Background sync set to $label",
+                                        when (lang) {
+                                            AppLanguage.SPANISH -> "Sincronización ajustada a $label"
+                                            AppLanguage.FRENCH -> "Synchronisation définie sur : $label"
+                                            AppLanguage.ENGLISH -> "Background sync set to $label"
+                                        },
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 },
@@ -539,7 +744,11 @@ fun NotificationSettingsSheet(
 
                     SimpleSettingSwitchRow(
                         title = s.settings.alertsWifiOnlyTitle,
-                        subtitle = if (isEs) "Comprobar en segundo plano solo con Wi-Fi" else "Only check in background when connected to Wi-Fi",
+                        subtitle = when (lang) {
+                            AppLanguage.SPANISH -> "Comprobar en segundo plano solo con Wi-Fi"
+                            AppLanguage.FRENCH -> "Vérifier en arrière-plan uniquement en Wi-Fi"
+                            AppLanguage.ENGLISH -> "Only check in background when connected to Wi-Fi"
+                        },
                         checked = wifiOnly,
                         enabled = isNotificationsEnabled,
                         titleColor = TextPrimary,
@@ -566,7 +775,11 @@ fun NotificationSettingsSheet(
                 ) {
                     Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(18.dp))
                     Text(
-                        if (isEs) "  Abrir Bandeja e Historial" else "  Open Alert Inbox & History",
+                        when (lang) {
+                            AppLanguage.SPANISH -> "  Abrir Bandeja e Historial"
+                            AppLanguage.FRENCH -> "  Ouvrir la boîte et l'historique"
+                            AppLanguage.ENGLISH -> "  Open Alert Inbox & History"
+                        },
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -581,7 +794,11 @@ fun NotificationSettingsSheet(
                             notificationHelper.sendTestNotification(isRichPreview = true)
                             Toast.makeText(
                                 context,
-                                if (isEs) "¡Alerta rica enviada! Revisa la barra." else "Rich BigPicture notification sent! Check drawer.",
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "¡Alerta rica enviada! Revisa la barra."
+                                    AppLanguage.FRENCH -> "Alerte illustrée envoyée ! Vérifiez vos notifications."
+                                    AppLanguage.ENGLISH -> "Rich BigPicture notification sent! Check drawer."
+                                },
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
@@ -592,7 +809,15 @@ fun NotificationSettingsSheet(
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonCyan)
                 ) {
                     Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Text(if (isEs) "  Alerta Juego" else "  Rich Game Alert", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        when (lang) {
+                            AppLanguage.SPANISH -> "  Alerta Juego"
+                            AppLanguage.FRENCH -> "  Alerte Jeu"
+                            AppLanguage.ENGLISH -> "  Rich Game Alert"
+                        },
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
 
                 OutlinedButton(
@@ -601,7 +826,11 @@ fun NotificationSettingsSheet(
                             notificationHelper.sendTestEndingSoonNotification()
                             Toast.makeText(
                                 context,
-                                if (isEs) "¡Alerta urgente enviada! Revisa la barra." else "Ending Soon notification sent! Check drawer.",
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "¡Alerta urgente enviada! Revisa la barra."
+                                    AppLanguage.FRENCH -> "Alerte urgente envoyée ! Vérifiez vos notifications."
+                                    AppLanguage.ENGLISH -> "Ending Soon notification sent! Check drawer."
+                                },
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
@@ -612,7 +841,15 @@ fun NotificationSettingsSheet(
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF5252))
                 ) {
                     Icon(Icons.Default.HourglassTop, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Text(if (isEs) "  Alerta Urgente" else "  Ending Alert", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        when (lang) {
+                            AppLanguage.SPANISH -> "  Alerta Urgente"
+                            AppLanguage.FRENCH -> "  Alerte urgente"
+                            AppLanguage.ENGLISH -> "  Ending Alert"
+                        },
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
 

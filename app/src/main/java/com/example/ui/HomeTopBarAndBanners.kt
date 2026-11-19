@@ -96,7 +96,7 @@ internal fun HomeTopBarChrome(
     onDismissReopenBanner: () -> Unit
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -158,14 +158,38 @@ internal fun HomeTopBarChrome(
                     }
                     val subtitleLabel = when (currentTab) {
                         MainTab.HOME -> if (userProfile.name.isNotBlank()) {
-                            if (isEs) "HOLA, ${userProfile.name.uppercase()}" else "WELCOME, ${userProfile.name.uppercase()}"
+                            when (lang) {
+                                AppLanguage.SPANISH -> "HOLA, ${userProfile.name.uppercase()}"
+                                AppLanguage.FRENCH -> "BONJOUR, ${userProfile.name.uppercase()}"
+                                AppLanguage.ENGLISH -> "WELCOME, ${userProfile.name.uppercase()}"
+                            }
                         } else {
-                            if (isEs) "ACTIVIDAD RECIENTE Y DESTACADOS" else "RECENT ACTIVITY & TOP PICKS"
+                            when (lang) {
+                                AppLanguage.SPANISH -> "ACTIVIDAD RECIENTE Y DESTACADOS"
+                                AppLanguage.FRENCH -> "ACTIVITÉ RÉCENTE & SÉLECTIONS"
+                                AppLanguage.ENGLISH -> "RECENT ACTIVITY & TOP PICKS"
+                            }
                         }
-                        MainTab.SETTINGS -> if (isEs) "AJUSTES Y PREFERENCIAS" else "APP PREFERENCES & CONTROLS"
-                        MainTab.CALENDAR -> if (isEs) "RADAR Y FECHAS DE CIERRE" else "EXPIRATION RADAR & TIMELINE"
-                        MainTab.CLAIMED -> if (isEs) "MI BÓVEDA DE JUEGOS" else "MY CLAIMED GAME VAULT"
-                        MainTab.DISCOVER -> if (isEs) "RADAR GRATIS DE PC Y CONSOLAS" else "PC & CONSOLE FREE RADAR"
+                        MainTab.SETTINGS -> when (lang) {
+                            AppLanguage.SPANISH -> "AJUSTES Y PREFERENCIAS"
+                            AppLanguage.FRENCH -> "PRÉFÉRENCES & CONTRÔLES"
+                            AppLanguage.ENGLISH -> "APP PREFERENCES & CONTROLS"
+                        }
+                        MainTab.CALENDAR -> when (lang) {
+                            AppLanguage.SPANISH -> "RADAR Y FECHAS DE CIERRE"
+                            AppLanguage.FRENCH -> "RADAR D'EXPIRATION & CHRONOLOGIE"
+                            AppLanguage.ENGLISH -> "EXPIRATION RADAR & TIMELINE"
+                        }
+                        MainTab.CLAIMED -> when (lang) {
+                            AppLanguage.SPANISH -> "MI BÓVEDA DE JUEGOS"
+                            AppLanguage.FRENCH -> "MON COFFRE DE JEUX RÉCLAMÉS"
+                            AppLanguage.ENGLISH -> "MY CLAIMED GAME VAULT"
+                        }
+                        MainTab.DISCOVER -> when (lang) {
+                            AppLanguage.SPANISH -> "RADAR GRATIS DE PC Y CONSOLAS"
+                            AppLanguage.FRENCH -> "RADAR JEUX GRATUITS PC & CONSOLES"
+                            AppLanguage.ENGLISH -> "PC & CONSOLE FREE RADAR"
+                        }
                     }
                     if (reducedMotion) {
                         Text(
@@ -249,7 +273,14 @@ internal fun HomeTopBarChrome(
                                 .padding(horizontal = 10.dp, vertical = 5.dp)
                                 .testTag("banner_one_tap_update_button")
                         ) {
-                            Text(if (isEs) "Actualizar" else "Update", fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color.Black)
+                            Text(
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Actualizar"
+                                    AppLanguage.FRENCH -> "Mettre à jour"
+                                    AppLanguage.ENGLISH -> "Update"
+                                },
+                                fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color.Black
+                            )
                         }
                     }
                     IconButton(onClick = onDismissReopenBanner, modifier = Modifier.size(24.dp)) {
@@ -270,7 +301,7 @@ fun ClaimedSavingsBanner(
     modifier: Modifier = Modifier
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val effectiveAnimations = isAnimationsEnabled && !LocalLowEndOptimization.current
     val (borderAlpha, medalBob, medalRot) = rememberClaimedBannerAnimations(enabled = effectiveAnimations)
     val animatedSavings = if (effectiveAnimations) {
@@ -309,7 +340,11 @@ fun ClaimedSavingsBanner(
                         Icon(Icons.Default.Savings, contentDescription = null, tint = NeonGreen, modifier = Modifier.size(15.dp))
                     }
                     Text(
-                        if (isEs) "TOTAL DE DINERO AHORRADO" else "TOTAL MONEY SAVED",
+                        when (lang) {
+                            AppLanguage.SPANISH -> "TOTAL DE DINERO AHORRADO"
+                            AppLanguage.FRENCH -> "TOTAL ÉCONOMISÉ"
+                            AppLanguage.ENGLISH -> "TOTAL MONEY SAVED"
+                        },
                         fontSize = 11.sp, fontWeight = FontWeight.Bold, color = NeonGreen, letterSpacing = 1.sp
                     )
                 }
@@ -323,7 +358,11 @@ fun ClaimedSavingsBanner(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        if (isEs) "AHORRADOS" else "SAVED",
+                        when (lang) {
+                            AppLanguage.SPANISH -> "AHORRADOS"
+                            AppLanguage.FRENCH -> "ÉCONOMISÉS"
+                            AppLanguage.ENGLISH -> "SAVED"
+                        },
                         fontSize = 12.sp, fontWeight = FontWeight.Bold, color = NeonGreen, modifier = Modifier.padding(bottom = 5.dp)
                     )
                 }
@@ -331,11 +370,17 @@ fun ClaimedSavingsBanner(
                 val avgSaved = if (claimedCount > 0) animatedSavings.toDouble() / claimedCount else 0.0
                 Text(
                     text = if (claimedCount > 0) {
-                        if (isEs) "$claimedCount juegos reclamados • prom. ${String.format(Locale.US, "$%.2f", avgSaved)} / juego"
-                        else "$claimedCount claimed games • avg ${String.format(Locale.US, "$%.2f", avgSaved)} / game"
+                        when (lang) {
+                            AppLanguage.SPANISH -> "$claimedCount juegos reclamados • prom. ${String.format(Locale.US, "$%.2f", avgSaved)} / juego"
+                            AppLanguage.FRENCH -> "$claimedCount jeux réclamés • moy. ${String.format(Locale.US, "$%.2f", avgSaved)} / jeu"
+                            AppLanguage.ENGLISH -> "$claimedCount claimed games • avg ${String.format(Locale.US, "$%.2f", avgSaved)} / game"
+                        }
                     } else {
-                        if (isEs) "Reclama juegos para llevar el control de tu ahorro"
-                        else "Claim games to track your savings backlog"
+                        when (lang) {
+                            AppLanguage.SPANISH -> "Reclama juegos para llevar el control de tu ahorro"
+                            AppLanguage.FRENCH -> "Réclamez des jeux pour suivre vos économies"
+                            AppLanguage.ENGLISH -> "Claim games to track your savings backlog"
+                        }
                     },
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -353,8 +398,11 @@ fun ClaimedSavingsBanner(
                     ) {
                         Text("💾", fontSize = 11.sp)
                         Text(
-                            text = if (isEs) "Espacio estimado: ${formatStorageGb(totalStorageGb)} totales en disco"
-                            else "Storage Footprint: ${formatStorageGb(totalStorageGb)} total planned drive space",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "Espacio estimado: ${formatStorageGb(totalStorageGb)} totales en disco"
+                                AppLanguage.FRENCH -> "Espace estimé : ${formatStorageGb(totalStorageGb)} au total sur disque"
+                                AppLanguage.ENGLISH -> "Storage Footprint: ${formatStorageGb(totalStorageGb)} total planned drive space"
+                            },
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = Color(0xFF00E5FF)
@@ -422,8 +470,11 @@ internal fun ActiveFiltersSummaryPill(
                         if (isNotEmpty()) append(" • ")
                         append(
                             if (selectedCategories.size <= 2) selectedCategories.joinToString(", ") { it.localizedDisplayName(s) }
-                            else if (s.language == AppLanguage.SPANISH) "${selectedCategories.size} Categorías"
-                            else "${selectedCategories.size} Categories"
+                            else when (s.language) {
+                                AppLanguage.SPANISH -> "${selectedCategories.size} Categorías"
+                                AppLanguage.FRENCH -> "${selectedCategories.size} Catégories"
+                                AppLanguage.ENGLISH -> "${selectedCategories.size} Categories"
+                            }
                         )
                     }
                     if (selectedSort != SortOption.NEWEST) {

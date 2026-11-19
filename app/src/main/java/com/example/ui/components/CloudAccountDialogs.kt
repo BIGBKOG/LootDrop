@@ -63,7 +63,7 @@ internal fun CreateCloudAccountDialog(
     onDismiss: () -> Unit
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val currentProfileName = viewModel.userProfile.collectAsState().value.name
     var inputUser by remember { mutableStateOf(username.ifBlank { currentProfileName.ifBlank { "" } }) }
     var inputEmail by remember { mutableStateOf("") }
@@ -94,7 +94,11 @@ internal fun CreateCloudAccountDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    text = if (isEs) "Configura tu cuenta gamer y contraseña (mín. 6 caracteres). Tu nombre coincidirá con tu perfil y quedará reservado." else "Set up your gamer account and password (min 6 characters). Your display name will match your profile name and be reserved so nobody else can use it.",
+                    text = when (lang) {
+                        AppLanguage.SPANISH -> "Configura tu cuenta gamer y contraseña (mín. 6 caracteres). Tu nombre coincidirá con tu perfil y quedará reservado."
+                        AppLanguage.FRENCH -> "Configurez votre compte joueur et mot de passe (min. 6 caractères). Votre pseudo correspondra à votre profil et sera réservé."
+                        AppLanguage.ENGLISH -> "Set up your gamer account and password (min 6 characters). Your display name will match your profile name and be reserved so nobody else can use it."
+                    },
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -102,7 +106,15 @@ internal fun CreateCloudAccountDialog(
                 OutlinedTextField(
                     value = inputUser,
                     onValueChange = { inputUser = it; errorMessage = null },
-                    label = { Text(if (isEs) "Gamer Tag / Nombre de Perfil" else "Gamer Tag / Profile Name") },
+                    label = {
+                        Text(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Gamer Tag / Nombre de Perfil"
+                                AppLanguage.FRENCH -> "Gamer Tag / Nom de profil"
+                                AppLanguage.ENGLISH -> "Gamer Tag / Profile Name"
+                            }
+                        )
+                    },
                     leadingIcon = { Icon(Icons.Default.AccountCircle, contentDescription = null, modifier = Modifier.size(18.dp)) },
                     singleLine = true,
                     modifier = Modifier
@@ -132,7 +144,11 @@ internal fun CreateCloudAccountDialog(
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(
                                 imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = if (isEs) "Mostrar u ocultar contraseña" else "Toggle password"
+                                contentDescription = when (lang) {
+                                    AppLanguage.SPANISH -> "Mostrar u ocultar contraseña"
+                                    AppLanguage.FRENCH -> "Afficher ou masquer le mot de passe"
+                                    AppLanguage.ENGLISH -> "Toggle password"
+                                }
                             )
                         }
                     },
@@ -148,7 +164,15 @@ internal fun CreateCloudAccountDialog(
                 OutlinedTextField(
                     value = inputConfirmPass,
                     onValueChange = { inputConfirmPass = it; errorMessage = null },
-                    label = { Text(if (isEs) "Confirmar Contraseña" else "Confirm Password") },
+                    label = {
+                        Text(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Confirmar Contraseña"
+                                AppLanguage.FRENCH -> "Confirmer le mot de passe"
+                                AppLanguage.ENGLISH -> "Confirm Password"
+                            }
+                        )
+                    },
                     leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(18.dp)) },
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
@@ -176,19 +200,35 @@ internal fun CreateCloudAccountDialog(
                     val e = inputEmail.trim()
                     val p = inputPass
                     if (u.length < 3) {
-                        errorMessage = if (isEs) "El nombre de cuenta debe tener al menos 3 caracteres." else "Account name must be at least 3 characters."
+                        errorMessage = when (lang) {
+                            AppLanguage.SPANISH -> "El nombre de cuenta debe tener al menos 3 caracteres."
+                            AppLanguage.FRENCH -> "Le nom du compte doit contenir au moins 3 caractères."
+                            AppLanguage.ENGLISH -> "Account name must be at least 3 characters."
+                        }
                         return@Button
                     }
                     if (e.isBlank() || !e.contains("@") || !e.contains(".")) {
-                        errorMessage = if (isEs) "Introduce un correo electrónico válido (ej. nombre@ejemplo.com)." else "Please enter a valid email address (e.g. name@example.com)."
+                        errorMessage = when (lang) {
+                            AppLanguage.SPANISH -> "Introduce un correo electrónico válido (ej. nombre@ejemplo.com)."
+                            AppLanguage.FRENCH -> "Veuillez saisir une adresse e-mail valide (ex. nom@exemple.com)."
+                            AppLanguage.ENGLISH -> "Please enter a valid email address (e.g. name@example.com)."
+                        }
                         return@Button
                     }
                     if (p.length < 6) {
-                        errorMessage = if (isEs) "La contraseña debe tener al menos 6 caracteres." else "Password must be at least 6 characters."
+                        errorMessage = when (lang) {
+                            AppLanguage.SPANISH -> "La contraseña debe tener al menos 6 caracteres."
+                            AppLanguage.FRENCH -> "Le mot de passe doit contenir au moins 6 caractères."
+                            AppLanguage.ENGLISH -> "Password must be at least 6 characters."
+                        }
                         return@Button
                     }
                     if (p != inputConfirmPass) {
-                        errorMessage = if (isEs) "Las contraseñas no coinciden." else "Passwords do not match."
+                        errorMessage = when (lang) {
+                            AppLanguage.SPANISH -> "Las contraseñas no coinciden."
+                            AppLanguage.FRENCH -> "Les mots de passe ne correspondent pas."
+                            AppLanguage.ENGLISH -> "Passwords do not match."
+                        }
                         return@Button
                     }
                     viewModel.createCloudAccount(u, p, context, email = e) { success, msg ->
@@ -206,7 +246,14 @@ internal fun CreateCloudAccountDialog(
                 if (isAuthenticating) {
                     CircularProgressIndicator(strokeWidth = 2.dp, color = MaterialTheme.colorScheme.background, modifier = Modifier.size(16.dp))
                 } else {
-                    Text(if (isEs) "Crear y Conectar" else "Create & Connect", fontWeight = FontWeight.Bold)
+                    Text(
+                        when (lang) {
+                            AppLanguage.SPANISH -> "Crear y Conectar"
+                            AppLanguage.FRENCH -> "Créer et connecter"
+                            AppLanguage.ENGLISH -> "Create & Connect"
+                        },
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         },
@@ -229,7 +276,7 @@ internal fun SignInCloudAccountDialog(
     onSwitchToCreateAccount: () -> Unit
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     var inputUser by remember { mutableStateOf(username) }
     var inputEmail by remember { mutableStateOf("") }
     var inputPass by remember { mutableStateOf("") }
@@ -250,7 +297,11 @@ internal fun SignInCloudAccountDialog(
                     modifier = Modifier.size(22.dp)
                 )
                 Text(
-                    text = if (isEs) "Iniciar Sesión en Nube" else "Sign In to Cloud Backup",
+                    text = when (lang) {
+                        AppLanguage.SPANISH -> "Iniciar Sesión en Nube"
+                        AppLanguage.FRENCH -> "Connexion au Cloud"
+                        AppLanguage.ENGLISH -> "Sign In to Cloud Backup"
+                    },
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -262,7 +313,11 @@ internal fun SignInCloudAccountDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    text = if (isEs) "Ingresa tu cuenta y contraseña para conectar tu archivo de respaldo personal." else "Enter your account and password to connect your personal backup file.",
+                    text = when (lang) {
+                        AppLanguage.SPANISH -> "Ingresa tu cuenta y contraseña para conectar tu archivo de respaldo personal."
+                        AppLanguage.FRENCH -> "Saisissez votre compte et mot de passe pour connecter votre sauvegarde personnelle."
+                        AppLanguage.ENGLISH -> "Enter your account and password to connect your personal backup file."
+                    },
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -270,7 +325,15 @@ internal fun SignInCloudAccountDialog(
                 OutlinedTextField(
                     value = inputUser,
                     onValueChange = { inputUser = it; errorMessage = null },
-                    label = { Text(if (isEs) "Nombre de Cuenta o Correo" else "Account Name or Email") },
+                    label = {
+                        Text(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Nombre de Cuenta o Correo"
+                                AppLanguage.FRENCH -> "Nom du compte ou e-mail"
+                                AppLanguage.ENGLISH -> "Account Name or Email"
+                            }
+                        )
+                    },
                     leadingIcon = { Icon(Icons.Default.AccountCircle, contentDescription = null, modifier = Modifier.size(18.dp)) },
                     singleLine = true,
                     modifier = Modifier
@@ -300,7 +363,11 @@ internal fun SignInCloudAccountDialog(
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(
                                 imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = if (isEs) "Mostrar u ocultar contraseña" else "Toggle password"
+                                contentDescription = when (lang) {
+                                    AppLanguage.SPANISH -> "Mostrar u ocultar contraseña"
+                                    AppLanguage.FRENCH -> "Afficher ou masquer le mot de passe"
+                                    AppLanguage.ENGLISH -> "Toggle password"
+                                }
                             )
                         }
                     },
@@ -328,7 +395,11 @@ internal fun SignInCloudAccountDialog(
                 ) {
                     TextButton(onClick = onSwitchToCreateAccount) {
                         Text(
-                            text = if (isEs) "¿No tienes cuenta? Crea una" else "Don't have an account? Create one",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "¿No tienes cuenta? Crea una"
+                                AppLanguage.FRENCH -> "Pas de compte ? Créez-en un"
+                                AppLanguage.ENGLISH -> "Don't have an account? Create one"
+                            },
                             fontSize = 11.sp,
                             color = NeonCyan
                         )
@@ -343,7 +414,11 @@ internal fun SignInCloudAccountDialog(
                     val e = inputEmail.trim()
                     val p = inputPass
                     if (u.isBlank() || p.isBlank()) {
-                        errorMessage = if (isEs) "Ingresa tu usuario y contraseña." else "Please enter your username and password."
+                        errorMessage = when (lang) {
+                            AppLanguage.SPANISH -> "Ingresa tu usuario y contraseña."
+                            AppLanguage.FRENCH -> "Veuillez saisir votre identifiant et mot de passe."
+                            AppLanguage.ENGLISH -> "Please enter your username and password."
+                        }
                         return@Button
                     }
                     viewModel.signInCloudAccount(u, p, context, email = e) { success, msg ->
@@ -381,7 +456,7 @@ internal fun RestoreCloudConfirmDialog(
     onConfirm: () -> Unit
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -395,18 +470,32 @@ internal fun RestoreCloudConfirmDialog(
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(24.dp)
                 )
-                Text(if (isEs) "¿Restaurar Respaldo de Cuenta?" else "Restore Account Backup?")
+                Text(
+                    when (lang) {
+                        AppLanguage.SPANISH -> "¿Restaurar Respaldo de Cuenta?"
+                        AppLanguage.FRENCH -> "Restaurer la sauvegarde du compte ?"
+                        AppLanguage.ENGLISH -> "Restore Account Backup?"
+                    }
+                )
             }
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = if (isEs) "Esto buscará y descargará el respaldo vinculado específicamente a la cuenta '$username'." else "This will locate and download the backup specifically linked to account '$username'.",
+                    text = when (lang) {
+                        AppLanguage.SPANISH -> "Esto buscará y descargará el respaldo vinculado específicamente a la cuenta '$username'."
+                        AppLanguage.FRENCH -> "Cela recherchera et téléchargera la sauvegarde liée au compte « $username »."
+                        AppLanguage.ENGLISH -> "This will locate and download the backup specifically linked to account '$username'."
+                    },
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = if (isEs) "• Cuenta: $username\n• Conserva datos locales al combinar respaldos\n• Restaura juegos reclamados, estados y perfil" else "• Account: $username\n• Preserves local data while merging cloud saves\n• Restores claimed games, play statuses, and profile",
+                    text = when (lang) {
+                        AppLanguage.SPANISH -> "• Cuenta: $username\n• Conserva datos locales al combinar respaldos\n• Restaura juegos reclamados, estados y perfil"
+                        AppLanguage.FRENCH -> "• Compte : $username\n• Préserve les données locales lors de la fusion\n• Restaure jeux réclamés, statuts et profil"
+                        AppLanguage.ENGLISH -> "• Account: $username\n• Preserves local data while merging cloud saves\n• Restores claimed games, play statuses, and profile"
+                    },
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 17.sp
@@ -423,7 +512,14 @@ internal fun RestoreCloudConfirmDialog(
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier.testTag("btn_confirm_account_restore")
             ) {
-                Text(if (isEs) "Restaurar de la Cuenta" else "Restore from Account", fontWeight = FontWeight.Bold)
+                Text(
+                    when (lang) {
+                        AppLanguage.SPANISH -> "Restaurar de la Cuenta"
+                        AppLanguage.FRENCH -> "Restaurer du compte"
+                        AppLanguage.ENGLISH -> "Restore from Account"
+                    },
+                    fontWeight = FontWeight.Bold
+                )
             }
         },
         dismissButton = {
@@ -442,7 +538,7 @@ internal fun SignOutCloudConfirmDialog(
     onConfirm: () -> Unit
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -469,7 +565,11 @@ internal fun SignOutCloudConfirmDialog(
         },
         text = {
             Text(
-                text = if (isEs) "¿Cerrar sesión de la cuenta '$username'? Tus juegos guardados y datos locales seguirán intactos, pero la sincronización en la nube se pausará hasta volver a entrar." else "Sign out of account '$username'? Your local saved giveaways and device data will stay intact, but cloud sync and backups will be paused until you sign back in.",
+                text = when (lang) {
+                    AppLanguage.SPANISH -> "¿Cerrar sesión de la cuenta '$username'? Tus juegos guardados y datos locales seguirán intactos, pero la sincronización en la nube se pausará hasta volver a entrar."
+                    AppLanguage.FRENCH -> "Déconnecter le compte « $username » ? Vos jeux enregistrés et données locales resteront intacts, mais la synchro cloud sera en pause jusqu'à votre reconnexion."
+                    AppLanguage.ENGLISH -> "Sign out of account '$username'? Your local saved giveaways and device data will stay intact, but cloud sync and backups will be paused until you sign back in."
+                },
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

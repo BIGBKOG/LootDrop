@@ -101,7 +101,7 @@ internal fun RichGiveawayCard(
     modifier: Modifier = Modifier
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -152,7 +152,11 @@ internal fun RichGiveawayCard(
                                     .padding(horizontal = 7.dp, vertical = 4.dp)
                             ) {
                                 Text(
-                                    text = if (isEs) "Multi-Tienda 100% Gratis" else "Multi-Launcher 100% Off",
+                                    text = when (lang) {
+                                        AppLanguage.SPANISH -> "Multi-Tienda 100% Gratis"
+                                        AppLanguage.FRENCH -> "Multi-lanceur 100% gratuit"
+                                        AppLanguage.ENGLISH -> "Multi-Launcher 100% Off"
+                                    },
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = Color(0xFF0B0F19)
@@ -194,7 +198,13 @@ internal fun RichGiveawayCard(
                     ) {
                         Icon(
                             imageVector = if (item.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                            contentDescription = if (item.isBookmarked) (if (isEs) "Guardado" else "Bookmarked") else s.home.cardBookmarkCd,
+                            contentDescription = if (item.isBookmarked) {
+                                when (lang) {
+                                    AppLanguage.SPANISH -> "Guardado"
+                                    AppLanguage.FRENCH -> "Enregistré"
+                                    AppLanguage.ENGLISH -> "Bookmarked"
+                                }
+                            } else s.home.cardBookmarkCd,
                             tint = if (item.isBookmarked) themePrimary else Color.White,
                             modifier = Modifier.size(16.dp)
                         )
@@ -214,14 +224,22 @@ internal fun RichGiveawayCard(
                             .border(1.2.dp, launcherColor.copy(alpha = 0.9f), CircleShape)
                             .clickable(
                                 onClick = onClick,
-                                onClickLabel = if (isEs) "Ver detalles de ${item.title}" else "View info for ${item.title}"
+                                onClickLabel = when (lang) {
+                                    AppLanguage.SPANISH -> "Ver detalles de ${item.title}"
+                                    AppLanguage.FRENCH -> "Voir les infos de ${item.title}"
+                                    AppLanguage.ENGLISH -> "View info for ${item.title}"
+                                }
                             )
                             .testTag("info_symbol_${item.id}"),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             Icons.Outlined.Info,
-                            contentDescription = if (isEs) "Detalles de ${item.title}" else "Game info for ${item.title}",
+                            contentDescription = when (lang) {
+                                AppLanguage.SPANISH -> "Detalles de ${item.title}"
+                                AppLanguage.FRENCH -> "Infos de ${item.title}"
+                                AppLanguage.ENGLISH -> "Game info for ${item.title}"
+                            },
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
                         )
@@ -246,7 +264,11 @@ internal fun RichGiveawayCard(
                                 .padding(horizontal = 7.dp, vertical = 3.dp)
                         ) {
                             Text(
-                                text = if (isEs) "❤️ EN TU LISTA DE DESEOS" else "❤️ ON YOUR WISHLIST",
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "❤️ EN TU LISTA DE DESEOS"
+                                    AppLanguage.FRENCH -> "❤️ SUR VOTRE LISTE"
+                                    AppLanguage.ENGLISH -> "❤️ ON YOUR WISHLIST"
+                                },
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color(0xFFFF2D87),
@@ -264,7 +286,11 @@ internal fun RichGiveawayCard(
                                 .padding(horizontal = 6.dp, vertical = 3.dp)
                         ) {
                             Text(
-                                text = if (isEs) "✨ NUEVO DROP" else "✨ NEW DROP",
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "✨ NUEVO DROP"
+                                    AppLanguage.FRENCH -> "✨ NOUVEAU DROP"
+                                    AppLanguage.ENGLISH -> "✨ NEW DROP"
+                                },
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
@@ -308,8 +334,13 @@ internal fun RichGiveawayCard(
                     if (showExpiration && item.endDate.isNotBlank() && item.endDate != "N/A") {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             Icon(Icons.Default.Schedule, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(13.dp))
+                            val endsLabel = when (lang) {
+                                AppLanguage.SPANISH -> "Termina"
+                                AppLanguage.FRENCH -> "Expire"
+                                AppLanguage.ENGLISH -> "Ends"
+                            }
                             Text(
-                                text = "${if (isEs) "Termina" else "Ends"}: ${item.endDate.split(" ").firstOrNull() ?: item.endDate}",
+                                text = "$endsLabel: ${item.endDate.split(" ").firstOrNull() ?: item.endDate}",
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -322,7 +353,16 @@ internal fun RichGiveawayCard(
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         if (item.isClaimed) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(if (isEs) "ESTADO:" else "STATUS:", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    when (lang) {
+                                        AppLanguage.SPANISH -> "ESTADO:"
+                                        AppLanguage.FRENCH -> "STATUT :"
+                                        AppLanguage.ENGLISH -> "STATUS:"
+                                    },
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                                 PlayStatusBadge(status = item.playStatus, onStatusSelected = onPlayStatusChange)
                             }
                         } else Spacer(modifier = Modifier.width(1.dp))
@@ -346,9 +386,17 @@ internal fun RichGiveawayCard(
                             Icon(if (item.hasMultipleLaunchers) Icons.Default.SportsEsports else Icons.AutoMirrored.Filled.OpenInNew, null, modifier = Modifier.size(16.dp))
                             Text(
                                 text = if (item.hasMultipleLaunchers) {
-                                    if (isEs) "Elegir Tienda ▾" else "Choose Launcher ▾"
+                                    when (lang) {
+                                        AppLanguage.SPANISH -> "Elegir Tienda ▾"
+                                        AppLanguage.FRENCH -> "Choisir lanceur ▾"
+                                        AppLanguage.ENGLISH -> "Choose Launcher ▾"
+                                    }
                                 } else {
-                                    if (isEs) "Reclamar" else "Claim"
+                                    when (lang) {
+                                        AppLanguage.SPANISH -> "Reclamar"
+                                        AppLanguage.FRENCH -> "Réclamer"
+                                        AppLanguage.ENGLISH -> "Claim"
+                                    }
                                 },
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold
@@ -388,9 +436,17 @@ internal fun RichGiveawayCard(
                             )
                             Text(
                                 text = if (item.isClaimed) {
-                                    if (isEs) "Reclamado" else "Claimed"
+                                    when (lang) {
+                                        AppLanguage.SPANISH -> "Reclamado"
+                                        AppLanguage.FRENCH -> "Réclamé"
+                                        AppLanguage.ENGLISH -> "Claimed"
+                                    }
                                 } else {
-                                    if (isEs) "¿Lo tienes?" else "Have It?"
+                                    when (lang) {
+                                        AppLanguage.SPANISH -> "¿Lo tienes?"
+                                        AppLanguage.FRENCH -> "Déjà acquis ?"
+                                        AppLanguage.ENGLISH -> "Have It?"
+                                    }
                                 },
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold

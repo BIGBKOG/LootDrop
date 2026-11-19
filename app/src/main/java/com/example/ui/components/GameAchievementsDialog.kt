@@ -78,10 +78,18 @@ private enum class AchievementFilterTab(val label: String) {
     LOCKED("Locked (Walkthroughs)"),
     UNLOCKED("Unlocked");
 
-    fun localized(isEs: Boolean): String = if (!isEs) label else when (this) {
-        ALL -> "Todos"
-        LOCKED -> "Bloqueados (Guías)"
-        UNLOCKED -> "Desbloqueados"
+    fun localized(lang: AppLanguage): String = when (lang) {
+        AppLanguage.ENGLISH -> label
+        AppLanguage.SPANISH -> when (this) {
+            ALL -> "Todos"
+            LOCKED -> "Bloqueados (Guías)"
+            UNLOCKED -> "Desbloqueados"
+        }
+        AppLanguage.FRENCH -> when (this) {
+            ALL -> "Tous"
+            LOCKED -> "Verrouillés (Guides)"
+            UNLOCKED -> "Débloqués"
+        }
     }
 }
 
@@ -95,7 +103,7 @@ fun GameAchievementsDialog(
 ) {
     val context = LocalContext.current
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val lowEnd = LocalLowEndOptimization.current
     val headerImageRequest = remember(context, game.headerImageUrl, lowEnd) {
         buildGiveawayImageRequest(
@@ -218,7 +226,11 @@ fun GameAchievementsDialog(
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                 ) {
                                     Text(
-                                        text = if (isEs) "🔥 ¡A $remainingToHundred DEL 100%!" else "🔥 $remainingToHundred AWAY FROM 100%!",
+                                        text = when (lang) {
+                                            AppLanguage.SPANISH -> "🔥 ¡A $remainingToHundred DEL 100%!"
+                                            AppLanguage.FRENCH -> "🔥 À $remainingToHundred DU 100 % !"
+                                            AppLanguage.ENGLISH -> "🔥 $remainingToHundred AWAY FROM 100%!"
+                                        },
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = NeonCyan
@@ -233,7 +245,11 @@ fun GameAchievementsDialog(
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                 ) {
                                     Text(
-                                        text = if (isEs) "👑 100% COMPLETADO" else "👑 100% MASTERED",
+                                        text = when (lang) {
+                                            AppLanguage.SPANISH -> "👑 100% COMPLETADO"
+                                            AppLanguage.FRENCH -> "👑 100 % MAÎTRISÉ"
+                                            AppLanguage.ENGLISH -> "👑 100% MASTERED"
+                                        },
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = NeonGreen
@@ -283,7 +299,7 @@ fun GameAchievementsDialog(
                             onClick = { selectedFilterTab = tab },
                             label = {
                                 Text(
-                                    text = tab.localized(isEs),
+                                    text = tab.localized(lang),
                                     fontSize = 11.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                                 )
@@ -321,7 +337,16 @@ fun GameAchievementsDialog(
                             modifier = Modifier.size(13.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(if (isEs) "Guías en Steam" else "All Steam Guides", fontSize = 11.sp, color = Color(0xFF66C0F4), fontWeight = FontWeight.SemiBold)
+                        Text(
+                            when (lang) {
+                                AppLanguage.SPANISH -> "Guías en Steam"
+                                AppLanguage.FRENCH -> "Tous les guides Steam"
+                                AppLanguage.ENGLISH -> "All Steam Guides"
+                            },
+                            fontSize = 11.sp,
+                            color = Color(0xFF66C0F4),
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                 }
 
@@ -348,7 +373,11 @@ fun GameAchievementsDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = if (isEs) "No hay logros que coincidan con este filtro." else "No achievements match this filter.",
+                            text = when (lang) {
+                                AppLanguage.SPANISH -> "No hay logros que coincidan con este filtro."
+                                AppLanguage.FRENCH -> "Aucun succès ne correspond à ce filtre."
+                                AppLanguage.ENGLISH -> "No achievements match this filter."
+                            },
                             fontSize = 13.sp,
                             color = TextMuted
                         )
@@ -392,7 +421,7 @@ private fun AchievementItemRow(
     onOpenWebGuide: () -> Unit
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     val tier = achievement.rarityTier
     val tierColor = tier.color
     val isUnlocked = achievement.isAchieved
@@ -438,14 +467,22 @@ private fun AchievementItemRow(
                     if (isUnlocked) {
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
-                            contentDescription = if (isEs) "Desbloqueado" else "Unlocked",
+                            contentDescription = when (lang) {
+                                AppLanguage.SPANISH -> "Desbloqueado"
+                                AppLanguage.FRENCH -> "Débloqué"
+                                AppLanguage.ENGLISH -> "Unlocked"
+                            },
                             tint = NeonGreen,
                             modifier = Modifier.size(20.dp)
                         )
                     } else {
                         Icon(
                             imageVector = Icons.Default.Lock,
-                            contentDescription = if (isEs) "Bloqueado" else "Locked",
+                            contentDescription = when (lang) {
+                                AppLanguage.SPANISH -> "Bloqueado"
+                                AppLanguage.FRENCH -> "Verrouillé"
+                                AppLanguage.ENGLISH -> "Locked"
+                            },
                             tint = Color(0xFF94A3B8),
                             modifier = Modifier.size(18.dp)
                         )
@@ -508,7 +545,11 @@ private fun AchievementItemRow(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = if (isEs) "Guías de logros:" else "Walkthrough Guides:",
+                    text = when (lang) {
+                        AppLanguage.SPANISH -> "Guías de logros:"
+                        AppLanguage.FRENCH -> "Guides de succès :"
+                        AppLanguage.ENGLISH -> "Walkthrough Guides:"
+                    },
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF94A3B8)
@@ -559,7 +600,16 @@ private fun AchievementItemRow(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                             Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(11.dp))
-                            Text(text = if (isEs) "Guía" else "Guide", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NeonCyan)
+                            Text(
+                                text = when (lang) {
+                                    AppLanguage.SPANISH -> "Guía"
+                                    AppLanguage.FRENCH -> "Guide"
+                                    AppLanguage.ENGLISH -> "Guide"
+                                },
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = NeonCyan
+                            )
                         }
                     }
                 }

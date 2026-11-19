@@ -29,14 +29,19 @@ object CustomFontHelper {
     }
 
     fun importFontFromUri(context: Context, uri: Uri): ImportResult {
-        val isEs = AppPreferences(context).appLanguage == AppLanguage.SPANISH
+        val lang = AppPreferences(context).appLanguage
+        val isEs = lang == AppLanguage.SPANISH
+        val isFr = lang == AppLanguage.FRENCH
         val displayName = resolveDisplayName(context, uri)
         val lowerName = displayName.lowercase()
 
         if (lowerName.endsWith(".woff") || lowerName.endsWith(".woff2")) {
             return ImportResult.Error(
-                if (isEs) "Las fuentes web WOFF/WOFF2 no son compatibles en Android. Importa un archivo .ttf u .otf."
-                else "WOFF/WOFF2 web fonts are not supported on Android. Please import a .ttf or .otf font file."
+                when {
+                    isEs -> "Las fuentes web WOFF/WOFF2 no son compatibles en Android. Importa un archivo .ttf u .otf."
+                    isFr -> "Les polices web WOFF/WOFF2 ne sont pas prises en charge sur Android. Importez un fichier .ttf ou .otf."
+                    else -> "WOFF/WOFF2 web fonts are not supported on Android. Please import a .ttf or .otf font file."
+                }
             )
         }
 
@@ -52,8 +57,11 @@ object CustomFontHelper {
         return try {
             val input = context.contentResolver.openInputStream(uri)
                 ?: return ImportResult.Error(
-                    if (isEs) "No se pudo leer el archivo de fuente seleccionado."
-                    else "Could not read the selected font file."
+                    when {
+                        isEs -> "No se pudo leer el archivo de fuente seleccionado."
+                        isFr -> "Impossible de lire le fichier de police sélectionné."
+                        else -> "Could not read the selected font file."
+                    }
                 )
 
             var totalBytes = 0L
@@ -67,8 +75,11 @@ object CustomFontHelper {
                         if (totalBytes > MAX_FONT_BYTES) {
                             tempFile.delete()
                             return ImportResult.Error(
-                                if (isEs) "El archivo de fuente es demasiado grande (máx. 20 MB)."
-                                else "Font file is too large (max 20 MB)."
+                                when {
+                                    isEs -> "El archivo de fuente es demasiado grande (máx. 20 MB)."
+                                    isFr -> "Le fichier de police est trop volumineux (max 20 Mo)."
+                                    else -> "Font file is too large (max 20 MB)."
+                                }
                             )
                         }
                         outStream.write(buffer, 0, read)
@@ -80,8 +91,11 @@ object CustomFontHelper {
             if (totalBytes < 12L || !hasValidFontHeader(tempFile)) {
                 tempFile.delete()
                 return ImportResult.Error(
-                    if (isEs) "Archivo inválido. Selecciona una fuente .ttf u .otf válida."
-                    else "Invalid font file. Please select a valid .ttf or .otf font."
+                    when {
+                        isEs -> "Archivo inválido. Selecciona una fuente .ttf u .otf válida."
+                        isFr -> "Fichier invalide. Sélectionnez une police .ttf ou .otf valide."
+                        else -> "Invalid font file. Please select a valid .ttf or .otf font."
+                    }
                 )
             }
 
@@ -89,8 +103,11 @@ object CustomFontHelper {
             if (parsedTypeface == null) {
                 tempFile.delete()
                 return ImportResult.Error(
-                    if (isEs) "Android no pudo leer esta fuente. Prueba con otro archivo .ttf u .otf."
-                    else "Android could not parse this font file. Try another .ttf or .otf font."
+                    when {
+                        isEs -> "Android no pudo leer esta fuente. Prueba con otro archivo .ttf u .otf."
+                        isFr -> "Android n'a pas pu lire cette police. Essayez un autre fichier .ttf ou .otf."
+                        else -> "Android could not parse this font file. Try another .ttf or .otf font."
+                    }
                 )
             }
 
@@ -114,8 +131,11 @@ object CustomFontHelper {
         } catch (e: Exception) {
             tempFile.delete()
             ImportResult.Error(
-                if (isEs) "Error al importar fuente: ${e.message ?: "Error desconocido"}"
-                else "Failed to import font: ${e.message ?: "Unknown error"}"
+                when {
+                    isEs -> "Error al importar fuente: ${e.message ?: "Error desconocido"}"
+                    isFr -> "Échec de l'importation de la police : ${e.message ?: "Erreur inconnue"}"
+                    else -> "Failed to import font: ${e.message ?: "Unknown error"}"
+                }
             )
         }
     }

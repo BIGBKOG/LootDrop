@@ -82,7 +82,6 @@ internal fun SteamDeckStatusPill(
     bold: Boolean = false
 ) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
     val bgColor = when (status) {
         SteamDeckStatus.VERIFIED -> Color(0x2210B981)
         SteamDeckStatus.PLAYABLE -> Color(0x22F59E0B)
@@ -109,7 +108,7 @@ internal fun SteamDeckStatusPill(
             .padding(horizontal = horizontalPad, vertical = verticalPad)
     ) {
         Text(
-            text = if (isEs) status.localizedLabel(s) else status.pillLabel,
+            text = if (s.language != AppLanguage.ENGLISH) status.localizedLabel(s) else status.pillLabel,
             fontSize = fontSizeSp.sp,
             fontWeight = if (bold) FontWeight.Bold else FontWeight.SemiBold,
             color = textColor
@@ -120,7 +119,7 @@ internal fun SteamDeckStatusPill(
 @Composable
 internal fun HardwareReadinessPillsRow(hardware: GameHardwareProfile) {
     val s = LocalAppStrings.current
-    val isEs = s.language == AppLanguage.SPANISH
+    val lang = s.language
     Row(
         modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -154,8 +153,15 @@ internal fun HardwareReadinessPillsRow(hardware: GameHardwareProfile) {
                 .border(1.dp, Color(0xFF8B5CF6).copy(alpha = 0.6f), RoundedCornerShape(6.dp))
                 .padding(horizontal = 6.dp, vertical = 2.5.dp)
         ) {
+            val manualSuffix = if (hardware.isManualOverride) {
+                when (lang) {
+                    AppLanguage.SPANISH -> " (manual)"
+                    AppLanguage.FRENCH -> " (perso)"
+                    AppLanguage.ENGLISH -> " (custom)"
+                }
+            } else ""
             Text(
-                text = "💾 ${hardware.formattedSize}${if (hardware.isManualOverride) (if (isEs) " (manual)" else " (custom)") else ""}",
+                text = "💾 ${hardware.formattedSize}$manualSuffix",
                 fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color(0xFFA78BFA)
